@@ -44,22 +44,44 @@ import {
 import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
 import { classifySurfaceIntent, isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
+import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
  */
 
 /**
- * Fixture·회귀용 축약 분류 (LLM 없음). 도움말·조회·플래너 락 다음 **surface** 를 넣어
+ * Fixture·회귀용 축약 분류 (LLM 없음). 도움말 다음 **Clean `start_project` Front Door** → 조회·플래너 락·lineage…
  * `runInboundCommandRouter` 와 맞춘다. 구조화 명령(`runInboundStructuredCommands`)은 시뮬하지 않는다.
  * @param {RouterSyncLike} snap `buildRouterSyncSnapshot` 결과와 동일 필드
+ * @param {Record<string, unknown>} [previewMetadata] 스레드 푸시백 픽스처용 슬랙 메타(채널·thread_ts 등)
  * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'navigator'|'council'|'dialog'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
  */
-export async function classifyInboundResponderPreview(snap) {
+export async function classifyInboundResponderPreview(snap, previewMetadata = {}) {
   const trimmed = snap.trimmed;
+  const meta =
+    previewMetadata && typeof previewMetadata === 'object'
+      ? { ...(snap.preview_metadata && typeof snap.preview_metadata === 'object' ? snap.preview_metadata : {}), ...previewMetadata }
+      : {};
 
   if (trimmed === '도움말' || trimmed === '운영도움말') {
     return { responder: 'help' };
+  }
+
+  const kickDoor = resolveCleanStartProjectKickoff(trimmed, meta);
+  if (kickDoor) {
+    const surfaceEarly = await tryExecutiveSurfaceResponse(kickDoor.line, meta, {
+      startProjectToneAck: kickDoor.toneAck,
+    });
+    if (surfaceEarly?.response_type === 'start_project') {
+      return {
+        responder: 'executive_surface',
+        surfaceRaw: surfaceEarly.text,
+        surfacePacketId: surfaceEarly.packet_id ?? null,
+        surfaceStatusPacketId: surfaceEarly.status_packet_id ?? null,
+        surfaceResponseType: surfaceEarly.response_type ?? 'start_project',
+      };
+    }
   }
 
   const queryRaw = await handleQueryOnlyCommands(snap.query_line_resolved);
@@ -200,9 +222,11 @@ export async function runInboundAiRouter(ctx) {
         });
       }
 
-      const navStart = classifySurfaceIntent(normalizeSlackUserPayload(navBodyStripped));
-      if (navStart?.intent === 'start_project') {
-        const se = await tryExecutiveSurfaceResponse(navBodyStripped, metadata);
+      const navKick = resolveCleanStartProjectKickoff(navBodyStripped, metadata);
+      if (navKick) {
+        const se = await tryExecutiveSurfaceResponse(navKick.line, metadata, {
+          startProjectToneAck: navKick.toneAck,
+        });
         if (se?.response_type === 'start_project') {
           logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_kickoff' });
           return finalizeSlackResponse({
@@ -313,8 +337,11 @@ export async function runInboundAiRouter(ctx) {
     });
   }
 
-  if (isStartProjectKickoffInput(trimmed)) {
-    const surfaceEarly = await tryExecutiveSurfaceResponse(trimmed, metadata);
+  const aiKickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
+  if (aiKickDoor) {
+    const surfaceEarly = await tryExecutiveSurfaceResponse(aiKickDoor.line, metadata, {
+      startProjectToneAck: aiKickDoor.toneAck,
+    });
     if (surfaceEarly?.response_type === 'start_project') {
       logRouterEvent('router_responder_selected', {
         responder: 'executive_surface',
@@ -322,7 +349,7 @@ export async function runInboundAiRouter(ctx) {
       });
       logRouterEvent('router_responder_locked', {
         responder: 'executive_surface',
-        via: 'ai_tail_start_project_overrides_council_prefix',
+        via: 'ai_tail_clean_start_project_front_door',
       });
       return finalizeSlackResponse({
         responder: 'executive_surface',
@@ -389,6 +416,7 @@ export async function runInboundAiRouter(ctx) {
       const kickSuppressApproval =
         isStartProjectKickoffInput(trimmed) ||
         isStartProjectKickoffInput(routedInput) ||
+        Boolean(resolveCleanStartProjectKickoff(trimmed, metadata)) ||
         Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question));
 
       let approvalItem = null;

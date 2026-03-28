@@ -41,10 +41,41 @@ for (const b of banned) {
   assert.ok(!out.text.includes(b), `must not leak council/approval shape: ${b}`);
 }
 
-const required = ['이해한 바', '기본 가정', '확인 질문', '월+주', '실행 큐', 'APR)을 만들지'];
+const required = [
+  '내가 이해한 요청',
+  '기본 MVP 가정안',
+  '포함 / 제외',
+  '핵심 질문',
+  '무응답 시 적용할 기본값',
+  '다음 산출물',
+  '월+주',
+  '실행 정렬 큐',
+  'APR)을 만들지 않습니다',
+];
 for (const r of required) {
   assert.ok(out.text.includes(r), `missing contract fragment: ${r}`);
 }
+
+const { clearConversationBuffer, recordConversationTurn, buildSlackThreadKey } = await import(
+  '../src/features/slackConversationBuffer.js'
+);
+const { resolveCleanStartProjectKickoff } = await import('../src/features/startProjectKickoffDoor.js');
+
+clearConversationBuffer();
+const pushMeta = { channel: 'CFIX-PUSH', thread_ts: '1111.2222' };
+const priorMsg =
+  '툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.';
+const kPush = buildSlackThreadKey(pushMeta);
+recordConversationTurn(kPush, 'user', priorMsg);
+const pushText = '그니까 네가 먼저 기준안을 보여주고 필요한 질문만 해';
+const door = resolveCleanStartProjectKickoff(pushText, pushMeta);
+assert.ok(door?.line && door.line.includes('툴제작:'), 'pushback must recover kickoff line');
+const outPush = await tryExecutiveSurfaceResponse(door.line, pushMeta, {
+  startProjectToneAck: door.toneAck,
+});
+assert.equal(outPush.response_type, 'start_project');
+assert.ok(outPush.text.includes('기준안을 먼저'), 'tone ack visible');
+assert.ok(!outPush.text.includes('페르소나별 핵심 관점'));
 
 await fs.rm(tmp, { recursive: true, force: true });
 console.log('ok: start_project kickoff contract');

@@ -1,5 +1,5 @@
 /**
- * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **M4 lineage**(패킷/워크큐) → 조회 → … → 구조화 명령 →
+ * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **Clean `start_project` Front Door** → **M4 lineage** → 조회 → … → 구조화 명령 →
  * **대표 표면(surface intent)** → 미스 시 AI.
  * 순서 정본: `COS_FastTrack_v1_Surface_And_Routing.md`
  *
@@ -25,7 +25,7 @@ import { runInboundStructuredCommands } from './runInboundStructuredCommands.js'
 import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeDecisionShortReply } from './decisionPackets.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
-import { classifySurfaceIntent } from './surfaceIntentClassifier.js';
+import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -142,6 +142,34 @@ export async function runInboundCommandRouter(ctx) {
     return { done: true, response };
   }
 
+  const kickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
+  if (kickDoor) {
+    const surfaceKick = await tryExecutiveSurfaceResponse(kickDoor.line, metadata, {
+      startProjectToneAck: kickDoor.toneAck,
+    });
+    if (surfaceKick != null && surfaceKick.response_type === 'start_project') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'start_project',
+        via: 'clean_start_project_front_door',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'clean_start_project_front_door',
+      });
+      const response = finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: surfaceKick.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'start_project',
+        council_blocked: true,
+        response_type: surfaceKick.response_type,
+      });
+      return { done: true, response };
+    }
+  }
+
   const lineageHit = await tryFinalizeG1CosLineageTransport(trimmed, routerCtx);
   if (lineageHit != null) {
     logRouterEvent('router_responder_selected', {
@@ -220,31 +248,6 @@ export async function runInboundCommandRouter(ctx) {
       envKey,
     });
     return { done: true, response };
-  }
-
-  if (classifySurfaceIntent(trimmed)?.intent === 'start_project') {
-    const surfaceKick = await tryExecutiveSurfaceResponse(trimmed, metadata);
-    if (surfaceKick != null) {
-      logRouterEvent('router_responder_selected', {
-        responder: 'executive_surface',
-        command_name: 'start_project',
-        via: 'pre_structured_start_project',
-      });
-      logRouterEvent('router_responder_locked', {
-        responder: 'executive_surface',
-        via: 'pre_structured_start_project',
-      });
-      const response = finalizeSlackResponse({
-        responder: 'executive_surface',
-        text: surfaceKick.text,
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'start_project',
-        council_blocked: true,
-        response_type: surfaceKick.response_type,
-      });
-      return { done: true, response };
-    }
   }
 
   const structuredOut = await runInboundStructuredCommands({

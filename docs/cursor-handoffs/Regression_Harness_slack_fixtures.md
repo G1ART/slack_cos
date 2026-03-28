@@ -39,6 +39,9 @@
 | `25_surface_hold_pause` | `이건 보류: …` → `executive_surface` (`hold_pause`) |
 | `26_surface_deploy_readiness` | `배포 준비` 등 → `executive_surface` (`request_deploy_readiness`) |
 | `27_g1cos_lineage_status_packet_miss` | `상태 STP-…` 감사 미스 → `query` (`lineage_status_packet_miss`) |
+| `27_start_project_calendar_gallery_kickoff` | 갤러리·캘린더 `툴제작:` → `start_project` 정렬 요약·Council 금지 (`classifyInboundResponderPreview` Front Door) |
+| `28_start_project_overrides_council_prefix` | `협의모드 툴제작:` → `start_project` 표면 |
+| `29_start_project_pushback_baseline_first` | 스레드 푸시백 + `prior_conversation`/`slack_metadata` → 이전 킥오프 줄 회수 후 정렬만 |
 | `99_repr_ceo_failure_placeholder` | 대표 재현 실패 슬롯 (SKIP) |
 
 ---
@@ -49,7 +52,8 @@
 |------|------|
 | `scripts/replay-slack-fixtures.mjs` | fixture 로더 + 리포트 + exit code |
 | `src/testing/routerSyncSnapshot.js` | `buildRouterSyncSnapshot` (`runInboundCommandRouter` 동기 단계와 동일 파이프라인) |
-| `src/features/runInboundCommandRouter.js` | pre-AI: …·**M4 lineage**·조회·…·구조화·`finalizeSlackResponse`(structured)·**surface**·… |
+| `src/features/runInboundCommandRouter.js` | pre-AI: …·**Clean `start_project` Front Door**·**M4 lineage**·조회·…·구조화·**surface**·… |
+| `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
 | `scripts/test-surface-intent.mjs` | Fast-Track surface 분류·**`product_feedback`**(`피드백:`) · **상태 패킷 STP-** (`npm test` 포함) |
 | `scripts/test-customer-feedback-awq-bridge.mjs` | CFB → **`feedback_follow_up` AWQ** · `linked_awq_id` · `customer_feedback_intake` 승인 티어 (`npm test` 포함) |
 | `scripts/test-start-project-fast-promote.mjs` | **`COS_FAST_SPEC_PROMOTE=1`** 시 `start_project` 표면에서 **실행큐계획화**까지 한 턴 (`npm test` 포함) |

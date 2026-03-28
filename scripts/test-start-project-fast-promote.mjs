@@ -22,7 +22,10 @@ const { tryExecutiveSurfaceResponse } = await import('../src/features/tryExecuti
 const meta = { channel: 'CEXEC', user: 'UCEO' };
 const out = await tryExecutiveSurfaceResponse('툴제작: 모바일 간편주문 미니앱 (MVP)', meta);
 assert.equal(out.response_type, 'start_project');
-assert.ok(out.text.includes('실행 큐에 적재'), out.text);
+assert.ok(
+  out.text.includes('실행 정렬 큐') || out.text.includes('실행 큐에 적재'),
+  out.text,
+);
 assert.ok(out.text.includes('COS_FAST_SPEC_PROMOTE'), out.text);
 assert.ok(out.text.includes('실행 큐 → 계획·업무'), out.text);
 assert.match(out.text, /PLN-/);

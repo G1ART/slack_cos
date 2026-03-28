@@ -17,6 +17,11 @@ import { finalizeSlackResponse } from '../src/features/topLevelRouter.js';
 import { assertNoCouncilLeakInNonCouncilResponse } from '../src/testing/councilLeakRules.js';
 import { classifySurfaceIntent } from '../src/features/surfaceIntentClassifier.js';
 import {
+  clearConversationBuffer,
+  recordConversationTurn,
+  buildSlackThreadKey,
+} from '../src/features/slackConversationBuffer.js';
+import {
   PLANNER_SLACK_EMPTY_BODY_MESSAGE,
   PLANNER_SLACK_ROUTING_MISS_MESSAGE,
 } from '../src/features/plannerRoute.js';
@@ -46,9 +51,9 @@ function loadFixtures() {
  * handleUserText AI 구간과 동일한 **축약** 분류.
  * @see classifyInboundResponderPreview
  */
-async function classifyFixture(inbound, snap) {
+async function classifyFixture(inbound, snap, previewMetadata = {}) {
   const trimmed = snap.trimmed;
-  const preview = await classifyInboundResponderPreview(snap);
+  const preview = await classifyInboundResponderPreview(snap, previewMetadata);
 
   if (preview.responder === 'lineage_transport' && preview.lineageText != null) {
     const finalized_text = finalizeSlackResponse({
@@ -135,6 +140,17 @@ async function runOne(fixture) {
   const inbound = getInboundCommandText(fixture.event || {});
   const snap = buildRouterSyncSnapshot(inbound);
 
+  clearConversationBuffer();
+  const previewMeta =
+    fixture.slack_metadata && typeof fixture.slack_metadata === 'object' ? fixture.slack_metadata : {};
+  if (fixture.prior_conversation?.length && Object.keys(previewMeta).length > 0) {
+    const bufKey = buildSlackThreadKey(previewMeta);
+    for (const turn of fixture.prior_conversation) {
+      const role = turn.role === 'assistant' ? 'assistant' : 'user';
+      recordConversationTurn(bufKey, role, String(turn.text ?? ''));
+    }
+  }
+
   if (exp.surface_intent != null) {
     const cs = classifySurfaceIntent(inbound);
     if (cs?.intent !== exp.surface_intent) {
@@ -156,7 +172,7 @@ async function runOne(fixture) {
     errors.push(`target_id want ${JSON.stringify(exp.target_id)} got ${JSON.stringify(snap.target_id)}`);
   }
 
-  const cls = await classifyFixture(inbound, snap);
+  const cls = await classifyFixture(inbound, snap, previewMeta);
 
   if (exp.final_responder && cls.final_responder !== exp.final_responder) {
     errors.push(`final_responder want ${exp.final_responder} got ${cls.final_responder}`);

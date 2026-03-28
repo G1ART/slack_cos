@@ -8,11 +8,15 @@
  */
 import { SocketModeClient } from '@slack/socket-mode';
 import BoltSmrMod from '@slack/bolt/dist/receivers/SocketModeReceiver.js';
-import SocketModeAckMod from '@slack/bolt/dist/receivers/SocketModeResponseAck.js';
+import * as SocketModeAckModule from '@slack/bolt/dist/receivers/SocketModeResponseAck.js';
 import * as SocketModeFunctions from '@slack/bolt/dist/receivers/SocketModeFunctions.js';
 
 const BaseSocketModeReceiver = BoltSmrMod.default ?? BoltSmrMod;
-const SocketModeResponseAck = SocketModeAckMod.default ?? SocketModeAckMod;
+/** CJS named export — default import 는 `{ SocketModeResponseAck }` 객체가 되어 `new` 가 실패함 */
+const SocketModeResponseAck =
+  SocketModeAckModule.SocketModeResponseAck ??
+  SocketModeAckModule.default?.SocketModeResponseAck ??
+  SocketModeAckModule.default;
 const { defaultProcessEventErrorHandler } = SocketModeFunctions;
 
 function readPingMs(envKey, fallback) {

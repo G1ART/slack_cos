@@ -147,8 +147,8 @@ import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
-import { classifySurfaceIntent } from './src/features/surfaceIntentClassifier.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
+import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
@@ -587,9 +587,11 @@ function operatorHelpText() {
 
 async function runLegacySingleFlow(trimmed, channelContext, metadata) {
   try {
-    const sp = classifySurfaceIntent(trimmed);
-    if (sp?.intent === 'start_project') {
-      const surf = await tryExecutiveSurfaceResponse(trimmed, metadata);
+    const kick = resolveCleanStartProjectKickoff(trimmed, metadata);
+    if (kick) {
+      const surf = await tryExecutiveSurfaceResponse(kick.line, metadata, {
+        startProjectToneAck: kick.toneAck,
+      });
       if (surf?.response_type === 'start_project') {
         return finalizeSlackResponseFromTopLevel({
           responder: 'executive_surface',
