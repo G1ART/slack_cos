@@ -39,6 +39,11 @@
 | `25_surface_hold_pause` | `이건 보류: …` → `executive_surface` (`hold_pause`) |
 | `26_surface_deploy_readiness` | `배포 준비` 등 → `executive_surface` (`request_deploy_readiness`) |
 | `27_g1cos_lineage_status_packet_miss` | `상태 STP-…` 감사 미스 → `query` (`lineage_status_packet_miss`) |
+| `27_start_project_calendar_gallery_kickoff` | 갤러리·캘린더 `툴제작:` → `start_project` 정렬 요약·Council 금지 (`classifyInboundResponderPreview` Front Door) |
+| `28_start_project_overrides_council_prefix` | `협의모드 툴제작:` → `start_project` 표면 |
+| `29_start_project_pushback_baseline_first` | 스레드 푸시백 + `prior_conversation`/`slack_metadata` → 이전 킥오프 줄 회수 후 정렬만 |
+| `30_start_project_lock_confirmed_turn2` | 킥오프 assistant 턴 다음 사용자 답변+`진행해줘`(충분) → `start_project_confirmed`·Council/업무등록 금지 |
+| `31_start_project_short_proceed_refine` | 동일 맥락에서 짧은 `진행해줘`만 → `start_project_refine`(충분성 미달)·잠금 표면 비발생 |
 | `99_repr_ceo_failure_placeholder` | 대표 재현 실패 슬롯 (SKIP) |
 
 ---
@@ -49,7 +54,15 @@
 |------|------|
 | `scripts/replay-slack-fixtures.mjs` | fixture 로더 + 리포트 + exit code |
 | `src/testing/routerSyncSnapshot.js` | `buildRouterSyncSnapshot` (`runInboundCommandRouter` 동기 단계와 동일 파이프라인) |
-| `src/features/runInboundCommandRouter.js` | pre-AI: …·**M4 lineage**·조회·…·구조화·`finalizeSlackResponse`(structured)·**surface**·… |
+| `src/features/runInboundCommandRouter.js` | pre-AI: …·**`start_project` 실행 승인(충분성)**·**`start_project` 정제**·**Front Door**·**M4 lineage**·조회·…·**surface**·… |
+| `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
+| `scripts/test-start-project-lock-confirmed.mjs` | 충분성 게이트·짧은 진행 → 정제(refine) (`npm test` 포함) |
+| `scripts/test-henry-calendar-intake-regression.mjs` | 전사 없이 sticky 인테이크만으로 2턴 잠금·Council 문자열 금지 (`npm test` 포함) |
+| `scripts/test-project-intake-cancel.mjs` | 인테이크 취소·활성 세션 중 협의모드 사전 라우터·`classifyInboundResponderPreview` (`npm test` 포함) |
+| `scripts/test-project-intake-persist.mjs` | `PROJECT_INTAKE_SESSION_PERSIST` JSON 로드/플러시 (`npm test` 포함) |
+| `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · sticky 세션 병행 · `scopeSufficiency.js` |
+| `src/features/projectIntakeSession.js` | 킥오프 후 스레드별 활성 인테이크(목표 한 줄)·잠금 시 종료 |
+| `src/features/scopeSufficiency.js` | MVP 범위 충분성 휴리스틱(후속 단계 격리·sticky 시 벤치 완화) |
 | `scripts/test-surface-intent.mjs` | Fast-Track surface 분류·**`product_feedback`**(`피드백:`) · **상태 패킷 STP-** (`npm test` 포함) |
 | `scripts/test-customer-feedback-awq-bridge.mjs` | CFB → **`feedback_follow_up` AWQ** · `linked_awq_id` · `customer_feedback_intake` 승인 티어 (`npm test` 포함) |
 | `scripts/test-start-project-fast-promote.mjs` | **`COS_FAST_SPEC_PROMOTE=1`** 시 `start_project` 표면에서 **실행큐계획화**까지 한 턴 (`npm test` 포함) |
@@ -79,7 +92,8 @@
 | `scripts/test-ci-hook.mjs` | `handleCosCiProofJson`·**HTTP** `GET /cos/health`·`POST /cos/ci-proof`·secret (`npm test` 포함) |
 | `scripts/test-work-queue-structured-cmd.mjs` | 워크큐 구조화 전체(실행허가·보류·재개·착수·**증거**·완료·취소) (`npm test` 포함) |
 | `src/testing/councilLeakRules.js` | Council 누수 **단일 문자열** 규칙 (회귀 전용) |
-| `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — app 과 공유 |
+| `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — `parseCouncilCommand` 정합 + 킥오프 제외 |
+| `scripts/test-henry-turn2-scope-lock.mjs` | Henry 2턴 잠금이 Council 합성이 아님 (`npm test` 포함) |
 
 Planner 골든 문자열 상수: `src/features/plannerRoute.js` 의 `PLANNER_SLACK_EMPTY_BODY_MESSAGE`, `PLANNER_SLACK_ROUTING_MISS_MESSAGE` (app.js 가 참조).
 

@@ -27,10 +27,16 @@ import {
 } from './workspaceQueuePromote.js';
 import { getDefaultEnvKey } from '../storage/environmentProfiles.js';
 import { getEnvironmentContext } from '../storage/environmentContext.js';
-import { buildStartProjectSurfaceBodyLines } from './startProjectSurfaceCopy.js';
+import { buildStartProjectAlignmentSummary } from './startProjectSurfaceCopy.js';
+import { openProjectIntakeSession } from './projectIntakeSession.js';
 
 function isFastSpecPromoteEnabled() {
   const v = String(process.env.COS_FAST_SPEC_PROMOTE || '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes';
+}
+
+function isStartProjectQueueFooterVerbose() {
+  const v = String(process.env.COS_START_PROJECT_VERBOSE_QUEUE || '').trim().toLowerCase();
   return v === '1' || v === 'true' || v === 'yes';
 }
 
@@ -57,9 +63,10 @@ async function resolveEnvKeyForSurface(metadata) {
 /**
  * @param {string} trimmed
  * @param {Record<string, unknown>} [metadata] thread tail·audit (없으면 결정 패킷만 문자열로 생성, 디스크 생략)
+ * @param {{ startProjectToneAck?: string | null }} [surfaceOpts]
  * @returns {Promise<{ text: string, packet_id: string | null, status_packet_id?: string | null, response_type: string } | null>}
  */
-export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined) {
+export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined, surfaceOpts = undefined) {
   const hit = classifySurfaceIntent(trimmed);
   if (!hit) return null;
 
@@ -146,6 +153,9 @@ export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined)
     }
     case 'start_project': {
       const g = hit.body || '';
+      const alignment = buildStartProjectAlignmentSummary(g, {
+        toneAck: surfaceOpts?.startProjectToneAck ?? null,
+      });
       /** @type {string[]} */
       const extra = [];
       if (metadata && typeof metadata === 'object' && g.trim()) {
@@ -156,53 +166,92 @@ export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined)
             metadata,
             channelContext: null,
           });
-          extra.push(
-            '',
-            '*실행 큐에 적재* — 에이전트·Cursor 레이어가 이어갈 수 있는 JSON 인테이크',
-            `\`CWS\`: \`${rec.id}\``,
-            '',
-            '*자동으로 PLN·WRK 만들기 (슬랙 한 줄)*',
-            `\`실행큐계획화 ${rec.id}\` 또는 \`실행큐계획화 최근\``,
-            '_이후 `커서발행 <WRK>`로 외부 Cursor에 넘기면 코딩 루프가 시작됩니다 (승인·환경 정책은 PLN 상태를 따름)._',
-          );
-          if (isFastSpecPromoteEnabled()) {
-            try {
-              const envKey = await resolveEnvKeyForSurface(metadata);
-              const prom = await promoteWorkspaceQueueSpecToPlan({
-                queueId: rec.id,
-                metadata,
-                channelContext: null,
-                projectContext: null,
-                envKey,
-              });
-              if (prom.ok) {
-                extra.push(
-                  '',
-                  '---',
-                  '_`COS_FAST_SPEC_PROMOTE` — 같은 턴에서 실행큐계획화 완료_',
-                  '',
-                  formatWorkspaceQueuePromoteSlack({
-                    plan: prom.plan,
-                    queueItem: prom.queueItem,
-                  }),
-                );
-              } else {
-                extra.push(
-                  '',
-                  `_자동 실행큐계획화 스킵:_ \`${prom.reason}\` — \`실행큐계획화 ${rec.id}\` 를 보내 주세요.`,
-                );
+          if (isStartProjectQueueFooterVerbose()) {
+            extra.push(
+              '',
+              '*실행 큐에 적재* — 에이전트·Cursor 레이어가 이어갈 수 있는 JSON 인테이크',
+              `\`CWS\`: \`${rec.id}\``,
+              '',
+              '*자동으로 PLN·WRK 만들기 (슬랙 한 줄)*',
+              `\`실행큐계획화 ${rec.id}\` 또는 \`실행큐계획화 최근\``,
+              '_이후 `커서발행 <WRK>`로 외부 Cursor에 넘기면 코딩 루프가 시작됩니다 (승인·환경 정책은 PLN 상태를 따름)._',
+            );
+            if (isFastSpecPromoteEnabled()) {
+              try {
+                const envKey = await resolveEnvKeyForSurface(metadata);
+                const prom = await promoteWorkspaceQueueSpecToPlan({
+                  queueId: rec.id,
+                  metadata,
+                  channelContext: null,
+                  projectContext: null,
+                  envKey,
+                });
+                if (prom.ok) {
+                  extra.push(
+                    '',
+                    '---',
+                    '_`COS_FAST_SPEC_PROMOTE` — 같은 턴에서 실행큐계획화 완료_',
+                    '',
+                    formatWorkspaceQueuePromoteSlack({
+                      plan: prom.plan,
+                      queueItem: prom.queueItem,
+                    }),
+                  );
+                } else {
+                  extra.push(
+                    '',
+                    `_자동 실행큐계획화 스킵:_ \`${prom.reason}\` — \`실행큐계획화 ${rec.id}\` 를 보내 주세요.`,
+                  );
+                }
+              } catch (e) {
+                const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
+                extra.push('', `_자동 실행큐계획화 실패:_ ${msg} — \`실행큐계획화 ${rec.id}\``);
               }
-            } catch (e) {
-              const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
-              extra.push('', `_자동 실행큐계획화 실패:_ ${msg} — \`실행큐계획화 ${rec.id}\``);
+            }
+          } else {
+            extra.push('', '_동일 킥오프 본문은 실행 정렬 큐에 남겼습니다. (APR 없음)_');
+            if (isFastSpecPromoteEnabled()) {
+              try {
+                const envKey = await resolveEnvKeyForSurface(metadata);
+                const prom = await promoteWorkspaceQueueSpecToPlan({
+                  queueId: rec.id,
+                  metadata,
+                  channelContext: null,
+                  projectContext: null,
+                  envKey,
+                });
+                if (prom.ok) {
+                  extra.push(
+                    '',
+                    '---',
+                    '_`COS_FAST_SPEC_PROMOTE` — 같은 턴에서 실행큐계획화 완료_',
+                    '',
+                    formatWorkspaceQueuePromoteSlack({
+                      plan: prom.plan,
+                      queueItem: prom.queueItem,
+                    }),
+                  );
+                } else {
+                  extra.push(
+                    '',
+                    `_자동 실행큐계획화 스킵:_ \`${prom.reason}\` — 운영 구조화 경로로 재시도 가능.`,
+                  );
+                }
+              } catch (e) {
+                const msg = e && typeof e === 'object' && 'message' in e ? String(e.message) : String(e);
+                extra.push('', `_자동 실행큐계획화 실패:_ ${msg}`);
+              }
             }
           }
         } catch {
           extra.push('', '_실행 큐 적재에 실패했습니다. `실행큐: …` 구조화 명령으로 다시 시도해 주세요._');
         }
       }
+      if (metadata && typeof metadata === 'object' && g.trim()) {
+        openProjectIntakeSession(metadata, { goalLine: g.trim() });
+      }
       return {
-        text: [...buildStartProjectSurfaceBodyLines(g), ...extra].join('\n'),
+        text: [alignment, ...extra].join('\n'),
         packet_id: null,
         status_packet_id: null,
         response_type: 'start_project',

@@ -147,14 +147,23 @@ import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
-import { classifySurfaceIntent } from './src/features/surfaceIntentClassifier.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
+import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
+import {
+  tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
+  tryProjectIntakeForcedRefineSurface,
+} from './src/features/startProjectLockConfirmed.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
   loadConversationBufferFromDisk,
   flushConversationBufferToDisk,
 } from './src/features/slackConversationBuffer.js';
+import {
+  loadProjectIntakeSessionsFromDisk,
+  flushProjectIntakeSessionsToDisk,
+} from './src/features/projectIntakeSession.js';
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
 
@@ -587,9 +596,62 @@ function operatorHelpText() {
 
 async function runLegacySingleFlow(trimmed, channelContext, metadata) {
   try {
-    const sp = classifySurfaceIntent(trimmed);
-    if (sp?.intent === 'start_project') {
-      const surf = await tryExecutiveSurfaceResponse(trimmed, metadata);
+    const lockSurf = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+    if (lockSurf) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: lockSurf.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: 'start_project_confirmed',
+        council_blocked: true,
+        response_type: lockSurf.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const refineSurf = await tryStartProjectRefineResponse(trimmed, metadata);
+    if (refineSurf) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: refineSurf.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: 'start_project_refine',
+        council_blocked: true,
+        response_type: refineSurf.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const intakeLegacy = await tryProjectIntakeForcedRefineSurface(trimmed, metadata);
+    if (intakeLegacy) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: intakeLegacy.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: intakeLegacy.response_type,
+        council_blocked: true,
+        response_type: intakeLegacy.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const kick = resolveCleanStartProjectKickoff(trimmed, metadata);
+    if (kick) {
+      const surf = await tryExecutiveSurfaceResponse(kick.line, metadata, {
+        startProjectToneAck: kick.toneAck,
+      });
       if (surf?.response_type === 'start_project') {
         return finalizeSlackResponseFromTopLevel({
           responder: 'executive_surface',
@@ -833,6 +895,7 @@ registerG1CosSlashCommand(slackApp);
 
   await ensureStorage();
   await loadConversationBufferFromDisk();
+  await loadProjectIntakeSessionsFromDisk();
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {
     const st = getStoreCore();
@@ -865,6 +928,7 @@ registerG1CosSlashCommand(slackApp);
     logger: console,
     beforeStop: async () => {
       await Promise.resolve(flushConversationBufferToDisk());
+      await flushProjectIntakeSessionsToDisk();
       if (ciHookServer) {
         await new Promise((resolve, reject) => {
           ciHookServer.close((err) => (err ? reject(err) : resolve()));

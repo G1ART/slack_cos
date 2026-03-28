@@ -1767,8 +1767,8 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **패치**: `Top-Level Router Lockdown + Query-Only Route Fix`
 - **불변식 1**: `계획등록` / planner intent(`analyzePlannerResponderLock` hit·miss) → 최종 응답은 **planner만** (성공=contract, 실패=planner 오류). Council·`inferWorkCandidate` **금지**.
 - **불변식 2**: 위 query 명령 → **query formatter만**. Council **금지**.
-- **구현 (2026-03-26 갱신·모듈화 반영)**: `app.js` `handleUserText` 는 **`runInboundCommandRouter`** (`src/features/runInboundCommandRouter.js`) 호출 후 미스 시 **`runInboundAiRouter`** 만 이어 붙인다. pre-AI 순서: 도움말 → **결정 짧은 회신**(`tryFinalizeDecisionShortReply`, 스레드 tail) → **M4 lineage**(`tryFinalizeG1CosLineageTransport`: 패킷·**상태 `STP-*`**(감사 JSONL)·턴/큐 ID·`워크큐 목록`·`워크큐 대기`·`proof_refs` 요약·증거/CI 훅 안내) → **`tryFinalizeSlackQueryRoute`**(**query**) → 동기 `routing_sync_*` 로그 → 컨텍스트 로드 → 플래너 하드 락(**planner** `hit`/`miss` → `runPlannerHardLockedBranch`) → **`runInboundStructuredCommands`** (예: **`워크큐*`** `AWQ-*`·**`워크큐증거`/`러너증거`**; **`커서발행`·GitHub `이슈발행`·`수파베이스발행`** 성공 시 **`linkAgentWorkQueueRunForWork`**; 선택 **`COS_CI_HOOK_*`** `GET /cos/health`·`POST /cos/ci-proof`) → **대표 surface**(`tryExecutiveSurfaceResponse`: `결정비교:`·상태·`전략 검토:`·`리스크 검토:` 등). AI 꼬리(`runInboundAiRouter.js`): 내비게이터(`COS`/`비서`) → planner 방화벽 재확인 → **명시 `협의모드:` 등만 Council** → 그 외 평문은 **`dialog`**(`runCosNaturalPartner`). `finalizeSlackResponse`·Council 누수 차단은 `src/features/topLevelRouter.js`.
-- **대화 버퍼**: 프로세스 메모리 `src/features/slackConversationBuffer.js` — DM·스레드 키(`thread_ts` 포함 메타)로 최근 턴을 누적, dialog·내비·Council 페르소나 입력에 합성.
+- **구현 (2026-03-27 갱신)**: `app.js` `handleUserText` 는 **`runInboundCommandRouter`** (`src/features/runInboundCommandRouter.js`) 호출 후 미스 시 **`runInboundAiRouter`** 만 이어 붙인다. pre-AI 순서: 도움말 → **`tryFinalizeProjectIntakeCancel`** / **활성 인테이크 + `isCouncilCommand` 연기 표면** (`projectIntakeSession.js`) → **결정 짧은 회신**(`tryFinalizeDecisionShortReply`, 스레드 tail) → **`start_project` 잠금·정제·Front Door·강제 정제** → **M4 lineage** → **`tryFinalizeSlackQueryRoute`**(**query**) → 동기 `routing_sync_*` 로그 → 컨텍스트 로드 → 플래너 하드 락(**planner** `hit`/`miss` → `runPlannerHardLockedBranch`) → **`runInboundStructuredCommands`** (예: **`워크큐*`** `AWQ-*`·**`워크큐증거`/`러너증거`**; **`커서발행`·GitHub `이슈발행`·`수파베이스발행`** 성공 시 **`linkAgentWorkQueueRunForWork`**; 선택 **`COS_CI_HOOK_*`** `GET /cos/health`·`POST /cos/ci-proof`) → **대표 surface**(`tryExecutiveSurfaceResponse`: `결정비교:`·상태·`전략 검토:`·`리스크 검토:` 등). AI 꼬리(`runInboundAiRouter.js`): **`tryFinalizeSlackQueryRoute`** → **인테이크 취소** → (Council 접두 아님·인테이크면 **`tryProjectIntakeExecutiveContinue`**) → 내비게이터(`COS`/`비서`) → planner 방화벽 재확인 → **명시 Council은 활성 인테이크면 연기 표면** → 아니면 **`runCouncilMode`** → 그 외 평문은 **`dialog`**(`runCosNaturalPartner`). `finalizeSlackResponse`·Council 누수 차단은 `src/features/topLevelRouter.js`.
+- **대화 버퍼**: 프로세스 메모리 `src/features/slackConversationBuffer.js` — DM·스레드 키(`thread_ts` 포함 메타)로 최근 턴을 누적, dialog·내비·Council 페르소나 입력에 합성. **프로젝트 인테이크 세션** 옵트인 영속: `PROJECT_INTAKE_SESSION_PERSIST=1`·`PROJECT_INTAKE_SESSIONS_FILE`(선택)·부팅/종료 시 로드·플러시(`app.js`·`projectIntakeSession.js`).
 - **정본**: `docs/cursor-handoffs/COS_Inbound_Routing_Current_260323.md` (구버전 순서는 `Router_Lockdown_260318_handoff.md` 상단 주의 참고)
 - **테스트**: `npm test` (`test-operations-loop` + `test-router-lockdown` + `replay-slack-fixtures`)
 
@@ -1806,9 +1806,10 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 
 - **목표**: 평문 기본 경로를 Council이 아닌 **dialog**로 고정하고, 내비·Council·dialog를 **한 모듈**에서 순서 보장; DM/스레드 **최근 대화**를 다음 턴에 넘김.
 - **코드**:
-  - `src/features/runInboundCommandRouter.js` — pre-AI 파이프라인(도움말·결정 짧은 회신·M4 lineage·조회·`routing_sync_*`·컨텍스트·플래너 하드 락·`runInboundStructuredCommands`·**문자열 구조화 응답은 `finalizeSlackResponse`( `structured` / `structured_command`)**·surface — surface **finalize `command_name` = intent `response_type`** → JSONL `surface_intent`)
+  - `src/features/runInboundCommandRouter.js` — pre-AI 파이프라인(도움말·**인테이크 취소·인테이크 중 명시 Council 연기**·결정 짧은 회신·`start_project` 루프·M4 lineage·조회·`routing_sync_*`·컨텍스트·플래너 하드 락·`runInboundStructuredCommands`·**문자열 구조화 응답은 `finalizeSlackResponse`( `structured` / `structured_command`)**·surface — surface **finalize `command_name` = intent `response_type`** → JSONL `surface_intent`)
   - `src/features/runInboundStructuredCommands.js` — 구조화 명령 대량 분기(미스 시 `undefined`)
-  - `src/features/runInboundAiRouter.js` — `runInboundAiRouter`, `classifyInboundResponderPreview`(회귀 축약: 도움말·조회·플래너 락·surface·내비·Council·dialog; 구조화 미시뮬)
+  - `src/features/runInboundAiRouter.js` — `runInboundAiRouter`, `classifyInboundResponderPreview`(회귀 축약: 도움말·**인테이크 취소**·**`start_project_confirmed`/`start_project_refine`**·Front Door(`start_project`)·조회·플래너 락·surface·**활성 인테이크+Council → 연기 표면**·내비·Council·dialog; 구조화 미시뮬)
+  - `src/features/scopeSufficiency.js` · `src/features/startProjectLockConfirmed.js` — **`start_project` 범위는 턴 수가 아니라 충분성(`assessScopeSufficiency`)**으로만 실행 승인; 미달 시 정제 루프(`start_project_refine`)
   - `src/features/slackConversationBuffer.js` — `buildSlackThreadKey`, `recordConversationTurn`, `getConversationTranscript`; 비활성 `CONVERSATION_BUFFER_DISABLE=1`
   - `src/slack/registerHandlers.js` — `metadata.thread_ts` 전달
   - `src/agents/council.js` — `conversationContext`(스레드 요약) + 페르소나 LLM 입력 합성
@@ -1820,6 +1821,8 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **Fixture**: `src/testing/inboundResponderClassify.js`는 위 모듈을 re-export하여 회귀와 프로덕션 분기 **단일 소스** 유지.
 - **North Star·Slack UX 정렬**: `COS_Project_Directive_NorthStar_FastTrack_v1.md` + `COS_NorthStar_Alignment_Memo_2026-03-24.md` + `COS_NorthStar_Implementation_Pathway_Harness_2026-03.md` + `COS_NorthStar_Workflow_2026-03.md` — 디렉티브·**M2a/M2b 잠금**·하네스 번역·북스타트·Slack UX 기둥.
 - **다음**: `/g1cos` 서브커맨드 확장 → 툴 레지스트리 **v2**(function calling·실차단 게이트) → 버퍼 영속 운영 디테일. **완료**: 슬래시 조회 MVP + lineage + **슬래시↔대화 버퍼 기록** (`recordSlashCommandExchange`) + 조회 Block Kit + 조회 네비 버튼; **`runPlannerHardLockedBranch`** 모듈; **툴 레지스트리 v1** (`cosToolRegistry`·`cosToolTelemetry`·`cosToolRuntime`, `tool_registry_bind` 로그, `WRK-260325-03`).
+- **레이어 분리(해석)**: `docs/cursor-handoffs/COS_Executive_vs_Orchestration_Layers_2026-03-27.md` — 대표 레이어 vs 오케스트레이션·새는 지점·에스컬레이션 v0(느슨) 원칙.
+- **프로젝트 킥오프 sticky 세션**: `docs/cursor-handoffs/COS_Project_Intake_Sticky_Session_2026-03.md` — `projectIntakeSession.js`·후속 턴 `start_project_*` 고정·Henry 회귀.
 
 ---
 

@@ -44,22 +44,99 @@ import {
 import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
 import { classifySurfaceIntent, isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
+import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
+import {
+  tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
+  tryProjectIntakeExecutiveContinue,
+  isStartProjectLockConfirmedContext,
+  isStartProjectRefineFlowContext,
+} from './startProjectLockConfirmed.js';
+import {
+  tryFinalizeProjectIntakeCancel,
+  buildProjectIntakeCouncilDeferSurface,
+  isActiveProjectIntake,
+} from './projectIntakeSession.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
  */
 
 /**
- * Fixture·회귀용 축약 분류 (LLM 없음). 도움말·조회·플래너 락 다음 **surface** 를 넣어
+ * Fixture·회귀용 축약 분류 (LLM 없음). 도움말 다음 **`start_project` 실행 승인(충분성)** → **`start_project` 정제(refine)** → **Front Door** → 조회·플래너 락·lineage…
  * `runInboundCommandRouter` 와 맞춘다. 구조화 명령(`runInboundStructuredCommands`)은 시뮬하지 않는다.
  * @param {RouterSyncLike} snap `buildRouterSyncSnapshot` 결과와 동일 필드
+ * @param {Record<string, unknown>} [previewMetadata] 스레드 푸시백 픽스처용 슬랙 메타(채널·thread_ts 등)
  * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'navigator'|'council'|'dialog'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
  */
-export async function classifyInboundResponderPreview(snap) {
+export async function classifyInboundResponderPreview(snap, previewMetadata = {}) {
   const trimmed = snap.trimmed;
+  const meta =
+    previewMetadata && typeof previewMetadata === 'object'
+      ? { ...(snap.preview_metadata && typeof snap.preview_metadata === 'object' ? snap.preview_metadata : {}), ...previewMetadata }
+      : {};
 
   if (trimmed === '도움말' || trimmed === '운영도움말') {
     return { responder: 'help' };
+  }
+
+  const intakeCancelPrev = tryFinalizeProjectIntakeCancel(trimmed, meta);
+  if (intakeCancelPrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: intakeCancelPrev.text,
+      surfacePacketId: null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: intakeCancelPrev.response_type,
+    };
+  }
+
+  if (isCouncilCommand(trimmed) && isActiveProjectIntake(meta)) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
+      surfacePacketId: null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: 'project_intake_council_deferred',
+    };
+  }
+
+  const lockPrev = await tryStartProjectLockConfirmedResponse(trimmed, meta);
+  if (lockPrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: lockPrev.text,
+      surfacePacketId: lockPrev.packet_id ?? null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: lockPrev.response_type ?? 'start_project_confirmed',
+    };
+  }
+
+  const refinePrev = await tryStartProjectRefineResponse(trimmed, meta);
+  if (refinePrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: refinePrev.text,
+      surfacePacketId: refinePrev.packet_id ?? null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: refinePrev.response_type ?? 'start_project_refine',
+    };
+  }
+
+  const kickDoor = resolveCleanStartProjectKickoff(trimmed, meta);
+  if (kickDoor) {
+    const surfaceEarly = await tryExecutiveSurfaceResponse(kickDoor.line, meta, {
+      startProjectToneAck: kickDoor.toneAck,
+    });
+    if (surfaceEarly?.response_type === 'start_project') {
+      return {
+        responder: 'executive_surface',
+        surfaceRaw: surfaceEarly.text,
+        surfacePacketId: surfaceEarly.packet_id ?? null,
+        surfaceStatusPacketId: surfaceEarly.status_packet_id ?? null,
+        surfaceResponseType: surfaceEarly.response_type ?? 'start_project',
+      };
+    }
   }
 
   const queryRaw = await handleQueryOnlyCommands(snap.query_line_resolved);
@@ -161,6 +238,49 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
+  const intakeCancelAi = tryFinalizeProjectIntakeCancel(trimmed, metadata);
+  if (intakeCancelAi != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: intakeCancelAi.response_type,
+      via: 'ai_head_project_intake_cancel',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'ai_head_project_intake_cancel' });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: intakeCancelAi.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: intakeCancelAi.response_type,
+      council_blocked: true,
+      response_type: intakeCancelAi.response_type,
+    });
+  }
+
+  if (!isCouncilCommand(trimmed)) {
+    const intakeEarly = await tryProjectIntakeExecutiveContinue(trimmed, metadata);
+    if (intakeEarly != null) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: intakeEarly.response_type,
+        via: 'ai_head_project_intake_sticky',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'ai_head_project_intake_sticky',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: intakeEarly.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: intakeEarly.response_type,
+        council_blocked: true,
+        response_type: intakeEarly.response_type,
+      });
+    }
+  }
+
   const navTrig = tryParseCosNavigatorTrigger(trimmed);
   if (navTrig) {
     logRouterEvent('navigator_route_entered', {
@@ -200,9 +320,53 @@ export async function runInboundAiRouter(ctx) {
         });
       }
 
-      const navStart = classifySurfaceIntent(normalizeSlackUserPayload(navBodyStripped));
-      if (navStart?.intent === 'start_project') {
-        const se = await tryExecutiveSurfaceResponse(navBodyStripped, metadata);
+      const navLock = await tryStartProjectLockConfirmedResponse(navBodyStripped, metadata);
+      if (navLock != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_lock_confirmed' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navLock.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: 'start_project_confirmed',
+          council_blocked: true,
+          response_type: navLock.response_type,
+        });
+      }
+
+      const navRefine = await tryStartProjectRefineResponse(navBodyStripped, metadata);
+      if (navRefine != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_refine' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navRefine.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: 'start_project_refine',
+          council_blocked: true,
+          response_type: navRefine.response_type,
+        });
+      }
+
+      const navIntake = await tryProjectIntakeExecutiveContinue(navBodyStripped, metadata);
+      if (navIntake != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'project_intake_sticky_nav_body' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navIntake.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: navIntake.response_type,
+          council_blocked: true,
+          response_type: navIntake.response_type,
+        });
+      }
+
+      const navKick = resolveCleanStartProjectKickoff(navBodyStripped, metadata);
+      if (navKick) {
+        const se = await tryExecutiveSurfaceResponse(navKick.line, metadata, {
+          startProjectToneAck: navKick.toneAck,
+        });
         if (se?.response_type === 'start_project') {
           logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_kickoff' });
           return finalizeSlackResponse({
@@ -313,8 +477,53 @@ export async function runInboundAiRouter(ctx) {
     });
   }
 
-  if (isStartProjectKickoffInput(trimmed)) {
-    const surfaceEarly = await tryExecutiveSurfaceResponse(trimmed, metadata);
+  const aiLock = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+  if (aiLock != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_confirmed',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'ai_tail_start_project_lock_confirmed',
+    });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: aiLock.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_confirmed',
+      council_blocked: true,
+      response_type: aiLock.response_type,
+    });
+  }
+
+  const aiRefine = await tryStartProjectRefineResponse(trimmed, metadata);
+  if (aiRefine != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_refine',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'ai_tail_start_project_refine',
+    });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: aiRefine.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_refine',
+      council_blocked: true,
+      response_type: aiRefine.response_type,
+    });
+  }
+
+  const aiKickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
+  if (aiKickDoor) {
+    const surfaceEarly = await tryExecutiveSurfaceResponse(aiKickDoor.line, metadata, {
+      startProjectToneAck: aiKickDoor.toneAck,
+    });
     if (surfaceEarly?.response_type === 'start_project') {
       logRouterEvent('router_responder_selected', {
         responder: 'executive_surface',
@@ -322,7 +531,7 @@ export async function runInboundAiRouter(ctx) {
       });
       logRouterEvent('router_responder_locked', {
         responder: 'executive_surface',
-        via: 'ai_tail_start_project_overrides_council_prefix',
+        via: 'ai_tail_clean_start_project_front_door',
       });
       return finalizeSlackResponse({
         responder: 'executive_surface',
@@ -340,6 +549,23 @@ export async function runInboundAiRouter(ctx) {
   const route = await routeTask(routedInput, channelContext);
 
   if (explicitCouncil) {
+    if (isActiveProjectIntake(metadata)) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'project_intake_council_deferred',
+        via: 'ai_head_intake_blocks_council',
+      });
+      logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'ai_head_intake_blocks_council' });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: buildProjectIntakeCouncilDeferSurface(),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'project_intake_council_deferred',
+        council_blocked: true,
+        response_type: 'project_intake_council_deferred',
+      });
+    }
     if (councilParsed?.question && isStructuredQueryOnlyLine(councilParsed.question)) {
       const qLine =
         extractQueryCommandLine(normalizeSlackUserPayload(String(councilParsed.question).trim())) ??
@@ -389,7 +615,13 @@ export async function runInboundAiRouter(ctx) {
       const kickSuppressApproval =
         isStartProjectKickoffInput(trimmed) ||
         isStartProjectKickoffInput(routedInput) ||
-        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question));
+        isStartProjectLockConfirmedContext(trimmed, metadata) ||
+        isStartProjectRefineFlowContext(trimmed, metadata) ||
+        Boolean(resolveCleanStartProjectKickoff(trimmed, metadata)) ||
+        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question)) ||
+        Boolean(
+          councilParsed?.question && isStartProjectRefineFlowContext(String(councilParsed.question).trim(), metadata),
+        );
 
       let approvalItem = null;
       if (decisionState.decisionNeeded && !kickSuppressApproval) {

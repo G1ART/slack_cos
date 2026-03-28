@@ -32,10 +32,10 @@ alwaysApply: true
 
 ## 응답 말미 — Owner actions (습관)
 
-**의미 있는 패치를 마친 턴**에는 사용자가 바로 실행할 수 있게 아래를 **복붙 블록**으로 출력한다 (해당 없으면 항목을 생략).
+**의미 있는 패치를 마친 턴**에는 사용자가 바로 실행할 수 있게 아래를 **복붙 블록**으로 출력한다. **Cursor API·다른 세션과 레포를 맞추려면** 로컬 검증과 Git 동기화를 **항상 같은 수준으로** 둔다 (`patch-report-commands.mdc` 와 동일 원칙).
 
-1. **SQL** — Supabase/DB 마이그레이션이 패치에 포함되면: 실행할 파일 경로 또는 인라인 `psql`/`supabase db` 예시.
-2. **Git** — 원격 반영이 필요할 때만: `git status` → `git add …` → `git commit -m "…"` → `git push` (브랜치 명시).
-3. **로컬 검증** — `npm test`, `node scripts/replay-slack-fixtures.mjs`, 스모크 스크립트 등 레포 관례 명령.
+1. **로컬 검증** — `npm test`, `npm start`, `node scripts/replay-slack-fixtures.mjs` 등 이번 패치에 맞는 레포 관례 명령.
+2. **Git (동기화)** — `git add` → `git commit` → `git pull --rebase origin "$(git branch --show-current)"` → `git push origin "$(git branch --show-current)"` (워크스페이스 `cd` 경로 포함한 **풀 블록**). 사용자가 이번 턴에 푸시 금지라고 한 경우에만 생략.
+3. **SQL** — Supabase/DB 마이그레이션이 패치에 포함될 때만.
 
 핸드오프 본문(`docs/cursor-handoffs/…`)에도 동일한 **Owner actions** 소절을 두면 세션 간 이어 받기가 쉽다.

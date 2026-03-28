@@ -9,7 +9,7 @@
     "planner_lock_type": "none",
     "surface_intent": "start_project",
     "final_responder": "executive_surface",
-    "response_contains": ["정렬 · 프로젝트/툴 시작", "기본 가정"],
+    "response_contains": ["정렬 · 툴/프로젝트 킥오프", "기본 MVP 가정안"],
     "response_forbidden": ["페르소나별 핵심 관점", "종합 추천안"]
   }
 }

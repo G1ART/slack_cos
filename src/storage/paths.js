@@ -31,6 +31,15 @@ export const SUPABASE_REGISTRY_FILE = path.join(DATA_DIR, 'supabase-registry.jso
 /** Slack 스레드/DM 대화 버퍼 스냅샷 (`CONVERSATION_BUFFER_PERSIST` on 일 때만 쓰기) */
 export const CONVERSATION_BUFFER_FILE = path.join(DATA_DIR, 'slack-conversation-buffer.json');
 
+/** `start_project` sticky 인테이크 세션 (`PROJECT_INTAKE_SESSION_PERSIST` on 일 때) */
+export const PROJECT_INTAKE_SESSIONS_FILE = path.join(DATA_DIR, 'project-intake-sessions.json');
+
+export function resolveProjectIntakeSessionsPath() {
+  const v = process.env.PROJECT_INTAKE_SESSIONS_FILE;
+  if (v && String(v).trim()) return path.isAbsolute(v) ? v : path.join(PROJECT_ROOT, v);
+  return PROJECT_INTAKE_SESSIONS_FILE;
+}
+
 /** North Star 최단거리: 구현·아이디어 / 고객 피드백 인테이크 큐 (JSON, 에이전트·Cursor 후속 액션용) */
 export const COS_WORKSPACE_QUEUE_FILE = path.join(DATA_DIR, 'cos-workspace-queue.json');
 

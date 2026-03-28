@@ -1,5 +1,5 @@
 /**
- * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **M4 lineage**(패킷/워크큐) → 조회 → … → 구조화 명령 →
+ * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **`start_project` 충분성 통과 시 실행 승인** · 미통과 시 **정제(refine)** → **Clean `start_project` Front Door** → **M4 lineage** → 조회 → … → 구조화 명령 →
  * **대표 표면(surface intent)** → 미스 시 AI.
  * 순서 정본: `COS_FastTrack_v1_Surface_And_Routing.md`
  *
@@ -7,6 +7,7 @@
  */
 
 import { normalizeSlackUserPayload } from '../slack/slackTextNormalize.js';
+import { isCouncilCommand } from '../slack/councilCommandPrefixes.js';
 import {
   tryFinalizeSlackQueryRoute,
   matchQueryCommandPrefix,
@@ -25,7 +26,17 @@ import { runInboundStructuredCommands } from './runInboundStructuredCommands.js'
 import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeDecisionShortReply } from './decisionPackets.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
-import { classifySurfaceIntent } from './surfaceIntentClassifier.js';
+import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
+import {
+  tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
+  tryProjectIntakeForcedRefineSurface,
+} from './startProjectLockConfirmed.js';
+import {
+  tryFinalizeProjectIntakeCancel,
+  buildProjectIntakeCouncilDeferSurface,
+  isActiveProjectIntake,
+} from './projectIntakeSession.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -119,6 +130,45 @@ export async function runInboundCommandRouter(ctx) {
     return { done: true, response };
   }
 
+  const intakeCancel = tryFinalizeProjectIntakeCancel(trimmed, metadata);
+  if (intakeCancel != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: intakeCancel.response_type,
+      via: 'project_intake_user_cancel',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'project_intake_user_cancel' });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: intakeCancel.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: intakeCancel.response_type,
+      council_blocked: true,
+      response_type: intakeCancel.response_type,
+    });
+    return { done: true, response };
+  }
+
+  if (isCouncilCommand(trimmed) && isActiveProjectIntake(metadata)) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'project_intake_council_deferred',
+      via: 'project_intake_blocks_council',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'project_intake_blocks_council' });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: buildProjectIntakeCouncilDeferSurface(),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'project_intake_council_deferred',
+      council_blocked: true,
+      response_type: 'project_intake_council_deferred',
+    });
+    return { done: true, response };
+  }
+
   const decisionShort = await tryFinalizeDecisionShortReply(trimmed, metadata);
   if (decisionShort != null) {
     logRouterEvent('router_responder_selected', {
@@ -140,6 +190,103 @@ export async function runInboundCommandRouter(ctx) {
       work_queue_id: decisionShort.work_queue_id ?? null,
     });
     return { done: true, response };
+  }
+
+  const lockConf = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+  if (lockConf != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_confirmed',
+      via: 'start_project_lock_confirmed',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'start_project_lock_confirmed',
+    });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: lockConf.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_confirmed',
+      council_blocked: true,
+      response_type: lockConf.response_type,
+    });
+    return { done: true, response };
+  }
+
+  const refineFlow = await tryStartProjectRefineResponse(trimmed, metadata);
+  if (refineFlow != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_refine',
+      via: 'start_project_refine_loop',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'start_project_refine_loop',
+    });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: refineFlow.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_refine',
+      council_blocked: true,
+      response_type: refineFlow.response_type,
+    });
+    return { done: true, response };
+  }
+
+  const intakeForced = await tryProjectIntakeForcedRefineSurface(trimmed, metadata);
+  if (intakeForced != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: intakeForced.response_type,
+      via: 'project_intake_forced_refine',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'project_intake_forced_refine',
+    });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: intakeForced.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: intakeForced.response_type,
+      council_blocked: true,
+      response_type: intakeForced.response_type,
+    });
+    return { done: true, response };
+  }
+
+  const kickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
+  if (kickDoor) {
+    const surfaceKick = await tryExecutiveSurfaceResponse(kickDoor.line, metadata, {
+      startProjectToneAck: kickDoor.toneAck,
+    });
+    if (surfaceKick != null && surfaceKick.response_type === 'start_project') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'start_project',
+        via: 'clean_start_project_front_door',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'clean_start_project_front_door',
+      });
+      const response = finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: surfaceKick.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'start_project',
+        council_blocked: true,
+        response_type: surfaceKick.response_type,
+      });
+      return { done: true, response };
+    }
   }
 
   const lineageHit = await tryFinalizeG1CosLineageTransport(trimmed, routerCtx);
@@ -220,31 +367,6 @@ export async function runInboundCommandRouter(ctx) {
       envKey,
     });
     return { done: true, response };
-  }
-
-  if (classifySurfaceIntent(trimmed)?.intent === 'start_project') {
-    const surfaceKick = await tryExecutiveSurfaceResponse(trimmed, metadata);
-    if (surfaceKick != null) {
-      logRouterEvent('router_responder_selected', {
-        responder: 'executive_surface',
-        command_name: 'start_project',
-        via: 'pre_structured_start_project',
-      });
-      logRouterEvent('router_responder_locked', {
-        responder: 'executive_surface',
-        via: 'pre_structured_start_project',
-      });
-      const response = finalizeSlackResponse({
-        responder: 'executive_surface',
-        text: surfaceKick.text,
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'start_project',
-        council_blocked: true,
-        response_type: surfaceKick.response_type,
-      });
-      return { done: true, response };
-    }
   }
 
   const structuredOut = await runInboundStructuredCommands({
