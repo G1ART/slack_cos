@@ -1821,6 +1821,7 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **Fixture**: `src/testing/inboundResponderClassify.js`는 위 모듈을 re-export하여 회귀와 프로덕션 분기 **단일 소스** 유지.
 - **North Star·Slack UX 정렬**: `COS_Project_Directive_NorthStar_FastTrack_v1.md` + `COS_NorthStar_Alignment_Memo_2026-03-24.md` + `COS_NorthStar_Implementation_Pathway_Harness_2026-03.md` + `COS_NorthStar_Workflow_2026-03.md` — 디렉티브·**M2a/M2b 잠금**·하네스 번역·북스타트·Slack UX 기둥.
 - **다음**: `/g1cos` 서브커맨드 확장 → 툴 레지스트리 **v2**(function calling·실차단 게이트) → 버퍼 영속 운영 디테일. **완료**: 슬래시 조회 MVP + lineage + **슬래시↔대화 버퍼 기록** (`recordSlashCommandExchange`) + 조회 Block Kit + 조회 네비 버튼; **`runPlannerHardLockedBranch`** 모듈; **툴 레지스트리 v1** (`cosToolRegistry`·`cosToolTelemetry`·`cosToolRuntime`, `tool_registry_bind` 로그, `WRK-260325-03`).
+- **레이어 분리(해석)**: `docs/cursor-handoffs/COS_Executive_vs_Orchestration_Layers_2026-03-27.md` — 대표 레이어 vs 오케스트레이션·새는 지점·에스컬레이션 v0(느슨) 원칙.
 
 ---
 

@@ -30,6 +30,8 @@
 
 **주진척·빌드 서사:** `COS_Project_Directive_NorthStar_FastTrack_v1.md` §1c 부속 · `COS_NorthStar_Alignment_Memo_2026-03-24.md`. 본 문서는 **현재 코드 분기**만 정본이며, 그 서사와 충돌하는 확장은 하지 않는다.
 
+**레이어 맵:** 대표 표면 vs 워커·큐·Council 등 오케스트레이션을 한 장으로 겹친 해석은 `COS_Executive_vs_Orchestration_Layers_2026-03-27.md` (에스컬레이션은 v0 느슨 → 점진 조정).
+
 ---
 
 ## 0. 라우팅 순서 (계약)
