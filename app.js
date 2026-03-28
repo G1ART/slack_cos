@@ -118,6 +118,7 @@ import {
   assertSocketModeMajorAtLeast2,
 } from './src/runtime/startup.js';
 import { startCosCiHookIfConfigured } from './src/runtime/ciWebhookServer.js';
+import { getBuildInfo, formatBuildBanner } from './src/runtime/buildInfo.js';
 import {
   JOB_NAMES,
   getAutomationSettings,
@@ -159,10 +160,13 @@ import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
   loadConversationBufferFromDisk,
   flushConversationBufferToDisk,
+  buildSlackThreadKey,
 } from './src/features/slackConversationBuffer.js';
 import {
   loadProjectIntakeSessionsFromDisk,
   flushProjectIntakeSessionsToDisk,
+  isActiveProjectIntake,
+  getProjectIntakeSession,
 } from './src/features/projectIntakeSession.js';
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
@@ -823,12 +827,14 @@ function parseBlockedRun(text) {
 }
 
 async function handleUserText(userText, metadata = {}) {
-  /**
-   * 단일 파이프라인: getInboundCommandText 도 동일 정규화로 마감 — 이중 정규화 순서 불일치 방지.
-   * @see runInboundCommandRouter
-   * M2a: `runInboundTurnTraceScope` + `finalizeSlackResponse` → `markInboundTurnFinalize`.
-   */
   const inputNorm = normalizeSlackUserPayload(String(userText ?? '').trim());
+  const _bi = getBuildInfo();
+  const _threadKey = buildSlackThreadKey(metadata);
+  const _intakeActive = isActiveProjectIntake(metadata);
+  const _intakeSess = _intakeActive ? getProjectIntakeSession(metadata) : null;
+
+  console.info(`[G1COS ROUTE BEGIN] sha=${_bi.release_sha_short} thread_key=${_threadKey} source=${metadata.source_type || 'unknown'} channel=${metadata.channel || ''} user=${metadata.user || ''} active_intake=${_intakeActive} text="${inputNorm.slice(0, 120)}"`);
+
   return runInboundTurnTraceScope(metadata, inputNorm, async () => {
     const routed = await runInboundCommandRouter({
       userText,
@@ -937,6 +943,8 @@ registerG1CosSlashCommand(slackApp);
     },
   });
   await runStartupChecks({ model: MODEL, logger: console });
+  console.log(formatBuildBanner());
+  console.log(`[G1COS BOOT] model=${MODEL} intake_persist=${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'} fast_spec_promote=${process.env.COS_FAST_SPEC_PROMOTE || '0'}`);
   console.log('[startup] Starting G1 COS v6...');
   console.log('[startup] Runtime mode:', RUNTIME_MODE);
   console.log('[startup] Model:', MODEL);

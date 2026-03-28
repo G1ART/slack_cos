@@ -37,6 +37,7 @@
 
 ## 0. 라우팅 순서 (계약)
 
+0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일.
 1. `도움말` / `운영도움말`  
 1b. **`tryFinalizeProjectIntakeCancel`** (`projectIntakeSession.js`) — 첫 줄만 `인테이크 취소`/`cancel intake` 등; 세션 있으면 제거·안내, 없으면 noop 표면.  
 1c. **활성 프로젝트 인테이크** → **`tryFinalizeProjectSpecBuildThread`** (`projectSpecSession.js`) — `tryFinalizeSlackQueryRoute`/`tryFinalizeG1CosLineageTransport`/플래너 **하드 락**에 걸리면 **null**로 다음 분기에 양보. **`isCouncilCommand`** 면 **`buildProjectIntakeCouncilDeferSurface`**. 그 외 **spec 병합**(`extractStructuredAnswers`·`extractFutureBacklog`·`extractProceedIntent`·`extractApprovalRules`)·`computeSufficiency` → 충분·`nearSufficient&&proceed`면 **`project_spec_execution_ready`**(`appendWorkspaceQueueItem`·`completeProjectIntakeSession`)·아니면 **`project_spec_refine`**. Council 메모·업무등록 푸터 패밀리 금지 정본은 코드 내 `PROJECT_SPEC_BUILD_ZONE_BANNED_SUBSTRINGS`·`scripts/test-calendar-build-thread-no-council-turn2.mjs` 참고.  

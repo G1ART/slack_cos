@@ -4,6 +4,8 @@
  */
 
 import { markInboundTurnFinalize } from './inboundTurnTrace.js';
+import { getBuildInfo } from '../runtime/buildInfo.js';
+import { isActiveProjectIntake, getProjectIntakeSession } from './projectIntakeSession.js';
 
 const COUNCIL_SYNTHESIS_MARKERS = [
   '페르소나별 핵심 관점',
@@ -72,6 +74,7 @@ export function logRouterEvent(event, fields = {}) {
  *   packet_id?: string | null,
  *   status_packet_id?: string | null,
  *   work_queue_id?: string | null,
+ *   via?: string | null,
  * }} p
  */
 export function finalizeSlackResponse(p) {
@@ -139,6 +142,12 @@ export function finalizeSlackResponse(p) {
     status_packet_id: status_packet_id ?? null,
     work_queue_id: work_queue_id ?? null,
   });
+
+  try {
+    const _bi = getBuildInfo();
+    const via = p.via || command_name || response_type;
+    console.info(`[G1COS ROUTE END] sha=${_bi.release_sha_short} responder=${responder} via=${via} response_type=${response_type} council_blocked=${blocked}`);
+  } catch { /* never crash on diagnostics */ }
 
   markInboundTurnFinalize({
     responder,
