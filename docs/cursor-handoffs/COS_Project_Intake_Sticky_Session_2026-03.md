@@ -42,6 +42,7 @@
 ## 5. 회귀
 
 - `scripts/test-henry-calendar-intake-regression.mjs` — 전사 없이 세션만으로 `start_project_confirmed` + Council 금지 문자열 없음.
+- `scripts/test-henry-turn2-scope-lock.mjs` — 킥오프 전사 + 인테이크·Henry式 2턴 본문이 **`isCouncilCommand` 아님** → 잠금 표면(합성 푸터 `협의 모드: council` 없음).
 - `scripts/test-project-intake-cancel.mjs` — 명시 취소·noop 스레드·활성 인테이크 중 협의모드 명령의 사전 라우터 대표 표면·`classifyInboundResponderPreview` 정합.
 - `scripts/test-project-intake-persist.mjs` — `PROJECT_INTAKE_SESSION_PERSIST` + 임시 파일 로드/플러시.
 

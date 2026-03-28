@@ -92,7 +92,8 @@
 | `scripts/test-ci-hook.mjs` | `handleCosCiProofJson`·**HTTP** `GET /cos/health`·`POST /cos/ci-proof`·secret (`npm test` 포함) |
 | `scripts/test-work-queue-structured-cmd.mjs` | 워크큐 구조화 전체(실행허가·보류·재개·착수·**증거**·완료·취소) (`npm test` 포함) |
 | `src/testing/councilLeakRules.js` | Council 누수 **단일 문자열** 규칙 (회귀 전용) |
-| `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — app 과 공유 |
+| `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — `parseCouncilCommand` 정합 + 킥오프 제외 |
+| `scripts/test-henry-turn2-scope-lock.mjs` | Henry 2턴 잠금이 Council 합성이 아님 (`npm test` 포함) |
 
 Planner 골든 문자열 상수: `src/features/plannerRoute.js` 의 `PLANNER_SLACK_EMPTY_BODY_MESSAGE`, `PLANNER_SLACK_ROUTING_MISS_MESSAGE` (app.js 가 참조).
 

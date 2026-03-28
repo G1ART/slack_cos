@@ -51,7 +51,7 @@ assert.ok(String(routed.response).includes('[인테이크 진행 중]'), routed.
 assert.ok(String(routed.response).includes('인테이크 취소'), routed.response);
 
 openProjectIntakeSession(meta, { goalLine });
-const snap = buildRouterSyncSnapshot('협의모드 질문');
+const snap = buildRouterSyncSnapshot('협의모드: 일정 충돌을 어떻게 볼까?');
 const prev = await classifyInboundResponderPreview(snap, meta);
 assert.equal(prev.responder, 'executive_surface');
 assert.equal(prev.surfaceResponseType, 'project_intake_council_deferred');

@@ -1,7 +1,12 @@
 /**
- * Council 명시 진입 접두 — app 라우터와 회귀 하네스가 동일 목록을 쓰도록 단일화.
+ * Council 명시 진입 — **`isCouncilCommand`** 는 `parseCouncilCommand` 와 정렬(접두만으론 부족).
+ * @see COUNCIL_COMMAND_PREFIXES — 문서·테스트 레퍼런스용 (블록 Kit 등에서 흔한 `협의모드 ` 오탐 방지).
  */
 
+import { parseCouncilCommand } from '../agents/council.js';
+import { isStartProjectKickoffInput } from '../features/surfaceIntentClassifier.js';
+
+/** 문서·grep용 — 판정은 `isCouncilCommand`(파싱+킥오프 제외)만 신뢰 */
 export const COUNCIL_COMMAND_PREFIXES = ['협의모드:', '협의모드 ', '매트릭스셀:', '관점추가 '];
 
 const LEADING_COUNCIL_STRIP_RES = [
@@ -29,10 +34,16 @@ export function stripLeadingCouncilPrefix(text) {
   return { stripped: raw, hadPrefix: false };
 }
 
-/** @param {string} text */
+/**
+ * 명시 Council만 — `협의모드 MVP…` 처럼 접두만 비슷하고 파싱 불가면 **false** (잠금·킥오프 차단 방지).
+ * `협의모드 툴제작:` 은 킥오프로 처리.
+ * @param {string} text
+ */
 export function isCouncilCommand(text) {
   const t = String(text || '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .trim();
-  return COUNCIL_COMMAND_PREFIXES.some((prefix) => t.startsWith(prefix));
+  if (!t) return false;
+  if (isStartProjectKickoffInput(t)) return false;
+  return parseCouncilCommand(t) != null;
 }

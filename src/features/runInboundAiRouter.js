@@ -91,6 +91,16 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
     };
   }
 
+  if (isCouncilCommand(trimmed) && isActiveProjectIntake(meta)) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
+      surfacePacketId: null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: 'project_intake_council_deferred',
+    };
+  }
+
   const lockPrev = await tryStartProjectLockConfirmedResponse(trimmed, meta);
   if (lockPrev != null) {
     return {
@@ -175,16 +185,6 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
       }
     }
     return { responder: 'navigator' };
-  }
-
-  if (isCouncilCommand(trimmed) && isActiveProjectIntake(meta)) {
-    return {
-      responder: 'executive_surface',
-      surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
-      surfacePacketId: null,
-      surfaceStatusPacketId: null,
-      surfaceResponseType: 'project_intake_council_deferred',
-    };
   }
 
   if (isCouncilCommand(trimmed)) {

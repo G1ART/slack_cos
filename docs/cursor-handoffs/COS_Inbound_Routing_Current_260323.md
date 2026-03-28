@@ -163,7 +163,7 @@
 4. **`scripts/test-router-lockdown.mjs`**: 조회는 poison 문자열도 통과(신뢰), `dialog` 는 기존처럼 `[COS]` 치환 유지.
 5. **`extractInlineQueryCommand` (추가)**: `@G1 COS` 등 **라틴/숫자 바로 뒤에 한글 조회 접두가 붙는** rich_text 병합(`COS계획진행PLN-…`)을 잡기 위해 `(?<=[A-Za-z0-9])` 경계 허용. 조회 실패 시 dialog가 에러 나면 `runLegacySingleFlow` → `composeFinalReport`(한 줄 요약·추천안·내부 처리 정보)로 떨어져 “Council 비슷한” 장문으로 보일 수 있음.
 6. **`runInboundAiRouter`**: `COS …` / `비서 …` **내비 트리거**인데 본문이 `계획진행 PLN-…` 등 **조회 한 줄이면** `tryFinalizeSlackQueryRoute(본문)` 으로 **내비 LLM보다 조회 우선**. `협의모드:` 로 시작하되 질문 부분이 **조회 한 줄만**이면(`isStructuredQueryOnlyLine`) Council 진입 전에 동일하게 조회 우선.
-7. **`isCouncilCommand`**: ZWSP 등 제거 후 `startsWith` 판정.
+7. **`isCouncilCommand`**: ZWSP 제거 후 **`parseCouncilCommand` 가 성공**하고 **`isStartProjectKickoffInput` 이 아닐 때만** 참 — `협의모드 ` 접두만 맞고 파싱 불가인 장문은 Council·잠금 게이트에 걸리지 않음.
 8. Fixture `16_cos_prefix_plan_progress_query.json` — `COS 계획진행 PLN-…` → `final_responder: query`.
 9. **`COS 계획등록: …` / `비서 계획등록 …`**: 첫 줄이 `COS`/`비서` 내비라 **전체 문자열**은 `planner_lock: none` 인데, **본문**만 보면 플래너 인테이크 → `runPlannerHardLockedBranch(본문 normalize + lock)` 으로 처리 (내비 LLM·Council 로 새지 않음). Fixture `17_cos_body_planner_register.json`.
 
