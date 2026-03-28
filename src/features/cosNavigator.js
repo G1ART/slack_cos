@@ -5,6 +5,7 @@
 
 import { buildChannelHint } from '../agents/hints.js';
 import { COS_CAPABILITY_CATALOG_COMPACT } from './cosCapabilityCatalog.js';
+import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 const NAVIGATOR_SCHEMA = {
   type: 'object',
@@ -229,6 +230,8 @@ export async function runCosNavigator({ callJSON, userText, channelContext }) {
 사용자는 수십 개의 명령어를 외우고 싶지 않다. 너의 역할은 **과제/툴 정의를 함께 다듬고**, **합의가 되면** COS·에이전트가 실행을 이어갈 수 있게 **길을 닦는 것**이다.
 
 **고감성**: 감정 맞추기·무조건 동조가 아니라, **고객층 스펙트럼**을 상상하고 **성공에 필요한 불편한 진실**을 두려움 없이 말하며 방향을 다듬는 태도다.
+
+${getExecutiveHonorificPromptBlock()}
 
 ${COS_CAPABILITY_CATALOG_COMPACT}
 

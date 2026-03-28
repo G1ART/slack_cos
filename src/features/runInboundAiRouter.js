@@ -43,6 +43,7 @@ import {
 } from '../slack/dialogQueueConfirmBlocks.js';
 import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
+import { classifySurfaceIntent, isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -198,6 +199,23 @@ export async function runInboundAiRouter(ctx) {
           envKey,
         });
       }
+
+      const navStart = classifySurfaceIntent(normalizeSlackUserPayload(navBodyStripped));
+      if (navStart?.intent === 'start_project') {
+        const se = await tryExecutiveSurfaceResponse(navBodyStripped, metadata);
+        if (se?.response_type === 'start_project') {
+          logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_kickoff' });
+          return finalizeSlackResponse({
+            responder: 'executive_surface',
+            text: se.text,
+            raw_text: routerCtx.raw_text,
+            normalized_text: routerCtx.normalized_text,
+            command_name: 'start_project',
+            council_blocked: true,
+            response_type: 'start_project',
+          });
+        }
+      }
     }
     if (!navBodyStripped) {
       const intro = getCosNavigatorEmptyIntro();
@@ -273,8 +291,6 @@ export async function runInboundAiRouter(ctx) {
   }
 
   const councilParsed = parseCouncilCommand(trimmed);
-  const routedInput = councilParsed?.question || trimmed;
-  const route = await routeTask(routedInput, channelContext);
   const explicitCouncil = isCouncilCommand(trimmed);
 
   const probeCouncil = normalizePlannerInputForRoute(trimmed);
@@ -296,6 +312,32 @@ export async function runInboundAiRouter(ctx) {
       envKey,
     });
   }
+
+  if (isStartProjectKickoffInput(trimmed)) {
+    const surfaceEarly = await tryExecutiveSurfaceResponse(trimmed, metadata);
+    if (surfaceEarly?.response_type === 'start_project') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'start_project',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'ai_tail_start_project_overrides_council_prefix',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: surfaceEarly.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'start_project',
+        council_blocked: true,
+        response_type: 'start_project',
+      });
+    }
+  }
+
+  const routedInput = councilParsed?.question || trimmed;
+  const route = await routeTask(routedInput, channelContext);
 
   if (explicitCouncil) {
     if (councilParsed?.question && isStructuredQueryOnlyLine(councilParsed.question)) {
@@ -344,8 +386,13 @@ export async function runInboundAiRouter(ctx) {
       });
 
       const decisionState = deriveDecisionState(route, council.primaryLike, council.riskLike);
+      const kickSuppressApproval =
+        isStartProjectKickoffInput(trimmed) ||
+        isStartProjectKickoffInput(routedInput) ||
+        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question));
+
       let approvalItem = null;
-      if (decisionState.decisionNeeded) {
+      if (decisionState.decisionNeeded && !kickSuppressApproval) {
         approvalItem = await upsertApprovalRecord({
           userText: council.meta?.question || trimmed,
           metadata,

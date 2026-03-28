@@ -15,6 +15,7 @@ import { buildRouterSyncSnapshot } from '../src/testing/routerSyncSnapshot.js';
 import { classifyInboundResponderPreview } from '../src/testing/inboundResponderClassify.js';
 import { finalizeSlackResponse } from '../src/features/topLevelRouter.js';
 import { assertNoCouncilLeakInNonCouncilResponse } from '../src/testing/councilLeakRules.js';
+import { classifySurfaceIntent } from '../src/features/surfaceIntentClassifier.js';
 import {
   PLANNER_SLACK_EMPTY_BODY_MESSAGE,
   PLANNER_SLACK_ROUTING_MISS_MESSAGE,
@@ -134,6 +135,13 @@ async function runOne(fixture) {
   const inbound = getInboundCommandText(fixture.event || {});
   const snap = buildRouterSyncSnapshot(inbound);
 
+  if (exp.surface_intent != null) {
+    const cs = classifySurfaceIntent(inbound);
+    if (cs?.intent !== exp.surface_intent) {
+      errors.push(`surface_intent want ${exp.surface_intent} got ${cs?.intent ?? 'null'}`);
+    }
+  }
+
   if (exp.planner_lock_type != null && snap.planner_lock.type !== exp.planner_lock_type) {
     errors.push(`planner_lock_type want ${exp.planner_lock_type} got ${snap.planner_lock.type}`);
   }
@@ -173,6 +181,11 @@ async function runOne(fixture) {
     for (const sub of exp.response_contains || []) {
       if (!finalizedText.includes(sub)) {
         errors.push(`response missing substring: ${JSON.stringify(sub)}`);
+      }
+    }
+    for (const sub of exp.response_forbidden || []) {
+      if (finalizedText.includes(sub)) {
+        errors.push(`response must not contain: ${JSON.stringify(sub)}`);
       }
     }
   }

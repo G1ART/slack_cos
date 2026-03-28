@@ -1,6 +1,7 @@
 import { getCallJson } from './callJson.js';
 import { buildChannelHint } from './hints.js';
 import { PRIMARY_SCHEMA } from './schemas.js';
+import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 function getPrimaryInstructions(primaryAgent, channelContext = null) {
   const common = `
@@ -8,6 +9,8 @@ function getPrimaryInstructions(primaryAgent, channelContext = null) {
 반드시 한국어로 답하고, 과장하지 말고, 실행 중심으로 말하라.
 항상 추천안을 먼저 내고, 가장 강한 반대 논리도 함께 제시하라.
 불확실한 것은 불확실하다고 밝혀라.
+
+${getExecutiveHonorificPromptBlock()}
 
 채널 기본 힌트:
 ${buildChannelHint(channelContext)}
