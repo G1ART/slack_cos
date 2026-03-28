@@ -37,6 +37,7 @@ import {
   buildProjectIntakeCouncilDeferSurface,
   isActiveProjectIntake,
 } from './projectIntakeSession.js';
+import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -150,23 +151,55 @@ export async function runInboundCommandRouter(ctx) {
     return { done: true, response };
   }
 
-  if (isCouncilCommand(trimmed) && isActiveProjectIntake(metadata)) {
-    logRouterEvent('router_responder_selected', {
-      responder: 'executive_surface',
-      command_name: 'project_intake_council_deferred',
-      via: 'project_intake_blocks_council',
+  if (isActiveProjectIntake(metadata)) {
+    const specFin = await tryFinalizeProjectSpecBuildThread({
+      trimmed,
+      metadata,
+      routerCtx,
     });
-    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'project_intake_blocks_council' });
-    const response = finalizeSlackResponse({
-      responder: 'executive_surface',
-      text: buildProjectIntakeCouncilDeferSurface(),
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'project_intake_council_deferred',
-      council_blocked: true,
-      response_type: 'project_intake_council_deferred',
-    });
-    return { done: true, response };
+    if (specFin?.kind === 'council_deferred') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'project_intake_council_deferred',
+        via: 'project_spec_build_thread_defer_council',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'project_spec_build_thread_defer_council',
+      });
+      const response = finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: buildProjectIntakeCouncilDeferSurface(),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'project_intake_council_deferred',
+        council_blocked: true,
+        response_type: 'project_intake_council_deferred',
+      });
+      return { done: true, response };
+    }
+    if (specFin && specFin.text) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: specFin.response_type || 'project_spec_session',
+        via: 'project_spec_build_thread',
+        spec_kind: specFin.kind,
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'project_spec_build_thread',
+      });
+      const response = finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: specFin.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: specFin.response_type || 'project_spec_session',
+        council_blocked: true,
+        response_type: specFin.response_type || 'project_spec_session',
+      });
+      return { done: true, response };
+    }
   }
 
   const decisionShort = await tryFinalizeDecisionShortReply(trimmed, metadata);

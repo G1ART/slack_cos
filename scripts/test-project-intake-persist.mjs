@@ -20,7 +20,7 @@ m.openProjectIntakeSession(meta, { goalLine: '영속 테스트 목표' });
 await m.flushProjectIntakeSessionsToDisk();
 
 const j1 = JSON.parse(await readFile(intakeFile, 'utf8'));
-assert.equal(j1.version, 1);
+assert.equal(j1.version, 2);
 assert.ok(Array.isArray(j1.entries) && j1.entries.length >= 1);
 const diskKey = j1.entries[0][0];
 assert.ok(typeof diskKey === 'string' && diskKey.startsWith('ch:'), diskKey);
@@ -56,6 +56,7 @@ await m.loadProjectIntakeSessionsFromDisk();
 const reMeta = { channel: 'CPER', thread_ts: '1744000000.pers', source_type: 'channel_mention' };
 assert.equal(m.isActiveProjectIntake(reMeta), true);
 assert.equal(m.getProjectIntakeSession(reMeta)?.goalLine, 'from disk');
+assert.ok(m.getProjectIntakeSession(reMeta)?.spec, 'v1 disk row must migrate to embedded spec');
 
 m.clearProjectIntakeSessionsForTest();
 await rm(tmpDir, { recursive: true, force: true });

@@ -18,21 +18,33 @@ alwaysApply: true
 - 이번 패치에 맞는 **레포 실제 명령**만: 예 `npm test`, `npm start`, `node scripts/replay-slack-fixtures.mjs` 등.
 - 해당 없으면 `이번 패치: 로컬 검증 생략 (문서·질문만)` 한 줄.
 
-### 2) Git — 변경 committed 후 push까지 (표준 풀 명령 포함)
+### 2) Git — pull + commit + pull + push (패치 말미 **항상** 복붙 블록)
 
-원격(GitHub)이 로컬과 맞도록 **아래 형태를 기본값**으로 출력한다. 경로·브랜치·커밋 메시지는 사용자가 바꾼다.
+사용자가 **이번 턴에 커밋·푸시 금지**라고 하지 않는 한, 의미 있는 패치 보고 **맨 끝**에 아래 블록을 **항상** 둔다 (복붙용). 경로는 레포 루트, 브랜치·커밋 메시지는 사용자가 수정.
+
+- **커밋할 것 없음**이면 `git commit` 줄만 건너뛰면 된다 (`git status`로 확인).
 
 ```bash
 cd /Users/hyunminkim/g1-cos-slack
 git status
+git pull --rebase origin "$(git branch --show-current)"
 git add -A
 git commit -m "설명 한 줄"
 git pull --rebase origin "$(git branch --show-current)"
 git push origin "$(git branch --show-current)"
 ```
 
-- **첫 push / upstream 없음**이면 `git push -u origin "$(git branch --show-current)"` 안내를 한 줄 추가해도 된다.
-- 사용자가 **이번 턴에는 커밋·푸시 금지**라고 한 경우에만 Git 블록을 생략하고 그 사유를 한 줄 적는다.
+**원격만 당기기**(작업 안 올릴 때) 전용:
+
+```bash
+cd /Users/hyunminkim/g1-cos-slack
+git status
+git fetch origin
+git pull --rebase origin "$(git branch --show-current)"
+```
+
+- **첫 push / upstream 없음**이면 마지막 줄을 `git push -u origin "$(git branch --show-current)"` 로 바꾼다는 안내를 한 줄 덧붙인다.
+- 사용자가 **이번 턴에는 Git 블록 생략**을 명시한 경우에만 Git 섹션을 빼고 사유 한 줄.
 
 ## SQL (해당 시만)
 

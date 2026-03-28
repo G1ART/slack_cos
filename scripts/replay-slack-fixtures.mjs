@@ -21,6 +21,7 @@ import {
   recordConversationTurn,
   buildSlackThreadKey,
 } from '../src/features/slackConversationBuffer.js';
+import { clearProjectIntakeSessionsForTest } from '../src/features/projectIntakeSession.js';
 import {
   PLANNER_SLACK_EMPTY_BODY_MESSAGE,
   PLANNER_SLACK_ROUTING_MISS_MESSAGE,
@@ -141,6 +142,7 @@ async function runOne(fixture) {
   const snap = buildRouterSyncSnapshot(inbound);
 
   clearConversationBuffer();
+  clearProjectIntakeSessionsForTest();
   const previewMeta =
     fixture.slack_metadata && typeof fixture.slack_metadata === 'object' ? fixture.slack_metadata : {};
   if (fixture.prior_conversation?.length && Object.keys(previewMeta).length > 0) {

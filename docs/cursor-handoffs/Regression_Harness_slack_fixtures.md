@@ -4,6 +4,8 @@
 > **North star**: 조회/planner는 Council 없이 고정 응답; **평문은 `dialog`(자연어 COS)**; **`협의모드:` 등 명시만 Council**.  
 > 본 하네스는 **로컬에서** 인바운드 병합 → 동기 라우팅 스냅샷 → query 응답(실스토리지) → planner 골든 문자열을 재현한다. **Council·dialog LLM은 호출하지 않는다.**
 
+**격리 (2026-03-28)**: fixture마다 `clearConversationBuffer`와 함께 **`clearProjectIntakeSessionsForTest`**를 호출한다. (`slack_metadata`가 비어 있으면 스레드 키가 `ch:no_channel:t:root`로 겹쳐, 이전 예제의 활성 인테이크가 다음 예제를 오염시키는 것을 방지.)
+
 ---
 
 ## 1. 추가된 fixture 목록
@@ -58,6 +60,7 @@
 | `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
 | `scripts/test-start-project-lock-confirmed.mjs` | 충분성 게이트·짧은 진행 → 정제(refine) (`npm test` 포함) |
 | `scripts/test-henry-calendar-intake-regression.mjs` | 전사 없이 sticky 인테이크만으로 2턴 잠금·Council 문자열 금지 (`npm test` 포함) |
+| `scripts/test-calendar-build-thread-no-council-turn2.mjs` | **`ProjectSpecSession`** 턴2: spec mutation·future backlog 격리·`project_spec_execution_ready`·Council/업무등록 시그니처 금지 (`npm test` 포함) |
 | `scripts/test-project-intake-cancel.mjs` | 인테이크 취소·활성 세션 중 협의모드 사전 라우터·`classifyInboundResponderPreview` (`npm test` 포함) |
 | `scripts/test-project-intake-persist.mjs` | `PROJECT_INTAKE_SESSION_PERSIST` JSON 로드/플러시 (`npm test` 포함) |
 | `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · sticky 세션 병행 · `scopeSufficiency.js` |
