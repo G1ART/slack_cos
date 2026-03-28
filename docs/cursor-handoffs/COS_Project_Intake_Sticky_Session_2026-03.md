@@ -27,9 +27,12 @@
 |------|------|
 | 킥오프 응답 확정 | `openProjectIntakeSession(metadata, { goalLine })` — 스레드 키당 활성 세션 |
 | 후속 턴 | `lastAssistantTurnWasKickoffOrRefine(transcript) \|\| isActiveProjectIntake(metadata)` 이면 잠금·정제 컨텍스트 유지 |
-| 잠금 성공 | `completeProjectIntakeSession(metadata)` |
+| 잠금 성공 | `completeProjectIntakeSession(metadata)` — Map 제거 + 옵트인 시 디스크 동기화 |
+| 명시 취소 | `tryFinalizeProjectIntakeCancel` — 첫 줄만 `인테이크 취소` 등(운영도움말 직후 명령 라우터·AI 꼬리 모두에서 처리) |
+| Council 연기 | `isCouncilCommand` + 활성 인테이크면 **`buildProjectIntakeCouncilDeferSurface`** 로 대표 표면(명령 라우터·`explicitCouncil` AI 경로) |
 | 명령 라우터 | 잠금·정제 미스 후 **`tryProjectIntakeForcedRefineSurface`** — 세션만 살아 있어도 정제 표면 강제 |
-| AI 꼬리 | 조회 직후 **`tryProjectIntakeExecutiveContinue`** — 세션 중엔 Council/dialog 앞에서 차단 |
+| AI 꼬리 | 조회 직후 **취소 →** `tryProjectIntakeExecutiveContinue` — 세션 중엔 Council/dialog 앞에서 차단 |
+| 영속(옵트인) | `PROJECT_INTAKE_SESSION_PERSIST=1`(또는 `true`/`yes`), 경로는 `PROJECT_INTAKE_SESSIONS_FILE` 또는 기본 `data/project-intake-sessions.json`; 부팅 시 `loadProjectIntakeSessionsFromDisk`, 종료 시 `flushProjectIntakeSessionsToDisk` |
 
 ## 4. 충분성 보조
 
@@ -39,11 +42,14 @@
 ## 5. 회귀
 
 - `scripts/test-henry-calendar-intake-regression.mjs` — 전사 없이 세션만으로 `start_project_confirmed` + Council 금지 문자열 없음.
+- `scripts/test-project-intake-cancel.mjs` — 명시 취소·noop 스레드·활성 인테이크 중 협의모드 명령의 사전 라우터 대표 표면·`classifyInboundResponderPreview` 정합.
+- `scripts/test-project-intake-persist.mjs` — `PROJECT_INTAKE_SESSION_PERSIST` + 임시 파일 로드/플러시.
 
-## 6. 남은 리스크
+## 6. 남은 리스크 (완화 조건)
 
-- 세션은 **프로세스 메모리**만 — 멀티 인스턴스·재시작 시 상실. 필요 시 `CONVERSATION_BUFFER_PERSIST` 패턴과 유사 JSON 스냅샷 후속.
-- 세션이 열린 스레드에서 **무관한 주제**로 말하면 정제 표면이 한동안 유지될 수 있음 — 상위 제품 정책으로 `완료`·`취소` 명시 턴 추가 가능.
+- **재시작/다중 인스턴스:** 기본은 메모리만. **`PROJECT_INTAKE_SESSION_PERSIST=1`** 이면 JSON 스냅샷으로 복구 가능(동시 쓰기 경합은 단일 프로세스/리더 가정과 동일).
+- **무관 주제:** 여전히 정제 표면이 유지될 수 있음 — **`인테이크 취소`** 한 줄로 세션을 닫을 수 있음.
+- **명시 Council vs 인테이크:** `협의모드` 등은 인테이크가 열린 동안 대표 표면으로 연기되며, 취소 또는 잠금 완료 후 정상 Council 가능.
 
 ---
 

@@ -7,6 +7,7 @@
  */
 
 import { normalizeSlackUserPayload } from '../slack/slackTextNormalize.js';
+import { isCouncilCommand } from '../slack/councilCommandPrefixes.js';
 import {
   tryFinalizeSlackQueryRoute,
   matchQueryCommandPrefix,
@@ -31,6 +32,11 @@ import {
   tryStartProjectRefineResponse,
   tryProjectIntakeForcedRefineSurface,
 } from './startProjectLockConfirmed.js';
+import {
+  tryFinalizeProjectIntakeCancel,
+  buildProjectIntakeCouncilDeferSurface,
+  isActiveProjectIntake,
+} from './projectIntakeSession.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -120,6 +126,45 @@ export async function runInboundCommandRouter(ctx) {
       command_name: '운영도움말',
       council_blocked: true,
       response_type: 'help_operator',
+    });
+    return { done: true, response };
+  }
+
+  const intakeCancel = tryFinalizeProjectIntakeCancel(trimmed, metadata);
+  if (intakeCancel != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: intakeCancel.response_type,
+      via: 'project_intake_user_cancel',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'project_intake_user_cancel' });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: intakeCancel.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: intakeCancel.response_type,
+      council_blocked: true,
+      response_type: intakeCancel.response_type,
+    });
+    return { done: true, response };
+  }
+
+  if (isCouncilCommand(trimmed) && isActiveProjectIntake(metadata)) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'project_intake_council_deferred',
+      via: 'project_intake_blocks_council',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'project_intake_blocks_council' });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: buildProjectIntakeCouncilDeferSurface(),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'project_intake_council_deferred',
+      council_blocked: true,
+      response_type: 'project_intake_council_deferred',
     });
     return { done: true, response };
   }

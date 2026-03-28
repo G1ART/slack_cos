@@ -38,6 +38,8 @@
 ## 0. 라우팅 순서 (계약)
 
 1. `도움말` / `운영도움말`  
+1b. **`tryFinalizeProjectIntakeCancel`** (`projectIntakeSession.js`) — 첫 줄만 `인테이크 취소`/`cancel intake` 등; 세션 있으면 제거·안내, 없으면 noop 표면.  
+1c. **활성 프로젝트 인테이크** + **`isCouncilCommand`** → **`buildProjectIntakeCouncilDeferSurface`** (명시 Council 사전에 대표 표면).  
 2. **결정 패킷 짧은 회신** (`tryFinalizeDecisionShortReply`) — 스레드 키로 tail에서 패킷 로드; **`evaluateApprovalPolicy` v1**은 채널 `getEnvironmentContext`·`metadata.env_key`·기본 `dev`의 **환경 프로필**과 선택 **옵션**으로 티어 산출. `pick` 시 큐 **`queued`** vs **`pending_executive`**·`approval_policy_tier`. 나머지 동일(조회보다 앞).
 3a. **`start_project` 실행 승인(충분성 통과)** (`tryStartProjectLockConfirmedResponse` / `startProjectLockConfirmed.js` + `assessScopeSufficiency`) — 직전 COS 턴이 **킥오프**(`*[정렬 · 툴/프로젝트 킥오프]*` 등) 또는 **정제**(`*[스코프 정제 · 툴/프로젝트]*`)이고, 사용자 메시지에 **확정 시그널**+본문 조건+**MVP 정의 충분성**이 맞으면 **Front Door보다 먼저** `start_project_confirmed`·`[execution_approval_packet]` `spec_intake` 큐. Council·APR·`업무등록:` 유도 없음.  
 3b. **`start_project` 정제 루프** (`tryStartProjectRefineResponse`) — 3a 미스이지만 직전 COS가 킥오프/정제이고 Council/새 킥오프가 아니면 `start_project_refine` 표면만. APR 없음.  
@@ -55,7 +57,7 @@
 
 - **평문**(조회·플래너 락·내비 트리거·Council 접두가 아님) → **`runCosNaturalPartner`** (`responder: dialog`, `cos_natural_dialog`; 스레드에 직전 PLN 이 있으면 `cos_natural_dialog_thread_plan_hint`).
 - **Slack 이벤트 dedup (replay)**: `registerHandlers` → `shouldSkipEvent` (`src/slack/eventDedup.js`). 기본은 프로세스 메모리·10분 TTL. **여러 인스턴스**면 `SLACK_EVENT_DEDUP_FILE`(공유 JSON; tmp+rename으로 쓰기) 옵트인; `SLACK_EVENT_DEDUP_DISABLE=1` 로 끄기. 부팅 `formatEnvCheck` 에 **`slack_event_dedup:`** 한 줄(`getSlackEventDedupSummary`). 상세: `src/runtime/env.js` 주석.
-- **Slack 버퍼**: `registerHandlers` 가 매 턴 user/assistant 를 `slackConversationBuffer` 에 기록 → `app.js` 플래너·조회 직반환도 동일 스레드 후속 `dialog` 가 맥락을 본다. **`/g1cos`**: `registerSlashCommands` 가 `recordSlashCommandExchange` 로 user 표시 문자열·응답 텍스트를 남김(DM은 `im:` 키로 일반 DM 과 공유). **옵트인 영속(1단계)**: `CONVERSATION_BUFFER_PERSIST=1` 이면 `data/slack-conversation-buffer.json`(또는 `CONVERSATION_BUFFER_FILE`)에 디바운스 저장, 기동 시 로드·graceful shutdown 시 flush (`app.js`·`startup.js`). 슬래시 기록 끄기: `CONVERSATION_BUFFER_RECORD_SLASH=0`.
+- **Slack 버퍼**: `registerHandlers` 가 매 턴 user/assistant 를 `slackConversationBuffer` 에 기록 → `app.js` 플래너·조회 직반환도 동일 스레드 후속 `dialog` 가 맥락을 본다. **`/g1cos`**: `registerSlashCommands` 가 `recordSlashCommandExchange` 로 user 표시 문자열·응답 텍스트를 남김(DM은 `im:` 키로 일반 DM 과 공유). **옵트인 영속(1단계)**: `CONVERSATION_BUFFER_PERSIST=1` 이면 `data/slack-conversation-buffer.json`(또는 `CONVERSATION_BUFFER_FILE`)에 디바운스 저장, 기동 시 로드·graceful shutdown 시 flush (`app.js`·`startup.js`). 슬래시 기록 끄기: `CONVERSATION_BUFFER_RECORD_SLASH=0`. **프로젝트 인테이크 세션**도 동일 패턴 옵트인: `PROJECT_INTAKE_SESSION_PERSIST=1`·`PROJECT_INTAKE_SESSIONS_FILE`(선택)·`loadProjectIntakeSessionsFromDisk` / `flushProjectIntakeSessionsToDisk` (`app.js`).
 - **Council** → **`협의모드:` / `매트릭스셀:` / `관점추가 `** 등 **`isCouncilCommand`** 가 참일 때만 (`runCouncilMode`).
 - **플래너 하드 락**(`hit`/`miss`) → AI 꼬리 진입 후에도 **재확인** → `runPlannerHardLockedBranch`.
 - **DM/스레드 맥락**: `slackConversationBuffer` + `metadata.thread_ts` 로 최근 턴을 dialog·내비·Council에 합성.
@@ -68,7 +70,7 @@
 |------|------|
 | `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope`(JSONL lineage, 행에 **`response_type`**) 안에서 **`runInboundCommandRouter`** → 미스 시 **`runInboundAiRouter`**. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
-| `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeDecisionShortReply`**·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
+| `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·인테이크 중 **`isCouncilCommand`** 연기·**`tryFinalizeDecisionShortReply`**·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
 | `src/features/g1cosLineageTransport.js` | **M4**: `턴`/`패킷`/`상태 STP-…`/`워크큐 AWQ-…`·**`워크큐 목록`/`대기`**·**`실행 큐 목록`/`고객 피드백 목록`**·**`CWS-`/`CFB-`** 드릴다운·감사/큐/turn JSON — 워크큐 항목별 **실행 브리지**(`커서발행`·`워크큐*` 등) |
 | `src/features/agentWorkQueue.js` | M3 큐·`linkAgentWorkQueueRunForWork`·`patchAgentWorkQueueItem` |
 | `src/features/executiveSurfaceHelp.js` | 대표용 짧은 도움말 |
@@ -82,7 +84,7 @@
 | `src/features/workspaceQueuePromote.js` | **`실행큐계획화`** — spec 큐 → `createPlanFromIntake` · WRK 연결 |
 | `src/features/statusPacketStub.js` | 레거시 — `statusPackets.js` 위임 |
 | `src/features/runInboundStructuredCommands.js` | 저장소/환경/자동화/승인/브리프/채널·프로젝트/업무·GitHub·Cursor·결정·교훈 등 **고정 문자열 분기** (~2k lines). 미스 시 `undefined`. |
-| `src/features/runInboundAiRouter.js` | 내비 → planner 방화벽 → Council → dialog; **`classifyInboundResponderPreview`** — 도움말·조회·플래너 락·**lineage_transport**·surface·내비·Council·dialog (구조화 미시뮬) |
+| `src/features/runInboundAiRouter.js` | 조회 직후 **인테이크 취소** → sticky **인테이크** 중 Council 아님 시 `tryProjectIntakeExecutiveContinue` → 내비 → planner 방화벽 → **명시 Council 시 활성 인테이크면 연기 표면** → Council → dialog; **`classifyInboundResponderPreview`** — 도움말·**취소**·`start_project_*`·Front Door·조회·…·**인테이크+Council → 대표 표면**·내비·Council·dialog (구조화 미시뮬) |
 | `src/features/slackConversationBuffer.js` | 스레드/DM 키, `recordConversationTurn`, `getConversationTranscript`; `CONVERSATION_BUFFER_DISABLE=1` 로 끄기. **영속**: `CONVERSATION_BUFFER_PERSIST=1`·`CONVERSATION_BUFFER_FILE`(선택)·`loadConversationBufferFromDisk` / `flushConversationBufferToDisk` |
 | `src/features/cosWorkspaceQueue.js` | **최단거리 인테이크**: `실행큐:`·`고객피드백:` 및 **자연어**(`실행큐에 올려줘`+다음 줄 등, `tryParseNaturalWorkspaceQueueIntake`) → `data/cos-workspace-queue.json` |
 | `src/slack/registerHandlers.js` | `handleUserText` 메타에 `thread_ts` 전달; **`g1cos_query_nav_*`** 버튼 → `tryFinalizeSlackQueryRoute` + 스레드 `postMessage`; **`g1cos_dialog_queue_*`** → 워크스페이스 큐 적재 |
@@ -108,11 +110,14 @@
 
 ## 3. AI 꼬리 순서 (`runInboundAiRouter` 내부)
 
-1. **내비게이터** — `COS` / `비서` 트리거 (본문 비면 인트로).
-2. `routeTask` — 라우터 JSON (dialog/Council 공통 참고).
-3. **플래너 방화벽**: `normalizePlannerInputForRoute` + `analyzePlannerResponderLock` → `hit`/`miss`면 즉시 `runPlannerHardLockedBranch` (**버퍼에 유저 턴 기록 없음**).
-4. **명시 Council** → `runCouncilMode` (+ `conversationContext`).
-5. 그 외 → **dialog** (`runCosNaturalPartner`, + `priorTranscript`).
+1. **조회** (`tryFinalizeSlackQueryRoute`) — 성공 시 즉시 반환.
+2. **`tryFinalizeProjectIntakeCancel`** — 취소 문구면 대표 표면.
+3. **Council 접두 아님** + 활성 인테이크 → **`tryProjectIntakeExecutiveContinue`**.
+4. **내비게이터** — `COS` / `비서` 트리거 (본문 비면 인트로).
+5. `routeTask` — 라우터 JSON (dialog/Council 공통 참고).
+6. **플래너 방화벽**: `normalizePlannerInputForRoute` + `analyzePlannerResponderLock` → `hit`/`miss`면 즉시 `runPlannerHardLockedBranch` (**버퍼에 유저 턴 기록 없음**).
+7. **명시 Council** — 활성 인테이크면 **`buildProjectIntakeCouncilDeferSurface`**; 아니면 `runCouncilMode` (+ `conversationContext`).
+8. 그 외 → **dialog** (`runCosNaturalPartner`, + `priorTranscript`).
 
 각 AI 응답 직전에 `getConversationTranscript` → 유저 턴 기록 → LLM → 어시스턴트 턴 기록.
 

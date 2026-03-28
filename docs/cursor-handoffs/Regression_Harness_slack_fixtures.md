@@ -58,6 +58,8 @@
 | `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
 | `scripts/test-start-project-lock-confirmed.mjs` | 충분성 게이트·짧은 진행 → 정제(refine) (`npm test` 포함) |
 | `scripts/test-henry-calendar-intake-regression.mjs` | 전사 없이 sticky 인테이크만으로 2턴 잠금·Council 문자열 금지 (`npm test` 포함) |
+| `scripts/test-project-intake-cancel.mjs` | 인테이크 취소·활성 세션 중 협의모드 사전 라우터·`classifyInboundResponderPreview` (`npm test` 포함) |
+| `scripts/test-project-intake-persist.mjs` | `PROJECT_INTAKE_SESSION_PERSIST` JSON 로드/플러시 (`npm test` 포함) |
 | `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · sticky 세션 병행 · `scopeSufficiency.js` |
 | `src/features/projectIntakeSession.js` | 킥오프 후 스레드별 활성 인테이크(목표 한 줄)·잠금 시 종료 |
 | `src/features/scopeSufficiency.js` | MVP 범위 충분성 휴리스틱(후속 단계 격리·sticky 시 벤치 완화) |

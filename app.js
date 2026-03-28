@@ -160,6 +160,10 @@ import {
   loadConversationBufferFromDisk,
   flushConversationBufferToDisk,
 } from './src/features/slackConversationBuffer.js';
+import {
+  loadProjectIntakeSessionsFromDisk,
+  flushProjectIntakeSessionsToDisk,
+} from './src/features/projectIntakeSession.js';
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
 
@@ -891,6 +895,7 @@ registerG1CosSlashCommand(slackApp);
 
   await ensureStorage();
   await loadConversationBufferFromDisk();
+  await loadProjectIntakeSessionsFromDisk();
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {
     const st = getStoreCore();
@@ -923,6 +928,7 @@ registerG1CosSlashCommand(slackApp);
     logger: console,
     beforeStop: async () => {
       await Promise.resolve(flushConversationBufferToDisk());
+      await flushProjectIntakeSessionsToDisk();
       if (ciHookServer) {
         await new Promise((resolve, reject) => {
           ciHookServer.close((err) => (err ? reject(err) : resolve()));

@@ -52,6 +52,11 @@ import {
   isStartProjectLockConfirmedContext,
   isStartProjectRefineFlowContext,
 } from './startProjectLockConfirmed.js';
+import {
+  tryFinalizeProjectIntakeCancel,
+  buildProjectIntakeCouncilDeferSurface,
+  isActiveProjectIntake,
+} from './projectIntakeSession.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -73,6 +78,17 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
 
   if (trimmed === '도움말' || trimmed === '운영도움말') {
     return { responder: 'help' };
+  }
+
+  const intakeCancelPrev = tryFinalizeProjectIntakeCancel(trimmed, meta);
+  if (intakeCancelPrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: intakeCancelPrev.text,
+      surfacePacketId: null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: intakeCancelPrev.response_type,
+    };
   }
 
   const lockPrev = await tryStartProjectLockConfirmedResponse(trimmed, meta);
@@ -161,6 +177,16 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
     return { responder: 'navigator' };
   }
 
+  if (isCouncilCommand(trimmed) && isActiveProjectIntake(meta)) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
+      surfacePacketId: null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: 'project_intake_council_deferred',
+    };
+  }
+
   if (isCouncilCommand(trimmed)) {
     const cp = parseCouncilCommand(trimmed);
     if (cp?.question && isStructuredQueryOnlyLine(cp.question)) {
@@ -211,6 +237,25 @@ export async function runInboundAiRouter(ctx) {
   if (queryFirst != null) return queryFirst;
 
   const threadKey = buildSlackThreadKey(metadata);
+
+  const intakeCancelAi = tryFinalizeProjectIntakeCancel(trimmed, metadata);
+  if (intakeCancelAi != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: intakeCancelAi.response_type,
+      via: 'ai_head_project_intake_cancel',
+    });
+    logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'ai_head_project_intake_cancel' });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: intakeCancelAi.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: intakeCancelAi.response_type,
+      council_blocked: true,
+      response_type: intakeCancelAi.response_type,
+    });
+  }
 
   if (!isCouncilCommand(trimmed)) {
     const intakeEarly = await tryProjectIntakeExecutiveContinue(trimmed, metadata);
@@ -504,6 +549,23 @@ export async function runInboundAiRouter(ctx) {
   const route = await routeTask(routedInput, channelContext);
 
   if (explicitCouncil) {
+    if (isActiveProjectIntake(metadata)) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'project_intake_council_deferred',
+        via: 'ai_head_intake_blocks_council',
+      });
+      logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'ai_head_intake_blocks_council' });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: buildProjectIntakeCouncilDeferSurface(),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'project_intake_council_deferred',
+        council_blocked: true,
+        response_type: 'project_intake_council_deferred',
+      });
+    }
     if (councilParsed?.question && isStructuredQueryOnlyLine(councilParsed.question)) {
       const qLine =
         extractQueryCommandLine(normalizeSlackUserPayload(String(councilParsed.question).trim())) ??
