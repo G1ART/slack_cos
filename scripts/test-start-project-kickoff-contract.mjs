@@ -62,6 +62,14 @@ const { clearConversationBuffer, recordConversationTurn, buildSlackThreadKey } =
 const { resolveCleanStartProjectKickoff } = await import('../src/features/startProjectKickoffDoor.js');
 
 clearConversationBuffer();
+const councilColKick =
+  '협의모드: 더그린 갤러리 캘린더를 팀 스케줄용으로 하나 만들자.';
+const doorCouncil = resolveCleanStartProjectKickoff(councilColKick, meta);
+assert.ok(doorCouncil?.line && !doorCouncil.line.startsWith('협의모드'), 'council prefix stripped for kickoff');
+const outCouncilKick = await tryExecutiveSurfaceResponse(doorCouncil.line, meta);
+assert.equal(outCouncilKick.response_type, 'start_project');
+assert.ok(!outCouncilKick.text.includes('페르소나별 핵심 관점'));
+
 const pushMeta = { channel: 'CFIX-PUSH', thread_ts: '1111.2222' };
 const priorMsg =
   '툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.';

@@ -4,6 +4,7 @@
  */
 
 import { buildSlackThreadKey, getConversationTranscript } from './slackConversationBuffer.js';
+import { stripLeadingCouncilPrefix } from '../slack/councilCommandPrefixes.js';
 import { isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
 
 /** @param {string} t */
@@ -66,6 +67,11 @@ export function resolveCleanStartProjectKickoff(trimmed, metadata = undefined) {
 
   if (isStartProjectKickoffInput(t)) {
     return { line: t, toneAck: null };
+  }
+
+  const { stripped: afterCouncil, hadPrefix } = stripLeadingCouncilPrefix(t);
+  if (hadPrefix && afterCouncil && isStartProjectKickoffInput(afterCouncil)) {
+    return { line: afterCouncil, toneAck: null };
   }
 
   if (!metadata || typeof metadata !== 'object') return null;

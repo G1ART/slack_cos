@@ -25,7 +25,7 @@
 
 | 단계 | 동작 |
 |------|------|
-| 킥오프 응답 확정 | `openProjectIntakeSession(metadata, { goalLine })` — 스레드 키당 활성 세션 |
+| 킥오프 응답 확정 | `openProjectIntakeSession(metadata, { goalLine })` — 스레드 키당 활성 세션 · `resolveCleanStartProjectKickoff` 는 **`협의모드:` / `협의모드 ` 등 명시 Council 접두를 떼고** 나머지가 킥오프면 Front Door로 고정(실수·도움말 복붙 대비) |
 | 후속 턴 | `lastAssistantTurnWasKickoffOrRefine(transcript) \|\| isActiveProjectIntake(metadata)` 이면 잠금·정제 컨텍스트 유지 |
 | 잠금 성공 | `completeProjectIntakeSession(metadata)` — Map 제거 + 옵트인 시 디스크 동기화 |
 | 명시 취소 | `tryFinalizeProjectIntakeCancel` — 첫 줄만 `인테이크 취소` 등(운영도움말 직후 명령 라우터·AI 꼬리 모두에서 처리) |
