@@ -1,0 +1,13 @@
+{
+  "id": "09_work_detail_not_found",
+  "description": "업무상세 not found",
+  "source": "synthetic",
+  "event": { "text": "업무상세 WRK-REG-FX-99" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": "업무상세",
+    "target_id": "WRK-REG-FX-99",
+    "final_responder": "query",
+    "response_contains": ["[업무상세]", "찾지 못했습니다"]
+  }
+}

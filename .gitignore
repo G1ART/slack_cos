@@ -1,0 +1,13 @@
+# Secrets & local env (never commit)
+.env
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Logs & OS
+*.log
+.DS_Store
+
+# Runtime / local data (adjust if you intentionally version fixtures)
+# data/*.json

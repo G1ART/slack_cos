@@ -1,0 +1,13 @@
+{
+  "id": "03_dm_plan_progress",
+  "description": "DM 평문 — 계획진행 (멘션 없음)",
+  "source": "synthetic",
+  "event": { "text": "계획진행 PLN-REG-FX-01" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": "계획진행",
+    "target_id": "PLN-REG-FX-01",
+    "final_responder": "query",
+    "response_contains": ["[계획진행]", "찾지 못했습니다"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "24_surface_risk_review",
+  "description": "Surface — 리스크 검토: … → executive_surface",
+  "source": "synthetic",
+  "event": { "text": "리스크 검토: 외부 API 의존" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": null,
+    "final_responder": "executive_surface",
+    "response_contains": ["리스크 검토", "협의모드"]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "11_planner_empty_body",
+  "description": "계획등록: 본문 없음 — planner 고정 + 골든 문자열",
+  "source": "synthetic",
+  "event": { "text": "계획등록:" },
+  "expect": {
+    "planner_lock_type": "hit",
+    "empty_body": true,
+    "query_prefix": null,
+    "final_responder": "planner",
+    "planner_golden": "empty_body"
+  }
+}

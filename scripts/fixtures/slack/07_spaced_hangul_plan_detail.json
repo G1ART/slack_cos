@@ -1,0 +1,15 @@
+{
+  "id": "07_spaced_hangul_plan_detail",
+  "description": "rich_text 글자 단위 분리 + ID 붙여쓰기",
+  "source": "synthetic",
+  "event": {
+    "text": "계 획 상 세PLN-REG-FX-01"
+  },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": "계획상세",
+    "target_id": "PLN-REG-FX-01",
+    "final_responder": "query",
+    "response_contains": ["찾지 못했습니다"]
+  }
+}

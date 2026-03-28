@@ -1,0 +1,12 @@
+{
+  "id": "19_surface_ask_status",
+  "description": "Fast-Track surface — 상태 요청 → executive_surface (하네스는 구조화 명령 미시뮬)",
+  "source": "synthetic",
+  "event": { "text": "지금 상태 보여줘" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": null,
+    "final_responder": "executive_surface",
+    "response_contains": ["상태 패킷"]
+  }
+}

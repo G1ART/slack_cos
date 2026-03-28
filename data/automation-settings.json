@@ -1,0 +1,9 @@
+{
+  "enabled_jobs": [],
+  "default_channel_by_job": {},
+  "default_user_by_job": {},
+  "schedule_stub": {},
+  "last_run_at_by_job": {
+    "approval_digest": "2026-03-19T23:17:07.878Z"
+  }
+}

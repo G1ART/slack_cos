@@ -1,0 +1,13 @@
+{
+  "id": "16_cos_prefix_plan_progress_query",
+  "description": "`COS 계획진행 PLN-…` — 내비 트리거처럼 보여도 본문이 조회 한 줄이면 query",
+  "source": "synthetic",
+  "event": { "text": "COS 계획진행 PLN-REG-FX-01" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": "계획진행",
+    "final_responder": "query",
+    "target_id": "PLN-REG-FX-01",
+    "skip_response_body": true
+  }
+}

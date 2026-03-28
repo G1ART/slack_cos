@@ -1,0 +1,54 @@
+# COS Big Pivot — CI → proof_refs 예시 (GitHub Actions)
+# -----------------------------------------------------------------
+# 봇 호스트: COS_CI_HOOK_PORT + COS_CI_HOOK_SECRET 설정 시 GET /cos/health · POST /cos/ci-proof 수신.
+# 이 파일은 참고용이다. 레포 루트 `.github/workflows/`에 복사·맞춤한 뒤 사용.
+#
+# GitHub 설정 예:
+#   Repository secrets: COS_CI_HOOK_BASE_URL (예: https://cos.example.com:3099)
+#                       COS_CI_HOOK_SECRET  (봇 환경 변수와 동일 값)
+#   Repository variables (선택): COS_WORK_QUEUE_ID (AWQ-…) 또는 COS_LINKED_RUN_ID (RUN-…)
+#
+name: cos-ci-proof-example
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  cos-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Append proof to agent work queue
+        env:
+          COS_CI_HOOK_BASE_URL: ${{ secrets.COS_CI_HOOK_BASE_URL }}
+          COS_CI_HOOK_SECRET: ${{ secrets.COS_CI_HOOK_SECRET }}
+          COS_WORK_QUEUE_ID: ${{ vars.COS_WORK_QUEUE_ID }}
+          COS_LINKED_RUN_ID: ${{ vars.COS_LINKED_RUN_ID }}
+        run: |
+          set -e
+          if [ -z "${COS_CI_HOOK_BASE_URL}" ] || [ -z "${COS_CI_HOOK_SECRET}" ]; then
+            echo "[cos-ci-proof] COS_CI_HOOK_BASE_URL / COS_CI_HOOK_SECRET 비어 있음 — 스킵"
+            exit 0
+          fi
+          BASE="${COS_CI_HOOK_BASE_URL%/}"
+          PROOF="ci=${{ github.run_id }} job=${{ github.job }} ref=${{ github.ref }} sha=${{ github.sha }}"
+          export BASE COS_CI_HOOK_SECRET PROOF
+          export COS_WORK_QUEUE_ID COS_LINKED_RUN_ID
+          BODY="$(node <<'NODE'
+          const secret = process.env.COS_CI_HOOK_SECRET;
+          const proof = process.env.PROOF;
+          const wq = (process.env.COS_WORK_QUEUE_ID || '').trim();
+          const rid = (process.env.COS_LINKED_RUN_ID || '').trim();
+          const o = { secret, proof };
+          if (wq) o.work_queue_id = wq;
+          else if (rid) o.run_id = rid;
+          else {
+            console.error('COS_WORK_QUEUE_ID 또는 COS_LINKED_RUN_ID 중 하나를 variables로 넣으세요.');
+            process.exit(2);
+          }
+          console.log(JSON.stringify(o));
+          NODE
+          )"
+          curl -sS -f -X POST "${BASE}/cos/ci-proof" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d "${BODY}"

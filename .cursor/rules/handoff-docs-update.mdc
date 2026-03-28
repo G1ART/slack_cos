@@ -1,0 +1,41 @@
+---
+description: Big Pivot / COS 작업 후 docs/cursor-handoffs 및 거대 핸드오프 갱신
+alwaysApply: true
+---
+
+# 핸드오프 문서 유지 (Cursor ↔ 사용자 ↔ ChatGPT 소통창구)
+
+`docs/cursor-handoffs/` 와 루트 `docs/G1_ART_Slack_COS_Handoff_v2_*.md` 는 **세션·도구를 넘는 지속 핸드오프 표면**(구현 연속성 / ledger)이다. **제품 헌법·빌드 순서·런타임 정본은 `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` 순서를 따른다.**
+
+## 패치 말미 (필수)
+
+**의미 있는 코드/동작 변경**을 끝낼 때마다, **같은 작업(턴) 안에서** 핸드오프·구현 노트를 맞춘다. `COS_OpenClaw_Vision_Roadmap` 같은 로드맵만 고치고 **`docs/cursor-handoffs/`·핸드오프 v2를 비우지 말 것.** (문서만/오타만이면 아래 「변경 없음」 준용.)
+
+## 필수에 가깝게 할 것
+
+1. **정본 인바운드 라우팅**이 바뀌면: `docs/cursor-handoffs/COS_Inbound_Routing_Current_*.md` (파일명 날짜 갱신 또는 본문 수정). 현행 코드 기준: pre-AI는 `runInboundCommandRouter.js`, AI 꼬리는 `runInboundAiRouter.js`, 구조화 대량 분기는 `runInboundStructuredCommands.js`.
+2. **라우터·fixture·테스트**가 바뀌면: `Regression_Harness_slack_fixtures.md`, 필요 시 `COS_Operator_QA_Guide_And_Test_Matrix.md` §3.
+3. **North Star·단계·제품 원칙(북스타트)** 문구가 바뀌면: `COS_NorthStar_Workflow_2026-03.md`, `src/features/cosWorkflowPhases.js` 주석/도움말과 맞추기.
+4. **주진척·M2 우선** 관련 패치면: **`COS_NorthStar_Alignment_Memo_2026-03-24.md`** · 디렉티브 **§1c 부속**과 레포 정합을 맞춘다. (선택) 패치 보고 형식 참고용으로 **`COS_NorthStar_ReLock_Directive_2026-03.md`** §6·§7을 볼 수 있으나 **권위는 없음**.
+
+## 거대 핸드오프 v2
+
+`docs/G1_ART_Slack_COS_Handoff_v2_2026-03-18.md` 는 **섹션 단위**로만 고친다 (전면 재작성 금지). 특히 **§23.x 라우팅·Slack** 구간이 코드와 어긋나면 해당 소절을 패치한다.
+
+## 용어
+
+- **Big Pivot**: 본 프로젝트 Slack COS 봇/런타임을 가리키는 별칭. (COS·Chief of Staff와 동의어로 쓰이지 않을 수 있음 — 문맥상 Slack 앱 전체를 가리킴.)
+
+## 이번 패치에 문서 변경이 없으면
+
+응답 말미에 **「핸드오프 변경 없음 (문서만/리팩만)」** 한 줄이라도 명시한다.
+
+## 응답 말미 — Owner actions (습관)
+
+**의미 있는 패치를 마친 턴**에는 사용자가 바로 실행할 수 있게 아래를 **복붙 블록**으로 출력한다 (해당 없으면 항목을 생략).
+
+1. **SQL** — Supabase/DB 마이그레이션이 패치에 포함되면: 실행할 파일 경로 또는 인라인 `psql`/`supabase db` 예시.
+2. **Git** — 원격 반영이 필요할 때만: `git status` → `git add …` → `git commit -m "…"` → `git push` (브랜치 명시).
+3. **로컬 검증** — `npm test`, `node scripts/replay-slack-fixtures.mjs`, 스모크 스크립트 등 레포 관례 명령.
+
+핸드오프 본문(`docs/cursor-handoffs/…`)에도 동일한 **Owner actions** 소절을 두면 세션 간 이어 받기가 쉽다.

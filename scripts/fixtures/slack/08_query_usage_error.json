@@ -1,0 +1,13 @@
+{
+  "id": "08_query_usage_error",
+  "description": "조회 usage — ID 없음",
+  "source": "synthetic",
+  "event": { "text": "계획진행" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": "계획진행",
+    "target_id": null,
+    "final_responder": "query",
+    "response_contains": ["형식:", "계획진행"]
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "dev": {
+    "env_key": "dev",
+    "display_name": "Dev",
+    "runtime_mode": "local",
+    "default_repo_by_project": {
+      "abstract": "g1art-abstract",
+      "slack_cos": "g1-cos-slack",
+      "shared_tools": "shared-tools",
+      "g1_ops": "g1-ops"
+    },
+    "default_db_by_project": {
+      "abstract": "abstract-dev",
+      "slack_cos": "slack-cos-dev",
+      "shared_tools": "shared-tools-dev",
+      "g1_ops": "g1-ops-dev"
+    },
+    "branch_prefix_rules": {
+      "bug": "fix",
+      "feature": "feat",
+      "refactor": "refactor",
+      "ops": "chore",
+      "data": "data",
+      "research": "research",
+      "content": "content"
+    },
+    "risk_level": "low",
+    "change_policy": "소규모/역추적 가능한 변경 우선",
+    "notes": "기본 개발 환경 프로필",
+    "created_at": "2026-03-19T18:35:32.106Z",
+    "updated_at": "2026-03-19T18:35:32.106Z"
+  },
+  "staging": {
+    "env_key": "staging",
+    "display_name": "Staging",
+    "runtime_mode": "hosted",
+    "default_repo_by_project": {
+      "abstract": "g1art-abstract",
+      "slack_cos": "g1-cos-slack",
+      "shared_tools": "shared-tools",
+      "g1_ops": "g1-ops"
+    },
+    "default_db_by_project": {
+      "abstract": "abstract-staging",
+      "slack_cos": "slack-cos-staging",
+      "shared_tools": "shared-tools-staging",
+      "g1_ops": "g1-ops-staging"
+    },
+    "branch_prefix_rules": {
+      "bug": "fix",
+      "feature": "feat",
+      "refactor": "refactor",
+      "ops": "chore",
+      "data": "data",
+      "research": "research",
+      "content": "content"
+    },
+    "risk_level": "medium",
+    "change_policy": "검증(테스트/리뷰) 강화 후 반영",
+    "notes": "배포 전 통제 환경 프로필",
+    "created_at": "2026-03-19T18:35:32.106Z",
+    "updated_at": "2026-03-19T18:35:32.106Z"
+  },
+  "prod": {
+    "env_key": "prod",
+    "display_name": "Prod",
+    "runtime_mode": "hosted",
+    "default_repo_by_project": {
+      "abstract": "g1art-abstract",
+      "slack_cos": "g1-cos-slack",
+      "shared_tools": "shared-tools",
+      "g1_ops": "g1-ops"
+    },
+    "default_db_by_project": {
+      "abstract": "abstract-prod",
+      "slack_cos": "slack-cos-prod",
+      "shared_tools": "shared-tools-prod",
+      "g1_ops": "g1-ops-prod"
+    },
+    "branch_prefix_rules": {
+      "bug": "fix",
+      "feature": "feat",
+      "refactor": "refactor",
+      "ops": "chore",
+      "data": "data",
+      "research": "research",
+      "content": "content"
+    },
+    "risk_level": "high",
+    "change_policy": "승인 게이트 + 리스크 최소화 필수",
+    "notes": "운영 환경 프로필",
+    "created_at": "2026-03-19T18:35:32.106Z",
+    "updated_at": "2026-03-19T18:35:32.106Z"
+  }
+}

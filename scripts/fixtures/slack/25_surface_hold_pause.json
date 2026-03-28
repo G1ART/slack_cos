@@ -1,0 +1,12 @@
+{
+  "id": "25_surface_hold_pause",
+  "description": "Surface — 이건 보류 → executive_surface (hold_pause)",
+  "source": "synthetic",
+  "event": { "text": "이건 보류: 우선순위 재검토 후" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": null,
+    "final_responder": "executive_surface",
+    "response_contains": ["보류", "기록"]
+  }
+}

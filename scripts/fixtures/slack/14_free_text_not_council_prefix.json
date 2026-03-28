@@ -1,0 +1,12 @@
+{
+  "id": "14_free_text_not_council_prefix",
+  "description": "일반 문장 — query/planner 아님 → 자연어 COS 대화(dialog)",
+  "source": "synthetic",
+  "event": { "text": "이번 주 우선순위만 정리해줘" },
+  "expect": {
+    "planner_lock_type": "none",
+    "query_prefix": null,
+    "final_responder": "dialog",
+    "skip_response_body": true
+  }
+}

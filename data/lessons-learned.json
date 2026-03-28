@@ -1,0 +1,4229 @@
+[
+  {
+    "id": "LES-1773869237528-f65nj2",
+    "created_at": "2026-03-18T21:27:17.528Z",
+    "title": "실험 범위 축소 우선",
+    "what_worked": "실험 지연의 원인이 초기 범위 설정에 있었다는 점을 명확히 인식했다.",
+    "what_failed": "실행 전에 범위를 너무 크게 잡아 착수와 진행 속도가 늦어졌다.",
+    "what_to_change_next_time": "처음부터 최소 실행 범위를 먼저 확정한 뒤, 이후 단계적으로 확장하는 방식으로 진행한다.",
+    "future_trigger": "새로운 실험이나 프로젝트를 시작할 때 초기 범위를 넓게 잡고 있다는 느낌이 들면 최소 실행 범위부터 다시 정의한다.",
+    "tags": [
+      "실험설계",
+      "범위조정",
+      "실행속도"
+    ],
+    "source": {
+      "source_type": "direct_message",
+      "channel": "D0AM9BE2YUB",
+      "user": "U0AN9S75CRW",
+      "ts": "1773869232.860159"
+    }
+  },
+  {
+    "id": "LES-1773899068881-599h6g",
+    "created_at": "2026-03-19T05:44:28.879Z",
+    "title": "폐기: 현시점에서 올해 하반기 홍콩 지사 설립은 보수적으로 보류하고, 먼저 영업 검증·파트너십·법무/세무 비용 구조를 확인하는 것이 낫습니다.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1773877841670-glurf5",
+    "source_approval_key": "FIN-260318-03",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-19T05:44:28.879Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1773898814.614169",
+        "channel_id": "D0AM9BE2YUB",
+        "is_ephemeral": false,
+        "thread_ts": "1773898814.614169"
+      },
+      "trigger_id": "10745699214753.10727561729414.fbe3760cf3f4ed62a34f93a9aea2cbb4",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "D0AM9BE2YUB",
+        "name": "directmessage"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1773898814.614169",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 요약  [1] FIN-260319-02 - 점수: 80 / 민감도: high - 요약: 지금 가장 위험한 축은 재무입니다. 이유는 다른 문제를 버틸 시간과 선택지를 결정하는 축이기 때문입니다. / 향후 3개월의 최우선 목표를 성장 확대가 아니라 런웨이 방어와 현금흐름 안정화로 전환할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류  [2] FIN-260319-01 - 점수: 80 / 민감도: high - 요약: 오늘은 '성과에 직접 연결되는 1~2개'에만 집중하는 일정으로 정리하는 것이 최선입니다. / 오늘 가장 중요한 기준을 무엇으로 둘지 결정이 필요합니다: 단기매출, 투자/파트너 대응, 제품진척, 팀 병목 해소 중 무엇이 1순위입니까? - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류  [3] FIN-260318-03 - 점수: 80 / 민감도: high - 요약: 현시점에서 올해 하반기 홍콩 지사 설립은 보수적으로 보류하고, 먼저 영업 검증·파트너십·법무/세무 비용 구조를 확인하는 것이 낫습니다. / 올해 하반기에는 지사 설립 대신 파일럿 검증에만 예산을 쓰고, 지사 결정은 검증 후로 미룰지 여부를 결정해야 합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류  [4] FIN-260318-02 - 점수: 50 / 민감도: high - 요약: 오늘은 ‘매출·현금·의사결정 병목’에 직접 영향을 주는 3가지만 먼저 처리하는 것이 최우선입니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 리스크 포함 요청, 채널 민감도 high",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1773898814.614169",
+        "reply_count": 2,
+        "reply_users_count": 1,
+        "latest_reply": "1773899044.997439",
+        "reply_users": [
+          "U0AMDM5KZUN"
+        ],
+        "is_locked": false,
+        "subscribed": false,
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "jIsGO",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 요약*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "ZDujZ",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260319-02\n- 점수: 80 / 민감도: high\n- 제목/질문: 지금 가장 위험한 축은 재무입니다. 이유는 다른 문제를 버틸 시간과 선택지를 결정하는 축이기 때문입니다. / 향후 3개월의 최우선 목표를 성장 확대가 아니라 런웨이 방어와 현금흐름 안정화로 전환할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "HhWyV",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773879179256-mpmr7d\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773879179256-mpmr7d\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773879179256-mpmr7d\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773879179256-mpmr7d\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "vpAVg",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260319-01\n- 점수: 80 / 민감도: high\n- 제목/질문: 오늘은 '성과에 직접 연결되는 1~2개'에만 집중하는 일정으로 정리하는 것이 최선입니다. / 오늘 가장 중요한 기준을 무엇으로 둘지 결정이 필요합니다: 단기매출, 투자/파트너 대응, 제품진척, 팀 병목 해소 중 무엇이 1순위입니까?\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "l5jxE",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773879167514-1ulemq\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773879167514-1ulemq\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773879167514-1ulemq\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773879167514-1ulemq\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hWEFE",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260318-03\n- 점수: 80 / 민감도: high\n- 제목/질문: 현시점에서 올해 하반기 홍콩 지사 설립은 보수적으로 보류하고, 먼저 영업 검증·파트너십·법무/세무 비용 구조를 확인하는 것이 낫습니다. / 올해 하반기에는 지사 설립 대신 파일럿 검증에만 예산을 쓰고, 지사 결정은 검증 후로 미룰지 여부를 결정해야 합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "d3sWx",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773877841670-glurf5\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773877841670-glurf5\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773877841670-glurf5\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773877841670-glurf5\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "OOo9Q",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260318-02\n- 점수: 50 / 민감도: high\n- 제목/질문: 오늘은 ‘매출·현금·의사결정 병목’에 직접 영향을 주는 3가지만 먼저 처리하는 것이 최우선입니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 리스크 포함 요청, 채널 민감도 high",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "bAxZ7",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773876945233-09llyv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773876945233-09llyv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773876945233-09llyv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773876945233-09llyv\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10729369715269/HbH104VH4xPkb9XEijujbRy7",
+      "actions": [
+        {
+          "action_id": "approval_2_reject",
+          "block_id": "d3sWx",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1773877841670-glurf5\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1773899053.799566"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243977311-z9wp01",
+    "created_at": "2026-03-23T05:32:56.685Z",
+    "title": "폐기: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1774119178424-1kikrw",
+    "source_approval_key": "FIN-260321-09",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:32:56.685Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243970.881119",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243968.195079"
+      },
+      "trigger_id": "10750835636485.10727561729414.b9682c45cb56fe90a349aba7e1b3a921",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243970.881119",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-09 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:52:58.424Z - 내부 ID: APR-1774119178424-1kikrw  [2] FIN-260321-06 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:17:38.579Z - 내부 ID: APR-1774117058580-va6usw  [3] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b  [4] FIN-260320-04 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T18:29:55.606Z - 내부 ID: APR-1774031395606-9pehuv  [5] FIN-260320-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:51:54.092Z - 내부 ID: APR-1773985914092-oo79p4",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243968.195079",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "bwDWl",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "8yG40",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260321-09\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "GMrww",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "uYzKC",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260321-06\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "lUefa",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Msi8A",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "vv0j5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hK4sq",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260320-04\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "P82z5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "+Z2TM",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[5]* FIN-260320-03\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "e6HD3",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10767164286177/jkhawiJtXbl9E2bRrWxBrlJw",
+      "actions": [
+        {
+          "action_id": "approval_0_reject",
+          "block_id": "GMrww",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243976.585057"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243980449-0rvyzy",
+    "created_at": "2026-03-23T05:33:00.085Z",
+    "title": "폐기: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1774117058580-va6usw",
+    "source_approval_key": "FIN-260321-06",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:00.085Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243970.881119",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243968.195079"
+      },
+      "trigger_id": "10754256722562.10727561729414.a76de3104fd257d5756dbd534e46476b",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243970.881119",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-09 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:52:58.424Z - 내부 ID: APR-1774119178424-1kikrw  [2] FIN-260321-06 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:17:38.579Z - 내부 ID: APR-1774117058580-va6usw  [3] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b  [4] FIN-260320-04 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T18:29:55.606Z - 내부 ID: APR-1774031395606-9pehuv  [5] FIN-260320-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:51:54.092Z - 내부 ID: APR-1773985914092-oo79p4",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243968.195079",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "bwDWl",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "8yG40",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260321-09\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "GMrww",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "uYzKC",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260321-06\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "lUefa",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Msi8A",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "vv0j5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hK4sq",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260320-04\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "P82z5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "+Z2TM",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[5]* FIN-260320-03\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "e6HD3",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10738806219895/fgXWVdwSIWwglBnN4hi0B5PO",
+      "actions": [
+        {
+          "action_id": "approval_1_reject",
+          "block_id": "lUefa",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243980.028775"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243983045-e9mku4",
+    "created_at": "2026-03-23T05:33:02.589Z",
+    "title": "폐기: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1774031395606-9pehuv",
+    "source_approval_key": "FIN-260320-04",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:02.589Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243970.881119",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243968.195079"
+      },
+      "trigger_id": "10750835084725.10727561729414.3e16c242496b4d82c214f0c9f39cc2c7",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243970.881119",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-09 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:52:58.424Z - 내부 ID: APR-1774119178424-1kikrw  [2] FIN-260321-06 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:17:38.579Z - 내부 ID: APR-1774117058580-va6usw  [3] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b  [4] FIN-260320-04 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T18:29:55.606Z - 내부 ID: APR-1774031395606-9pehuv  [5] FIN-260320-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:51:54.092Z - 내부 ID: APR-1773985914092-oo79p4",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243968.195079",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "bwDWl",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "8yG40",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260321-09\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "GMrww",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "uYzKC",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260321-06\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "lUefa",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Msi8A",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "vv0j5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hK4sq",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260320-04\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "P82z5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "+Z2TM",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[5]* FIN-260320-03\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "e6HD3",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10782529437680/80sgBev6kC3FW29s51c9KtJ3",
+      "actions": [
+        {
+          "action_id": "approval_3_reject",
+          "block_id": "P82z5",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243982.491699"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243984525-iiylqe",
+    "created_at": "2026-03-23T05:33:04.178Z",
+    "title": "폐기: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1773985914092-oo79p4",
+    "source_approval_key": "FIN-260320-03",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:04.178Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243970.881119",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243968.195079"
+      },
+      "trigger_id": "10782529742512.10727561729414.9c15397cffa705cf250377e4ee827c16",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243970.881119",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-09 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:52:58.424Z - 내부 ID: APR-1774119178424-1kikrw  [2] FIN-260321-06 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:17:38.579Z - 내부 ID: APR-1774117058580-va6usw  [3] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b  [4] FIN-260320-04 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T18:29:55.606Z - 내부 ID: APR-1774031395606-9pehuv  [5] FIN-260320-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:51:54.092Z - 내부 ID: APR-1773985914092-oo79p4",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243968.195079",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "bwDWl",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "8yG40",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260321-09\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "GMrww",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "uYzKC",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260321-06\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "lUefa",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Msi8A",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "vv0j5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hK4sq",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260320-04\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "P82z5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "+Z2TM",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[5]* FIN-260320-03\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "e6HD3",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10754256453842/uGSIIyjSYzbxvicSpdg27jmG",
+      "actions": [
+        {
+          "action_id": "approval_4_reject",
+          "block_id": "e6HD3",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243983.772397"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243996819-9yexkr",
+    "created_at": "2026-03-23T05:33:16.359Z",
+    "title": "폐기: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1774115669514-hijc0b",
+    "source_approval_key": "FIN-260321-03",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:16.359Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243970.881119",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243968.195079"
+      },
+      "trigger_id": "10747868699475.10727561729414.63819a06cc60fe79f693c8ff21ba4177",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243970.881119",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-09 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:52:58.424Z - 내부 ID: APR-1774119178424-1kikrw  [2] FIN-260321-06 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T18:17:38.579Z - 내부 ID: APR-1774117058580-va6usw  [3] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b  [4] FIN-260320-04 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T18:29:55.606Z - 내부 ID: APR-1774031395606-9pehuv  [5] FIN-260320-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:51:54.092Z - 내부 ID: APR-1773985914092-oo79p4",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243968.195079",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "bwDWl",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "8yG40",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[1]* FIN-260321-09\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "GMrww",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119178424-1kikrw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "uYzKC",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[2]* FIN-260321-06\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-02\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "lUefa",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774117058580-va6usw\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Msi8A",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[3]* FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "vv0j5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "hK4sq",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[4]* FIN-260320-04\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260320-08\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "P82z5",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774031395606-9pehuv\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "+Z2TM",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*[5]* FIN-260320-03\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-05\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "e6HD3",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773985914092-oo79p4\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10757843894980/vtDO6PxlwV7jAzjdlBCwXkWq",
+      "actions": [
+        {
+          "action_id": "approval_2_reject",
+          "block_id": "vv0j5",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243981.301657"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774243999649-ntxh98",
+    "created_at": "2026-03-23T05:33:19.293Z",
+    "title": "폐기: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1773984619412-peujhu",
+    "source_approval_key": "FIN-260320-02",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:19.293Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243990.409479",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243988.729109"
+      },
+      "trigger_id": "10752202746902.10727561729414.efc617677d3cb3d5d40430786b52293e",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243990.409479",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b - 연결 Plan: PLN-260321-01  [2] FIN-260320-02 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:30:19.412Z - 내부 ID: APR-1773984619412-peujhu - 연결 Plan: PLN-260320-03  [3] FIN-260320-01 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:27:07.590Z - 내부 ID: APR-1773984427590-2nlco6 - 연결 Plan: PLN-260320-01  [4] FIN-260319-05 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T22:56:11.895Z - 내부 ID: APR-1773960971895-p8qq7j - 연결 Plan: PLN-260319-04  [5] FIN-260323-01 - 점수: 80 - 채널 민감도: high - 제목/질문 요약: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-23T05:32:09.816Z - 내부 ID: APR-1774243929815-zxkz2w  [6] ENG-260319-01 - 점수: 73 - 채널 민감도: medium - 제목/질문 요약: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T06:22:48.715Z - 내부 ID: APR-1773901368715-gl2bxs  [7] ENG-260319-07 - 점수: 68 - 채널 민감도: medium - 제목/질문 요약: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-19T19:08:38.907Z - 내부 ID: APR-1773947318907-altus2  [8] ENG-260319-02 - 점수: 63 - 채널 민감도: medium - 제목/질문 요약: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청 - 생성일: 2026-03-19T06:32:14.436Z - 내부 ID: APR-1773901934439-3mdrxp  [9] FIN-260321-10 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다. - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:53:55.292Z - 내부 ID: APR-1774119235292-7g2h5h  [10] FIN-260321-08 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음 - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:36:37.232Z - 내부 ID: APR-1774118197232-0rymls",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243988.729109",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "OM3TB",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "yYLOm",
+            "text": {
+              "type": "plain_text",
+              "text": "[1] FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "Z8kc+",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Gf86z",
+            "text": {
+              "type": "plain_text",
+              "text": "[2] FIN-260320-02\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "0Z94l",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Wojc0",
+            "text": {
+              "type": "plain_text",
+              "text": "[3] FIN-260320-01\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "ZuNgz",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "7BT/O",
+            "text": {
+              "type": "plain_text",
+              "text": "[4] FIN-260319-05\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "hamZe",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "2TtrY",
+            "text": {
+              "type": "plain_text",
+              "text": "[5] FIN-260323-01\n- 점수: 80 / 민감도: high\n- 제목/질문: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "XhgcE",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "kWlSH",
+            "text": {
+              "type": "plain_text",
+              "text": "[6] ENG-260319-01\n- 점수: 73 / 민감도: medium\n- 제목/질문: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "5G3FR",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_5_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Uj5n1",
+            "text": {
+              "type": "plain_text",
+              "text": "[7] ENG-260319-07\n- 점수: 68 / 민감도: medium\n- 제목/질문: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "MtyrG",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_6_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "6Eke5",
+            "text": {
+              "type": "plain_text",
+              "text": "[8] ENG-260319-02\n- 점수: 63 / 민감도: medium\n- 제목/질문: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "tnYql",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_7_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "vttU8",
+            "text": {
+              "type": "plain_text",
+              "text": "[9] FIN-260321-10\n- 점수: 60 / 민감도: high\n- 제목/질문: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다.\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uqI0i",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_8_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "z168L",
+            "text": {
+              "type": "plain_text",
+              "text": "[10] FIN-260321-08\n- 점수: 60 / 민감도: high\n- 제목/질문: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uiTzr",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_9_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10782531631712/WmWXjCwGPGrN5KdBl0nqxMEu",
+      "actions": [
+        {
+          "action_id": "approval_1_reject",
+          "block_id": "0Z94l",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774243999.154531"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774244001826-g03bep",
+    "created_at": "2026-03-23T05:33:21.195Z",
+    "title": "폐기: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1773960971895-p8qq7j",
+    "source_approval_key": "FIN-260319-05",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:21.195Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243990.409479",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243988.729109"
+      },
+      "trigger_id": "10750837304229.10727561729414.5c999c18691f44e6cf09bafc7de0c334",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243990.409479",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b - 연결 Plan: PLN-260321-01  [2] FIN-260320-02 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:30:19.412Z - 내부 ID: APR-1773984619412-peujhu - 연결 Plan: PLN-260320-03  [3] FIN-260320-01 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:27:07.590Z - 내부 ID: APR-1773984427590-2nlco6 - 연결 Plan: PLN-260320-01  [4] FIN-260319-05 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T22:56:11.895Z - 내부 ID: APR-1773960971895-p8qq7j - 연결 Plan: PLN-260319-04  [5] FIN-260323-01 - 점수: 80 - 채널 민감도: high - 제목/질문 요약: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-23T05:32:09.816Z - 내부 ID: APR-1774243929815-zxkz2w  [6] ENG-260319-01 - 점수: 73 - 채널 민감도: medium - 제목/질문 요약: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T06:22:48.715Z - 내부 ID: APR-1773901368715-gl2bxs  [7] ENG-260319-07 - 점수: 68 - 채널 민감도: medium - 제목/질문 요약: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-19T19:08:38.907Z - 내부 ID: APR-1773947318907-altus2  [8] ENG-260319-02 - 점수: 63 - 채널 민감도: medium - 제목/질문 요약: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청 - 생성일: 2026-03-19T06:32:14.436Z - 내부 ID: APR-1773901934439-3mdrxp  [9] FIN-260321-10 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다. - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:53:55.292Z - 내부 ID: APR-1774119235292-7g2h5h  [10] FIN-260321-08 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음 - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:36:37.232Z - 내부 ID: APR-1774118197232-0rymls",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243988.729109",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "OM3TB",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "yYLOm",
+            "text": {
+              "type": "plain_text",
+              "text": "[1] FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "Z8kc+",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Gf86z",
+            "text": {
+              "type": "plain_text",
+              "text": "[2] FIN-260320-02\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "0Z94l",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Wojc0",
+            "text": {
+              "type": "plain_text",
+              "text": "[3] FIN-260320-01\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "ZuNgz",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "7BT/O",
+            "text": {
+              "type": "plain_text",
+              "text": "[4] FIN-260319-05\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "hamZe",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "2TtrY",
+            "text": {
+              "type": "plain_text",
+              "text": "[5] FIN-260323-01\n- 점수: 80 / 민감도: high\n- 제목/질문: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "XhgcE",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "kWlSH",
+            "text": {
+              "type": "plain_text",
+              "text": "[6] ENG-260319-01\n- 점수: 73 / 민감도: medium\n- 제목/질문: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "5G3FR",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_5_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Uj5n1",
+            "text": {
+              "type": "plain_text",
+              "text": "[7] ENG-260319-07\n- 점수: 68 / 민감도: medium\n- 제목/질문: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "MtyrG",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_6_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "6Eke5",
+            "text": {
+              "type": "plain_text",
+              "text": "[8] ENG-260319-02\n- 점수: 63 / 민감도: medium\n- 제목/질문: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "tnYql",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_7_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "vttU8",
+            "text": {
+              "type": "plain_text",
+              "text": "[9] FIN-260321-10\n- 점수: 60 / 민감도: high\n- 제목/질문: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다.\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uqI0i",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_8_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "z168L",
+            "text": {
+              "type": "plain_text",
+              "text": "[10] FIN-260321-08\n- 점수: 60 / 민감도: high\n- 제목/질문: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uiTzr",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_9_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10757846165572/UjdGKpILtEExK6xLjT0CN2oU",
+      "actions": [
+        {
+          "action_id": "approval_3_reject",
+          "block_id": "hamZe",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774244001.042682"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  },
+  {
+    "id": "LES-1774244015573-hzjg1g",
+    "created_at": "2026-03-23T05:33:35.152Z",
+    "title": "폐기: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘.",
+    "what_worked": "결정 조건과 리스크를 명확히 함",
+    "what_failed": "추가 사유 없음",
+    "what_to_change_next_time": "필요한 조건/정보를 보완한 뒤 재검토",
+    "future_trigger": "조건이 충족되면 승인대기 재요청",
+    "tags": [
+      "FIN",
+      "discarded"
+    ],
+    "source_type": "approval",
+    "source_approval_id": "APR-1773984427590-2nlco6",
+    "source_approval_key": "FIN-260320-01",
+    "disposition": "discarded",
+    "reason": "",
+    "channel": "strategy_finance",
+    "category": "FIN",
+    "timestamp": "2026-03-23T05:33:35.152Z",
+    "source": {
+      "type": "block_actions",
+      "user": {
+        "id": "U0AN9S75CRW",
+        "username": "henry",
+        "name": "henry",
+        "team_id": "T0AMDGHMFC6"
+      },
+      "api_app_id": "A0ANA1AMF6C",
+      "token": "387cwwk45lc5OeayKP7Q6KtO",
+      "container": {
+        "type": "message",
+        "message_ts": "1774243990.409479",
+        "channel_id": "C0AMELPEFRC",
+        "is_ephemeral": false,
+        "thread_ts": "1774243988.729109"
+      },
+      "trigger_id": "10752202228806.10727561729414.22216b84d809d7360ec5fdba52b350da",
+      "team": {
+        "id": "T0AMDGHMFC6",
+        "domain": "g1artaiagentd-skb9744"
+      },
+      "enterprise": null,
+      "is_enterprise_install": false,
+      "channel": {
+        "id": "C0AMELPEFRC",
+        "name": "privategroup"
+      },
+      "message": {
+        "user": "U0AMDM5KZUN",
+        "type": "message",
+        "ts": "1774243990.409479",
+        "bot_id": "B0AMCADBUAZ",
+        "app_id": "A0ANA1AMF6C",
+        "text": "승인 대기 안건  [1] FIN-260321-03 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-21T17:54:29.514Z - 내부 ID: APR-1774115669514-hijc0b - 연결 Plan: PLN-260321-01  [2] FIN-260320-02 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:30:19.412Z - 내부 ID: APR-1773984619412-peujhu - 연결 Plan: PLN-260320-03  [3] FIN-260320-01 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-20T05:27:07.590Z - 내부 ID: APR-1773984427590-2nlco6 - 연결 Plan: PLN-260320-01  [4] FIN-260319-05 - 점수: 95 - 채널 민감도: high - 제목/질문 요약: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04 - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T22:56:11.895Z - 내부 ID: APR-1773960971895-p8qq7j - 연결 Plan: PLN-260319-04  [5] FIN-260323-01 - 점수: 80 - 채널 민감도: high - 제목/질문 요약: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-23T05:32:09.816Z - 내부 ID: APR-1774243929815-zxkz2w  [6] ENG-260319-01 - 점수: 73 - 채널 민감도: medium - 제목/질문 요약: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다. - 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류 - 생성일: 2026-03-19T06:22:48.715Z - 내부 ID: APR-1773901368715-gl2bxs  [7] ENG-260319-07 - 점수: 68 - 채널 민감도: medium - 제목/질문 요약: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-19T19:08:38.907Z - 내부 ID: APR-1773947318907-altus2  [8] ENG-260319-02 - 점수: 63 - 채널 민감도: medium - 제목/질문 요약: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다. - 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청 - 생성일: 2026-03-19T06:32:14.436Z - 내부 ID: APR-1773901934439-3mdrxp  [9] FIN-260321-10 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다. - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:53:55.292Z - 내부 ID: APR-1774119235292-7g2h5h  [10] FIN-260321-08 - 점수: 60 - 채널 민감도: high - 제목/질문 요약: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음 - 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청 - 생성일: 2026-03-21T18:36:37.232Z - 내부 ID: APR-1774118197232-0rymls",
+        "team": "T0AMDGHMFC6",
+        "thread_ts": "1774243988.729109",
+        "parent_user_id": "U0AN9S75CRW",
+        "blocks": [
+          {
+            "type": "section",
+            "block_id": "OM3TB",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*승인 대기 안건*",
+              "verbatim": false
+            }
+          },
+          {
+            "type": "section",
+            "block_id": "yYLOm",
+            "text": {
+              "type": "plain_text",
+              "text": "[1] FIN-260321-03\n- 점수: 95 / 민감도: high\n- 제목/질문: Slack COS를 hosted 환경으로 배포하고 production에서 Supabase read preference를 supabase로 전환하는 작업 계획을 세워줘. / Planner 계획 승인: PLN-260321-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "Z8kc+",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_0_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_0_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774115669514-hijc0b\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Gf86z",
+            "text": {
+              "type": "plain_text",
+              "text": "[2] FIN-260320-02\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-03\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "0Z94l",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_1_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_1_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984619412-peujhu\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Wojc0",
+            "text": {
+              "type": "plain_text",
+              "text": "[3] FIN-260320-01\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260320-01\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "ZuNgz",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_2_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_2_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "7BT/O",
+            "text": {
+              "type": "plain_text",
+              "text": "[4] FIN-260319-05\n- 점수: 95 / 민감도: high\n- 제목/질문: slack_cos에서 업무상세에 github issue state와 cursor handoff path를 함께 보여주는 요약 줄을 추가해줘. / Planner 계획 승인: PLN-260319-04\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "hamZe",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_3_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_3_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773960971895-p8qq7j\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "2TtrY",
+            "text": {
+              "type": "plain_text",
+              "text": "[5] FIN-260323-01\n- 점수: 80 / 민감도: high\n- 제목/질문: 내부 직원과 고객 예약을 함께 다루는 최소 기능의 웹 캘린더를 먼저 만들고, 결제·마케팅·복잡한 CRM은 2단계로 미루는 것이 가장 합리적입니다. / 자체 캘린더 툴을 만들지, 아니면 기성 예약 SaaS를 먼저 도입해 운영 검증 후 커스터마이징할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "XhgcE",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_4_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_4_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774243929815-zxkz2w\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "kWlSH",
+            "text": {
+              "type": "plain_text",
+              "text": "[6] ENG-260319-01\n- 점수: 73 / 민감도: medium\n- 제목/질문: 더그린 이벤트 관리 캘린더 앱은 먼저 범위를 축소한 MVP로 정의하고, 일정·이벤트·참석/알림 중심의 안정적인 구조부터 확정하는 것이 가장 현실적입니다. / 이번 프로젝트는 1차 목표를 '운영 가능한 MVP 출시'로 둘지, 아니면 외부 연동과 모바일 앱까지 포함한 확장형 제품으로 시작할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 medium, 대표 결정 필요, 리스크로 인한 결정 보류",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "5G3FR",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_5_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_5_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901368715-gl2bxs\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "Uj5n1",
+            "text": {
+              "type": "plain_text",
+              "text": "[7] ENG-260319-07\n- 점수: 68 / 민감도: medium\n- 제목/질문: 배포 전에는 기능 완성보다 롤백 가능성, 데이터 안전성, 모니터링 준비 상태를 우선 점검하는 것이 맞습니다. / 이 안건을 지금 승인할지, 보류할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "MtyrG",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_6_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_6_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773947318907-altus2\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "6Eke5",
+            "text": {
+              "type": "plain_text",
+              "text": "[8] ENG-260319-02\n- 점수: 63 / 민감도: medium\n- 제목/질문: 프로필 저장 오류 수정은 원인 진단 범위를 먼저 고정하고, 작은 패치와 즉시 롤백 가능한 방식으로 Cursor 작업 지시서를 발행하는 것이 안전합니다. / 리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.\n- 핵심 이유: 긴급도 high, 대표 결정 필요, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "tnYql",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_7_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_7_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1773901934439-3mdrxp\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "vttU8",
+            "text": {
+              "type": "plain_text",
+              "text": "[9] FIN-260321-10\n- 점수: 60 / 민감도: high\n- 제목/질문: 요청이 너무 짧아 현재로선 계획등록 대상과 목적을 특정할 수 없습니다. / 현재 단계에서는 CEO 의사결정이 필요하지 않습니다.\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uqI0i",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_8_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_8_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774119235292-7g2h5h\"}"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "block_id": "z168L",
+            "text": {
+              "type": "plain_text",
+              "text": "[10] FIN-260321-08\n- 점수: 60 / 민감도: high\n- 제목/질문: 추천안은 Slack COS hosted 배포와 production Supabase read preference 전환을 분리된 단계로 진행하되, 사전 검증·관측·즉시 롤백 경로를 먼 / 없음\n- 핵심 이유: 긴급도 medium, 리스크로 인한 결정 보류, 리스크 포함 요청",
+              "emoji": true
+            }
+          },
+          {
+            "type": "actions",
+            "block_id": "uiTzr",
+            "elements": [
+              {
+                "type": "button",
+                "action_id": "approval_9_approve",
+                "text": {
+                  "type": "plain_text",
+                  "text": "승인",
+                  "emoji": true
+                },
+                "style": "primary",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_hold",
+                "text": {
+                  "type": "plain_text",
+                  "text": "보류",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_reject",
+                "text": {
+                  "type": "plain_text",
+                  "text": "폐기",
+                  "emoji": true
+                },
+                "style": "danger",
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              },
+              {
+                "type": "button",
+                "action_id": "approval_9_detail",
+                "text": {
+                  "type": "plain_text",
+                  "text": "상세",
+                  "emoji": true
+                },
+                "value": "{\"approvalId\":\"APR-1774118197232-0rymls\"}"
+              }
+            ]
+          }
+        ]
+      },
+      "state": {
+        "values": {}
+      },
+      "response_url": "https://hooks.slack.com/actions/T0AMDGHMFC6/10750836776053/gHrXvzxWSpBjbcLhZXDOK5C9",
+      "actions": [
+        {
+          "action_id": "approval_2_reject",
+          "block_id": "ZuNgz",
+          "text": {
+            "type": "plain_text",
+            "text": "폐기",
+            "emoji": true
+          },
+          "value": "{\"approvalId\":\"APR-1773984427590-2nlco6\"}",
+          "style": "danger",
+          "type": "button",
+          "action_ts": "1774244000.069414"
+        }
+      ],
+      "source_type": "approval"
+    },
+    "channel_context": "strategy_finance"
+  }
+]
