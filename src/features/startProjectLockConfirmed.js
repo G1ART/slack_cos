@@ -1,17 +1,21 @@
 /**
- * 킥오프 정렬(COS 1턴) 직후, 대표가 답변 + 확정(진행해줘 등)을 보낸 2턴 전용 표면.
- * Council·APR·업무등록 유도 없이 scope lock → 내부 실행 전환만 노출.
+ * 툴/프로젝트 킥오프 이후: **턴 수가 아닌 충분성**으로만 실행 승인(잠금) 패킷.
+ * 미충족 시 정제(refine) 표면만 — Council·APR·업무등록 유도 없음.
  */
 
 import { buildSlackThreadKey, getConversationTranscript } from './slackConversationBuffer.js';
 import { isCouncilCommand } from '../slack/councilCommandPrefixes.js';
+import { isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
 import { extractLatestStartProjectUserLineFromTranscript } from './startProjectKickoffDoor.js';
 import { appendWorkspaceQueueItem } from './cosWorkspaceQueue.js';
+import { assessScopeSufficiency } from './scopeSufficiency.js';
+import {
+  isActiveProjectIntake,
+  touchProjectIntakeSession,
+  completeProjectIntakeSession,
+  getProjectIntakeSession,
+} from './projectIntakeSession.js';
 
-/**
- * @param {string} transcript
- * @returns {string[]}
- */
 function parseTranscriptCosChunks(transcript) {
   const t = String(transcript || '').trim();
   if (!t) return [];
@@ -38,10 +42,6 @@ function parseTranscriptUserChunks(transcript) {
   return out;
 }
 
-/**
- * 버퍼 transcript 상 마지막 COS 턴이 킥오프 정렬 요약인지 (현재 user 턴은 아직 버퍼에 없음).
- * @param {string} transcript
- */
 export function lastAssistantTurnWasStartProjectKickoff(transcript) {
   const cos = parseTranscriptCosChunks(transcript);
   if (!cos.length) return false;
@@ -51,6 +51,37 @@ export function lastAssistantTurnWasStartProjectKickoff(transcript) {
     /내가\s*이해한\s*요청/u.test(last) &&
     /다음\s*산출물/u.test(last)
   );
+}
+
+export function lastAssistantTurnWasStartProjectRefine(transcript) {
+  const cos = parseTranscriptCosChunks(transcript);
+  if (!cos.length) return false;
+  const last = cos[cos.length - 1];
+  return /스코프\s*정제\s*·\s*툴\/프로젝트/u.test(last);
+}
+
+function lastAssistantTurnWasKickoffOrRefine(transcript) {
+  return lastAssistantTurnWasStartProjectKickoff(transcript) || lastAssistantTurnWasStartProjectRefine(transcript);
+}
+
+function extractGoalLineFromPrior(prior) {
+  const users = parseTranscriptUserChunks(prior);
+  return (
+    extractLatestStartProjectUserLineFromTranscript(prior) || (users.length ? users[users.length - 1] : '') || ''
+  );
+}
+
+/** 전사가 비어도 인테이크 세션의 goalLine으로 복구 */
+export function resolveStartProjectGoalLine(prior, metadata) {
+  const fromTx = String(extractGoalLineFromPrior(prior) || '').trim();
+  if (fromTx) return fromTx;
+  const sess = getProjectIntakeSession(metadata);
+  const g = sess?.goalLine && String(sess.goalLine).trim();
+  return g || '';
+}
+
+function inStartProjectIntakeContinuation(prior, metadata) {
+  return lastAssistantTurnWasKickoffOrRefine(prior) || isActiveProjectIntake(metadata);
 }
 
 /** @param {string} t */
@@ -65,10 +96,6 @@ export function hasProjectLockProceedSignal(t) {
   );
 }
 
-/**
- * 답변 본문이 충분히 있거나, 짧은 확정 한 줄만 있는 경우(무응답 기본값 전부 수락).
- * @param {string} t
- */
 function hasAcceptableLockReplyBody(t) {
   const s = String(t || '').trim();
   if (s.length >= 36) return true;
@@ -88,83 +115,143 @@ function hasAcceptableLockReplyBody(t) {
 }
 
 /**
- * sync — Council APR 억제·푸터 가드 등에서 사용
- * @param {string} trimmed
- * @param {Record<string, unknown>} [metadata]
+ * 실행 승인 패킷(잠금) — 충분성 + 진행 시그널 있을 때만
  */
 export function isStartProjectLockConfirmedContext(trimmed, metadata) {
   if (!trimmed || !metadata || typeof metadata !== 'object') return false;
   if (isCouncilCommand(trimmed)) return false;
-  const key = buildSlackThreadKey(metadata);
-  const prior = getConversationTranscript(key);
-  if (!lastAssistantTurnWasStartProjectKickoff(prior)) return false;
+  const prior = getConversationTranscript(buildSlackThreadKey(metadata));
+  if (!inStartProjectIntakeContinuation(prior, metadata)) return false;
   if (!hasProjectLockProceedSignal(trimmed)) return false;
   if (!hasAcceptableLockReplyBody(trimmed)) return false;
-  return true;
+  const goalLine = resolveStartProjectGoalLine(prior, metadata);
+  return assessScopeSufficiency(prior, trimmed, goalLine, {
+    quarantineFuturePhaseIdeas: true,
+    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+  }).sufficient;
 }
 
 /**
- * @param {string} goalLine
- * @param {string} userFollowUp 원본 user 메시지(답변 + 확정)
+ * 정제 루프 APR 억제 — 킥오프/정제 COS 직후 대표턴
  */
+export function isStartProjectRefineFlowContext(trimmed, metadata) {
+  if (!trimmed || !metadata || typeof metadata !== 'object') return false;
+  if (isCouncilCommand(trimmed)) return false;
+  if (isStartProjectKickoffInput(trimmed)) return false;
+  const prior = getConversationTranscript(buildSlackThreadKey(metadata));
+  if (!inStartProjectIntakeContinuation(prior, metadata)) return false;
+  if (isStartProjectLockConfirmedContext(trimmed, metadata)) return false;
+  return true;
+}
+
 export function buildProjectLockConfirmedSurface(goalLine, userFollowUp) {
   const g = String(goalLine || '').trim() || '프로젝트';
   const u = String(userFollowUp || '').trim();
   const uClip = u.length > 900 ? `${u.slice(0, 900)}…` : u;
 
   return [
-    '*[범위 잠금 · 실행 전환]*',
+    '*[실행 승인 요청 · 범위 잠금]*',
     '',
-    '좋습니다. 말씀해 주신 기준으로 **MVP 범위를 잠그겠습니다.**',
+    '판단하기에 **MVP 정의와 리스크가 실행 단계로 넘길 만큼 충분합니다.** (턴 수가 아니라, 말씀·합의의 밀도 기준입니다.)',
     '',
     '*1. 잠긴 MVP 요약*',
     `_초기 목표:_ ${g.slice(0, 400)}${g.length > 400 ? '…' : ''}`,
     uClip ? `_대표 확인·보정(원문):_ ${uClip}` : '',
     '',
-    '*2. 이번 단계 포함 범위*',
-    '- 월/주 중심 캘린더 뷰, 일정 CRUD, 멤버·역할, 승인·반복 등 **방금 합의한 요소**를 기준으로 합니다.',
-    '- 저장·동기화는 **Supabase** 를 전제로 한 설계 초안을 내부에서 잡습니다.',
+    '*2. 이번 단계 포함*',
+    '- 논의에서 합의된 기능·규칙(뷰, 일정, 승인, 반복, 권한 등)을 PLN·WRK에 옮깁니다.',
+    '- 저장·동기화는 **Supabase** 설계 초안과 맞춥니다.',
     '',
-    '*3. 이번 단계 제외 · 후속 확장*',
-    '- 대표님이 **후속**(예: 공개 블랙아웃 링크, 결제·요금 트리거, 모바일 네이티브 전용)으로 두신 항목은 **이번 릴리스 밖**에 둡니다.',
-    '- 제외 목록은 필요 시 PLN 본문에 명시해 두겠습니다.',
+    '*3. 제외 · 후속*',
+    '- 후속(공개 링크, 결제, 네이티브 전용 최적화 등)은 **명시적으로 밖**에 둡니다.',
     '',
-    '*4. 내부 실행 역할(한 줄)*',
-    'COS가 **계획·작업 시드·스키마 초안·Cursor용 실행 지시**를 한 덩어리로 묶어 내부 멀티 에이전트에 넘깁니다. 대표 표면에는 페르소나별 장문을 붙이지 않습니다.',
+    '*4. 왜 지금 실행해도 되는지*',
+    '- 문제 정의·사용자·MVP 경계·주요 리스크가 말로 고정되었고, 남은 불확실성은 기본값·반복 가능한 범위로 처리 가능합니다.',
     '',
-    '*5. 지금부터 만드는 산출물*',
-    '- **실행 계획(PLN) 초안**',
-    '- **작업 시드(WRK)** (캘린더 코어·승인·반복·충돌 등)',
-    '- **Supabase 테이블·정책 초안**',
-    '- **실행/핸드오프 패킷** (Cursor·Evidence 루프용)',
+    '*5. 내부 실행(한 줄)*',
+    'COS가 계획·작업 시드·스키마 초안·Cursor 핸드오프를 한 덩어리로 묶습니다. 페르소나 장문은 대표 표면에 쓰지 않습니다.',
     '',
-    '_이 턴에는 **승인 대기열(APR)을 만들지 않습니다.** 대표님이 “진행”까지만 해 주시면, COS가 위 산출물을 내부적으로 생성·정렬합니다._',
-    '_내부 운영 명령어를 외우실 필요 없습니다._',
+    '*6. 바로 만들 산출물*',
+    '- PLN 초안 · WRK 시드 · Supabase 초안 · 실행 패킷',
+    '',
+    '승인해 주시면 **내부 오케스트레이션**으로 넘어가고, 대표 표면은 결과·에스컬레이션 위주로 유지하겠습니다.',
+    '',
+    '_이 턴에 **APR을 자동 만들지는 않습니다** — 원하시면 별도 승인 게이트 정책을 맞춥니다._',
+    '_내부 운영 명령을 외우실 필요 없습니다._',
   ]
     .filter(Boolean)
     .join('\n');
 }
 
 /**
- * @param {string} trimmed
- * @param {Record<string, unknown>} [metadata]
+ * @param {string} goalLine
+ * @param {string} userMsg
+ * @param {{ sufficient: boolean, gaps: string[] }} suff
+ */
+export function buildStartProjectRefineSurface(goalLine, userMsg, suff) {
+  const g = String(goalLine || '').trim() || '프로젝트';
+  const u = String(userMsg || '').trim();
+  const uClip = u.length > 700 ? `${u.slice(0, 700)}…` : u;
+  const proceed = hasProjectLockProceedSignal(u);
+
+  /** @type {string[]} */
+  const lines = [
+    '*[스코프 정제 · 툴/프로젝트]*',
+    '',
+    '_역할: 성공 확률을 높이기 위한 **PM/Chief Engineer** — 맹목적 동의가 아니라, 범위·리스크를 짚는 쪽에 섭니다._',
+    '',
+    uClip ? `*이번에 반영한 말씀:* _${uClip}_` : '',
+    '',
+    '*현재까지 이해한 목표(한 줄)*',
+    `_${g.slice(0, 420)}${g.length > 420 ? '…' : ''}_`,
+    '',
+  ];
+
+  if (proceed && !suff.sufficient) {
+    lines.push(
+      '*실행 전환 전 — 아직 부족한 부분*',
+      '“진행” 의사는 이해했습니다. 다만 **책임 있게 코드로 넘기려면** 아래가 더 필요합니다.',
+      ...suff.gaps.map((x) => `- ${x}`),
+      '',
+    );
+  }
+
+  lines.push(
+    '*가벼운 시장·벤치마크 (참고)*',
+    '- 팀/멤버 캘린더·대관 예약은 **Google Calendar / 팀 단위 툴 / 단순 시설 예약** 등과 UX 기대가 갈립니다. 이번 MVP가 어디에 가깝게 붙을지 합의하면 설계가 빨라집니다.',
+    '',
+    '*반대 가능성 (한 줄)*',
+    '- 한 번에 웹+모바일 풀편집·외부 공개·결제까지 넣으면 검증이 느려질 수 있어, **이번에 검증할 한 가지**를 같이 고정하면 좋겠습니다.',
+    '',
+    '*다음으로 가장 정보 가치가 큰 것*',
+    suff.gaps.length
+      ? `1. ${suff.gaps[0]}`
+      : '1. 이번 MVP가 “팀 일정+승인”과 “공간 대관” 중 **어느 축을 검증의 중심**으로 둘지',
+    suff.gaps.length > 1 ? `2. ${suff.gaps[1]}` : '2. 첫 성공: **사용자가 “됐다”고 느끼는 행동 한 가지**',
+    suff.gaps.length > 2 ? `3. ${suff.gaps[2]}` : '3. **후순위**로 확실히 미룰 것 한 가지',
+    '',
+    '_질문 폭탄이 아니라, 한 턴에 꼭 고정할 최소만 묻습니다. “이정도면 충분하지 않나?”라고 역으로 말씀해 주셔도 됩니다._',
+    '_이 턴 **APR 없음** — 승인 큐는 범위가 잠긴 뒤에만 둡니다._',
+  );
+
+  return lines.filter(Boolean).join('\n');
+}
+
+/**
  * @returns {Promise<{ text: string, packet_id: null, response_type: 'start_project_confirmed' } | null>}
  */
 export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
   if (!isStartProjectLockConfirmedContext(trimmed, metadata)) return null;
 
-  const key = buildSlackThreadKey(metadata);
-  const prior = getConversationTranscript(key);
-  const users = parseTranscriptUserChunks(prior);
-  const goalLine =
-    extractLatestStartProjectUserLineFromTranscript(prior) || (users.length ? users[users.length - 1] : '') || '';
+  const prior = getConversationTranscript(buildSlackThreadKey(metadata));
+  const goalLine = resolveStartProjectGoalLine(prior, metadata);
 
   const surface = buildProjectLockConfirmedSurface(goalLine, trimmed);
   /** @type {string[]} */
   const extra = [];
   if (metadata && typeof metadata === 'object') {
     try {
-      const body = `[project_lock_confirmed]\n초기목표: ${String(goalLine).slice(0, 2000)}\n\n대표 확인:\n${trimmed.slice(0, 6000)}`;
+      const body = `[execution_approval_packet]\n초기목표: ${String(goalLine).slice(0, 2000)}\n\n대표 확인:\n${trimmed.slice(0, 6000)}`;
       await appendWorkspaceQueueItem({
         kind: 'spec_intake',
         body,
@@ -173,16 +260,81 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
       });
       extra.push(
         '',
-        '_잠긴 범위와 확인 내용은 **실행 정렬 큐**에도 남겼습니다. 내부적으로 PLN·WRK 시드·스키마 초안을 이어서 만들겠습니다._',
+        '_잠긴 요약은 **실행 정렬 큐**에도 남겼습니다. 승인 후 PLN·WRK·스키마 초안을 이어가겠습니다._',
       );
     } catch {
       extra.push('', '_실행 정렬 큐 기록에 실패했습니다. 동일 스레드에서 한 번 더 보내 주시면 재시도됩니다._');
     }
   }
 
+  completeProjectIntakeSession(metadata);
   return {
     text: [surface, ...extra].join('\n'),
     packet_id: null,
     response_type: 'start_project_confirmed',
+  };
+}
+
+/**
+ * @returns {Promise<{ text: string, packet_id: null, response_type: 'start_project_refine' } | null>}
+ */
+export async function tryStartProjectRefineResponse(trimmed, metadata) {
+  if (!isStartProjectRefineFlowContext(trimmed, metadata)) return null;
+
+  const prior = getConversationTranscript(buildSlackThreadKey(metadata));
+  const goalLine = resolveStartProjectGoalLine(prior, metadata);
+  const suff = assessScopeSufficiency(prior, trimmed, goalLine, {
+    quarantineFuturePhaseIdeas: true,
+    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+  });
+
+  const text = buildStartProjectRefineSurface(goalLine, trimmed, suff);
+  return {
+    text,
+    packet_id: null,
+    response_type: 'start_project_refine',
+  };
+}
+
+/**
+ * 활성 인테이크 세션이 있을 때만: 잠금 → 정제 → (최후) 정제 표면 고정.
+ * Council·dialog 대표 표면 새는 것을 막는다.
+ * @returns {Promise<{ text: string, packet_id: null, response_type: string } | null>}
+ */
+export async function tryProjectIntakeExecutiveContinue(trimmed, metadata) {
+  if (!trimmed || !metadata || typeof metadata !== 'object') return null;
+  if (isCouncilCommand(trimmed)) return null;
+  if (!isActiveProjectIntake(metadata)) return null;
+  touchProjectIntakeSession(metadata);
+
+  const lock = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+  if (lock != null) return lock;
+
+  const refine = await tryStartProjectRefineResponse(trimmed, metadata);
+  if (refine != null) return refine;
+
+  return tryProjectIntakeForcedRefineSurface(trimmed, metadata);
+}
+
+/**
+ * 잠금·정제를 바깥에서 이미 시도한 뒤에도 응답이 없을 때(세션만 살아 있는 경우) 정제 표면 강제.
+ * @returns {Promise<{ text: string, packet_id: null, response_type: 'start_project_refine' } | null>}
+ */
+export async function tryProjectIntakeForcedRefineSurface(trimmed, metadata) {
+  if (!trimmed || !metadata || typeof metadata !== 'object') return null;
+  if (isCouncilCommand(trimmed)) return null;
+  if (!isActiveProjectIntake(metadata)) return null;
+  touchProjectIntakeSession(metadata);
+  const prior = getConversationTranscript(buildSlackThreadKey(metadata));
+  const goalLine = resolveStartProjectGoalLine(prior, metadata);
+  const suff = assessScopeSufficiency(prior, trimmed, goalLine, {
+    quarantineFuturePhaseIdeas: true,
+    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+  });
+  const text = buildStartProjectRefineSurface(goalLine, trimmed, suff);
+  return {
+    text,
+    packet_id: null,
+    response_type: 'start_project_refine',
   };
 }

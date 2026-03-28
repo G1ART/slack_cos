@@ -28,6 +28,7 @@ import {
 import { getDefaultEnvKey } from '../storage/environmentProfiles.js';
 import { getEnvironmentContext } from '../storage/environmentContext.js';
 import { buildStartProjectAlignmentSummary } from './startProjectSurfaceCopy.js';
+import { openProjectIntakeSession } from './projectIntakeSession.js';
 
 function isFastSpecPromoteEnabled() {
   const v = String(process.env.COS_FAST_SPEC_PROMOTE || '').trim().toLowerCase();
@@ -245,6 +246,9 @@ export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined,
         } catch {
           extra.push('', '_실행 큐 적재에 실패했습니다. `실행큐: …` 구조화 명령으로 다시 시도해 주세요._');
         }
+      }
+      if (metadata && typeof metadata === 'object' && g.trim()) {
+        openProjectIntakeSession(metadata, { goalLine: g.trim() });
       }
       return {
         text: [alignment, ...extra].join('\n'),

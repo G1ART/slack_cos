@@ -48,6 +48,7 @@ import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
 import {
   tryStartProjectLockConfirmedResponse,
   tryStartProjectRefineResponse,
+  tryProjectIntakeExecutiveContinue,
   isStartProjectLockConfirmedContext,
   isStartProjectRefineFlowContext,
 } from './startProjectLockConfirmed.js';
@@ -211,6 +212,30 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
+  if (!isCouncilCommand(trimmed)) {
+    const intakeEarly = await tryProjectIntakeExecutiveContinue(trimmed, metadata);
+    if (intakeEarly != null) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: intakeEarly.response_type,
+        via: 'ai_head_project_intake_sticky',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'ai_head_project_intake_sticky',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: intakeEarly.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: intakeEarly.response_type,
+        council_blocked: true,
+        response_type: intakeEarly.response_type,
+      });
+    }
+  }
+
   const navTrig = tryParseCosNavigatorTrigger(trimmed);
   if (navTrig) {
     logRouterEvent('navigator_route_entered', {
@@ -275,6 +300,20 @@ export async function runInboundAiRouter(ctx) {
           command_name: 'start_project_refine',
           council_blocked: true,
           response_type: navRefine.response_type,
+        });
+      }
+
+      const navIntake = await tryProjectIntakeExecutiveContinue(navBodyStripped, metadata);
+      if (navIntake != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'project_intake_sticky_nav_body' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navIntake.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: navIntake.response_type,
+          council_blocked: true,
+          response_type: navIntake.response_type,
         });
       }
 

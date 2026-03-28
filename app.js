@@ -152,6 +152,7 @@ import { resolveCleanStartProjectKickoff } from './src/features/startProjectKick
 import {
   tryStartProjectLockConfirmedResponse,
   tryStartProjectRefineResponse,
+  tryProjectIntakeForcedRefineSurface,
 } from './src/features/startProjectLockConfirmed.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
@@ -618,6 +619,23 @@ async function runLegacySingleFlow(trimmed, channelContext, metadata) {
         command_name: 'start_project_refine',
         council_blocked: true,
         response_type: refineSurf.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const intakeLegacy = await tryProjectIntakeForcedRefineSurface(trimmed, metadata);
+    if (intakeLegacy) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: intakeLegacy.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: intakeLegacy.response_type,
+        council_blocked: true,
+        response_type: intakeLegacy.response_type,
       });
     }
   } catch {

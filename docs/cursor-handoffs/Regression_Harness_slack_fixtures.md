@@ -57,8 +57,10 @@
 | `src/features/runInboundCommandRouter.js` | pre-AI: …·**`start_project` 실행 승인(충분성)**·**`start_project` 정제**·**Front Door**·**M4 lineage**·조회·…·**surface**·… |
 | `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
 | `scripts/test-start-project-lock-confirmed.mjs` | 충분성 게이트·짧은 진행 → 정제(refine) (`npm test` 포함) |
-| `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · `scopeSufficiency.js` |
-| `src/features/scopeSufficiency.js` | MVP 범위 충분성 휴리스틱(사용자 발화 중심) |
+| `scripts/test-henry-calendar-intake-regression.mjs` | 전사 없이 sticky 인테이크만으로 2턴 잠금·Council 문자열 금지 (`npm test` 포함) |
+| `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · sticky 세션 병행 · `scopeSufficiency.js` |
+| `src/features/projectIntakeSession.js` | 킥오프 후 스레드별 활성 인테이크(목표 한 줄)·잠금 시 종료 |
+| `src/features/scopeSufficiency.js` | MVP 범위 충분성 휴리스틱(후속 단계 격리·sticky 시 벤치 완화) |
 | `scripts/test-surface-intent.mjs` | Fast-Track surface 분류·**`product_feedback`**(`피드백:`) · **상태 패킷 STP-** (`npm test` 포함) |
 | `scripts/test-customer-feedback-awq-bridge.mjs` | CFB → **`feedback_follow_up` AWQ** · `linked_awq_id` · `customer_feedback_intake` 승인 티어 (`npm test` 포함) |
 | `scripts/test-start-project-fast-promote.mjs` | **`COS_FAST_SPEC_PROMOTE=1`** 시 `start_project` 표면에서 **실행큐계획화**까지 한 턴 (`npm test` 포함) |
