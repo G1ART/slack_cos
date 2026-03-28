@@ -14,6 +14,7 @@ import {
 } from './personas.js';
 import { evaluateMatrixCellTrigger } from './matrixCell.js';
 import { mergeRisks } from './risk.js';
+import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 const PERSONA_VIEW_SCHEMA = {
   type: 'object',
@@ -82,6 +83,9 @@ async function runPersonaLLM(personaId, userText, channelContext) {
 
   const instructions = `
 ${persona.buildInstructions(buildChannelHint(channelContext))}
+
+${getExecutiveHonorificPromptBlock()}
+
 응답 규칙:
 - recommendation은 실행 가능한 문장으로 작성.
 - strongest_objection은 핵심 반대 1개를 가장 강하게 제시.

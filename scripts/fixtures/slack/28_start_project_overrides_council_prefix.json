@@ -1,0 +1,15 @@
+{
+  "id": "28_start_project_overrides_council_prefix",
+  "description": "`협의모드 ` 접두 + 본문에 툴제작 — Council이 아니라 start_project 표면 (매크로·실수 대비)",
+  "source": "synthetic",
+  "event": {
+    "text": "협의모드 툴제작: 더그린 갤러리 캘린더 MVP"
+  },
+  "expect": {
+    "planner_lock_type": "none",
+    "surface_intent": "start_project",
+    "final_responder": "executive_surface",
+    "response_contains": ["정렬 · 프로젝트/툴 시작", "기본 가정"],
+    "response_forbidden": ["페르소나별 핵심 관점", "종합 추천안"]
+  }
+}

@@ -27,6 +27,7 @@ import {
 } from './workspaceQueuePromote.js';
 import { getDefaultEnvKey } from '../storage/environmentProfiles.js';
 import { getEnvironmentContext } from '../storage/environmentContext.js';
+import { buildStartProjectSurfaceBodyLines } from './startProjectSurfaceCopy.js';
 
 function isFastSpecPromoteEnabled() {
   const v = String(process.env.COS_FAST_SPEC_PROMOTE || '').trim().toLowerCase();
@@ -201,19 +202,7 @@ export async function tryExecutiveSurfaceResponse(trimmed, metadata = undefined)
         }
       }
       return {
-        text: [
-          '*[정렬 · 프로젝트/툴 시작]*',
-          '',
-          `목표(인입): _${g.slice(0, 500)}${g.length > 500 ? '…' : ''}_`,
-          '',
-          'COS가 확인하고 싶은 점 (짧게 답해 주시면 다음 패킷으로 넘깁니다):',
-          '1. **사용자/고객** — 누가 쓰나요?',
-          '2. **완료 정의** — 무엇이 되면 “됐다”인가요?',
-          '3. **기한·우선순위** — 언제까지, 다른 일 대비 어느 정도인가요?',
-          '',
-          '_내부 실행은 `계획등록:`·업무/run 등 **운영 어휘**로 이어집니다 — 대표 표면에서 문법을 외울 필요는 없습니다._',
-          ...extra,
-        ].join('\n'),
+        text: [...buildStartProjectSurfaceBodyLines(g), ...extra].join('\n'),
         packet_id: null,
         status_packet_id: null,
         response_type: 'start_project',

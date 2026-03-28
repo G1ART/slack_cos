@@ -1,6 +1,7 @@
 import { getCallJson } from './callJson.js';
 import { buildChannelHint } from './hints.js';
 import { ROUTER_SCHEMA } from './schemas.js';
+import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 export async function routeTask(userText, channelContext = null) {
   const callJSON = getCallJson();
@@ -9,6 +10,8 @@ export async function routeTask(userText, channelContext = null) {
   const instructions = `
 당신은 G1.ART 비서실장의 라우터다.
 사용자 요청을 아래 중 하나로 분류하라.
+
+${getExecutiveHonorificPromptBlock()}
 
 분류 기준:
 - strategy_finance: 전략, 예산, 우선순위, 가격, 수익화, 투자대비효과
@@ -33,6 +36,7 @@ ${buildChannelHint(channelContext)}
 규칙:
 - 채널 기본 힌트를 참고하되, 사용자 요청 내용이 더 강하면 요청 내용을 우선한다.
 - risk_review 채널이면 include_risk를 가능하면 true로 잡아라.
+- **구현·새 툴 킥오프**(예: 툴제작 콜론 접두, MVP·캘린더·앱·플랫폼을 **만들거나** 스펙을 **확정**하는 문장)은 Slack **대표 표면 start_project** 에서 먼저 처리되는 경우가 많다. 그런 본문을 **ops_grants** 등 운영 라벨로만 흐리게 묶지 말고, 기술 실행 성격이면 **engineering** 쪽에 가깝게 분류하라 (다만 이 라우터 출력은 Council 이전 단계에서 이미 가려질 수 있음).
 `;
 
   return callJSON({

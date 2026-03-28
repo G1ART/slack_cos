@@ -147,6 +147,9 @@ import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
+import { classifySurfaceIntent } from './src/features/surfaceIntentClassifier.js';
+import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
+import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
   loadConversationBufferFromDisk,
@@ -583,6 +586,26 @@ function operatorHelpText() {
 }
 
 async function runLegacySingleFlow(trimmed, channelContext, metadata) {
+  try {
+    const sp = classifySurfaceIntent(trimmed);
+    if (sp?.intent === 'start_project') {
+      const surf = await tryExecutiveSurfaceResponse(trimmed, metadata);
+      if (surf?.response_type === 'start_project') {
+        return finalizeSlackResponseFromTopLevel({
+          responder: 'executive_surface',
+          text: surf.text,
+          raw_text: trimmed,
+          normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+          command_name: 'start_project',
+          council_blocked: true,
+          response_type: 'start_project',
+        });
+      }
+    }
+  } catch {
+    /* fall through to primary+risk */
+  }
+
   const route = await routeTask(trimmed, channelContext);
   const primary = await runPrimaryAgent(route.primary_agent, trimmed, channelContext);
   const risk = route.include_risk ? await runRiskAgent(trimmed, primary, channelContext) : null;

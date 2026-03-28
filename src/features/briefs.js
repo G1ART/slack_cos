@@ -1,5 +1,6 @@
 import { getStoreCore } from '../storage/core/index.js';
 import { getPendingApprovals } from './approvals.js';
+import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 let callTextFn = null;
 
@@ -37,6 +38,9 @@ export async function buildDecisionHighlights(days) {
 
   const instructions = `
 당신은 G1.ART 비서실장이다.
+
+${getExecutiveHonorificPromptBlock()}
+
 아래 의사결정 기록을 바탕으로 대표가 빠르게 파악할 수 있는 핵심 결정 요약을 작성하라.
 
 규칙:
@@ -68,6 +72,9 @@ export async function buildLessonHighlights(days) {
 
   const instructions = `
 당신은 G1.ART 비서실장이다.
+
+${getExecutiveHonorificPromptBlock()}
+
 아래 교훈 기록을 바탕으로 대표가 바로 참고할 수 있는 핵심 교훈 요약을 작성하라.
 
 규칙:
@@ -101,6 +108,9 @@ export async function buildRiskHighlights(days) {
 
   const instructions = `
 당신은 G1.ART의 비서실장 겸 리스크 정리자다.
+
+${getExecutiveHonorificPromptBlock()}
+
 아래 상호작용 로그, 의사결정 기록, 승인 대기 안건을 바탕으로 대표가 당장 봐야 할 핵심 리스크를 요약하라.
 
 규칙:
@@ -134,6 +144,9 @@ export async function buildWeeklyBrief(days) {
 
   const instructions = `
 당신은 G1.ART 비서실장이다.
+
+${getExecutiveHonorificPromptBlock()}
+
 아래 최근 ${days}일 데이터를 바탕으로 대표용 주간 브리프를 작성하라.
 
 규칙:
@@ -175,6 +188,9 @@ export async function buildExecutiveReport(days) {
 
   const instructions = `
 당신은 G1.ART 비서실장이다.
+
+${getExecutiveHonorificPromptBlock()}
+
 아래 최근 ${days}일 데이터를 바탕으로 대표보고서를 작성하라.
 
 규칙:

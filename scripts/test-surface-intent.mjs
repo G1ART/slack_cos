@@ -26,6 +26,14 @@ const proj = await tryExecutiveSurfaceResponse('툴시작: 결제 연동');
 assert.ok(proj.text.includes('정렬'), proj.text);
 assert.equal(proj.response_type, 'start_project');
 
+const multilineStart = classifySurfaceIntent('안녕하세요\n툴제작: 멀티라인 스펙');
+assert.ok(
+  multilineStart && multilineStart.intent === 'start_project' && multilineStart.body.includes('멀티라인'),
+  multilineStart,
+);
+const g1cosGlue = classifySurfaceIntent('G1COS툴제작: 접두 붙임');
+assert.ok(g1cosGlue && g1cosGlue.intent === 'start_project' && g1cosGlue.body.includes('접두'), g1cosGlue);
+
 const tm = classifySurfaceIntent('툴제작: 내부 어드민 롤백 버튼');
 assert.ok(tm && tm.intent === 'start_project' && tm.body.includes('어드민'), tm);
 

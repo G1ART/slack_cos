@@ -1,0 +1,31 @@
+{
+  "id": "27_start_project_calendar_gallery_kickoff",
+  "description": "갤러리/아뜰리에 스케줄 캘린더 툴제작 킥오프 — start_project 표면만, APR·Council 문구 금지",
+  "source": "synthetic",
+  "event": {
+    "text": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자."
+  },
+  "expect": {
+    "planner_lock_type": "none",
+    "surface_intent": "start_project",
+    "query_prefix": null,
+    "final_responder": "executive_surface",
+    "response_contains": [
+      "정렬 · 프로젝트/툴 시작",
+      "이해한 바",
+      "기본 가정",
+      "확인 질문",
+      "월+주",
+      "실행 큐",
+      "승인 대기열(APR)을 만들지 않습니다"
+    ],
+    "response_forbidden": [
+      "페르소나별 핵심 관점",
+      "종합 추천안",
+      "가장 강한 반대 논리",
+      "승인 대기열\n- 상태: pending",
+      "내부 처리 정보",
+      "질문 리스트에 답"
+    ]
+  }
+}
