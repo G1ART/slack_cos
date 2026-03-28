@@ -1808,7 +1808,8 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **코드**:
   - `src/features/runInboundCommandRouter.js` — pre-AI 파이프라인(도움말·결정 짧은 회신·M4 lineage·조회·`routing_sync_*`·컨텍스트·플래너 하드 락·`runInboundStructuredCommands`·**문자열 구조화 응답은 `finalizeSlackResponse`( `structured` / `structured_command`)**·surface — surface **finalize `command_name` = intent `response_type`** → JSONL `surface_intent`)
   - `src/features/runInboundStructuredCommands.js` — 구조화 명령 대량 분기(미스 시 `undefined`)
-  - `src/features/runInboundAiRouter.js` — `runInboundAiRouter`, `classifyInboundResponderPreview`(회귀 축약: 도움말·조회·플래너 락·surface·내비·Council·dialog; 구조화 미시뮬)
+  - `src/features/runInboundAiRouter.js` — `runInboundAiRouter`, `classifyInboundResponderPreview`(회귀 축약: 도움말·**`start_project_confirmed`/`start_project_refine`**·Front Door(`start_project`)·조회·플래너 락·surface·내비·Council·dialog; 구조화 미시뮬)
+  - `src/features/scopeSufficiency.js` · `src/features/startProjectLockConfirmed.js` — **`start_project` 범위는 턴 수가 아니라 충분성(`assessScopeSufficiency`)**으로만 실행 승인; 미달 시 정제 루프(`start_project_refine`)
   - `src/features/slackConversationBuffer.js` — `buildSlackThreadKey`, `recordConversationTurn`, `getConversationTranscript`; 비활성 `CONVERSATION_BUFFER_DISABLE=1`
   - `src/slack/registerHandlers.js` — `metadata.thread_ts` 전달
   - `src/agents/council.js` — `conversationContext`(스레드 요약) + 페르소나 LLM 입력 합성

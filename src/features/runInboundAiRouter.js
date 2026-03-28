@@ -47,7 +47,9 @@ import { classifySurfaceIntent, isStartProjectKickoffInput } from './surfaceInte
 import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
 import {
   tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
   isStartProjectLockConfirmedContext,
+  isStartProjectRefineFlowContext,
 } from './startProjectLockConfirmed.js';
 
 /**
@@ -55,7 +57,7 @@ import {
  */
 
 /**
- * Fixture·회귀용 축약 분류 (LLM 없음). 도움말 다음 **Clean `start_project` Front Door** → 조회·플래너 락·lineage…
+ * Fixture·회귀용 축약 분류 (LLM 없음). 도움말 다음 **`start_project` 실행 승인(충분성)** → **`start_project` 정제(refine)** → **Front Door** → 조회·플래너 락·lineage…
  * `runInboundCommandRouter` 와 맞춘다. 구조화 명령(`runInboundStructuredCommands`)은 시뮬하지 않는다.
  * @param {RouterSyncLike} snap `buildRouterSyncSnapshot` 결과와 동일 필드
  * @param {Record<string, unknown>} [previewMetadata] 스레드 푸시백 픽스처용 슬랙 메타(채널·thread_ts 등)
@@ -80,6 +82,17 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
       surfacePacketId: lockPrev.packet_id ?? null,
       surfaceStatusPacketId: null,
       surfaceResponseType: lockPrev.response_type ?? 'start_project_confirmed',
+    };
+  }
+
+  const refinePrev = await tryStartProjectRefineResponse(trimmed, meta);
+  if (refinePrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: refinePrev.text,
+      surfacePacketId: refinePrev.packet_id ?? null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: refinePrev.response_type ?? 'start_project_refine',
     };
   }
 
@@ -251,6 +264,20 @@ export async function runInboundAiRouter(ctx) {
         });
       }
 
+      const navRefine = await tryStartProjectRefineResponse(navBodyStripped, metadata);
+      if (navRefine != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_refine' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navRefine.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: 'start_project_refine',
+          council_blocked: true,
+          response_type: navRefine.response_type,
+        });
+      }
+
       const navKick = resolveCleanStartProjectKickoff(navBodyStripped, metadata);
       if (navKick) {
         const se = await tryExecutiveSurfaceResponse(navKick.line, metadata, {
@@ -387,6 +414,27 @@ export async function runInboundAiRouter(ctx) {
     });
   }
 
+  const aiRefine = await tryStartProjectRefineResponse(trimmed, metadata);
+  if (aiRefine != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_refine',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'ai_tail_start_project_refine',
+    });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: aiRefine.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_refine',
+      council_blocked: true,
+      response_type: aiRefine.response_type,
+    });
+  }
+
   const aiKickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
   if (aiKickDoor) {
     const surfaceEarly = await tryExecutiveSurfaceResponse(aiKickDoor.line, metadata, {
@@ -467,8 +515,12 @@ export async function runInboundAiRouter(ctx) {
         isStartProjectKickoffInput(trimmed) ||
         isStartProjectKickoffInput(routedInput) ||
         isStartProjectLockConfirmedContext(trimmed, metadata) ||
+        isStartProjectRefineFlowContext(trimmed, metadata) ||
         Boolean(resolveCleanStartProjectKickoff(trimmed, metadata)) ||
-        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question));
+        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question)) ||
+        Boolean(
+          councilParsed?.question && isStartProjectRefineFlowContext(String(councilParsed.question).trim(), metadata),
+        );
 
       let approvalItem = null;
       if (decisionState.decisionNeeded && !kickSuppressApproval) {

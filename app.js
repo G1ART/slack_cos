@@ -149,7 +149,10 @@ import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
 import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
-import { tryStartProjectLockConfirmedResponse } from './src/features/startProjectLockConfirmed.js';
+import {
+  tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
+} from './src/features/startProjectLockConfirmed.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
@@ -598,6 +601,23 @@ async function runLegacySingleFlow(trimmed, channelContext, metadata) {
         command_name: 'start_project_confirmed',
         council_blocked: true,
         response_type: lockSurf.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const refineSurf = await tryStartProjectRefineResponse(trimmed, metadata);
+    if (refineSurf) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: refineSurf.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: 'start_project_refine',
+        council_blocked: true,
+        response_type: refineSurf.response_type,
       });
     }
   } catch {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * 킥오프 2턴 — 답변 + 진행해줘 → start_project_confirmed 표면, Council·업무등록 유도 금지.
+ * 킥오프 후 — (1) 충분한 답변 + 진행해줘 → start_project_confirmed
+ * (2) 짧은 진행해줘만 → start_project_refine (턴 수 고정 잠금 없음)
  */
 import assert from 'node:assert/strict';
 import fs from 'fs/promises';
@@ -18,9 +19,11 @@ const {
   recordConversationTurn,
   buildSlackThreadKey,
 } = await import('../src/features/slackConversationBuffer.js');
-const { tryStartProjectLockConfirmedResponse, buildProjectLockConfirmedSurface } = await import(
-  '../src/features/startProjectLockConfirmed.js'
-);
+const {
+  tryStartProjectLockConfirmedResponse,
+  tryStartProjectRefineResponse,
+  buildProjectLockConfirmedSurface,
+} = await import('../src/features/startProjectLockConfirmed.js');
 
 const kickUser =
   '툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.';
@@ -47,6 +50,20 @@ const out = await tryStartProjectLockConfirmedResponse(turn2, meta);
 assert.ok(out, 'expected lock confirmed surface');
 assert.equal(out.response_type, 'start_project_confirmed');
 
+clearConversationBuffer();
+recordConversationTurn(key, 'user', kickUser);
+recordConversationTurn(key, 'assistant', kickCos);
+const shortProceed = '진행해줘';
+assert.equal(
+  await tryStartProjectLockConfirmedResponse(shortProceed, meta),
+  null,
+  'short proceed must not lock without sufficiency',
+);
+const refineOut = await tryStartProjectRefineResponse(shortProceed, meta);
+assert.ok(refineOut, 'expected refine surface');
+assert.equal(refineOut.response_type, 'start_project_refine');
+assert.ok(refineOut.text.includes('스코프 정제'), 'refine title');
+
 const banned = [
   '페르소나별 핵심 관점',
   '종합 추천안',
@@ -67,4 +84,4 @@ const pure = buildProjectLockConfirmedSurface('goal line', '답변만');
 assert.ok(pure.includes('잠긴 MVP'));
 
 await fs.rm(tmp, { recursive: true, force: true });
-console.log('ok: start_project lock confirmed');
+console.log('ok: start_project sufficiency gate + refine');

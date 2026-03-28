@@ -1,10 +1,10 @@
 {
-  "id": "30_start_project_lock_confirmed_turn2",
-  "description": "킥오프 COS 응답 다음 턴 — 답변+진행해줘 → 잠금 표면, Council/APR/업무등록 금지",
+  "id": "31_start_project_short_proceed_refine",
+  "description": "킥오프 assistant 턴 다음 사용자가 짧은 진행해줘만 — 충분성 미달이면 start_project_refine (턴 수 고정 잠금 없음)",
   "source": "synthetic",
   "slack_metadata": {
-    "channel": "CFIX30",
-    "thread_ts": "1743100000.000030"
+    "channel": "CFIX31",
+    "thread_ts": "1743100000.000031"
   },
   "prior_conversation": [
     {
@@ -17,19 +17,18 @@
     }
   ],
   "event": {
-    "text": "MVP 가정은 정확해. 중심 사용은 개인/팀 일정 관리가 우선이야. 반복 일정도 필요해. 승인이 필요한 일정은 전시·대관·외부 대관만 관리자 승인이야. 진행해줘."
+    "text": "진행해줘"
   },
   "expect": {
     "planner_lock_type": "none",
     "final_responder": "executive_surface",
     "response_contains": [
-      "범위 잠금",
-      "잠긴 MVP",
-      "PLN",
-      "WRK",
-      "APR을 자동 만들지는 않습니다"
+      "스코프 정제",
+      "PM/Chief Engineer",
+      "APR 없음"
     ],
     "response_forbidden": [
+      "범위 잠금",
       "페르소나별 핵심 관점",
       "종합 추천안",
       "실행 작업 후보로 보입니다",

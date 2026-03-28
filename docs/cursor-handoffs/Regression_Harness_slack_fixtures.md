@@ -42,7 +42,8 @@
 | `27_start_project_calendar_gallery_kickoff` | 갤러리·캘린더 `툴제작:` → `start_project` 정렬 요약·Council 금지 (`classifyInboundResponderPreview` Front Door) |
 | `28_start_project_overrides_council_prefix` | `협의모드 툴제작:` → `start_project` 표면 |
 | `29_start_project_pushback_baseline_first` | 스레드 푸시백 + `prior_conversation`/`slack_metadata` → 이전 킥오프 줄 회수 후 정렬만 |
-| `30_start_project_lock_confirmed_turn2` | 킥오프 assistant 턴 다음 사용자 답변+`진행해줘` → `start_project_confirmed`·Council/업무등록 금지 |
+| `30_start_project_lock_confirmed_turn2` | 킥오프 assistant 턴 다음 사용자 답변+`진행해줘`(충분) → `start_project_confirmed`·Council/업무등록 금지 |
+| `31_start_project_short_proceed_refine` | 동일 맥락에서 짧은 `진행해줘`만 → `start_project_refine`(충분성 미달)·잠금 표면 비발생 |
 | `99_repr_ceo_failure_placeholder` | 대표 재현 실패 슬롯 (SKIP) |
 
 ---
@@ -53,10 +54,11 @@
 |------|------|
 | `scripts/replay-slack-fixtures.mjs` | fixture 로더 + 리포트 + exit code |
 | `src/testing/routerSyncSnapshot.js` | `buildRouterSyncSnapshot` (`runInboundCommandRouter` 동기 단계와 동일 파이프라인) |
-| `src/features/runInboundCommandRouter.js` | pre-AI: …·**`start_project` 잠금(2턴)**·**Front Door**·**M4 lineage**·조회·…·**surface**·… |
+| `src/features/runInboundCommandRouter.js` | pre-AI: …·**`start_project` 실행 승인(충분성)**·**`start_project` 정제**·**Front Door**·**M4 lineage**·조회·…·**surface**·… |
 | `scripts/test-start-project-kickoff-contract.mjs` | 캘린더 킥오프 계약 + 푸시백 회수 (`npm test` 포함) |
-| `scripts/test-start-project-lock-confirmed.mjs` | 2턴 잠금·실행 전환 표면 (`npm test` 포함) |
-| `src/features/startProjectLockConfirmed.js` | `project_lock_confirmed` · transcript 마지막 COS=킥오프 · 확정 시그널 |
+| `scripts/test-start-project-lock-confirmed.mjs` | 충분성 게이트·짧은 진행 → 정제(refine) (`npm test` 포함) |
+| `src/features/startProjectLockConfirmed.js` | 실행 승인·정제 루프 · transcript 마지막 COS=킥오프/정제 · `scopeSufficiency.js` |
+| `src/features/scopeSufficiency.js` | MVP 범위 충분성 휴리스틱(사용자 발화 중심) |
 | `scripts/test-surface-intent.mjs` | Fast-Track surface 분류·**`product_feedback`**(`피드백:`) · **상태 패킷 STP-** (`npm test` 포함) |
 | `scripts/test-customer-feedback-awq-bridge.mjs` | CFB → **`feedback_follow_up` AWQ** · `linked_awq_id` · `customer_feedback_intake` 승인 티어 (`npm test` 포함) |
 | `scripts/test-start-project-fast-promote.mjs` | **`COS_FAST_SPEC_PROMOTE=1`** 시 `start_project` 표면에서 **실행큐계획화**까지 한 턴 (`npm test` 포함) |
