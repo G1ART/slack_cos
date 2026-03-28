@@ -1,5 +1,5 @@
 /**
- * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **Clean `start_project` Front Door** → **M4 lineage** → 조회 → … → 구조화 명령 →
+ * Pre-AI 인바운드 파이프라인: 정규화 → 도움말(대표/운영) → 결정 짧은 회신 → **`start_project` 범위 잠금(2턴)** → **Clean `start_project` Front Door** → **M4 lineage** → 조회 → … → 구조화 명령 →
  * **대표 표면(surface intent)** → 미스 시 AI.
  * 순서 정본: `COS_FastTrack_v1_Surface_And_Routing.md`
  *
@@ -26,6 +26,7 @@ import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeDecisionShortReply } from './decisionPackets.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
 import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
+import { tryStartProjectLockConfirmedResponse } from './startProjectLockConfirmed.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -138,6 +139,29 @@ export async function runInboundCommandRouter(ctx) {
       response_type: decisionShort.response_type,
       packet_id: decisionShort.packet_id,
       work_queue_id: decisionShort.work_queue_id ?? null,
+    });
+    return { done: true, response };
+  }
+
+  const lockConf = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+  if (lockConf != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_confirmed',
+      via: 'start_project_lock_confirmed',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'start_project_lock_confirmed',
+    });
+    const response = finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: lockConf.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_confirmed',
+      council_blocked: true,
+      response_type: lockConf.response_type,
     });
     return { done: true, response };
   }

@@ -45,6 +45,10 @@ import { tryExecutiveSurfaceResponse } from './tryExecutiveSurfaceResponse.js';
 import { tryFinalizeG1CosLineageTransport } from './g1cosLineageTransport.js';
 import { classifySurfaceIntent, isStartProjectKickoffInput } from './surfaceIntentClassifier.js';
 import { resolveCleanStartProjectKickoff } from './startProjectKickoffDoor.js';
+import {
+  tryStartProjectLockConfirmedResponse,
+  isStartProjectLockConfirmedContext,
+} from './startProjectLockConfirmed.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -66,6 +70,17 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
 
   if (trimmed === '도움말' || trimmed === '운영도움말') {
     return { responder: 'help' };
+  }
+
+  const lockPrev = await tryStartProjectLockConfirmedResponse(trimmed, meta);
+  if (lockPrev != null) {
+    return {
+      responder: 'executive_surface',
+      surfaceRaw: lockPrev.text,
+      surfacePacketId: lockPrev.packet_id ?? null,
+      surfaceStatusPacketId: null,
+      surfaceResponseType: lockPrev.response_type ?? 'start_project_confirmed',
+    };
   }
 
   const kickDoor = resolveCleanStartProjectKickoff(trimmed, meta);
@@ -222,6 +237,20 @@ export async function runInboundAiRouter(ctx) {
         });
       }
 
+      const navLock = await tryStartProjectLockConfirmedResponse(navBodyStripped, metadata);
+      if (navLock != null) {
+        logRouterEvent('navigator_route_deferred', { reason: 'body_is_start_project_lock_confirmed' });
+        return finalizeSlackResponse({
+          responder: 'executive_surface',
+          text: navLock.text,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: 'start_project_confirmed',
+          council_blocked: true,
+          response_type: navLock.response_type,
+        });
+      }
+
       const navKick = resolveCleanStartProjectKickoff(navBodyStripped, metadata);
       if (navKick) {
         const se = await tryExecutiveSurfaceResponse(navKick.line, metadata, {
@@ -337,6 +366,27 @@ export async function runInboundAiRouter(ctx) {
     });
   }
 
+  const aiLock = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+  if (aiLock != null) {
+    logRouterEvent('router_responder_selected', {
+      responder: 'executive_surface',
+      command_name: 'start_project_confirmed',
+    });
+    logRouterEvent('router_responder_locked', {
+      responder: 'executive_surface',
+      via: 'ai_tail_start_project_lock_confirmed',
+    });
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: aiLock.text,
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'start_project_confirmed',
+      council_blocked: true,
+      response_type: aiLock.response_type,
+    });
+  }
+
   const aiKickDoor = resolveCleanStartProjectKickoff(trimmed, metadata);
   if (aiKickDoor) {
     const surfaceEarly = await tryExecutiveSurfaceResponse(aiKickDoor.line, metadata, {
@@ -416,6 +466,7 @@ export async function runInboundAiRouter(ctx) {
       const kickSuppressApproval =
         isStartProjectKickoffInput(trimmed) ||
         isStartProjectKickoffInput(routedInput) ||
+        isStartProjectLockConfirmedContext(trimmed, metadata) ||
         Boolean(resolveCleanStartProjectKickoff(trimmed, metadata)) ||
         Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question));
 

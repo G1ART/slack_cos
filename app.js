@@ -149,6 +149,7 @@ import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
 import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
+import { tryStartProjectLockConfirmedResponse } from './src/features/startProjectLockConfirmed.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
@@ -586,6 +587,23 @@ function operatorHelpText() {
 }
 
 async function runLegacySingleFlow(trimmed, channelContext, metadata) {
+  try {
+    const lockSurf = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
+    if (lockSurf) {
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'executive_surface',
+        text: lockSurf.text,
+        raw_text: trimmed,
+        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
+        command_name: 'start_project_confirmed',
+        council_blocked: true,
+        response_type: lockSurf.response_type,
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
   try {
     const kick = resolveCleanStartProjectKickoff(trimmed, metadata);
     if (kick) {
