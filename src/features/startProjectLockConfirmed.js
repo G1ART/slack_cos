@@ -11,10 +11,13 @@ import { appendWorkspaceQueueItem } from './cosWorkspaceQueue.js';
 import { assessScopeSufficiency } from './scopeSufficiency.js';
 import {
   isActiveProjectIntake,
+  isPreLockIntake,
+  hasOpenExecutionOwnership,
   touchProjectIntakeSession,
-  completeProjectIntakeSession,
+  transitionProjectIntakeStage,
   getProjectIntakeSession,
 } from './projectIntakeSession.js';
+import { createExecutionPacket, createExecutionRun } from './executionRun.js';
 
 function parseTranscriptCosChunks(transcript) {
   const t = String(transcript || '').trim();
@@ -81,7 +84,7 @@ export function resolveStartProjectGoalLine(prior, metadata) {
 }
 
 function inStartProjectIntakeContinuation(prior, metadata) {
-  return lastAssistantTurnWasKickoffOrRefine(prior) || isActiveProjectIntake(metadata);
+  return lastAssistantTurnWasKickoffOrRefine(prior) || isPreLockIntake(metadata);
 }
 
 /** @param {string} t */
@@ -127,7 +130,7 @@ export function isStartProjectLockConfirmedContext(trimmed, metadata) {
   const goalLine = resolveStartProjectGoalLine(prior, metadata);
   return assessScopeSufficiency(prior, trimmed, goalLine, {
     quarantineFuturePhaseIdeas: true,
-    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+    relaxBenchmarkForStickyIntake: isPreLockIntake(metadata),
   }).sufficient;
 }
 
@@ -138,6 +141,7 @@ export function isStartProjectRefineFlowContext(trimmed, metadata) {
   if (!trimmed || !metadata || typeof metadata !== 'object') return false;
   if (isCouncilCommand(trimmed)) return false;
   if (isStartProjectKickoffInput(trimmed)) return false;
+  if (hasOpenExecutionOwnership(metadata)) return false;
   const prior = getConversationTranscript(buildSlackThreadKey(metadata));
   if (!inStartProjectIntakeContinuation(prior, metadata)) return false;
   if (isStartProjectLockConfirmedContext(trimmed, metadata)) return false;
@@ -238,20 +242,41 @@ export function buildStartProjectRefineSurface(goalLine, userMsg, suff) {
 }
 
 /**
- * @returns {Promise<{ text: string, packet_id: null, response_type: 'start_project_confirmed' } | null>}
+ * @returns {Promise<{ text: string, packet_id: string, run_id: string, response_type: 'start_project_confirmed' } | null>}
  */
 export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
   if (!isStartProjectLockConfirmedContext(trimmed, metadata)) return null;
 
   const prior = getConversationTranscript(buildSlackThreadKey(metadata));
   const goalLine = resolveStartProjectGoalLine(prior, metadata);
+  const threadKey = buildSlackThreadKey(metadata);
+  const sess = getProjectIntakeSession(metadata);
+
+  const packet = createExecutionPacket({
+    thread_key: threadKey,
+    goal_line: goalLine,
+    locked_scope_summary: goalLine,
+    includes: sess?.spec?.includes || [],
+    excludes: sess?.spec?.excludes || [],
+    deferred_items: sess?.spec?.future_phase_backlog || [],
+    approval_rules: sess?.spec?.approval_rules || [],
+    session_id: sess?.spec?.session_id || '',
+    requested_by: String(metadata?.user || ''),
+  });
+
+  const run = createExecutionRun({ packet, metadata });
+
+  transitionProjectIntakeStage(metadata, 'execution_running', {
+    packet_id: packet.packet_id,
+    run_id: run.run_id,
+  });
 
   const surface = buildProjectLockConfirmedSurface(goalLine, trimmed);
   /** @type {string[]} */
   const extra = [];
   if (metadata && typeof metadata === 'object') {
     try {
-      const body = `[execution_approval_packet]\n초기목표: ${String(goalLine).slice(0, 2000)}\n\n대표 확인:\n${trimmed.slice(0, 6000)}`;
+      const body = `[execution_approval_packet]\npacket_id: ${packet.packet_id}\nrun_id: ${run.run_id}\n초기목표: ${String(goalLine).slice(0, 2000)}\n\n대표 확인:\n${trimmed.slice(0, 6000)}`;
       await appendWorkspaceQueueItem({
         kind: 'spec_intake',
         body,
@@ -260,17 +285,17 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
       });
       extra.push(
         '',
-        '_잠긴 요약은 **실행 정렬 큐**에도 남겼습니다. 승인 후 PLN·WRK·스키마 초안을 이어가겠습니다._',
+        `_실행 패킷 \`${packet.packet_id}\` · 실행 \`${run.run_id}\` 생성. 내부 오케스트레이션 개시._`,
       );
     } catch {
       extra.push('', '_실행 정렬 큐 기록에 실패했습니다. 동일 스레드에서 한 번 더 보내 주시면 재시도됩니다._');
     }
   }
 
-  completeProjectIntakeSession(metadata);
   return {
     text: [surface, ...extra].join('\n'),
-    packet_id: null,
+    packet_id: packet.packet_id,
+    run_id: run.run_id,
     response_type: 'start_project_confirmed',
   };
 }
@@ -285,7 +310,7 @@ export async function tryStartProjectRefineResponse(trimmed, metadata) {
   const goalLine = resolveStartProjectGoalLine(prior, metadata);
   const suff = assessScopeSufficiency(prior, trimmed, goalLine, {
     quarantineFuturePhaseIdeas: true,
-    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+    relaxBenchmarkForStickyIntake: isPreLockIntake(metadata),
   });
 
   const text = buildStartProjectRefineSurface(goalLine, trimmed, suff);
@@ -304,7 +329,7 @@ export async function tryStartProjectRefineResponse(trimmed, metadata) {
 export async function tryProjectIntakeExecutiveContinue(trimmed, metadata) {
   if (!trimmed || !metadata || typeof metadata !== 'object') return null;
   if (isCouncilCommand(trimmed)) return null;
-  if (!isActiveProjectIntake(metadata)) return null;
+  if (!isPreLockIntake(metadata)) return null;
   touchProjectIntakeSession(metadata);
 
   const lock = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
@@ -323,13 +348,13 @@ export async function tryProjectIntakeExecutiveContinue(trimmed, metadata) {
 export async function tryProjectIntakeForcedRefineSurface(trimmed, metadata) {
   if (!trimmed || !metadata || typeof metadata !== 'object') return null;
   if (isCouncilCommand(trimmed)) return null;
-  if (!isActiveProjectIntake(metadata)) return null;
+  if (!isPreLockIntake(metadata)) return null;
   touchProjectIntakeSession(metadata);
   const prior = getConversationTranscript(buildSlackThreadKey(metadata));
   const goalLine = resolveStartProjectGoalLine(prior, metadata);
   const suff = assessScopeSufficiency(prior, trimmed, goalLine, {
     quarantineFuturePhaseIdeas: true,
-    relaxBenchmarkForStickyIntake: isActiveProjectIntake(metadata),
+    relaxBenchmarkForStickyIntake: isPreLockIntake(metadata),
   });
   const text = buildStartProjectRefineSurface(goalLine, trimmed, suff);
   return {

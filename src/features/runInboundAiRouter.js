@@ -56,8 +56,10 @@ import {
   tryFinalizeProjectIntakeCancel,
   buildProjectIntakeCouncilDeferSurface,
   isActiveProjectIntake,
+  hasOpenExecutionOwnership,
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
+import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -272,6 +274,38 @@ export async function runInboundAiRouter(ctx) {
       command_name: intakeCancelAi.response_type,
       council_blocked: true,
       response_type: intakeCancelAi.response_type,
+    });
+  }
+
+  // Execution spine guard — post-lock threads never fall through to council/dialog
+  if (hasOpenExecutionOwnership(metadata)) {
+    const execResult = tryFinalizeExecutionSpineTurn({ trimmed, metadata });
+    if (execResult && execResult !== 'council_defer' && execResult.text) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'execution_spine',
+        command_name: execResult.response_type,
+        via: 'ai_router_execution_spine_guard',
+      });
+      logRouterEvent('router_responder_locked', { responder: 'execution_spine', via: 'ai_router_execution_spine_guard' });
+      return finalizeSlackResponse({
+        responder: 'execution_spine',
+        text: execResult.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: execResult.response_type,
+        council_blocked: true,
+        response_type: execResult.response_type,
+        packet_id: execResult.packet_id || null,
+      });
+    }
+    return finalizeSlackResponse({
+      responder: 'execution_spine',
+      text: buildProjectIntakeCouncilDeferSurface(metadata),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'execution_spine_council_block',
+      council_blocked: true,
+      response_type: 'execution_spine_council_block',
     });
   }
 

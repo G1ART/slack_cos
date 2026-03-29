@@ -12,7 +12,9 @@ const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'g1cos-lock-confirmed-'));
 process.env.STORAGE_MODE = 'json';
 process.env.STORE_READ_PREFERENCE = 'json';
 process.env.COS_WORKSPACE_QUEUE_FILE = path.join(tmp, 'cos-workspace-queue.json');
+process.env.EXECUTION_RUNS_FILE = path.join(tmp, 'execution-runs.json');
 await fs.writeFile(process.env.COS_WORKSPACE_QUEUE_FILE, '[]', 'utf8');
+await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 
 const {
   clearConversationBuffer,
@@ -78,7 +80,12 @@ for (const b of banned) {
 
 assert.ok(out.text.includes('범위 잠금'), 'title');
 assert.ok(out.text.includes('PLN'), 'artifact plan');
-assert.ok(out.text.includes('실행 정렬 큐') || out.text.includes('큐'), 'queue note');
+assert.ok(out.text.includes('EPK-') || out.text.includes('실행 패킷'), 'has packet_id');
+assert.ok(out.text.includes('RUN-') || out.text.includes('실행'), 'has run_id');
+assert.ok(out.packet_id, 'packet_id is present');
+assert.ok(out.run_id, 'run_id is present');
+assert.ok(out.packet_id.startsWith('EPK-'), 'packet_id format');
+assert.ok(out.run_id.startsWith('RUN-'), 'run_id format');
 
 const pure = buildProjectLockConfirmedSurface('goal line', '답변만');
 assert.ok(pure.includes('잠긴 MVP'));
