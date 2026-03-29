@@ -16,61 +16,101 @@ import {
   updateRunStage,
   updateRunReport,
 } from './executionRun.js';
+import { collectOutboundStatus, formatOutboundStatusForSlack } from './executionOutboundOrchestrator.js';
 
 /* ------------------------------------------------------------------ */
 /*  Execution-phase renderers                                          */
 /* ------------------------------------------------------------------ */
 
 export function renderExecutionRunningPacket(run) {
-  const lanes = (run.workstreams || [])
-    .map((w) => `- \`${w.lane_type}\`: ${w.objective.slice(0, 100)}`)
-    .join('\n');
-  const git = run.git_trace || {};
-  const gitLine = git.branch
-    ? `- branch: \`${git.branch}\`${git.issue_id ? ` · issue: \`${git.issue_id}\`` : ''}`
-    : '- Git seed: 생성 예정';
+  const laneLines = (run.workstreams || []).map((w) => {
+    const ob = w.outbound || {};
+    const statusIcon = {
+      pending: '⏳', drafted: '📋', dispatched: '🚀',
+      completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
+    }[ob.outbound_status] || '⏳';
+    const provider = ob.outbound_provider ? ` (${ob.outbound_provider})` : '';
+    const refs = (ob.outbound_ref_ids || []).length
+      ? ` → ${ob.outbound_ref_ids.slice(0, 2).join(', ')}`
+      : '';
+    return `${statusIcon} \`${w.lane_type}\`${provider}: ${ob.outbound_status || w.status}${refs}`;
+  });
 
-  return [
+  const git = run.git_trace || {};
+  const gitParts = [];
+  if (git.repo) gitParts.push(`repo: \`${git.repo}\``);
+  if (git.issue_id) gitParts.push(`issue: \`#${git.issue_id}\``);
+  if (git.branch) gitParts.push(`branch: \`${git.branch}\``);
+  if (git.generated_cursor_handoff_path) gitParts.push(`cursor handoff: \`${git.generated_cursor_handoff_path}\``);
+
+  const lines = [
     `*[실행 개시 · 내부 오케스트레이션]*`,
     `\`${run.run_id}\` · packet \`${run.packet_id}\``,
     '',
     `*목표:* ${String(run.project_goal || '').slice(0, 300)}`,
     '',
-    '*내부 lane 배정*',
-    lanes || '- (없음)',
-    '',
-    '*Git trace*',
-    gitLine,
+    '*Lane 배정 및 outbound 현황*',
+    ...(laneLines.length ? laneLines : ['- (없음)']),
+  ];
+
+  if (gitParts.length) {
+    lines.push('', '*Outbound trace*', ...gitParts.map((p) => `- ${p}`));
+  } else {
+    lines.push('', '*Git trace*', '- 생성 예정');
+  }
+
+  lines.push(
     '',
     '*다음 보고:* 초안 산출물 묶음 준비 시',
     '',
     '_대표 표면은 결과·에스컬레이션 위주로 유지합니다._',
-  ].join('\n');
+  );
+
+  return lines.join('\n');
 }
 
 export function renderExecutionReportingPacket(run) {
-  const report = run.latest_report || '(아직 보고 없음)';
-  const activeLanes = (run.workstreams || []).filter((w) => w.status !== 'done');
-  const doneLanes = (run.workstreams || []).filter((w) => w.status === 'done');
-  return [
+  const report = run.latest_report || null;
+
+  const laneLines = (run.workstreams || []).map((w) => {
+    const ob = w.outbound || {};
+    const statusIcon = {
+      pending: '⏳', drafted: '📋', dispatched: '🚀',
+      completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
+    }[ob.outbound_status] || '⏳';
+    const provider = ob.outbound_provider ? ` (${ob.outbound_provider})` : '';
+    const refs = (ob.outbound_ref_ids || []).length
+      ? ` → ${ob.outbound_ref_ids.slice(0, 2).join(', ')}`
+      : '';
+    return `${statusIcon} \`${w.lane_type}\`: ${ob.outbound_status || w.status}${provider}${refs}`;
+  });
+
+  const gitTrace = run.git_trace || {};
+  const gitParts = [];
+  if (gitTrace.repo) gitParts.push(`repo: \`${gitTrace.repo}\``);
+  if (gitTrace.issue_id) gitParts.push(`issue: \`#${gitTrace.issue_id}\``);
+  if (gitTrace.branch) gitParts.push(`branch: \`${gitTrace.branch}\``);
+  if (gitTrace.generated_cursor_handoff_path) gitParts.push(`cursor handoff: \`${gitTrace.generated_cursor_handoff_path}\``);
+
+  const lines = [
     `*[실행 진행 보고]*`,
-    `\`${run.run_id}\``,
+    `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
     '',
     `*현재 단계:* \`${run.current_stage}\``,
     '',
-    '*완료 lane*',
-    doneLanes.length
-      ? doneLanes.map((w) => `- ✅ \`${w.lane_type}\``).join('\n')
-      : '- (아직 없음)',
-    '',
-    '*진행 중 lane*',
-    activeLanes.length
-      ? activeLanes.map((w) => `- ⏳ \`${w.lane_type}\`: ${w.status}`).join('\n')
-      : '- (없음)',
-    '',
-    '*최신 보고*',
-    String(report).slice(0, 1200),
-  ].join('\n');
+    '*Lane 상태*',
+    ...(laneLines.length ? laneLines : ['- (없음)']),
+  ];
+
+  if (gitParts.length) {
+    lines.push('', '*Outbound trace*', ...gitParts.map((p) => `- ${p}`));
+  }
+
+  if (report) {
+    lines.push('', '*최신 보고*', String(report).slice(0, 800));
+  }
+
+  return lines.join('\n');
 }
 
 export function renderEscalationPacket(run, escalationText) {

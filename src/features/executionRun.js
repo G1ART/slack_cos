@@ -38,6 +38,20 @@ const runsById = new Map();
 /*  Default 4-lane workstream seed                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @typedef {'pending'|'drafted'|'dispatched'|'completed'|'manual_required'|'blocked'|'failed'} OutboundStatus
+ */
+
+function makeOutboundMeta() {
+  return {
+    outbound_provider: null,
+    outbound_status: /** @type {OutboundStatus} */ ('pending'),
+    outbound_ref_ids: [],
+    last_outbound_at: null,
+    last_error: null,
+  };
+}
+
 function seedWorkstreams(goalLine) {
   const g = String(goalLine || '').trim();
   return [
@@ -53,6 +67,7 @@ function seedWorkstreams(goalLine) {
       git_artifacts: [],
       external_tools_needed: ['web_search', 'competitor_analysis'],
       done_criteria: 'research note delivered',
+      outbound: makeOutboundMeta(),
     },
     {
       lane_id: makeLaneId('swe'),
@@ -66,6 +81,7 @@ function seedWorkstreams(goalLine) {
       git_artifacts: [],
       external_tools_needed: ['cursor', 'github', 'supabase'],
       done_criteria: 'PR seed + schema draft ready',
+      outbound: makeOutboundMeta(),
     },
     {
       lane_id: makeLaneId('uiux'),
@@ -79,6 +95,7 @@ function seedWorkstreams(goalLine) {
       git_artifacts: [],
       external_tools_needed: [],
       done_criteria: 'UI spec + component checklist delivered',
+      outbound: makeOutboundMeta(),
     },
     {
       lane_id: makeLaneId('qa'),
@@ -92,6 +109,7 @@ function seedWorkstreams(goalLine) {
       git_artifacts: [],
       external_tools_needed: [],
       done_criteria: 'test checklist + smoke cases delivered',
+      outbound: makeOutboundMeta(),
     },
   ];
 }
@@ -280,6 +298,65 @@ export function updateRunGitTrace(runId, traceUpdate) {
       run.git_trace.supabase_migration_ids = [...new Set([...(run.git_trace.supabase_migration_ids || []), ...v])];
     } else if (v != null) {
       run.git_trace[k] = v;
+    }
+  }
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * Update outbound metadata on a specific workstream lane.
+ * @param {string} runId
+ * @param {string} laneType
+ * @param {{ provider?: string, status?: OutboundStatus, ref_ids?: string[], error?: string | null }} update
+ */
+export function updateLaneOutbound(runId, laneType, update) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  const ws = (run.workstreams || []).find((w) => w.lane_type === laneType);
+  if (!ws) return false;
+  if (!ws.outbound) ws.outbound = { outbound_provider: null, outbound_status: 'pending', outbound_ref_ids: [], last_outbound_at: null, last_error: null };
+  if (update.provider != null) ws.outbound.outbound_provider = update.provider;
+  if (update.status != null) ws.outbound.outbound_status = update.status;
+  if (update.ref_ids) ws.outbound.outbound_ref_ids = [...new Set([...(ws.outbound.outbound_ref_ids || []), ...update.ref_ids])];
+  if (update.error !== undefined) ws.outbound.last_error = update.error;
+  ws.outbound.last_outbound_at = new Date().toISOString();
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * Append an entry to cursor_trace.
+ * @param {string} runId
+ * @param {{ dispatch_mode: string, handoff_path: string, status: string, result_summary?: string, result_link?: string }} entry
+ */
+export function appendCursorTrace(runId, entry) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  if (!run.cursor_trace) run.cursor_trace = [];
+  run.cursor_trace.push({ created_at: new Date().toISOString(), ...entry });
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * Append an entry to supabase_trace.
+ * @param {string} runId
+ * @param {{ kind: string, draft_path?: string, migration_id?: string, status: string }} entry
+ */
+export function appendSupabaseTrace(runId, entry) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  if (!run.supabase_trace) run.supabase_trace = [];
+  run.supabase_trace.push({ created_at: new Date().toISOString(), ...entry });
+  if (entry.migration_id) {
+    if (!run.git_trace) run.git_trace = {};
+    if (!run.git_trace.supabase_migration_ids) run.git_trace.supabase_migration_ids = [];
+    if (!run.git_trace.supabase_migration_ids.includes(entry.migration_id)) {
+      run.git_trace.supabase_migration_ids.push(entry.migration_id);
     }
   }
   run.updated_at = new Date().toISOString();
