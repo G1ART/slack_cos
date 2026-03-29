@@ -6,7 +6,7 @@
   "expect": {
     "planner_lock_type": "none",
     "query_prefix": null,
-    "final_responder": "dialog",
+    "final_responder": "research_surface",
     "skip_response_body": true
   }
 }

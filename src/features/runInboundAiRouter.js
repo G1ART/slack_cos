@@ -60,6 +60,14 @@ import {
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
+import {
+  interpretTask,
+  isResearchSurfaceCandidate,
+  isFreshnessRequired,
+  openPlaybook,
+  getActivePlaybook,
+} from './dynamicPlaybook.js';
+import { runRepresentativeResearch } from './representativeResearchSurface.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -219,7 +227,10 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
     return { responder: 'council' };
   }
 
-  return { responder: 'dialog' };
+  if (isResearchSurfaceCandidate(trimmed)) {
+    return { responder: 'research_surface' };
+  }
+  return { responder: 'partner_surface' };
 }
 
 /**
@@ -799,11 +810,88 @@ export async function runInboundAiRouter(ctx) {
     }
   }
 
-  logRouterEvent('router_responder_selected', { responder: 'dialog', command_name: 'cos_natural' });
-  logRouterEvent('router_responder_locked', { responder: 'dialog' });
+  // ── Dynamic Playbook Interpretation + Research / Partner Surface ──
+  const hypothesis = interpretTask(trimmed);
+  const existingPlaybook = getActivePlaybook(threadKey);
+  const taskKind = existingPlaybook?.kind || hypothesis.kind;
+  const playbookForThread = existingPlaybook || (
+    hypothesis.should_open_playbook
+      ? openPlaybook(threadKey, hypothesis, trimmed)
+      : null
+  );
+
+  logRouterEvent('dynamic_task_interpreted', {
+    task_kind: taskKind,
+    mode: hypothesis.mode,
+    is_research: hypothesis.is_research,
+    freshness_required: hypothesis.freshness_required,
+    should_open_playbook: hypothesis.should_open_playbook,
+    should_open_execution: hypothesis.should_open_execution,
+    confidence: hypothesis.confidence,
+    playbook_id: playbookForThread?.playbook_id || null,
+    council_allowed: false,
+    council_exposed: false,
+    execution_ownership: false,
+  });
+
+  // Research Surface — broad natural-language research questions
+  if (hypothesis.is_research) {
+    logRouterEvent('router_responder_selected', { responder: 'research_surface', command_name: 'research', task_kind: taskKind });
+    logRouterEvent('router_responder_locked', { responder: 'research_surface' });
+
+    const priorResearch = getConversationTranscript(threadKey);
+    try {
+      const researchText = await runRepresentativeResearch({
+        callText,
+        userText: trimmed,
+        channelContext,
+        freshness_required: hypothesis.freshness_required,
+        task_kind: taskKind,
+        playbook_id: playbookForThread?.playbook_id || null,
+        priorTranscript: priorResearch || '',
+      });
+
+      await appendJsonRecord(INTERACTIONS_FILE, {
+        id: makeId('INT'),
+        created_at: new Date().toISOString(),
+        user_text: trimmed,
+        source: metadata,
+        channel_context: channelContext,
+        route,
+        orchestration_mode: 'research_surface',
+        task_kind: taskKind,
+        playbook_id: playbookForThread?.playbook_id || null,
+        freshness_required: hypothesis.freshness_required,
+        approval_id: null,
+        decision_needed: false,
+      });
+
+      return finalizeSlackResponse({
+        responder: 'research_surface',
+        text: researchText,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'research',
+        council_blocked: true,
+        response_type: 'research_surface',
+      });
+    } catch (error) {
+      console.error('RESEARCH_SURFACE_ERROR -> fallback partner:', error);
+    }
+  }
+
+  // Partner Surface — COS natural partner (default for all non-council, non-research)
+  logRouterEvent('router_responder_selected', {
+    responder: 'partner_surface',
+    command_name: 'cos_natural',
+    task_kind: taskKind,
+    playbook_id: playbookForThread?.playbook_id || null,
+  });
+  logRouterEvent('router_responder_locked', { responder: 'partner_surface' });
   logRouterEvent('dialog_route_entered', {
     raw_text: String(routerCtx.raw_text).slice(0, 400),
     normalized_text: trimmed.slice(0, 400),
+    task_kind: taskKind,
   });
 
   const priorDialog = getConversationTranscript(threadKey);
@@ -824,7 +912,9 @@ export async function runInboundAiRouter(ctx) {
       source: metadata,
       channel_context: channelContext,
       route,
-      orchestration_mode: 'cos_natural_dialog',
+      orchestration_mode: 'cos_partner_surface',
+      task_kind: taskKind,
+      playbook_id: playbookForThread?.playbook_id || null,
       approval_id: null,
       decision_needed: false,
     });
@@ -841,13 +931,13 @@ export async function runInboundAiRouter(ctx) {
     }
 
     const out = finalizeSlackResponse({
-      responder: 'dialog',
+      responder: 'partner_surface',
       text: dialogWithHint,
       raw_text: routerCtx.raw_text,
       normalized_text: routerCtx.normalized_text,
       command_name: 'COS_대화',
       council_blocked: true,
-      response_type: hintPlanId ? 'cos_natural_dialog_thread_plan_hint' : 'cos_natural_dialog',
+      response_type: hintPlanId ? 'cos_partner_dialog_thread_plan_hint' : 'cos_partner_dialog',
     });
     if (shouldOfferWorkspaceQueueButtons(trimmed)) {
       logRouterEvent('dialog_queue_buttons_attached', { normalized_len: trimmed.length });
@@ -858,7 +948,7 @@ export async function runInboundAiRouter(ctx) {
     }
     return out;
   } catch (error) {
-    console.error('COS_NATURAL_DIALOG_ERROR -> fallback single flow:', error);
+    console.error('COS_PARTNER_SURFACE_ERROR -> fallback single flow:', error);
     const legacyText = await runLegacySingleFlow(trimmed, channelContext, metadata);
     return finalizeSlackResponse({
       responder: 'single',
@@ -866,7 +956,7 @@ export async function runInboundAiRouter(ctx) {
       raw_text: routerCtx.raw_text,
       normalized_text: routerCtx.normalized_text,
       council_blocked: true,
-      response_type: 'legacy_single_after_dialog_error',
+      response_type: 'legacy_single_after_partner_error',
     });
   }
 }
