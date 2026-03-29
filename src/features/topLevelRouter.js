@@ -111,6 +111,9 @@ export function finalizeSlackResponse(p) {
       'partner_surface',
       'research_surface',
       'execution_spine',
+      'execution_running_surface',
+      'execution_reporting_surface',
+      'escalation_surface',
       'executive_surface',
       'structured',
     ].includes(responder);

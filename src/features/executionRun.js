@@ -137,7 +137,10 @@ export function createExecutionPacket(opts) {
 /**
  * @param {{ packet: object, metadata: Record<string, unknown> }} opts
  */
-export function createExecutionRun({ packet, metadata }) {
+/**
+ * @param {{ packet: object, metadata: Record<string, unknown>, playbook_id?: string, task_kind?: string }} opts
+ */
+export function createExecutionRun({ packet, metadata, playbook_id, task_kind }) {
   const run_id = makeRunId();
   const now = new Date().toISOString();
   const run = {
@@ -167,6 +170,14 @@ export function createExecutionRun({ packet, metadata }) {
     },
     cursor_trace: [],
     supabase_trace: [],
+    artifacts: {
+      research_benchmark: { research_note_id: null, research_note_path: null },
+      fullstack_swe: { github_issue_id: null, github_issue_url: null, branch_name: null, pr_id: null, pr_url: null, cursor_handoff_path: null, supabase_schema_draft_path: null },
+      uiux_design: { ui_spec_delta_path: null, wireframe_note_path: null, component_checklist_path: null },
+      qa_qc: { acceptance_checklist_path: null, regression_case_list_path: null, smoke_test_plan_path: null },
+    },
+    originating_playbook_id: playbook_id || null,
+    originating_task_kind: task_kind || null,
     escalation_policy: 'bounded',
     requested_by: packet.requested_by || String(metadata?.user || ''),
     approved_by: String(metadata?.user || ''),
@@ -227,6 +238,51 @@ export function updateRunStage(runId, newStage) {
   if (newStage === 'completed' || newStage === 'cancelled') {
     run.status = newStage;
   }
+  persistRun(run);
+  return true;
+}
+
+/**
+ * Attach artifact metadata to a specific lane in the run.
+ * @param {string} runId
+ * @param {string} laneType - e.g. 'fullstack_swe'
+ * @param {Record<string, unknown>} artifactData
+ */
+export function attachRunArtifact(runId, laneType, artifactData) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  if (!run.artifacts) run.artifacts = {};
+  run.artifacts[laneType] = { ...(run.artifacts[laneType] || {}), ...artifactData };
+  const ws = (run.workstreams || []).find((w) => w.lane_type === laneType);
+  if (ws) {
+    for (const [k, v] of Object.entries(artifactData)) {
+      if (v && !ws.git_artifacts.includes(k)) ws.git_artifacts.push(k);
+    }
+  }
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * Update git_trace fields progressively.
+ * @param {string} runId
+ * @param {Record<string, unknown>} traceUpdate
+ */
+export function updateRunGitTrace(runId, traceUpdate) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  if (!run.git_trace) run.git_trace = {};
+  for (const [k, v] of Object.entries(traceUpdate)) {
+    if (k === 'commit_shas' && Array.isArray(v)) {
+      run.git_trace.commit_shas = [...new Set([...(run.git_trace.commit_shas || []), ...v])];
+    } else if (k === 'supabase_migration_ids' && Array.isArray(v)) {
+      run.git_trace.supabase_migration_ids = [...new Set([...(run.git_trace.supabase_migration_ids || []), ...v])];
+    } else if (v != null) {
+      run.git_trace[k] = v;
+    }
+  }
+  run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;
 }
