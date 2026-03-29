@@ -318,7 +318,8 @@ try {
 /* Cleanup */
 /* ============================== */
 clearPlaybooksForTest();
-await fs.rm(tmp, { recursive: true, force: true });
+await new Promise((r) => setTimeout(r, 200));
+await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 delete process.env.COS_WORKSPACE_QUEUE_FILE;
 delete process.env.EXECUTION_RUNS_FILE;
 delete process.env.PLAYBOOKS_FILE;

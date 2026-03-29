@@ -474,21 +474,40 @@ export async function generateResearchArtifact(run) {
   const absPath = path.resolve(process.cwd(), relPath);
 
   try {
+    const researchLane = (run.workstreams || []).find((w) => w.lane_type === 'research_benchmark');
     const content = [
       `# Research Note — ${run.run_id}`,
       '', `**Generated**: ${new Date().toISOString()}`,
       `**run_id**: \`${run.run_id}\``, `**task_kind**: \`${run.originating_task_kind || 'general'}\``,
       '', '---', '',
+      '## Task Summary',
+      run.locked_mvp_summary || run.project_goal || '(not set)',
+      '',
       '## Research Objective',
-      (run.workstreams || []).find((w) => w.lane_type === 'research_benchmark')?.objective || run.project_goal || '(not set)',
-      '', '## Scope', `**Goal**: ${run.project_goal || '(not set)'}`,
-      '', '### Key Questions',
-      ...(run.includes || []).map((i) => `- ${i}`),
-      '', '## Findings', '', '> _[To be filled by research agent or manual input]_',
-      '', '## Source Bundle', '', '- (sources to be attached)',
-      '', '## Next Actions', '', '- Feed findings to fullstack_swe and uiux_design lanes',
+      researchLane?.objective || run.project_goal || '(not set)',
+      '',
+      '## Search Scope',
+      `**Goal**: ${run.project_goal || '(not set)'}`,
+      `**Domain**: ${run.originating_task_kind || 'general'}`,
+      '',
+      '### Questions to Validate',
+      ...(run.includes || []).map((i, idx) => `${idx + 1}. ${i}`),
+      (run.includes || []).length === 0 ? '1. (define questions)' : null,
+      '',
+      '## Findings',
+      '', '> _[To be filled by research agent or manual input]_',
+      '',
+      '## Source Placeholders',
+      '', '| # | Source | URL/Ref | Relevance |',
+      '|---|--------|---------|-----------|',
+      '| 1 | (source) | (url) | (notes) |',
+      '',
+      '## Next Actions',
+      '', '- [ ] Fill findings from research execution',
+      '- [ ] Feed findings to fullstack_swe and uiux_design lanes',
+      '- [ ] Validate key assumptions',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
-    ].join('\n');
+    ].filter(Boolean).join('\n');
     await fs.mkdir(path.dirname(absPath), { recursive: true });
     await fs.writeFile(absPath, content, 'utf8');
 
@@ -519,24 +538,40 @@ export async function generateUiuxArtifacts(run) {
     await writeArtifactFile(specPath, [
       `# UI Spec Delta — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
       '', '## Objective', uiuxLane?.objective || run.project_goal || '(not set)',
-      '', '## View Model', '', '> _[To be designed]_',
-      '', '## Permission Surface', '', '> _[To be designed]_',
-      '', '## Key Screens / Flows', '', '> _[To be designed]_',
+      '',
+      '## Core Screens',
+      '', '| Screen | Purpose | Priority |',
+      '|--------|---------|----------|',
+      '| (main) | (purpose) | P0 |',
+      '',
+      '## Behavior Notes',
+      '', '- (interaction patterns, state transitions)',
+      '',
+      '## Visibility / Permission Notes',
+      '', '- Public: (list)', '- Private: (list)', '- Admin-only: (list)',
+      '',
+      '## Unresolved UX Items',
+      '', '- [ ] (list open questions)',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].join('\n'));
 
     const compPath = `${base}_components.md`;
     await writeArtifactFile(compPath, [
       `# Component Checklist — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
-      '', '## Components Required', '', '- [ ] (list components here)',
-      '', '## Dependencies', '', '- (dependencies)',
+      '', '## Component Targets',
+      '', '| Component | States | Dependencies |',
+      '|-----------|--------|--------------|',
+      '| (component) | default, loading, error | (deps) |',
+      '',
+      '## Notes', '', '- (notes)',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].join('\n'));
 
     const wirePath = `${base}_wireframe.md`;
     await writeArtifactFile(wirePath, [
       `# Wireframe Notes — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
-      '', '## Layout Notes', '', '> _[To be designed]_',
+      '', '## Layout Notes', '', '- (layout description)',
+      '', '## Navigation Flow', '', '- (flow description)',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].join('\n'));
 
@@ -561,23 +596,41 @@ export async function generateQaArtifacts(run) {
     await writeArtifactFile(accPath, [
       `# Acceptance Checklist — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
       '', '## Objective', qaLane?.objective || '(not set)',
-      '', '## Acceptance Criteria',
+      '',
+      '## Success Criteria',
       ...(run.includes || []).map((i) => `- [ ] ${i}`),
       (run.includes || []).length === 0 ? '- [ ] (define criteria)' : null,
+      '',
+      '## User Journey Checks',
+      '', '- [ ] Primary happy path verified',
+      '- [ ] Edge case handling acceptable',
+      '- [ ] Error states user-friendly',
+      '',
+      '## Regression Sensitivity',
+      '', '- [ ] No existing functionality broken',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].filter(Boolean).join('\n'));
 
     const regPath = `${base}_regression.md`;
     await writeArtifactFile(regPath, [
       `# Regression Case List — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
-      '', '## Cases', '', '- [ ] Existing flows still work', '- [ ] No scope creep',
+      '', '## Cases',
+      '', '- [ ] Existing flows still work',
+      '- [ ] No scope creep beyond locked MVP',
+      '- [ ] API backward compatibility maintained',
+      '- [ ] Data integrity preserved',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].join('\n'));
 
     const smokePath = `${base}_smoke.md`;
     await writeArtifactFile(smokePath, [
       `# Smoke Test Plan — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
-      '', '## Smoke Cases', '', '- [ ] App boots', '- [ ] Core happy path works',
+      '', '## Minimal Smoke Steps',
+      '', '| Step | Action | Expected Result |',
+      '|------|--------|-----------------|',
+      '| 1 | App boots | No crash, clean log |',
+      '| 2 | Core happy path | Expected output |',
+      '| 3 | Error path | Graceful handling |',
       '', '---', `_Auto-generated for \`${run.run_id}\`_`,
     ].join('\n'));
 

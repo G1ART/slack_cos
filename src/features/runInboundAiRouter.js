@@ -73,7 +73,7 @@ import { createExecutionPacket, createExecutionRun, getExecutionRunByThread } fr
 import { transitionProjectIntakeStage, getProjectIntakeSession } from './projectIntakeSession.js';
 import { runRepresentativeResearch } from './representativeResearchSurface.js';
 import { renderExecutionRunningPacket } from './executionSpineRouter.js';
-import { dispatchOutboundActionsForRun } from './executionOutboundOrchestrator.js';
+import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -868,10 +868,7 @@ export async function runInboundAiRouter(ctx) {
     });
     linkPlaybookToExecution(pb.playbook_id, { packet_id: packet.packet_id, run_id: run.run_id });
 
-    // Auto-dispatch outbound (fire-and-forget; errors handled per-lane)
-    dispatchOutboundActionsForRun(run, metadata).catch((err) => {
-      console.warn('[runInboundAiRouter] auto-dispatch error:', err?.message || err);
-    });
+    ensureExecutionRunDispatched(run, metadata);
 
     logRouterEvent('router_responder_selected', {
       responder: 'execution_spine',

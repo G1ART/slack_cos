@@ -159,7 +159,8 @@ console.log('TEST 5 PASS: matrix/council blocked; escalation works');
 clearProjectIntakeSessionsForTest();
 clearExecutionRunsForTest();
 clearConversationBuffer();
-await fs.rm(tmp, { recursive: true, force: true });
+await new Promise((r) => setTimeout(r, 200));
+await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 delete process.env.COS_WORKSPACE_QUEUE_FILE;
 delete process.env.EXECUTION_RUNS_FILE;
 

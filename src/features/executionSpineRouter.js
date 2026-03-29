@@ -16,7 +16,15 @@ import {
   updateRunStage,
   updateRunReport,
 } from './executionRun.js';
-import { collectOutboundStatus, formatOutboundStatusForSlack } from './executionOutboundOrchestrator.js';
+import { collectOutboundStatus, formatOutboundStatusForSlack, retryRunOutbound } from './executionOutboundOrchestrator.js';
+import {
+  evaluateExecutionRunCompletion,
+  detectAndApplyCompletion,
+  detectPMIntent,
+  diagnoseGithubConfig,
+  getCursorOperationalStatus,
+  buildSupabaseManualApplyInstructions,
+} from './executionDispatchLifecycle.js';
 
 /* ------------------------------------------------------------------ */
 /*  Execution-phase renderers                                          */
@@ -104,11 +112,14 @@ export function renderExecutionReportingPacket(run) {
   const cursorTraceLen = (run.cursor_trace || []).length;
   const supaTraceLen = (run.supabase_trace || []).length;
 
+  const eval_ = evaluateExecutionRunCompletion(run.run_id);
+  const overallStatus = eval_?.overall_status || 'unknown';
+
   const lines = [
     `*[실행 진행 보고]*`,
     `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
     '',
-    `*현재 단계:* \`${run.current_stage}\``,
+    `*현재 단계:* \`${run.current_stage}\` · *전체:* \`${overallStatus}\``,
     `*Dispatch 상태:* ${dispatchIcon} \`${dispatchState}\`${run.outbound_dispatched_at ? ` (${run.outbound_dispatched_at})` : ''}`,
     '',
     '*Lane 상태*',
@@ -151,6 +162,97 @@ export function renderExecutionReportingPacket(run) {
   return lines.join('\n');
 }
 
+function renderRetryResponsePacket(run, eval_) {
+  const lines = [
+    `*[재시도 실행]*`,
+    `\`${run.run_id}\``,
+    '',
+  ];
+  if (eval_) {
+    lines.push(`*전체 상태:* \`${eval_.overall_status}\``);
+    if (eval_.failed_lanes.length) lines.push(`*재시도 대상:* ${eval_.failed_lanes.map((l) => `\`${l}\``).join(', ')}`);
+    if (eval_.completed_lanes.length) lines.push(`*완료:* ${eval_.completed_lanes.map((l) => `\`${l}\``).join(', ')}`);
+    if (eval_.next_actions.length) {
+      lines.push('', '*다음 액션*');
+      for (const a of eval_.next_actions) lines.push(`- ${a}`);
+    }
+  } else {
+    lines.push('재시도를 시작했습니다.');
+  }
+  return lines.join('\n');
+}
+
+function renderManualActionsPacket(run) {
+  const eval_ = evaluateExecutionRunCompletion(run.run_id);
+  const lines = [
+    `*[수동 조치 현황]*`,
+    `\`${run.run_id}\``,
+    '',
+  ];
+
+  if (!eval_ || eval_.manual_required_lanes.length === 0) {
+    lines.push('현재 수동 조치가 필요한 lane이 없습니다.');
+    return lines.join('\n');
+  }
+
+  for (const laneType of eval_.manual_required_lanes) {
+    const ws = (run.workstreams || []).find((w) => w.lane_type === laneType);
+    lines.push(`- \`${laneType}\` (${ws?.outbound?.outbound_provider || '?'}): ${ws?.outbound?.last_error || '수동 처리 필요'}`);
+  }
+
+  const ghDiag = diagnoseGithubConfig();
+  if (!ghDiag.configured) {
+    lines.push('', `*GitHub 설정 부족:* ${ghDiag.missing.join(', ')}`);
+  }
+
+  const cursor = getCursorOperationalStatus(run.run_id);
+  if (cursor?.status === 'awaiting_result') {
+    lines.push('', `*Cursor:* 핸드오프 생성됨, 결과 대기 중`);
+    lines.push(`  결과 드롭 위치: \`${cursor.result_drop_paths[0]}\``);
+  }
+
+  const supa = buildSupabaseManualApplyInstructions(run.run_id);
+  if (supa && supa.draft_path !== '(no draft created)') {
+    lines.push('', '*Supabase:* 수동 적용 대기');
+    for (const step of supa.steps) lines.push(`  ${step}`);
+  }
+
+  return lines.join('\n');
+}
+
+export function renderPMCockpitPacket(run) {
+  const eval_ = evaluateExecutionRunCompletion(run.run_id);
+  const dispState = run.outbound_dispatch_state || 'not_started';
+
+  const statusMap = {
+    pending: '⏳', drafted: '📋', dispatched: '🚀',
+    completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
+    acknowledged: '📬', partial: '🔄', in_progress: '🔄', not_started: '⏳',
+  };
+
+  const lines = [
+    `*[PM 대시보드]*`,
+    `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
+    '',
+    `*전체:* \`${eval_?.overall_status || 'unknown'}\` · *Dispatch:* ${statusMap[dispState] || '❓'} \`${dispState}\``,
+    '',
+  ];
+
+  for (const ws of (run.workstreams || [])) {
+    const ob = ws.outbound || {};
+    const icon = statusMap[ob.outbound_status] || '⏳';
+    const deps = ws.dependencies?.length ? ` (deps: ${ws.dependencies.join(', ')})` : '';
+    lines.push(`${icon} \`${ws.lane_type}\`: ${ob.outbound_status || 'pending'}${deps}`);
+  }
+
+  if (eval_?.next_actions?.length) {
+    lines.push('', '*다음 필요 액션*');
+    for (const a of eval_.next_actions) lines.push(`- ${a}`);
+  }
+
+  return lines.join('\n');
+}
+
 export function renderEscalationPacket(run, escalationText) {
   return [
     `*[에스컬레이션 · 대표 확인 필요]*`,
@@ -180,9 +282,11 @@ export function renderExecutionCompletedPacket(run) {
 /*  Progress / escalation intent detection                             */
 /* ------------------------------------------------------------------ */
 
-const PROGRESS_RE = /(?:progress|진행\s*(?:상황|보고|요약))|지금\s*어디|현황|보고\s*해|status/i;
+const PROGRESS_RE = /(?:progress|진행\s*(?:상황|보고|요약))|지금\s*어디|현황|보고\s*해|status|어디까지\s*됐/i;
 const ESCALATION_RE = /에스컬레이션|내\s*승인\s*없이는|대표\s*결정|escalat/i;
 const COMPLETION_RE = /실행\s*완료|프로젝트\s*완료|종료/i;
+const RETRY_RE = /retry|재시도|다시\s*해|재실행/i;
+const MANUAL_ASK_RE = /manual\s*action|수동\s*조치|뭐\s*남았|남은\s*작업/i;
 
 /* ------------------------------------------------------------------ */
 /*  Main execution spine handler                                       */
@@ -223,9 +327,30 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
   }
 
   if (PROGRESS_RE.test(trimmed)) {
+    detectAndApplyCompletion(run.run_id);
     return {
       text: renderExecutionReportingPacket(run),
       response_type: 'execution_reporting_status',
+      packet_id: run.packet_id,
+      run_id: run.run_id,
+    };
+  }
+
+  if (RETRY_RE.test(trimmed)) {
+    retryRunOutbound(run.run_id, metadata).catch(() => {});
+    const eval_ = evaluateExecutionRunCompletion(run.run_id);
+    return {
+      text: renderRetryResponsePacket(run, eval_),
+      response_type: 'execution_retry',
+      packet_id: run.packet_id,
+      run_id: run.run_id,
+    };
+  }
+
+  if (MANUAL_ASK_RE.test(trimmed)) {
+    return {
+      text: renderManualActionsPacket(run),
+      response_type: 'execution_manual_status',
       packet_id: run.packet_id,
       run_id: run.run_id,
     };
@@ -239,6 +364,8 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
       run_id: run.run_id,
     };
   }
+
+  detectAndApplyCompletion(run.run_id);
 
   return {
     text: renderExecutionRunningPacket(run),

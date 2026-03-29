@@ -90,5 +90,6 @@ assert.ok(out.run_id.startsWith('RUN-'), 'run_id format');
 const pure = buildProjectLockConfirmedSurface('goal line', '답변만');
 assert.ok(pure.includes('잠긴 MVP'));
 
-await fs.rm(tmp, { recursive: true, force: true });
+await new Promise((r) => setTimeout(r, 200));
+await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 console.log('ok: start_project sufficiency gate + refine');

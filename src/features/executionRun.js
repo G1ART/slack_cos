@@ -199,6 +199,7 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     outbound_dispatch_state: 'not_started',
     outbound_dispatched_at: null,
     outbound_dispatch_attempts: 0,
+    outbound_last_error: null,
     escalation_policy: 'bounded',
     requested_by: packet.requested_by || String(metadata?.user || ''),
     approved_by: String(metadata?.user || ''),
@@ -370,8 +371,9 @@ export function appendSupabaseTrace(runId, entry) {
 /**
  * @param {string} runId
  * @param {'not_started'|'in_progress'|'completed'|'partial'|'failed'} state
+ * @param {{ error?: string }} [extra]
  */
-export function updateOutboundDispatchState(runId, state) {
+export function updateOutboundDispatchState(runId, state, extra = {}) {
   const run = runsById.get(runId);
   if (!run) return false;
   run.outbound_dispatch_state = state;
@@ -379,6 +381,32 @@ export function updateOutboundDispatchState(runId, state) {
     run.outbound_dispatched_at = run.outbound_dispatched_at || new Date().toISOString();
   }
   run.outbound_dispatch_attempts = (run.outbound_dispatch_attempts || 0) + (state === 'in_progress' ? 1 : 0);
+  if (extra.error !== undefined) run.outbound_last_error = extra.error;
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+export function getRunDispatchState(runId) {
+  const run = runsById.get(runId);
+  if (!run) return null;
+  return {
+    outbound_dispatch_state: run.outbound_dispatch_state || 'not_started',
+    outbound_dispatched_at: run.outbound_dispatched_at || null,
+    outbound_dispatch_attempts: run.outbound_dispatch_attempts || 0,
+    outbound_last_error: run.outbound_last_error || null,
+  };
+}
+
+/**
+ * Update lane-level status field (not outbound, but lane.status itself).
+ */
+export function updateLaneStatus(runId, laneType, status) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  const ws = (run.workstreams || []).find((w) => w.lane_type === laneType);
+  if (!ws) return false;
+  ws.status = status;
   run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;
