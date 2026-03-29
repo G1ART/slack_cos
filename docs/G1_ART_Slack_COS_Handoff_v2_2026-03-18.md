@@ -1834,7 +1834,14 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - `@slack/bolt` **^4.6.0** (내부 `@slack/socket-mode` **2.x**)
 - Bolt 3 + socket-mode 1.x에서는 `connecting` 상태에서 `server explicit disconnect` 시 finity state machine 예외로 프로세스가 죽는 이슈가 보고된 바 있음. **Bolt 4 / socket-mode 2**로 올려 완화하는 것이 1차 대응이다.
 
-### 24.1b Execution Spine (2026-03-29)
+### 24.1b Open-World COS / Dynamic Playbook (2026-03-29)
+
+- **Council은 기본 화자가 아님**. explicit command (`협의모드:`) 또는 bounded escalation에서만 user-facing.
+- 일반 자연어 → **partner_surface** (`cosNaturalPartner`), research 질문 → **research_surface** (`representativeResearchSurface`).
+- **Dynamic Playbook Engine** (`dynamicPlaybook.js`): open-world kind 추론, `PBK-...` playbook 생성, 3회 반복 시 promotion.
+- 정본 참조: `docs/cursor-handoffs/COS_OpenWorld_Dynamic_Playbook_2026-03.md`.
+
+### 24.1c Execution Spine (2026-03-29)
 
 - `start_project` 흐름은 이제 **lock-confirmed 이후에도 세션을 삭제하지 않는다**.
 - Session stage: `active → execution_ready → execution_running → execution_reporting → completed`.

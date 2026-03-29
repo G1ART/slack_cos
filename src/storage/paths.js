@@ -101,6 +101,15 @@ export function resolveExecutionRunsPath() {
   return EXECUTION_RUNS_FILE;
 }
 
+/** Dynamic playbooks (append-only JSON array) */
+export const PLAYBOOKS_FILE = path.join(DATA_DIR, 'dynamic-playbooks.json');
+
+export function resolvePlaybooksPath() {
+  const v = process.env.PLAYBOOKS_FILE;
+  if (v) return path.isAbsolute(v) ? v : path.join(PROJECT_ROOT, v);
+  return PLAYBOOKS_FILE;
+}
+
 /** M3 agent work queue seed — JSON 배열 (`AGENT_WORK_QUEUE_FILE` 로 오버라이드) */
 export function resolveAgentWorkQueuePath() {
   const v = process.env.AGENT_WORK_QUEUE_FILE;

@@ -108,6 +108,9 @@ export function finalizeSlackResponse(p) {
       'legacy_single',
       'navigator',
       'dialog',
+      'partner_surface',
+      'research_surface',
+      'execution_spine',
       'executive_surface',
       'structured',
     ].includes(responder);
