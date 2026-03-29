@@ -18,6 +18,7 @@ import {
   getProjectIntakeSession,
 } from './projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun } from './executionRun.js';
+import { dispatchOutboundActionsForRun } from './executionOutboundOrchestrator.js';
 
 function parseTranscriptCosChunks(transcript) {
   const t = String(transcript || '').trim();
@@ -265,6 +266,11 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
   });
 
   const run = createExecutionRun({ packet, metadata });
+
+  // Auto-dispatch outbound (fire-and-forget; errors handled per-lane)
+  dispatchOutboundActionsForRun(run, metadata).catch((err) => {
+    console.warn('[startProjectLockConfirmed] auto-dispatch error:', err?.message || err);
+  });
 
   transitionProjectIntakeStage(metadata, 'execution_running', {
     packet_id: packet.packet_id,

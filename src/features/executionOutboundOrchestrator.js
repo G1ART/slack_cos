@@ -18,6 +18,7 @@ import {
   updateLaneOutbound,
   appendCursorTrace,
   appendSupabaseTrace,
+  updateOutboundDispatchState,
 } from './executionRun.js';
 import {
   isGithubAuthConfigured,
@@ -69,13 +70,33 @@ function slugify(text) {
     .slice(0, 50);
 }
 
+function standardBranch(run) {
+  const kind = slugify(run.originating_task_kind || 'task');
+  const goal = slugify(run.project_goal || 'execution');
+  return `feat/${kind !== 'task' ? kind + '-' : ''}${goal}`;
+}
+
 /**
  * @param {object} run
  * @param {Record<string, unknown>} metadata
  * @returns {Promise<{ mode: 'live'|'draft'|'error', issue_id?: number|string, issue_url?: string, branch_name?: string, error_summary?: string }>}
  */
 export async function ensureGithubIssueForRun(run, metadata = {}) {
-  const branchName = `feat/${slugify(run.project_goal || run.originating_task_kind || 'execution')}`;
+  const branchName = standardBranch(run);
+
+  const existing = run.artifacts?.fullstack_swe;
+  if (existing?.github_issue_id || existing?.github_draft_payload) {
+    logOutbound('outbound_dispatch_skipped', {
+      run_id: run.run_id, lane_type: 'fullstack_swe', provider: 'github', reason: 'already_exists',
+    });
+    return {
+      mode: existing.github_issue_id ? 'live' : 'draft',
+      issue_id: existing.github_issue_id,
+      issue_url: existing.github_issue_url,
+      branch_name: existing.branch_name || branchName,
+      skipped: true,
+    };
+  }
 
   logOutbound('outbound_dispatch_started', {
     run_id: run.run_id, packet_id: run.packet_id,
@@ -234,6 +255,14 @@ function buildGithubIssueBody(run) {
  * @returns {Promise<{ mode: 'created'|'error', handoff_path?: string, error_summary?: string }>}
  */
 export async function ensureCursorHandoffForRun(run) {
+  const existingHandoff = run.artifacts?.fullstack_swe?.cursor_handoff_path;
+  if (existingHandoff) {
+    logOutbound('outbound_dispatch_skipped', {
+      run_id: run.run_id, lane_type: 'fullstack_swe', provider: 'cursor', reason: 'already_exists',
+    });
+    return { mode: 'created', handoff_path: existingHandoff, skipped: true };
+  }
+
   logOutbound('outbound_dispatch_started', {
     run_id: run.run_id, packet_id: run.packet_id,
     lane_type: 'fullstack_swe', provider: 'cursor',
@@ -436,58 +465,136 @@ export async function ensureSupabaseDraftForRun(run) {
 /* ------------------------------------------------------------------ */
 
 /**
- * @param {object} run
- * @returns {{ mode: 'seeded' }}
+ * Generate actual research note artifact file.
  */
-export function seedResearchArtifact(run) {
+export async function generateResearchArtifact(run) {
   const slug = slugify(run.originating_task_kind || run.project_goal || 'research');
-  const relPath = `docs/research-notes/research_${slug}_${run.run_id.replace(/[^a-zA-Z0-9-]/g, '')}.md`;
+  const rid = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const relPath = `docs/research-notes/research_${slug}_${rid}.md`;
+  const absPath = path.resolve(process.cwd(), relPath);
 
-  attachRunArtifact(run.run_id, 'research_benchmark', {
-    research_note_id: `RN-${run.run_id}`,
-    research_note_path: relPath,
-  });
-  updateLaneOutbound(run.run_id, 'research_benchmark', {
-    provider: 'internal', status: 'drafted', ref_ids: [relPath], error: null,
-  });
+  try {
+    const content = [
+      `# Research Note — ${run.run_id}`,
+      '', `**Generated**: ${new Date().toISOString()}`,
+      `**run_id**: \`${run.run_id}\``, `**task_kind**: \`${run.originating_task_kind || 'general'}\``,
+      '', '---', '',
+      '## Research Objective',
+      (run.workstreams || []).find((w) => w.lane_type === 'research_benchmark')?.objective || run.project_goal || '(not set)',
+      '', '## Scope', `**Goal**: ${run.project_goal || '(not set)'}`,
+      '', '### Key Questions',
+      ...(run.includes || []).map((i) => `- ${i}`),
+      '', '## Findings', '', '> _[To be filled by research agent or manual input]_',
+      '', '## Source Bundle', '', '- (sources to be attached)',
+      '', '## Next Actions', '', '- Feed findings to fullstack_swe and uiux_design lanes',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n');
+    await fs.mkdir(path.dirname(absPath), { recursive: true });
+    await fs.writeFile(absPath, content, 'utf8');
 
-  logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'research_benchmark', artifact: 'research_note' });
-  return { mode: 'seeded' };
+    attachRunArtifact(run.run_id, 'research_benchmark', { research_note_id: `RN-${rid}`, research_note_path: relPath });
+    updateLaneOutbound(run.run_id, 'research_benchmark', { provider: 'internal', status: 'drafted', ref_ids: [relPath], error: null });
+    logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'research_benchmark', artifact: 'research_note' });
+    return { mode: 'created', path: relPath };
+  } catch (err) {
+    updateLaneOutbound(run.run_id, 'research_benchmark', { provider: 'internal', status: 'failed', error: String(err?.message || err).slice(0, 200) });
+    return { mode: 'error', error_summary: String(err?.message || err).slice(0, 200) };
+  }
 }
 
-export function seedUiuxArtifacts(run) {
+async function writeArtifactFile(relPath, content) {
+  const absPath = path.resolve(process.cwd(), relPath);
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  await fs.writeFile(absPath, content, 'utf8');
+}
+
+export async function generateUiuxArtifacts(run) {
   const slug = slugify(run.originating_task_kind || run.project_goal || 'uiux');
-  const base = `docs/design-specs/uiux_${slug}_${run.run_id.replace(/[^a-zA-Z0-9-]/g, '')}`;
+  const rid = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const base = `docs/design-specs/uiux_${slug}_${rid}`;
+  const uiuxLane = (run.workstreams || []).find((w) => w.lane_type === 'uiux_design');
 
-  attachRunArtifact(run.run_id, 'uiux_design', {
-    ui_spec_delta_path: `${base}_spec.md`,
-    wireframe_note_path: `${base}_wireframe.md`,
-    component_checklist_path: `${base}_components.md`,
-  });
-  updateLaneOutbound(run.run_id, 'uiux_design', {
-    provider: 'internal', status: 'drafted', ref_ids: [`${base}_spec.md`], error: null,
-  });
+  try {
+    const specPath = `${base}_spec.md`;
+    await writeArtifactFile(specPath, [
+      `# UI Spec Delta — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Objective', uiuxLane?.objective || run.project_goal || '(not set)',
+      '', '## View Model', '', '> _[To be designed]_',
+      '', '## Permission Surface', '', '> _[To be designed]_',
+      '', '## Key Screens / Flows', '', '> _[To be designed]_',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n'));
 
-  logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'uiux_design', artifact: 'ui_spec_delta' });
-  return { mode: 'seeded' };
+    const compPath = `${base}_components.md`;
+    await writeArtifactFile(compPath, [
+      `# Component Checklist — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Components Required', '', '- [ ] (list components here)',
+      '', '## Dependencies', '', '- (dependencies)',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n'));
+
+    const wirePath = `${base}_wireframe.md`;
+    await writeArtifactFile(wirePath, [
+      `# Wireframe Notes — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Layout Notes', '', '> _[To be designed]_',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n'));
+
+    attachRunArtifact(run.run_id, 'uiux_design', { ui_spec_delta_path: specPath, wireframe_note_path: wirePath, component_checklist_path: compPath });
+    updateLaneOutbound(run.run_id, 'uiux_design', { provider: 'internal', status: 'drafted', ref_ids: [specPath, compPath, wirePath], error: null });
+    logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'uiux_design', artifact: 'ui_spec_delta' });
+    return { mode: 'created', paths: [specPath, compPath, wirePath] };
+  } catch (err) {
+    updateLaneOutbound(run.run_id, 'uiux_design', { provider: 'internal', status: 'failed', error: String(err?.message || err).slice(0, 200) });
+    return { mode: 'error', error_summary: String(err?.message || err).slice(0, 200) };
+  }
 }
 
-export function seedQaArtifacts(run) {
+export async function generateQaArtifacts(run) {
   const slug = slugify(run.originating_task_kind || run.project_goal || 'qa');
-  const base = `docs/qa-specs/qa_${slug}_${run.run_id.replace(/[^a-zA-Z0-9-]/g, '')}`;
+  const rid = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const base = `docs/qa-specs/qa_${slug}_${rid}`;
+  const qaLane = (run.workstreams || []).find((w) => w.lane_type === 'qa_qc');
 
-  attachRunArtifact(run.run_id, 'qa_qc', {
-    acceptance_checklist_path: `${base}_acceptance.md`,
-    regression_case_list_path: `${base}_regression.md`,
-    smoke_test_plan_path: `${base}_smoke.md`,
-  });
-  updateLaneOutbound(run.run_id, 'qa_qc', {
-    provider: 'internal', status: 'drafted', ref_ids: [`${base}_acceptance.md`], error: null,
-  });
+  try {
+    const accPath = `${base}_acceptance.md`;
+    await writeArtifactFile(accPath, [
+      `# Acceptance Checklist — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Objective', qaLane?.objective || '(not set)',
+      '', '## Acceptance Criteria',
+      ...(run.includes || []).map((i) => `- [ ] ${i}`),
+      (run.includes || []).length === 0 ? '- [ ] (define criteria)' : null,
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].filter(Boolean).join('\n'));
 
-  logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'qa_qc', artifact: 'qa_checklist' });
-  return { mode: 'seeded' };
+    const regPath = `${base}_regression.md`;
+    await writeArtifactFile(regPath, [
+      `# Regression Case List — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Cases', '', '- [ ] Existing flows still work', '- [ ] No scope creep',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n'));
+
+    const smokePath = `${base}_smoke.md`;
+    await writeArtifactFile(smokePath, [
+      `# Smoke Test Plan — ${run.run_id}`, '', `**Generated**: ${new Date().toISOString()}`,
+      '', '## Smoke Cases', '', '- [ ] App boots', '- [ ] Core happy path works',
+      '', '---', `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n'));
+
+    attachRunArtifact(run.run_id, 'qa_qc', { acceptance_checklist_path: accPath, regression_case_list_path: regPath, smoke_test_plan_path: smokePath });
+    updateLaneOutbound(run.run_id, 'qa_qc', { provider: 'internal', status: 'drafted', ref_ids: [accPath, regPath, smokePath], error: null });
+    logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'qa_qc', artifact: 'qa_checklist' });
+    return { mode: 'created', paths: [accPath, regPath, smokePath] };
+  } catch (err) {
+    updateLaneOutbound(run.run_id, 'qa_qc', { provider: 'internal', status: 'failed', error: String(err?.message || err).slice(0, 200) });
+    return { mode: 'error', error_summary: String(err?.message || err).slice(0, 200) };
+  }
 }
+
+// Keep backward-compat aliases
+export const seedResearchArtifact = generateResearchArtifact;
+export const seedUiuxArtifacts = generateUiuxArtifacts;
+export const seedQaArtifacts = generateQaArtifacts;
 
 /* ------------------------------------------------------------------ */
 /*  Top-level orchestration entrypoints                                */
@@ -522,16 +629,29 @@ export function planOutboundActionsForRun(run) {
  * @returns {Promise<{ github: object, cursor: object, supabase: object, research: object, uiux: object, qa: object }>}
  */
 export async function dispatchOutboundActionsForRun(run, metadata = {}) {
-  const results = {};
+  if (run.outbound_dispatch_state === 'completed') {
+    logOutbound('outbound_dispatch_skipped', { run_id: run.run_id, reason: 'already_completed' });
+    return { skipped: true, reason: 'already_completed' };
+  }
 
-  results.research = seedResearchArtifact(run);
-  results.uiux = seedUiuxArtifacts(run);
-  results.qa = seedQaArtifacts(run);
+  updateOutboundDispatchState(run.run_id, 'in_progress');
+  const results = {};
+  let anyFailed = false;
+
+  results.research = await generateResearchArtifact(run);
+  results.uiux = await generateUiuxArtifacts(run);
+  results.qa = await generateQaArtifacts(run);
 
   results.github = await ensureGithubIssueForRun(run, metadata);
-  results.cursor = await ensureCursorHandoffForRun(run);
-  results.supabase = await ensureSupabaseDraftForRun(run);
+  if (results.github.mode === 'error') anyFailed = true;
 
+  results.cursor = await ensureCursorHandoffForRun(run);
+  if (results.cursor.mode === 'error') anyFailed = true;
+
+  results.supabase = await ensureSupabaseDraftForRun(run);
+  if (results.supabase.mode === 'error') anyFailed = true;
+
+  updateOutboundDispatchState(run.run_id, anyFailed ? 'partial' : 'completed');
   return results;
 }
 
@@ -578,6 +698,58 @@ export function collectOutboundStatus(runId) {
   }));
 
   return { run_id: runId, lanes };
+}
+
+/**
+ * Retry outbound for a single lane. Resets lane status and re-dispatches.
+ */
+export async function retryOutboundLane(runId, laneType, metadata = {}) {
+  const run = getExecutionRunById(runId);
+  if (!run) return { ok: false, error: 'run_not_found' };
+  const ws = (run.workstreams || []).find((w) => w.lane_type === laneType);
+  if (!ws) return { ok: false, error: 'lane_not_found' };
+
+  const st = ws.outbound?.outbound_status;
+  if (st === 'dispatched' || st === 'completed') return { ok: true, skipped: true, reason: `already_${st}` };
+
+  updateLaneOutbound(runId, laneType, { status: 'pending', error: null });
+  if (laneType === 'fullstack_swe') {
+    // Clear existing artifacts to allow re-creation
+    if (run.artifacts?.fullstack_swe) {
+      run.artifacts.fullstack_swe.github_issue_id = null;
+      run.artifacts.fullstack_swe.github_issue_url = null;
+      run.artifacts.fullstack_swe.github_draft_payload = null;
+      run.artifacts.fullstack_swe.cursor_handoff_path = null;
+    }
+  }
+
+  return dispatchWorkstream(run, laneType, metadata);
+}
+
+/**
+ * Retry all non-completed/non-dispatched lanes for a run.
+ */
+export async function retryRunOutbound(runId, metadata = {}) {
+  const run = getExecutionRunById(runId);
+  if (!run) return { ok: false, error: 'run_not_found' };
+
+  updateOutboundDispatchState(runId, 'in_progress');
+  const results = {};
+  let anyFailed = false;
+
+  for (const ws of (run.workstreams || [])) {
+    const st = ws.outbound?.outbound_status;
+    if (st === 'dispatched' || st === 'completed') {
+      results[ws.lane_type] = { skipped: true, reason: `already_${st}` };
+      continue;
+    }
+    const r = await retryOutboundLane(runId, ws.lane_type, metadata);
+    results[ws.lane_type] = r;
+    if (r?.mode === 'error' || r?.github?.mode === 'error') anyFailed = true;
+  }
+
+  updateOutboundDispatchState(runId, anyFailed ? 'partial' : 'completed');
+  return results;
 }
 
 /**
