@@ -72,31 +72,44 @@ export function renderExecutionRunningPacket(run) {
 export function renderExecutionReportingPacket(run) {
   const report = run.latest_report || null;
 
+  const statusMap = {
+    pending: '⏳', drafted: '📋', dispatched: '🚀',
+    completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
+    acknowledged: '📬', partial: '🔄', in_progress: '🔄', not_started: '⏳',
+  };
+
   const laneLines = (run.workstreams || []).map((w) => {
     const ob = w.outbound || {};
-    const statusIcon = {
-      pending: '⏳', drafted: '📋', dispatched: '🚀',
-      completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
-    }[ob.outbound_status] || '⏳';
+    const icon = statusMap[ob.outbound_status] || '⏳';
     const provider = ob.outbound_provider ? ` (${ob.outbound_provider})` : '';
     const refs = (ob.outbound_ref_ids || []).length
-      ? ` → ${ob.outbound_ref_ids.slice(0, 2).join(', ')}`
+      ? `\n  → ${ob.outbound_ref_ids.slice(0, 3).join(', ')}`
       : '';
-    return `${statusIcon} \`${w.lane_type}\`: ${ob.outbound_status || w.status}${provider}${refs}`;
+    const errLine = ob.last_error ? `\n  _err: ${String(ob.last_error).slice(0, 100)}_` : '';
+    return `${icon} \`${w.lane_type}\`: ${ob.outbound_status || w.status}${provider}${refs}${errLine}`;
   });
+
+  const dispatchState = run.outbound_dispatch_state || 'not_started';
+  const dispatchIcon = statusMap[dispatchState] || '❓';
 
   const gitTrace = run.git_trace || {};
   const gitParts = [];
   if (gitTrace.repo) gitParts.push(`repo: \`${gitTrace.repo}\``);
   if (gitTrace.issue_id) gitParts.push(`issue: \`#${gitTrace.issue_id}\``);
   if (gitTrace.branch) gitParts.push(`branch: \`${gitTrace.branch}\``);
+  if (gitTrace.pr_id) gitParts.push(`PR: \`#${gitTrace.pr_id}\``);
   if (gitTrace.generated_cursor_handoff_path) gitParts.push(`cursor handoff: \`${gitTrace.generated_cursor_handoff_path}\``);
+  if ((gitTrace.supabase_migration_ids || []).length) gitParts.push(`supabase migrations: \`${gitTrace.supabase_migration_ids.join(', ')}\``);
+
+  const cursorTraceLen = (run.cursor_trace || []).length;
+  const supaTraceLen = (run.supabase_trace || []).length;
 
   const lines = [
     `*[실행 진행 보고]*`,
     `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
     '',
     `*현재 단계:* \`${run.current_stage}\``,
+    `*Dispatch 상태:* ${dispatchIcon} \`${dispatchState}\`${run.outbound_dispatched_at ? ` (${run.outbound_dispatched_at})` : ''}`,
     '',
     '*Lane 상태*',
     ...(laneLines.length ? laneLines : ['- (없음)']),
@@ -104,6 +117,31 @@ export function renderExecutionReportingPacket(run) {
 
   if (gitParts.length) {
     lines.push('', '*Outbound trace*', ...gitParts.map((p) => `- ${p}`));
+  }
+
+  if (cursorTraceLen) {
+    const last = run.cursor_trace[cursorTraceLen - 1];
+    const ct = [`entries: ${cursorTraceLen}`];
+    if (last.status) ct.push(`latest: \`${last.status}\``);
+    if (last.result_summary) ct.push(last.result_summary.slice(0, 120));
+    lines.push('', '*Cursor trace*', ct.join(' · '));
+  }
+
+  if (supaTraceLen) {
+    const last = run.supabase_trace[supaTraceLen - 1];
+    const st = [`entries: ${supaTraceLen}`];
+    if (last.status) st.push(`latest: \`${last.status}\``);
+    if (last.migration_id) st.push(`migration: \`${last.migration_id}\``);
+    lines.push('', '*Supabase trace*', st.join(' · '));
+  }
+
+  // Blocked / manual summary
+  const blocked = (run.workstreams || []).filter((w) => ['manual_required', 'blocked', 'failed'].includes(w.outbound?.outbound_status));
+  if (blocked.length) {
+    lines.push('', '*수동 조치 필요*');
+    for (const b of blocked) {
+      lines.push(`- \`${b.lane_type}\`: ${b.outbound?.outbound_status} — ${b.outbound?.last_error || '(세부 없음)'}`);
+    }
   }
 
   if (report) {

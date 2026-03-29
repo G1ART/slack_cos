@@ -196,6 +196,9 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     },
     originating_playbook_id: playbook_id || null,
     originating_task_kind: task_kind || null,
+    outbound_dispatch_state: 'not_started',
+    outbound_dispatched_at: null,
+    outbound_dispatch_attempts: 0,
     escalation_policy: 'bounded',
     requested_by: packet.requested_by || String(metadata?.user || ''),
     approved_by: String(metadata?.user || ''),
@@ -364,6 +367,23 @@ export function appendSupabaseTrace(runId, entry) {
   return true;
 }
 
+/**
+ * @param {string} runId
+ * @param {'not_started'|'in_progress'|'completed'|'partial'|'failed'} state
+ */
+export function updateOutboundDispatchState(runId, state) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  run.outbound_dispatch_state = state;
+  if (state === 'in_progress' || state === 'completed' || state === 'partial') {
+    run.outbound_dispatched_at = run.outbound_dispatched_at || new Date().toISOString();
+  }
+  run.outbound_dispatch_attempts = (run.outbound_dispatch_attempts || 0) + (state === 'in_progress' ? 1 : 0);
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
 export function updateRunReport(runId, report) {
   const run = runsById.get(runId);
   if (!run) return false;
@@ -380,7 +400,9 @@ export function updateRunReport(runId, report) {
 function persistRun(run) {
   try {
     const fp = resolveExecutionRunsPath();
-    appendJsonRecord(fp, run);
+    Promise.resolve(appendJsonRecord(fp, run)).catch((e) => {
+      console.warn('[execution_run] persist failed:', e?.message || e);
+    });
   } catch (e) {
     console.warn('[execution_run] persist failed:', e?.message || e);
   }
