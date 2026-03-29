@@ -12,7 +12,21 @@ import { buildSlackThreadKey } from './slackConversationBuffer.js';
 import { resolveProjectIntakeSessionsPath } from '../storage/paths.js';
 import { createProjectSpecSession, seedSpecMvpDefaultsFromProblem } from './projectSpecModel.js';
 
-/** @typedef {{ stage: 'active', goalLine: string, openedAt: string, updatedAt: string, spec?: Record<string, unknown> }} ProjectIntakeSession */
+/**
+ * @typedef {'active' | 'execution_ready' | 'approval_pending' | 'execution_running' | 'execution_reporting' | 'completed' | 'cancelled'} IntakeStage
+ */
+
+const OWNER_STAGES = new Set([
+  'active',
+  'execution_ready',
+  'approval_pending',
+  'execution_running',
+  'execution_reporting',
+]);
+
+const TERMINAL_STAGES = new Set(['completed', 'cancelled']);
+
+/** @typedef {{ stage: IntakeStage, goalLine: string, openedAt: string, updatedAt: string, spec?: Record<string, unknown>, packet_id?: string | null, run_id?: string | null }} ProjectIntakeSession */
 
 /** @type {Map<string, ProjectIntakeSession>} */
 const sessions = new Map();
@@ -68,14 +82,18 @@ export async function loadProjectIntakeSessionsFromDisk() {
     for (const row of data.entries) {
       if (!Array.isArray(row) || row.length < 2) continue;
       const [k, v] = row;
-      if (!k || !v || v.stage !== 'active' || !v.goalLine) continue;
+      if (!k || !v || !v.goalLine) continue;
+      if (!v.stage || TERMINAL_STAGES.has(v.stage)) continue;
       const key = String(k);
       const goalLine = String(v.goalLine);
+      const stage = OWNER_STAGES.has(v.stage) ? v.stage : 'active';
       const base = {
-        stage: /** @type {'active'} */ ('active'),
+        stage: /** @type {IntakeStage} */ (stage),
         goalLine,
         openedAt: String(v.openedAt || new Date().toISOString()),
         updatedAt: String(v.updatedAt || new Date().toISOString()),
+        packet_id: v.packet_id || null,
+        run_id: v.run_id || null,
       };
       let spec = v.spec && typeof v.spec === 'object' ? { ...v.spec } : null;
       if (!spec) {
@@ -134,7 +152,7 @@ export function openProjectIntakeSession(metadata, payload) {
 export function touchProjectIntakeSessionSpec(metadata, spec) {
   if (!metadata || typeof metadata !== 'object' || !spec || typeof spec !== 'object') return;
   const s = getProjectIntakeSession(metadata);
-  if (!s || s.stage !== 'active') return;
+  if (!s || TERMINAL_STAGES.has(s.stage)) return;
   s.spec = spec;
   s.updatedAt = new Date().toISOString();
   schedulePersist();
@@ -149,39 +167,91 @@ export function getProjectIntakeSession(metadata) {
 /** @param {Record<string, unknown>} metadata */
 export function isActiveProjectIntake(metadata) {
   const s = getProjectIntakeSession(metadata);
+  return Boolean(s && OWNER_STAGES.has(s.stage));
+}
+
+/** True only during explore/refine (pre-lock) intake. */
+export function isPreLockIntake(metadata) {
+  const s = getProjectIntakeSession(metadata);
   return Boolean(s && s.stage === 'active');
+}
+
+/** True when execution spine owns the thread (post-lock, pre-completion). */
+export function hasOpenExecutionOwnership(metadata) {
+  const s = getProjectIntakeSession(metadata);
+  if (!s) return false;
+  return ['execution_ready', 'approval_pending', 'execution_running', 'execution_reporting'].includes(s.stage);
 }
 
 /** @param {Record<string, unknown>} metadata */
 export function touchProjectIntakeSession(metadata) {
   const s = getProjectIntakeSession(metadata);
-  if (!s || s.stage !== 'active') return;
+  if (!s || TERMINAL_STAGES.has(s.stage)) return;
   s.updatedAt = new Date().toISOString();
   schedulePersist();
 }
 
-/** 실행 승인(잠금) 완료 등 — 세션 제거 */
+/**
+ * Transition session to a new stage. Only forward transitions allowed.
+ * @param {Record<string, unknown>} metadata
+ * @param {IntakeStage} newStage
+ * @param {{ packet_id?: string, run_id?: string }} [extra]
+ */
+export function transitionProjectIntakeStage(metadata, newStage, extra = {}) {
+  const s = getProjectIntakeSession(metadata);
+  if (!s) return false;
+  if (TERMINAL_STAGES.has(s.stage)) return false;
+  s.stage = newStage;
+  s.updatedAt = new Date().toISOString();
+  if (extra.packet_id) s.packet_id = extra.packet_id;
+  if (extra.run_id) s.run_id = extra.run_id;
+  if (TERMINAL_STAGES.has(newStage)) {
+    const key = buildSlackThreadKey(metadata);
+    sessions.delete(key);
+  }
+  schedulePersist();
+  return true;
+}
+
+/**
+ * Terminal completion — only for truly finished/abandoned sessions.
+ * Do NOT call after lock-confirmed; use transitionProjectIntakeStage instead.
+ */
 export function completeProjectIntakeSession(metadata) {
-  const key = buildSlackThreadKey(metadata);
-  if (sessions.delete(key)) schedulePersist();
+  return transitionProjectIntakeStage(metadata, 'completed');
 }
 
 /** 대표가 범위 정렬을 닫을 때 */
 export function cancelProjectIntakeSession(metadata) {
-  const key = buildSlackThreadKey(metadata);
-  if (sessions.delete(key)) schedulePersist();
+  return transitionProjectIntakeStage(metadata, 'cancelled');
 }
 
-/** @returns {string} */
-export function buildProjectIntakeCouncilDeferSurface() {
+/**
+ * @param {Record<string, unknown>} [metadata]
+ * @returns {string}
+ */
+export function buildProjectIntakeCouncilDeferSurface(metadata) {
+  const s = metadata ? getProjectIntakeSession(metadata) : null;
+  const inExec = s && s.stage !== 'active';
+  if (inExec) {
+    return [
+      '*[실행 스파인 활성]*',
+      '',
+      '이 스레드에는 **프로젝트 실행 스파인**이 열려 있습니다.',
+      `현재 단계: \`${s.stage}\`${s.run_id ? ` · \`${s.run_id}\`` : ''}`,
+      '',
+      'Council·매트릭스 논의는 **실행 완료** 또는 **`인테이크 취소`** 전까지 대표 표면의 최종 화자가 될 수 없습니다.',
+      'COS 실행 owner가 이 스레드를 계속 소유합니다.',
+    ].join('\n');
+  }
   return [
     '*[인테이크 진행 중]*',
     '',
-    '이 스레드에는 **프로젝트 인테이크**(툴/프로젝트 범위 정렬·실행 승인)가 열려 있습니다.',
+    '이 스레드에는 **프로젝트 인테이크**(범위 정렬 → 실행 승인 → 실행 스파인)가 열려 있습니다.',
     '',
-    '`협의모드`로 다각 논의를 열려면 먼저 **`인테이크 취소`** 한 줄을 보내 주세요. (범위를 잠근 뒤에는 인테이크가 자동으로 닫힙니다.)',
+    '`협의모드`로 다각 논의를 열려면 먼저 **`인테이크 취소`** 한 줄을 보내 주세요.',
     '',
-    '_내부 페르소나·Council은 인테이크가 닫힌 뒤 같은 스레드에서 다시 쓸 수 있습니다._',
+    '_실행 완료 또는 명시적 전환 전까지 이 스레드는 COS 실행 owner가 소유합니다._',
   ].join('\n');
 }
 

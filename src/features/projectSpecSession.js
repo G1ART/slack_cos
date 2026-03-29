@@ -8,10 +8,12 @@ import { isCouncilCommand } from '../slack/councilCommandPrefixes.js';
 import {
   getProjectIntakeSession,
   isActiveProjectIntake,
+  isPreLockIntake,
   touchProjectIntakeSession,
   touchProjectIntakeSessionSpec,
-  completeProjectIntakeSession,
+  transitionProjectIntakeStage,
 } from './projectIntakeSession.js';
+import { createExecutionPacket, createExecutionRun } from './executionRun.js';
 import {
   createProjectSpecSession,
   seedSpecMvpDefaultsFromProblem,
@@ -245,7 +247,7 @@ function ensureIntakeSpec(metadata, intake) {
 export async function tryFinalizeProjectSpecBuildThread(ctx) {
   const { trimmed, metadata, routerCtx, previewOnly = false } = ctx;
   if (!trimmed || !metadata || typeof metadata !== 'object') return null;
-  if (!isActiveProjectIntake(metadata)) return null;
+  if (!isPreLockIntake(metadata)) return null;
 
   const intake = getProjectIntakeSession(metadata);
   if (!intake) return null;
@@ -307,9 +309,34 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
     ];
     const textOut = lines.join('\n');
 
+    let packet_id = null;
+    let run_id = null;
+
     if (!previewOnly) {
+      const threadKey = buildSlackThreadKey(metadata);
+      const packet = createExecutionPacket({
+        thread_key: threadKey,
+        goal_line: spec.problem_statement || '',
+        locked_scope_summary: spec.mvp_summary || spec.problem_statement || '',
+        includes: spec.includes || [],
+        excludes: spec.excludes || [],
+        deferred_items: spec.future_phase_backlog || [],
+        approval_rules: spec.approval_rules || [],
+        session_id: spec.session_id || '',
+        requested_by: String(metadata?.user || ''),
+      });
+
+      const run = createExecutionRun({ packet, metadata });
+      packet_id = packet.packet_id;
+      run_id = run.run_id;
+
+      transitionProjectIntakeStage(metadata, 'execution_running', {
+        packet_id,
+        run_id,
+      });
+
       try {
-        const body = `[execution_approval_packet]\nproject_spec_session: ${JSON.stringify({
+        const body = `[execution_approval_packet]\npacket_id: ${packet_id}\nrun_id: ${run_id}\nproject_spec_session: ${JSON.stringify({
           problem_statement: spec.problem_statement,
           mvp_summary: spec.mvp_summary,
           includes: spec.includes,
@@ -327,12 +354,13 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
       } catch {
         /* 큐 실패해도 대표 표면은 유지 */
       }
-      completeProjectIntakeSession(metadata);
     }
 
     return {
       kind: 'execution_ready',
       text: textOut,
+      packet_id,
+      run_id,
       response_type: 'project_spec_execution_ready',
     };
   }

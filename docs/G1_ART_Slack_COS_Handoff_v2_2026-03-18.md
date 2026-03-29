@@ -1834,6 +1834,15 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - `@slack/bolt` **^4.6.0** (내부 `@slack/socket-mode` **2.x**)
 - Bolt 3 + socket-mode 1.x에서는 `connecting` 상태에서 `server explicit disconnect` 시 finity state machine 예외로 프로세스가 죽는 이슈가 보고된 바 있음. **Bolt 4 / socket-mode 2**로 올려 완화하는 것이 1차 대응이다.
 
+### 24.1b Execution Spine (2026-03-29)
+
+- `start_project` 흐름은 이제 **lock-confirmed 이후에도 세션을 삭제하지 않는다**.
+- Session stage: `active → execution_ready → execution_running → execution_reporting → completed`.
+- `EPK-...` (execution packet) + `RUN-...` (execution run) 이 scope lock 시점에 생성됨.
+- **post-lock 스레드**에서는 `executionSpineRouter.js`가 대표 표면을 소유. Council/matrix 가 최종 화자가 되지 못함.
+- 4-lane workstream (research_benchmark, fullstack_swe, uiux_design, qa_qc) + git_trace spine.
+- 정본 참조: `docs/cursor-handoffs/COS_Execution_Spine_2026-03.md`.
+
 ### 24.2 ESM + CJS
 
 - `package.json`의 `"type": "module"` 환경에서는 `import { App } from '@slack/bolt'` 대신 `import bolt from '@slack/bolt'; const { App } = bolt` 패턴을 사용한다.

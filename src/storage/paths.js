@@ -92,6 +92,15 @@ export function resolveThreadDecisionTailPath() {
   return path.join(DATA_DIR, 'cos-thread-decision-tail.json');
 }
 
+/** Execution spine runs (append-only JSON array) */
+export const EXECUTION_RUNS_FILE = path.join(DATA_DIR, 'execution-runs.json');
+
+export function resolveExecutionRunsPath() {
+  const v = process.env.EXECUTION_RUNS_FILE;
+  if (v) return path.isAbsolute(v) ? v : path.join(PROJECT_ROOT, v);
+  return EXECUTION_RUNS_FILE;
+}
+
 /** M3 agent work queue seed — JSON 배열 (`AGENT_WORK_QUEUE_FILE` 로 오버라이드) */
 export function resolveAgentWorkQueuePath() {
   const v = process.env.AGENT_WORK_QUEUE_FILE;

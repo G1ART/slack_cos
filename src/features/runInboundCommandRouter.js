@@ -36,8 +36,10 @@ import {
   tryFinalizeProjectIntakeCancel,
   buildProjectIntakeCouncilDeferSurface,
   isActiveProjectIntake,
+  hasOpenExecutionOwnership,
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
+import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
 import { getBuildInfo } from '../runtime/buildInfo.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
@@ -178,6 +180,44 @@ export async function runInboundCommandRouter(ctx) {
     return { done: true, response };
   }
 
+  // EXECUTION SPINE — post-lock ownership takes priority
+  if (hasOpenExecutionOwnership(metadata)) {
+    const execResult = tryFinalizeExecutionSpineTurn({ trimmed, metadata });
+    if (execResult && execResult !== 'council_defer' && execResult.text) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'execution_spine',
+        command_name: execResult.response_type,
+        via: 'execution_spine_owner',
+        packet_id: execResult.packet_id || null,
+        run_id: execResult.run_id || null,
+      });
+      logRouterEvent('router_responder_locked', { responder: 'execution_spine', via: 'execution_spine_owner' });
+      const response = finalizeSlackResponse({
+        responder: 'execution_spine',
+        text: execResult.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: execResult.response_type,
+        council_blocked: true,
+        response_type: execResult.response_type,
+        packet_id: execResult.packet_id || null,
+      });
+      return { done: true, response };
+    }
+    if (execResult === 'council_defer') {
+      const response = finalizeSlackResponse({
+        responder: 'execution_spine',
+        text: buildProjectIntakeCouncilDeferSurface(metadata),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'execution_spine_council_defer',
+        council_blocked: true,
+        response_type: 'execution_spine_council_defer',
+      });
+      return { done: true, response };
+    }
+  }
+
   if (isActiveProjectIntake(metadata)) {
     const specFin = await tryFinalizeProjectSpecBuildThread({
       trimmed,
@@ -196,7 +236,7 @@ export async function runInboundCommandRouter(ctx) {
       });
       const response = finalizeSlackResponse({
         responder: 'executive_surface',
-        text: buildProjectIntakeCouncilDeferSurface(),
+        text: buildProjectIntakeCouncilDeferSurface(metadata),
         raw_text: routerCtx.raw_text,
         normalized_text: routerCtx.normalized_text,
         command_name: 'project_intake_council_deferred',
