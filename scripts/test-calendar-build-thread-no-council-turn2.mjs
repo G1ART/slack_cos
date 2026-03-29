@@ -79,7 +79,8 @@ assert.ok(fb.some((x) => /블랙아웃|외부/u.test(x)));
 assert.ok(fb.some((x) => /결제|가격/u.test(x)));
 assert.ok((sess.spec.approval_rules || []).length >= 3);
 
-await fs.rm(tmp, { recursive: true, force: true });
+await new Promise((r) => setTimeout(r, 200));
+await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 clearProjectIntakeSessionsForTest();
 delete process.env.COS_WORKSPACE_QUEUE_FILE;
 console.log('ok: calendar build thread turn2 no council memo');

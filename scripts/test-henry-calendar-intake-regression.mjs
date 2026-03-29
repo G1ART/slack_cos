@@ -47,6 +47,7 @@ for (const b of banned) {
 }
 assert.ok(out.text.includes('범위 잠금'), 'lock title');
 
-await fs.rm(tmp, { recursive: true, force: true });
+await new Promise((r) => setTimeout(r, 200));
+await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 clearProjectIntakeSessionsForTest();
 console.log('ok: henry calendar intake regression (sticky session, empty transcript)');

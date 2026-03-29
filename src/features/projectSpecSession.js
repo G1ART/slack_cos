@@ -14,7 +14,7 @@ import {
   transitionProjectIntakeStage,
 } from './projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun } from './executionRun.js';
-import { dispatchOutboundActionsForRun } from './executionOutboundOrchestrator.js';
+import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
 import {
   createProjectSpecSession,
   seedSpecMvpDefaultsFromProblem,
@@ -331,10 +331,7 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
       packet_id = packet.packet_id;
       run_id = run.run_id;
 
-      // Auto-dispatch outbound (fire-and-forget; errors handled per-lane)
-      dispatchOutboundActionsForRun(run, metadata).catch((err) => {
-        console.warn('[projectSpecSession] auto-dispatch error:', err?.message || err);
-      });
+      ensureExecutionRunDispatched(run, metadata);
 
       transitionProjectIntakeStage(metadata, 'execution_running', {
         packet_id,
