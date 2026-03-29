@@ -15,6 +15,9 @@ import {
 } from './projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun } from './executionRun.js';
 import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
+import { resolveProjectSpaceForThread } from './projectSpaceResolver.js';
+import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
+import { bootstrapProjectSpace } from './projectSpaceBootstrap.js';
 import {
   createProjectSpecSession,
   seedSpecMvpDefaultsFromProblem,
@@ -331,11 +334,24 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
       packet_id = packet.packet_id;
       run_id = run.run_id;
 
+      let resolved = resolveProjectSpaceForThread({ threadKey, text: spec.problem_statement, metadata });
+      if (!resolved.resolved) {
+        const label = String(spec.problem_statement || spec.mvp_summary || '').slice(0, 60);
+        const { space } = bootstrapProjectSpace({ label, threadKey, metadata });
+        resolved = { resolved: true, project_id: space.project_id, space };
+      }
+      if (resolved.resolved && resolved.project_id) {
+        linkRunToProjectSpace(resolved.project_id, run.run_id);
+        linkThreadToProjectSpace(resolved.project_id, threadKey);
+        run.project_id = resolved.project_id;
+      }
+
       ensureExecutionRunDispatched(run, metadata);
 
       transitionProjectIntakeStage(metadata, 'execution_running', {
         packet_id,
         run_id,
+        project_id: resolved.project_id || null,
       });
 
       try {

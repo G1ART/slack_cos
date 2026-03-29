@@ -367,12 +367,12 @@ try {
   const after = getExecutionRunById(run.run_id);
 
   const report = renderExecutionReportingPacket(after);
-  assert.ok(report.includes('실행 진행 보고'), 'has reporting header');
+  assert.ok(report.includes('PM 진행 보고'), 'has reporting header');
   assert.ok(report.includes('전체:'), 'has overall status');
-  assert.ok(report.includes('Dispatch 상태'), 'has dispatch state');
+  assert.ok(report.includes('Dispatch'), 'has dispatch state');
 
   const cockpit = renderPMCockpitPacket(after);
-  assert.ok(cockpit.includes('PM 대시보드'), 'has cockpit header');
+  assert.ok(cockpit.includes('PM 진행 보고'), 'has cockpit header');
   assert.ok(cockpit.includes('research_benchmark'));
   assert.ok(cockpit.includes('fullstack_swe'));
 

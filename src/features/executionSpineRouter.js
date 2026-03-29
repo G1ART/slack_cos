@@ -24,6 +24,8 @@ import {
   diagnoseGithubConfig,
   getCursorOperationalStatus,
   buildSupabaseManualApplyInstructions,
+  computeLaneDispatchPlan,
+  scanPendingCursorResults,
 } from './executionDispatchLifecycle.js';
 
 /* ------------------------------------------------------------------ */
@@ -51,9 +53,11 @@ export function renderExecutionRunningPacket(run) {
   if (git.branch) gitParts.push(`branch: \`${git.branch}\``);
   if (git.generated_cursor_handoff_path) gitParts.push(`cursor handoff: \`${git.generated_cursor_handoff_path}\``);
 
+  const projectLabel = run.project_id ? ` · project \`${run.project_id}\`` : '';
+
   const lines = [
     `*[실행 개시 · 내부 오케스트레이션]*`,
-    `\`${run.run_id}\` · packet \`${run.packet_id}\``,
+    `\`${run.run_id}\` · packet \`${run.packet_id}\`${projectLabel}`,
     '',
     `*목표:* ${String(run.project_goal || '').slice(0, 300)}`,
     '',
@@ -84,7 +88,16 @@ export function renderExecutionReportingPacket(run) {
     pending: '⏳', drafted: '📋', dispatched: '🚀',
     completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
     acknowledged: '📬', partial: '🔄', in_progress: '🔄', not_started: '⏳',
+    running: '🔄', manual_blocked: '👤',
   };
+
+  const eval_ = evaluateExecutionRunCompletion(run.run_id);
+  const overallStatus = eval_?.overall_status || 'unknown';
+  const dispatchState = run.outbound_dispatch_state || 'not_started';
+  const dispatchIcon = statusMap[dispatchState] || '❓';
+  const overallIcon = statusMap[overallStatus] || '❓';
+
+  const lanePlan = computeLaneDispatchPlan(run);
 
   const laneLines = (run.workstreams || []).map((w) => {
     const ob = w.outbound || {};
@@ -94,11 +107,40 @@ export function renderExecutionReportingPacket(run) {
       ? `\n  → ${ob.outbound_ref_ids.slice(0, 3).join(', ')}`
       : '';
     const errLine = ob.last_error ? `\n  _err: ${String(ob.last_error).slice(0, 100)}_` : '';
-    return `${icon} \`${w.lane_type}\`: ${ob.outbound_status || w.status}${provider}${refs}${errLine}`;
+    const planEntry = lanePlan.find((p) => p.lane_type === w.lane_type);
+    const depInfo = planEntry?.depends_on?.length
+      ? `\n  deps: ${planEntry.depends_on.join(', ')} ${planEntry.deps_resolved ? '✅' : '⏳ 대기'}`
+      : '';
+    return `${icon} \`${w.lane_type}\`: ${ob.outbound_status || w.status}${provider}${refs}${errLine}${depInfo}`;
   });
 
-  const dispatchState = run.outbound_dispatch_state || 'not_started';
-  const dispatchIcon = statusMap[dispatchState] || '❓';
+  const projectLabel = run.project_id ? ` · project \`${run.project_id}\`` : '';
+
+  const lines = [
+    `*[PM 진행 보고]*`,
+    `\`${run.run_id}\` · packet \`${run.packet_id}\`${projectLabel}`,
+    run.originating_task_kind ? `task: \`${run.originating_task_kind}\`` : '',
+    '',
+    `${overallIcon} *전체:* \`${overallStatus}\` · *단계:* \`${run.current_stage}\``,
+    `*Dispatch:* ${dispatchIcon} \`${dispatchState}\`${run.outbound_dispatched_at ? ` (${run.outbound_dispatched_at})` : ''}`,
+    '',
+    '*Lane 상태*',
+    ...(laneLines.length ? laneLines : ['- (없음)']),
+  ];
+
+  const ghDiag = diagnoseGithubConfig();
+  const cursorSt = getCursorOperationalStatus(run.run_id);
+  const supaSt = buildSupabaseManualApplyInstructions(run.run_id);
+
+  lines.push('', '*Provider 현황*');
+  lines.push(`- GitHub: ${ghDiag.configured ? '✅ live' : `⚠️ draft_only (미설정: ${ghDiag.missing.join(', ')})`}`);
+  lines.push(`- Cursor: ${cursorSt ? `${statusMap[cursorSt.status] || '❓'} ${cursorSt.status}` : '❓ unknown'}`);
+  if (cursorSt?.status === 'result_ingested' && cursorSt.result_summary) {
+    lines.push(`  결과: ${cursorSt.result_summary.slice(0, 120)}`);
+  }
+  const supaLane = (run.workstreams || []).find((w) => w.outbound?.outbound_provider === 'supabase');
+  const supaStatus = supaLane?.outbound?.outbound_status || 'pending';
+  lines.push(`- Supabase: ${statusMap[supaStatus] || '⏳'} ${supaStatus}${supaSt?.draft_path !== '(no draft created)' ? ' (draft 있음)' : ''}`);
 
   const gitTrace = run.git_trace || {};
   const gitParts = [];
@@ -108,36 +150,21 @@ export function renderExecutionReportingPacket(run) {
   if (gitTrace.pr_id) gitParts.push(`PR: \`#${gitTrace.pr_id}\``);
   if (gitTrace.generated_cursor_handoff_path) gitParts.push(`cursor handoff: \`${gitTrace.generated_cursor_handoff_path}\``);
   if ((gitTrace.supabase_migration_ids || []).length) gitParts.push(`supabase migrations: \`${gitTrace.supabase_migration_ids.join(', ')}\``);
-
-  const cursorTraceLen = (run.cursor_trace || []).length;
-  const supaTraceLen = (run.supabase_trace || []).length;
-
-  const eval_ = evaluateExecutionRunCompletion(run.run_id);
-  const overallStatus = eval_?.overall_status || 'unknown';
-
-  const lines = [
-    `*[실행 진행 보고]*`,
-    `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
-    '',
-    `*현재 단계:* \`${run.current_stage}\` · *전체:* \`${overallStatus}\``,
-    `*Dispatch 상태:* ${dispatchIcon} \`${dispatchState}\`${run.outbound_dispatched_at ? ` (${run.outbound_dispatched_at})` : ''}`,
-    '',
-    '*Lane 상태*',
-    ...(laneLines.length ? laneLines : ['- (없음)']),
-  ];
-
   if (gitParts.length) {
     lines.push('', '*Outbound trace*', ...gitParts.map((p) => `- ${p}`));
   }
 
+  const cursorTraceLen = (run.cursor_trace || []).length;
+  const supaTraceLen = (run.supabase_trace || []).length;
   if (cursorTraceLen) {
     const last = run.cursor_trace[cursorTraceLen - 1];
     const ct = [`entries: ${cursorTraceLen}`];
     if (last.status) ct.push(`latest: \`${last.status}\``);
+    if (last.changed_files?.length) ct.push(`changed: ${last.changed_files.length}개`);
+    if (last.tests_passed != null) ct.push(`tests: ${last.tests_passed ? 'pass' : 'fail'}`);
     if (last.result_summary) ct.push(last.result_summary.slice(0, 120));
     lines.push('', '*Cursor trace*', ct.join(' · '));
   }
-
   if (supaTraceLen) {
     const last = run.supabase_trace[supaTraceLen - 1];
     const st = [`entries: ${supaTraceLen}`];
@@ -146,7 +173,6 @@ export function renderExecutionReportingPacket(run) {
     lines.push('', '*Supabase trace*', st.join(' · '));
   }
 
-  // Blocked / manual summary
   const blocked = (run.workstreams || []).filter((w) => ['manual_required', 'blocked', 'failed'].includes(w.outbound?.outbound_status));
   if (blocked.length) {
     lines.push('', '*수동 조치 필요*');
@@ -155,11 +181,19 @@ export function renderExecutionReportingPacket(run) {
     }
   }
 
-  if (report) {
-    lines.push('', '*최신 보고*', String(report).slice(0, 800));
+  if (eval_?.next_actions?.length) {
+    lines.push('', '*다음 필요 액션*');
+    for (const a of eval_.next_actions) lines.push(`- ${a}`);
   }
 
-  return lines.join('\n');
+  const retryable = (eval_?.failed_lanes?.length || 0) > 0;
+  if (retryable) lines.push('', '_"다시 시도해" 로 실패 lane 재실행 가능_');
+
+  if (report) {
+    lines.push('', '*최신 보고*', String(report).slice(0, 600));
+  }
+
+  return lines.filter(Boolean).join('\n');
 }
 
 function renderRetryResponsePacket(run, eval_) {
@@ -221,36 +255,7 @@ function renderManualActionsPacket(run) {
 }
 
 export function renderPMCockpitPacket(run) {
-  const eval_ = evaluateExecutionRunCompletion(run.run_id);
-  const dispState = run.outbound_dispatch_state || 'not_started';
-
-  const statusMap = {
-    pending: '⏳', drafted: '📋', dispatched: '🚀',
-    completed: '✅', manual_required: '👤', blocked: '🚫', failed: '❌',
-    acknowledged: '📬', partial: '🔄', in_progress: '🔄', not_started: '⏳',
-  };
-
-  const lines = [
-    `*[PM 대시보드]*`,
-    `\`${run.run_id}\`${run.originating_task_kind ? ` · \`${run.originating_task_kind}\`` : ''}`,
-    '',
-    `*전체:* \`${eval_?.overall_status || 'unknown'}\` · *Dispatch:* ${statusMap[dispState] || '❓'} \`${dispState}\``,
-    '',
-  ];
-
-  for (const ws of (run.workstreams || [])) {
-    const ob = ws.outbound || {};
-    const icon = statusMap[ob.outbound_status] || '⏳';
-    const deps = ws.dependencies?.length ? ` (deps: ${ws.dependencies.join(', ')})` : '';
-    lines.push(`${icon} \`${ws.lane_type}\`: ${ob.outbound_status || 'pending'}${deps}`);
-  }
-
-  if (eval_?.next_actions?.length) {
-    lines.push('', '*다음 필요 액션*');
-    for (const a of eval_.next_actions) lines.push(`- ${a}`);
-  }
-
-  return lines.join('\n');
+  return renderExecutionReportingPacket(run);
 }
 
 export function renderEscalationPacket(run, escalationText) {
@@ -285,8 +290,10 @@ export function renderExecutionCompletedPacket(run) {
 const PROGRESS_RE = /(?:progress|진행\s*(?:상황|보고|요약))|지금\s*어디|현황|보고\s*해|status|어디까지\s*됐/i;
 const ESCALATION_RE = /에스컬레이션|내\s*승인\s*없이는|대표\s*결정|escalat/i;
 const COMPLETION_RE = /실행\s*완료|프로젝트\s*완료|종료/i;
-const RETRY_RE = /retry|재시도|다시\s*해|재실행/i;
-const MANUAL_ASK_RE = /manual\s*action|수동\s*조치|뭐\s*남았|남은\s*작업/i;
+const RETRY_RE = /retry|재시도|다시\s*(?:해|시도)|재실행/i;
+const MANUAL_ASK_RE = /manual\s*action|수동\s*조치|뭐\s*남았|남은\s*작업|내가\s*해야\s*할|수동으로/i;
+const BLOCKED_ASK_RE = /뭐가\s*막혔|blocked|어떤\s*lane.*기다|waiting/i;
+const DONE_CHECK_RE = /다\s*끝났어|이\s*run\s*끝났|all\s*done|finished|완료\s*됐어/i;
 
 /* ------------------------------------------------------------------ */
 /*  Main execution spine handler                                       */
@@ -315,6 +322,8 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
 
   if (!run) return null;
 
+  scanPendingCursorResults().catch(() => {});
+
   if (COMPLETION_RE.test(trimmed)) {
     updateRunStage(run.run_id, 'completed');
     transitionProjectIntakeStage(metadata, 'completed');
@@ -326,8 +335,20 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
     };
   }
 
-  if (PROGRESS_RE.test(trimmed)) {
+  if (DONE_CHECK_RE.test(trimmed)) {
     detectAndApplyCompletion(run.run_id);
+    const eval_ = evaluateExecutionRunCompletion(run.run_id);
+    const isComplete = eval_?.overall_status === 'completed';
+    if (isComplete) {
+      updateRunStage(run.run_id, 'completed');
+      transitionProjectIntakeStage(metadata, 'completed');
+      return {
+        text: renderExecutionCompletedPacket(run),
+        response_type: 'execution_completed',
+        packet_id: run.packet_id,
+        run_id: run.run_id,
+      };
+    }
     return {
       text: renderExecutionReportingPacket(run),
       response_type: 'execution_reporting_status',
@@ -347,10 +368,21 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
     };
   }
 
-  if (MANUAL_ASK_RE.test(trimmed)) {
+  if (MANUAL_ASK_RE.test(trimmed) || BLOCKED_ASK_RE.test(trimmed)) {
+    detectAndApplyCompletion(run.run_id);
     return {
       text: renderManualActionsPacket(run),
       response_type: 'execution_manual_status',
+      packet_id: run.packet_id,
+      run_id: run.run_id,
+    };
+  }
+
+  if (PROGRESS_RE.test(trimmed)) {
+    detectAndApplyCompletion(run.run_id);
+    return {
+      text: renderExecutionReportingPacket(run),
+      response_type: 'execution_reporting_status',
       packet_id: run.packet_id,
       run_id: run.run_id,
     };

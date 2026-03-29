@@ -245,7 +245,7 @@ export function buildSupabaseManualApplyInstructions(runId) {
     steps: [
       draftPath ? `1. Review draft: \`${draftPath}\`` : '1. No draft exists — create schema manually',
       '2. Apply via `supabase db push` or Supabase dashboard',
-      `3. Drop result payload at: \`data/cursor-results/${runId}.json\` or call ingestSupabaseResult()`,
+      `3. Drop result payload at: \`data/supabase-results/${runId}.json\` or call ingestSupabaseResult()`,
       '4. Include: { migration_id, migration_path, apply_status: "applied_result_ingested" }',
     ],
     result_drop_path: `data/supabase-results/${runId}.json`,
@@ -286,23 +286,50 @@ export function getCursorOperationalStatus(runId) {
 }
 
 /**
- * Scan for any pending cursor results across all active runs.
+ * Scan data/cursor-results/ for pending result files and ingest them.
  */
 export async function scanPendingCursorResults() {
-  // This is a convenience — individual file-drop ingest
-  // Currently a no-op placeholder for bulk scanning
-  return { scanned: 0, ingested: 0 };
+  const { default: fs } = await import('fs/promises');
+  const { default: path } = await import('path');
+  const dir = path.resolve(process.cwd(), 'data', 'cursor-results');
+  let entries;
+  try {
+    entries = await fs.readdir(dir);
+  } catch {
+    return { scanned: 0, ingested: 0 };
+  }
+
+  let scanned = 0;
+  let ingested = 0;
+  for (const entry of entries) {
+    if (!entry.endsWith('.json')) continue;
+    const runId = entry.replace(/\.json$/, '');
+    scanned++;
+    const run = getExecutionRunById(runId);
+    if (!run) continue;
+    const lastTrace = (run.cursor_trace || []).at(-1);
+    if (lastTrace?.dispatch_mode === 'result_ingested') continue;
+    const result = await ingestCursorResultFromFile(runId);
+    if (result.ok) ingested++;
+  }
+  return { scanned, ingested };
 }
 
 /* ------------------------------------------------------------------ */
 /*  PM cockpit: retry intent mapping                                    */
 /* ------------------------------------------------------------------ */
 
-const RETRY_RE = /retry|재시도|다시\s*해|재실행/i;
-const MANUAL_ASK_RE = /manual\s*action|수동\s*조치|뭐\s*남았|manual|남은\s*작업/i;
+const RETRY_RE = /retry|재시도|다시\s*(?:해|시도)|재실행/i;
+const MANUAL_ASK_RE = /manual\s*action|수동\s*조치|뭐\s*남았|남은\s*작업|내가\s*해야\s*할|수동으로/i;
+const BLOCKED_ASK_RE = /뭐가\s*막혔|blocked|어떤\s*lane.*기다|waiting/i;
+const DONE_ASK_RE = /끝났어|완료\s*됐|다\s*끝|all\s*done|finished/i;
+const PROGRESS_ASK_RE = /어디까지\s*됐|progress|진행\s*(?:상황|보고)|현황|status/i;
 
 export function detectPMIntent(text) {
   if (RETRY_RE.test(text)) return 'retry';
   if (MANUAL_ASK_RE.test(text)) return 'manual_status';
+  if (BLOCKED_ASK_RE.test(text)) return 'blocked_status';
+  if (DONE_ASK_RE.test(text)) return 'completion_check';
+  if (PROGRESS_ASK_RE.test(text)) return 'progress';
   return null;
 }

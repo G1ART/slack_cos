@@ -19,6 +19,9 @@ import {
 } from './projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun } from './executionRun.js';
 import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
+import { resolveProjectSpaceForThread } from './projectSpaceResolver.js';
+import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
+import { bootstrapProjectSpace } from './projectSpaceBootstrap.js';
 
 function parseTranscriptCosChunks(transcript) {
   const t = String(transcript || '').trim();
@@ -267,11 +270,24 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
 
   const run = createExecutionRun({ packet, metadata });
 
+  let resolved = resolveProjectSpaceForThread({ threadKey, text: goalLine, metadata });
+  if (!resolved.resolved) {
+    const label = String(goalLine).slice(0, 60);
+    const { space } = bootstrapProjectSpace({ label, threadKey, metadata });
+    resolved = { resolved: true, project_id: space.project_id, space };
+  }
+  if (resolved.resolved && resolved.project_id) {
+    linkRunToProjectSpace(resolved.project_id, run.run_id);
+    linkThreadToProjectSpace(resolved.project_id, threadKey);
+    run.project_id = resolved.project_id;
+  }
+
   ensureExecutionRunDispatched(run, metadata);
 
   transitionProjectIntakeStage(metadata, 'execution_running', {
     packet_id: packet.packet_id,
     run_id: run.run_id,
+    project_id: resolved.project_id || null,
   });
 
   const surface = buildProjectLockConfirmedSurface(goalLine, trimmed);
