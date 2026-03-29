@@ -54,7 +54,7 @@ export function normalizePlanMgmtCommandLine(input) {
  * 순서 고정: trim → collapsePlannerRegisterSpacing → planMgmt 줄 → Slack 장식 제거
  */
 export function normalizeSlackUserPayload(raw) {
-  let t = String(raw ?? '').trim();
+  let t = String(raw ?? '').trim().normalize('NFC');
   t = collapsePlannerRegisterSpacing(t);
   t = normalizePlanMgmtCommandLine(t);
   t = normalizeSlackCommandDecorations(t);
