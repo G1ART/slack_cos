@@ -245,6 +245,7 @@ export function resolveApproval({ thread_key, text, metadata, packet }) {
     run_id: run.run_id,
     packet_id: packet.packet_id,
     stage_result: 'execution_running',
+    run,
   };
 }
 

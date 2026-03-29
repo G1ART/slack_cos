@@ -74,6 +74,9 @@ import { transitionProjectIntakeStage, getProjectIntakeSession } from './project
 import { runRepresentativeResearch } from './representativeResearchSurface.js';
 import { renderExecutionRunningPacket } from './executionSpineRouter.js';
 import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
+import { resolveProjectSpaceForThread, detectProjectIntent } from './projectSpaceResolver.js';
+import { bootstrapProjectSpace, renderBootstrapPlanForSlack } from './projectSpaceBootstrap.js';
+import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -868,6 +871,12 @@ export async function runInboundAiRouter(ctx) {
     });
     linkPlaybookToExecution(pb.playbook_id, { packet_id: packet.packet_id, run_id: run.run_id });
 
+    const resolved = resolveProjectSpaceForThread({ threadKey, text: trimmed, metadata });
+    if (resolved.resolved && resolved.project_id) {
+      linkRunToProjectSpace(resolved.project_id, run.run_id);
+      run.project_id = resolved.project_id;
+    }
+
     ensureExecutionRunDispatched(run, metadata);
 
     logRouterEvent('router_responder_selected', {
@@ -877,6 +886,7 @@ export async function runInboundAiRouter(ctx) {
       playbook_id: pb.playbook_id,
       run_id: run.run_id,
       packet_id: packet.packet_id,
+      project_id: resolved.project_id || null,
     });
     logRouterEvent('router_responder_locked', { responder: 'execution_spine', via: 'playbook_execution_promotion' });
 
@@ -936,6 +946,26 @@ export async function runInboundAiRouter(ctx) {
     } catch (error) {
       console.error('RESEARCH_SURFACE_ERROR -> fallback partner:', error);
     }
+  }
+
+  // Project Space Bootstrap — "새 프로젝트 만들자" 류 요청 감지
+  const projectIntent = detectProjectIntent(trimmed);
+  if (projectIntent === 'new_project') {
+    const labelMatch = trimmed.match(/(?:프로젝트|앱|서비스)\s*(?:이름|명|:)?\s*[「"']?([^"'」\n]{2,30})/);
+    const label = labelMatch?.[1]?.trim() || trimmed.slice(0, 40);
+    const { space, plan } = bootstrapProjectSpace({ label, threadKey, metadata });
+    linkThreadToProjectSpace(space.project_id, threadKey);
+
+    logRouterEvent('router_responder_selected', { responder: 'project_bootstrap', project_id: space.project_id });
+    return finalizeSlackResponse({
+      responder: 'partner_surface',
+      text: renderBootstrapPlanForSlack(plan),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'project_bootstrap',
+      council_blocked: true,
+      response_type: 'project_bootstrap',
+    });
   }
 
   // Partner Surface — COS natural partner (default for all non-council, non-research)
