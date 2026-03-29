@@ -57,6 +57,7 @@ import {
   buildProjectIntakeCouncilDeferSurface,
   isActiveProjectIntake,
 } from './projectIntakeSession.js';
+import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -91,14 +92,31 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
     };
   }
 
-  if (isCouncilCommand(trimmed) && isActiveProjectIntake(meta)) {
-    return {
-      responder: 'executive_surface',
-      surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
-      surfacePacketId: null,
-      surfaceStatusPacketId: null,
-      surfaceResponseType: 'project_intake_council_deferred',
-    };
+  if (isActiveProjectIntake(meta)) {
+    const specPr = await tryFinalizeProjectSpecBuildThread({
+      trimmed,
+      metadata: meta,
+      routerCtx: { raw_text: trimmed, normalized_text: trimmed },
+      previewOnly: true,
+    });
+    if (specPr?.kind === 'council_deferred') {
+      return {
+        responder: 'executive_surface',
+        surfaceRaw: buildProjectIntakeCouncilDeferSurface(),
+        surfacePacketId: null,
+        surfaceStatusPacketId: null,
+        surfaceResponseType: 'project_intake_council_deferred',
+      };
+    }
+    if (specPr && specPr.text) {
+      return {
+        responder: 'executive_surface',
+        surfaceRaw: specPr.text,
+        surfacePacketId: null,
+        surfaceStatusPacketId: null,
+        surfaceResponseType: specPr.response_type ?? 'project_spec_session',
+      };
+    }
   }
 
   const lockPrev = await tryStartProjectLockConfirmedResponse(trimmed, meta);
@@ -475,6 +493,54 @@ export async function runInboundAiRouter(ctx) {
       projectContext,
       envKey,
     });
+  }
+
+  if (isActiveProjectIntake(metadata)) {
+    const specFinAi = await tryFinalizeProjectSpecBuildThread({
+      trimmed,
+      metadata,
+      routerCtx,
+    });
+    if (specFinAi?.kind === 'council_deferred') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'project_intake_council_deferred',
+        via: 'ai_tail_project_spec_defer_council',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'ai_tail_project_spec_defer_council',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: buildProjectIntakeCouncilDeferSurface(),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'project_intake_council_deferred',
+        council_blocked: true,
+        response_type: 'project_intake_council_deferred',
+      });
+    }
+    if (specFinAi && specFinAi.text) {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: specFinAi.response_type || 'project_spec_session',
+        via: 'ai_tail_project_spec_build_thread',
+      });
+      logRouterEvent('router_responder_locked', {
+        responder: 'executive_surface',
+        via: 'ai_tail_project_spec_build_thread',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: specFinAi.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: specFinAi.response_type || 'project_spec_session',
+        council_blocked: true,
+        response_type: specFinAi.response_type || 'project_spec_session',
+      });
+    }
   }
 
   const aiLock = await tryStartProjectLockConfirmedResponse(trimmed, metadata);

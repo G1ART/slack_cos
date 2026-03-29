@@ -19,7 +19,7 @@
 
 ---
 
-**코드 기준일**: 2026-03-27 (**`start_project` 범위 충분성 게이트** — `scopeSufficiency.js`·킥오프/정제 COS 직후; 충분 시 `start_project_confirmed`·미달 시 `start_project_refine`; **Front Door**·M4 lineage 순. **턴 수 고정 잠금 없음**.) · 원본 2026-03-23  
+**코드 기준일**: 2026-03-28 (**`ProjectSpecSession`** — 활성 인테이크 스레드는 `projectSpecSession.js`의 `tryFinalizeProjectSpecBuildThread`가 조회/M4/플래너 락에 **양보**하지 않으면 **spec mutation·충분성(`computeSufficiency`)**으로 대표 표면을 고정; 성공 시 `project_spec_execution_ready`·실패 시 `project_spec_refine`. transcript 기반 `start_project_confirmed`/`start_project_refine`은 **인테이크가 비활성**이거나 spec 핸들러가 **null**일 때 기존 경로.) · 원본 2026-03-23  
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
@@ -37,12 +37,13 @@
 
 ## 0. 라우팅 순서 (계약)
 
+0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일.
 1. `도움말` / `운영도움말`  
 1b. **`tryFinalizeProjectIntakeCancel`** (`projectIntakeSession.js`) — 첫 줄만 `인테이크 취소`/`cancel intake` 등; 세션 있으면 제거·안내, 없으면 noop 표면.  
-1c. **활성 프로젝트 인테이크** + **`isCouncilCommand`** → **`buildProjectIntakeCouncilDeferSurface`** (명시 Council 사전에 대표 표면).  
+1c. **활성 프로젝트 인테이크** → **`tryFinalizeProjectSpecBuildThread`** (`projectSpecSession.js`) — `tryFinalizeSlackQueryRoute`/`tryFinalizeG1CosLineageTransport`/플래너 **하드 락**에 걸리면 **null**로 다음 분기에 양보. **`isCouncilCommand`** 면 **`buildProjectIntakeCouncilDeferSurface`**. 그 외 **spec 병합**(`extractStructuredAnswers`·`extractFutureBacklog`·`extractProceedIntent`·`extractApprovalRules`)·`computeSufficiency` → 충분·`nearSufficient&&proceed`면 **`project_spec_execution_ready`**(`appendWorkspaceQueueItem`·`completeProjectIntakeSession`)·아니면 **`project_spec_refine`**. Council 메모·업무등록 푸터 패밀리 금지 정본은 코드 내 `PROJECT_SPEC_BUILD_ZONE_BANNED_SUBSTRINGS`·`scripts/test-calendar-build-thread-no-council-turn2.mjs` 참고.  
 2. **결정 패킷 짧은 회신** (`tryFinalizeDecisionShortReply`) — 스레드 키로 tail에서 패킷 로드; **`evaluateApprovalPolicy` v1**은 채널 `getEnvironmentContext`·`metadata.env_key`·기본 `dev`의 **환경 프로필**과 선택 **옵션**으로 티어 산출. `pick` 시 큐 **`queued`** vs **`pending_executive`**·`approval_policy_tier`. 나머지 동일(조회보다 앞).
-3a. **`start_project` 실행 승인(충분성 통과)** (`tryStartProjectLockConfirmedResponse` / `startProjectLockConfirmed.js` + `assessScopeSufficiency`) — 직전 COS 턴이 **킥오프**(`*[정렬 · 툴/프로젝트 킥오프]*` 등) 또는 **정제**(`*[스코프 정제 · 툴/프로젝트]*`)이고, 사용자 메시지에 **확정 시그널**+본문 조건+**MVP 정의 충분성**이 맞으면 **Front Door보다 먼저** `start_project_confirmed`·`[execution_approval_packet]` `spec_intake` 큐. Council·APR·`업무등록:` 유도 없음.  
-3b. **`start_project` 정제 루프** (`tryStartProjectRefineResponse`) — 3a 미스이지만 직전 COS가 킥오프/정제이고 Council/새 킥오프가 아니면 `start_project_refine` 표면만. APR 없음.  
+3a. **`start_project` 실행 승인(충분성 통과)** (`tryStartProjectLockConfirmedResponse` / `startProjectLockConfirmed.js` + `assessScopeSufficiency`) — **인테이크가 비활성**이거나 1c가 양보한 경우 등, 직전 COS 턴이 **킥오프**/**정제**이고 transcript **충분성**+확정 시그널이 맞으면 `start_project_confirmed`·`spec_intake` 큐. Council·APR·`업무등록:` 유도 없음.  
+3b. **`start_project` 정제 루프** (`tryStartProjectRefineResponse`) — 3a 미스이지만 직전 COS가 킥오프/정제이고 Council/새 킥오프가 아니면 `start_project_refine` 표면. **활성 인테이크+1c가 처리하는 턴**에서는 보통 3a/3b에 도달하지 않음. APR 없음.  
 4. **Clean `start_project` Front Door** (`resolveCleanStartProjectKickoff` in `startProjectKickoffDoor.js`) — `툴제작:`·빌드 시그널 등 **새 킥오프**는 **lineage·조회보다 앞**에서 `tryExecutiveSurfaceResponse`(선택 `startProjectToneAck`)로 종료(`clean_start_project_front_door`). 스레드 **푸시백**(예: 기준안 먼저)이면 버퍼 transcript에서 **가장 최근 킥오프 사용자 줄**을 회수해 동일 계약 응답.
 5. **M4 lineage drill-down** (`tryFinalizeG1CosLineageTransport`) — 한 줄: `턴 <uuid>` / `추적` / `trace` · `패킷 PKT-…` · **`상태 STP-…`** / `status STP-…`(M2b `status-packets.jsonl` 감사) · `워크큐 AWQ-…` · **`워크큐 목록` / `워크큐 대기`**(최근·`pending_executive`+`queued`) · **`실행 큐 목록` / `고객 피드백 목록`**(`cos-workspace-queue.json`) · **`실행 큐 CWS-…` / `고객 피드백 CFB-…`** 드릴다운 → `inbound-turn-trace.jsonl`·감사 JSONL(결정·상태)·`agent-work-queue.json`·워크스페이스 큐 JSON **읽기 전용** (`responder: query`, `response_type: lineage_*`). 워크큐 응답에 **`queued`/`pending_executive` → `커서발행`/`이슈발행`/`수파베이스발행` 실행 브리지**·`in_progress` 시 **`워크큐증거`/`러너증거`**·목록 푸터 **CI 훅(`COS_CI_HOOK_*`)** 안내·**`proof_refs` 길이 요약**(과도한 줄 truncate). **조회(PLN/WRK 한 줄)보다 앞**.
 6. 조회 전용 (`tryFinalizeSlackQueryRoute`)  
@@ -70,7 +71,9 @@
 |------|------|
 | `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope`(JSONL lineage, 행에 **`response_type`**) 안에서 **`runInboundCommandRouter`** → 미스 시 **`runInboundAiRouter`**. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
-| `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·인테이크 중 **`isCouncilCommand`** 연기·**`tryFinalizeDecisionShortReply`**·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
+| `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·**`tryFinalizeProjectSpecBuildThread`**(활성 인테이크)·**`tryFinalizeDecisionShortReply`**·…·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
+| `src/features/projectSpecSession.js` | 인테이크 빌드 스레드: spec mutation·`computeSufficiency`·`project_spec_execution_ready` / `project_spec_refine` |
+| `src/features/projectSpecModel.js` | `ProjectSpecSession` 팩토리·MVP 시드·금지 시그니처 목록 |
 | `src/features/g1cosLineageTransport.js` | **M4**: `턴`/`패킷`/`상태 STP-…`/`워크큐 AWQ-…`·**`워크큐 목록`/`대기`**·**`실행 큐 목록`/`고객 피드백 목록`**·**`CWS-`/`CFB-`** 드릴다운·감사/큐/turn JSON — 워크큐 항목별 **실행 브리지**(`커서발행`·`워크큐*` 등) |
 | `src/features/agentWorkQueue.js` | M3 큐·`linkAgentWorkQueueRunForWork`·`patchAgentWorkQueueItem` |
 | `src/features/executiveSurfaceHelp.js` | 대표용 짧은 도움말 |

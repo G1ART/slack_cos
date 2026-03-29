@@ -10,8 +10,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import { buildSlackThreadKey } from './slackConversationBuffer.js';
 import { resolveProjectIntakeSessionsPath } from '../storage/paths.js';
+import { createProjectSpecSession, seedSpecMvpDefaultsFromProblem } from './projectSpecModel.js';
 
-/** @typedef {{ stage: 'active', goalLine: string, openedAt: string, updatedAt: string }} ProjectIntakeSession */
+/** @typedef {{ stage: 'active', goalLine: string, openedAt: string, updatedAt: string, spec?: Record<string, unknown> }} ProjectIntakeSession */
 
 /** @type {Map<string, ProjectIntakeSession>} */
 const sessions = new Map();
@@ -44,7 +45,7 @@ async function writeIntakeFile() {
   const fp = intakeFilePath();
   const entries = [...sessions.entries()].map(([k, v]) => [k, v]);
   const payload = JSON.stringify(
-    { version: 1, savedAt: new Date().toISOString(), entries },
+    { version: 2, savedAt: new Date().toISOString(), entries },
     null,
     0,
   );
@@ -61,18 +62,28 @@ export async function loadProjectIntakeSessionsFromDisk() {
   try {
     const raw = await fs.readFile(fp, 'utf8');
     const data = JSON.parse(raw);
-    if (data.version !== 1 || !Array.isArray(data.entries)) return;
+    const ver = data.version;
+    if ((ver !== 1 && ver !== 2) || !Array.isArray(data.entries)) return;
     sessions.clear();
     for (const row of data.entries) {
       if (!Array.isArray(row) || row.length < 2) continue;
       const [k, v] = row;
       if (!k || !v || v.stage !== 'active' || !v.goalLine) continue;
-      sessions.set(String(k), {
-        stage: 'active',
-        goalLine: String(v.goalLine),
+      const key = String(k);
+      const goalLine = String(v.goalLine);
+      const base = {
+        stage: /** @type {'active'} */ ('active'),
+        goalLine,
         openedAt: String(v.openedAt || new Date().toISOString()),
         updatedAt: String(v.updatedAt || new Date().toISOString()),
-      });
+      };
+      let spec = v.spec && typeof v.spec === 'object' ? { ...v.spec } : null;
+      if (!spec) {
+        const ownerId = '';
+        spec = createProjectSpecSession(goalLine, key, ownerId);
+      }
+      seedSpecMvpDefaultsFromProblem(spec);
+      sessions.set(key, { ...base, spec });
     }
   } catch (e) {
     const code = /** @type {NodeJS.ErrnoException} */ (e).code;
@@ -100,12 +111,32 @@ export function openProjectIntakeSession(metadata, payload) {
   if (!goalLine) return;
   const key = buildSlackThreadKey(metadata);
   const now = new Date().toISOString();
+  const ownerId = String(
+    metadata?.user || metadata?.user_id || metadata?.slack_user_id || '',
+  );
+  const spec = createProjectSpecSession(goalLine, key, ownerId);
+  seedSpecMvpDefaultsFromProblem(spec);
+
   sessions.set(key, {
     stage: 'active',
     goalLine,
     openedAt: now,
     updatedAt: now,
+    spec,
   });
+  schedulePersist();
+}
+
+/**
+ * @param {Record<string, unknown>} metadata
+ * @param {Record<string, unknown>} spec
+ */
+export function touchProjectIntakeSessionSpec(metadata, spec) {
+  if (!metadata || typeof metadata !== 'object' || !spec || typeof spec !== 'object') return;
+  const s = getProjectIntakeSession(metadata);
+  if (!s || s.stage !== 'active') return;
+  s.spec = spec;
+  s.updatedAt = new Date().toISOString();
   schedulePersist();
 }
 
