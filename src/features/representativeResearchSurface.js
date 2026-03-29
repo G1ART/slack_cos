@@ -8,6 +8,13 @@
 
 import { buildChannelHint } from '../agents/hints.js';
 import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
+import {
+  buildSearchQuery,
+  executeLiveSearch,
+  normalizeResults,
+  formatCitations,
+  isLiveSearchConfigured,
+} from './liveSearchProvider.js';
 
 /**
  * @param {{
@@ -69,8 +76,24 @@ ${priorBlock}
 응답은 한국어.
 `.trim();
 
+  let liveContext = '';
+  if (freshness_required) {
+    try {
+      const sq = buildSearchQuery(userText, task_kind, { freshness_required });
+      const liveResponse = await executeLiveSearch(sq);
+      const findings = normalizeResults(liveResponse);
+      if (findings.length) {
+        liveContext = `\n\n**[Live Search 결과 (${findings.length}건)]**\n${findings.map((r, i) => `${i + 1}. ${r.title} — ${r.snippet?.slice(0, 200) || ''} (${r.url})`).join('\n')}\n`;
+      } else if (!isLiveSearchConfigured()) {
+        liveContext = '\n\n_[Live search provider 미설정 — 학습 데이터 기반 응답. `COS_SEARCH_PROVIDER` env로 연결 필요.]_\n';
+      }
+    } catch {
+      liveContext = '\n\n_[Live search 일시 불가 — 학습 데이터 기반 응답.]_\n';
+    }
+  }
+
   return callText({
-    instructions,
+    instructions: instructions + liveContext,
     input: String(userText || '').slice(0, 12000),
   });
 }

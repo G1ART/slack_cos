@@ -322,6 +322,43 @@ export function clearPlaybooksForTest() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Playbook → Execution Bridge                                        */
+/* ------------------------------------------------------------------ */
+
+const PROCEED_RE = /진행해줘|진행\s*해줘|바로\s*시작|착수해|착수\s*해|시작해줘|만들어줘?|go\s*ahead|proceed/iu;
+
+/**
+ * Check if user text is a "proceed to execution" signal inside an active playbook.
+ * @param {string} text
+ * @param {string} threadKey
+ * @returns {{ should_promote: boolean, playbook: DynamicPlaybook | null }}
+ */
+export function checkPlaybookExecutionPromotion(text, threadKey) {
+  const pb = getActivePlaybook(threadKey);
+  if (!pb) return { should_promote: false, playbook: null };
+  if (!PROCEED_RE.test(String(text || ''))) return { should_promote: false, playbook: pb };
+  if (pb.execution_eligible || pb.mode === 'execution' || pb.mode === 'hybrid') {
+    return { should_promote: true, playbook: pb };
+  }
+  return { should_promote: false, playbook: pb };
+}
+
+/**
+ * Link playbook to an execution run after promotion.
+ * @param {string} playbookId
+ * @param {{ packet_id: string, run_id: string }} ids
+ */
+export function linkPlaybookToExecution(playbookId, ids) {
+  const pb = playbooksById.get(playbookId);
+  if (!pb) return;
+  pb.linked_packet_id = ids.packet_id;
+  pb.linked_run_id = ids.run_id;
+  pb.status = 'active';
+  pb.updated_at = new Date().toISOString();
+  try { persistPlaybook(pb); } catch { /* ignore */ }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Promoted Playbook Registry (in-memory seed)                        */
 /* ------------------------------------------------------------------ */
 

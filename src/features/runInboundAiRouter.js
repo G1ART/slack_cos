@@ -66,8 +66,13 @@ import {
   isFreshnessRequired,
   openPlaybook,
   getActivePlaybook,
+  checkPlaybookExecutionPromotion,
+  linkPlaybookToExecution,
 } from './dynamicPlaybook.js';
+import { createExecutionPacket, createExecutionRun, getExecutionRunByThread } from './executionRun.js';
+import { transitionProjectIntakeStage, getProjectIntakeSession } from './projectIntakeSession.js';
 import { runRepresentativeResearch } from './representativeResearchSurface.js';
+import { renderExecutionRunningPacket } from './executionSpineRouter.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -78,7 +83,7 @@ import { runRepresentativeResearch } from './representativeResearchSurface.js';
  * `runInboundCommandRouter` 와 맞춘다. 구조화 명령(`runInboundStructuredCommands`)은 시뮬하지 않는다.
  * @param {RouterSyncLike} snap `buildRouterSyncSnapshot` 결과와 동일 필드
  * @param {Record<string, unknown>} [previewMetadata] 스레드 푸시백 픽스처용 슬랙 메타(채널·thread_ts 등)
- * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'navigator'|'council'|'dialog'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
+ * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'execution_spine'|'navigator'|'council'|'research_surface'|'partner_surface'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
  */
 export async function classifyInboundResponderPreview(snap, previewMetadata = {}) {
   const trimmed = snap.trimmed;
@@ -820,6 +825,9 @@ export async function runInboundAiRouter(ctx) {
       : null
   );
 
+  const existingRun = getExecutionRunByThread(threadKey);
+  const existingSess = getProjectIntakeSession(metadata);
+
   logRouterEvent('dynamic_task_interpreted', {
     task_kind: taskKind,
     mode: hypothesis.mode,
@@ -829,10 +837,57 @@ export async function runInboundAiRouter(ctx) {
     should_open_execution: hypothesis.should_open_execution,
     confidence: hypothesis.confidence,
     playbook_id: playbookForThread?.playbook_id || null,
+    run_id: existingRun?.run_id || null,
+    packet_id: existingRun?.packet_id || null,
     council_allowed: false,
     council_exposed: false,
-    execution_ownership: false,
+    execution_ownership: Boolean(existingRun),
   });
+
+  // Playbook → Execution promotion: "진행해줘" in active playbook thread
+  const promotion = checkPlaybookExecutionPromotion(trimmed, threadKey);
+  if (promotion.should_promote && promotion.playbook && !existingRun) {
+    const pb = promotion.playbook;
+    const packet = createExecutionPacket({
+      thread_key: threadKey,
+      goal_line: pb.task_summary,
+      locked_scope_summary: pb.task_summary,
+      includes: [],
+      excludes: [],
+      deferred_items: [],
+      approval_rules: [],
+      session_id: '',
+      requested_by: String(metadata?.user || ''),
+    });
+    const run = createExecutionRun({
+      packet,
+      metadata,
+      playbook_id: pb.playbook_id,
+      task_kind: pb.kind,
+    });
+    linkPlaybookToExecution(pb.playbook_id, { packet_id: packet.packet_id, run_id: run.run_id });
+
+    logRouterEvent('router_responder_selected', {
+      responder: 'execution_spine',
+      command_name: 'playbook_execution_promotion',
+      via: 'dynamic_playbook_proceed',
+      playbook_id: pb.playbook_id,
+      run_id: run.run_id,
+      packet_id: packet.packet_id,
+    });
+    logRouterEvent('router_responder_locked', { responder: 'execution_spine', via: 'playbook_execution_promotion' });
+
+    return finalizeSlackResponse({
+      responder: 'execution_spine',
+      text: renderExecutionRunningPacket(run),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'playbook_execution_promotion',
+      council_blocked: true,
+      response_type: 'execution_running_surface',
+      packet_id: packet.packet_id,
+    });
+  }
 
   // Research Surface — broad natural-language research questions
   if (hypothesis.is_research) {
@@ -937,7 +992,7 @@ export async function runInboundAiRouter(ctx) {
       normalized_text: routerCtx.normalized_text,
       command_name: 'COS_대화',
       council_blocked: true,
-      response_type: hintPlanId ? 'cos_partner_dialog_thread_plan_hint' : 'cos_partner_dialog',
+      response_type: hintPlanId ? 'cos_partner_surface_thread_plan_hint' : 'cos_partner_surface',
     });
     if (shouldOfferWorkspaceQueueButtons(trimmed)) {
       logRouterEvent('dialog_queue_buttons_attached', { normalized_len: trimmed.length });
