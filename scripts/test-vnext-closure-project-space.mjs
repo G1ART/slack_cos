@@ -71,18 +71,26 @@ const {
   linkThreadToProjectSpace,
   getProjectSpaceByThread,
   searchProjectSpaces,
+  loadProjectSpacesFromDisk,
   _resetForTest,
 } = await import('../src/features/projectSpaceRegistry.js');
 
 const {
   resolveProjectSpaceForThread,
   detectProjectIntent,
+  renderProjectResolutionSurface,
 } = await import('../src/features/projectSpaceResolver.js');
 
 const {
   bootstrapProjectSpace,
   renderBootstrapPlanForSlack,
+  getOrCreateProjectSpaceForBootstrap,
 } = await import('../src/features/projectSpaceBootstrap.js');
+
+const {
+  tryFinalizeExecutionSpineTurn,
+  renderPMCockpitPacket,
+} = await import('../src/features/executionSpineRouter.js');
 
 const { diagnoseVercelReadiness, buildVercelBootstrapDraft } = await import('../src/adapters/vercelAdapter.js');
 const { diagnoseRailwayReadiness, buildRailwayBootstrapDraft } = await import('../src/adapters/railwayAdapter.js');
@@ -357,6 +365,159 @@ try {
 
   ok('project space CRUD');
 } catch (e) { fail('project space CRUD', e); }
+
+/* TEST 14: existing_reference resolves existing project (not fall-through) */
+try {
+  _resetForTest();
+  const space = createProjectSpace({
+    human_label: 'Gallery App',
+    aliases: ['gallery', 'gallery-app'],
+    repo_name: 'gallery-app',
+  });
+  const threadKey = 'ch:TEST:ref-routing';
+  linkThreadToProjectSpace(space.project_id, threadKey);
+
+  const r = resolveProjectSpaceForThread({ threadKey, text: '지난번 그 프로젝트에 피드백 반영해' });
+  assert.ok(r.resolved, 'existing ref resolves via thread link');
+  assert.equal(r.project_id, space.project_id);
+  assert.equal(r.reason, 'thread_linked');
+
+  const intent = detectProjectIntent('지난번 그 프로젝트에 이 피드백 반영해');
+  assert.equal(intent, 'existing_reference', 'intent detected as existing_reference');
+
+  ok('existing_reference resolves existing project');
+} catch (e) { fail('existing_reference resolves existing project', e); }
+
+/* TEST 15: ambiguous project match returns candidates */
+try {
+  _resetForTest();
+  createProjectSpace({ human_label: 'Calendar App', aliases: ['calendar'] });
+  createProjectSpace({ human_label: 'Calendar Admin', aliases: ['calendar-admin'] });
+
+  const r = resolveProjectSpaceForThread({ text: 'calendar' });
+  if (r.resolved) {
+    assert.ok(r.confidence >= 10, 'if resolved, high confidence');
+  } else {
+    assert.equal(r.reason, 'ambiguous', 'ambiguous when two calendars match');
+    assert.ok(r.candidates.length >= 2, 'at least 2 candidates');
+  }
+
+  const surface = renderProjectResolutionSurface(r);
+  if (!r.resolved) {
+    assert.ok(surface.includes('식별 필요') || surface.includes('확인 필요'), 'surface shows disambiguation');
+  }
+
+  ok('ambiguous project match returns candidates');
+} catch (e) { fail('ambiguous project match returns candidates', e); }
+
+/* TEST 16: unresolved existing project does not auto-bind */
+try {
+  _resetForTest();
+  createProjectSpace({ human_label: 'Dashboard X', aliases: ['dash'] });
+
+  const r = resolveProjectSpaceForThread({ text: '완전 다른 뭔가 전혀 관련 없는' });
+  assert.ok(!r.resolved, 'unrelated text is unresolved');
+  assert.ok(!r.project_id, 'no project_id bound');
+
+  ok('unresolved existing does not auto-bind');
+} catch (e) { fail('unresolved existing does not auto-bind', e); }
+
+/* TEST 17: startup hydration restores persisted registry */
+try {
+  await new Promise((r) => setTimeout(r, 200));
+  _resetForTest();
+  const hydroFile = path.join(tmp, 'hydro-test-spaces.json');
+  const testSpace = {
+    project_id: 'PROJ-hydro-test',
+    human_label: 'Hydration Test',
+    aliases: ['hydro'],
+    canonical_summary: '',
+    repo_owner: null,
+    repo_name: 'hydro-repo',
+    default_branch: 'main',
+    github_ready_status: 'unknown',
+    cursor_workspace_root: null,
+    cursor_handoff_root: null,
+    supabase_project_ref: null,
+    supabase_url: null,
+    supabase_ready_status: 'unknown',
+    vercel_project_id: null,
+    vercel_project_url: null,
+    vercel_ready_status: 'unknown',
+    railway_project_id: null,
+    railway_service_id: null,
+    railway_ready_status: 'unknown',
+    deploy_env_map: {},
+    owner_thread_ids: ['ch:TEST:hydro-thread'],
+    linked_playbook_ids: [],
+    active_run_ids: [],
+    status: 'active',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  process.env.PROJECT_SPACES_FILE = hydroFile;
+  await fs.writeFile(hydroFile, JSON.stringify([testSpace]), 'utf8');
+
+  const count = await loadProjectSpacesFromDisk();
+  assert.ok(count >= 1, `hydrated ${count} spaces`);
+
+  const reloaded = getProjectSpaceById('PROJ-hydro-test');
+  assert.ok(reloaded, 'space survives reload');
+  assert.equal(reloaded.human_label, 'Hydration Test');
+
+  const threadResolved = getProjectSpaceByThread('ch:TEST:hydro-thread');
+  assert.ok(threadResolved, 'thread index restored');
+  assert.equal(threadResolved.project_id, 'PROJ-hydro-test');
+
+  process.env.PROJECT_SPACES_FILE = path.join(tmp, 'project-spaces.json');
+  ok('startup hydration restores persisted registry');
+} catch (e) { fail('startup hydration restores persisted registry', e); }
+
+/* TEST 18: repeated same-thread bootstrap is idempotent */
+try {
+  _resetForTest();
+  const threadKey = 'ch:TEST:idem-thread';
+  const { space: s1, reused: r1 } = bootstrapProjectSpace({ label: 'Idempotent App', threadKey });
+  assert.ok(!r1, 'first bootstrap creates new');
+
+  const { space: s2, reused: r2 } = bootstrapProjectSpace({ label: 'Idempotent App', threadKey });
+  assert.ok(r2, 'second bootstrap reuses');
+  assert.equal(s1.project_id, s2.project_id, 'same project_id');
+
+  assert.equal(listProjectSpaces().length, 1, 'only one space exists');
+
+  ok('repeated same-thread bootstrap is idempotent');
+} catch (e) { fail('repeated same-thread bootstrap is idempotent', e); }
+
+/* TEST 19: PM intent routing uses detectPMIntent canonically */
+try {
+  const progressIntent = detectPMIntent('지금 어디까지 됐어');
+  assert.equal(progressIntent, 'progress');
+  const blockedIntent = detectPMIntent('뭐가 막혔어');
+  assert.equal(blockedIntent, 'blocked_status');
+  const retryIntent = detectPMIntent('다시 시도해');
+  assert.equal(retryIntent, 'retry');
+  const manualIntent = detectPMIntent('수동으로 내가 해야 할 게 뭐야');
+  assert.equal(manualIntent, 'manual_status');
+  const completionIntent = detectPMIntent('이 run 끝났어?');
+  assert.equal(completionIntent, 'completion_check');
+
+  ok('PM intent routing uses detectPMIntent canonically');
+} catch (e) { fail('PM intent routing uses detectPMIntent canonically', e); }
+
+/* TEST 20: provider truth shows readiness + run state separately */
+try {
+  const run = makeTestRun();
+  await dispatchOutboundActionsForRun(run, {});
+  const cockpit = renderPMCockpitPacket(run);
+  assert.ok(cockpit.includes('Provider 준비 상태'), 'has readiness section');
+  assert.ok(cockpit.includes('Provider 실행 상태') || cockpit.includes('GitHub run:'), 'has run truth section');
+  assert.ok(cockpit.includes('GitHub run:'), 'github run truth present');
+  assert.ok(cockpit.includes('Cursor run:'), 'cursor run truth present');
+  assert.ok(cockpit.includes('Supabase run:'), 'supabase run truth present');
+
+  ok('provider truth shows readiness + run state separately');
+} catch (e) { fail('provider truth shows readiness + run state separately', e); }
 
 /* Cleanup */
 console.log(`\n=== ${passed} passed, ${failed} failed ===`);

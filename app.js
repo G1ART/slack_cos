@@ -163,6 +163,9 @@ import {
   buildSlackThreadKey,
 } from './src/features/slackConversationBuffer.js';
 import {
+  loadProjectSpacesFromDisk,
+} from './src/features/projectSpaceRegistry.js';
+import {
   loadProjectIntakeSessionsFromDisk,
   flushProjectIntakeSessionsToDisk,
   isActiveProjectIntake,
@@ -902,6 +905,12 @@ registerG1CosSlashCommand(slackApp);
   await ensureStorage();
   await loadConversationBufferFromDisk();
   await loadProjectIntakeSessionsFromDisk();
+  try {
+    const psCount = await loadProjectSpacesFromDisk();
+    console.info(JSON.stringify({ startup_project_spaces_hydrated: psCount }));
+  } catch (e) {
+    console.warn(JSON.stringify({ startup_project_spaces_hydration_error: String(e?.message || e) }));
+  }
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {
     const st = getStoreCore();

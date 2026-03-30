@@ -74,7 +74,7 @@ import { transitionProjectIntakeStage, getProjectIntakeSession } from './project
 import { runRepresentativeResearch } from './representativeResearchSurface.js';
 import { renderExecutionRunningPacket } from './executionSpineRouter.js';
 import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
-import { resolveProjectSpaceForThread, detectProjectIntent } from './projectSpaceResolver.js';
+import { resolveProjectSpaceForThread, detectProjectIntent, renderProjectResolutionSurface } from './projectSpaceResolver.js';
 import { bootstrapProjectSpace, renderBootstrapPlanForSlack } from './projectSpaceBootstrap.js';
 import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
 
@@ -948,7 +948,7 @@ export async function runInboundAiRouter(ctx) {
     }
   }
 
-  // Project Space Bootstrap — "새 프로젝트 만들자" 류 요청 감지
+  // Project Space routing — new or existing reference
   const projectIntent = detectProjectIntent(trimmed);
   if (projectIntent === 'new_project') {
     const labelMatch = trimmed.match(/(?:프로젝트|앱|서비스)\s*(?:이름|명|:)?\s*[「"']?([^"'」\n]{2,30})/);
@@ -965,6 +965,40 @@ export async function runInboundAiRouter(ctx) {
       command_name: 'project_bootstrap',
       council_blocked: true,
       response_type: 'project_bootstrap',
+    });
+  }
+
+  if (projectIntent === 'existing_reference') {
+    const resolved = resolveProjectSpaceForThread({ threadKey, text: trimmed, metadata });
+    logRouterEvent('existing_project_resolve_attempt', {
+      resolved: resolved.resolved,
+      reason: resolved.reason,
+      project_id: resolved.project_id || null,
+      candidate_count: resolved.candidates?.length || 0,
+    });
+
+    if (resolved.resolved) {
+      linkThreadToProjectSpace(resolved.project_id, threadKey);
+      return finalizeSlackResponse({
+        responder: 'partner_surface',
+        text: renderProjectResolutionSurface(resolved),
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'existing_project_resolved',
+        council_blocked: true,
+        response_type: 'existing_project_resolved',
+        project_id: resolved.project_id,
+      });
+    }
+
+    return finalizeSlackResponse({
+      responder: 'partner_surface',
+      text: renderProjectResolutionSurface(resolved),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'existing_project_unresolved',
+      council_blocked: true,
+      response_type: 'existing_project_unresolved',
     });
   }
 

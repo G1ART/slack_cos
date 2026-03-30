@@ -119,10 +119,57 @@ linkRunToProjectSpace(space.project_id, 'RUN-abc123');
 
 ---
 
-## 7. Next Patch Priorities
+## 7. vNext.1 — Project Space Truth Hardening (2026-03-30)
+
+**Patch**: vNext.1 — existing-reference routing / hydration / idempotent bootstrap / provider truth
+
+### 변경 요약
+
+| 항목 | 상태 |
+|---|---|
+| existing_reference routing in runInboundAiRouter | ✅ 전용 분기 추가. resolved → thread 바인딩 + 확인 표면, ambiguous → 후보 리스트, unresolved → 프로젝트 식별 요청 |
+| tokenized NL resolution | ✅ searchProjectSpacesWithScore() 토큰 분리 + stop word 제거 + confidence threshold 10점 |
+| registry hydration on app startup | ✅ app.js에 loadProjectSpacesFromDisk() 연결, 카운트 로깅, 파일 부재/corrupt 시 안전 복구 |
+| idempotent bootstrap | ✅ getOrCreateProjectSpaceForBootstrap() — thread-linked/label-match 재사용 후 create |
+| canonical PM cockpit routing | ✅ detectPMIntent()가 유일한 intent classifier. 로컬 regex 5개 제거, COMPLETION_RE/ESCALATION_RE만 사전 필터 |
+| provider run truth | ✅ renderExecutionReportingPacket: readiness (env 준비)와 run truth (issue/branch/PR/cursor trace/supabase migration) 분리 |
+
+### 방지되는 잘못된 바인딩 케이스
+
+1. **"지난번 그 프로젝트"** 발화 시 기존 thread-linked space로 resolve → partner surface 낙하 방지
+2. **ambiguous match** (Calendar App vs Calendar Admin 등): 자동 바인딩 없이 후보 리스트 표면
+3. **unresolved text**: 자동 space 생성 없이 프로젝트 ID/별칭 요청
+4. **같은 스레드 반복 "새 프로젝트"**: 기존 thread-linked space 재사용 (duplicate 방지)
+5. **strong label match** 시 bootstrap 재사용 (score ≥ 12)
+
+### 수정 파일
+
+- `src/features/projectSpaceRegistry.js` — searchProjectSpacesWithScore(), tokenized search, stop words
+- `src/features/projectSpaceResolver.js` — confidence threshold, phrase extraction, renderProjectResolutionSurface()
+- `src/features/projectSpaceBootstrap.js` — getOrCreateProjectSpaceForBootstrap(), idempotent bootstrap
+- `src/features/executionSpineRouter.js` — detectPMIntent canonical routing, buildProviderRunTruth(), PM cockpit 분리
+- `src/features/runInboundAiRouter.js` — existing_reference 라우팅 분기
+- `app.js` — loadProjectSpacesFromDisk() startup wiring
+- `scripts/test-vnext-closure-project-space.mjs` — 7개 신규 테스트 (14-20)
+
+### 테스트 추가
+
+| # | 테스트 | 검증 내용 |
+|---|---|---|
+| 14 | existing_reference resolves existing project | thread-linked space가 있을 때 intent='existing_reference' 시 올바른 space resolve |
+| 15 | ambiguous project match returns candidates | 동일 키워드 2개 space → ambiguous + 후보 리스트 |
+| 16 | unresolved existing does not auto-bind | 무관한 텍스트 → project_id 없이 unresolved |
+| 17 | startup hydration restores persisted registry | 파일 → reset → load → thread index 복원 |
+| 18 | repeated same-thread bootstrap is idempotent | 같은 thread 반복 bootstrap → 1개 space, reused=true |
+| 19 | PM intent routing uses detectPMIntent canonically | 5종 intent 문자열 매칭 |
+| 20 | provider truth shows readiness + run state | cockpit에 준비 상태 / 실행 상태 분리 확인 |
+
+---
+
+## 8. Next Patch Priorities
 
 1. **Live provider integration** — Vercel/Railway API create, Cursor cloud callback
 2. **Project space UI surface** — 대표가 "내 프로젝트 목록" 조회 가능
-3. **Multi-project disambiguation** — ambiguous resolve 시 대표에게 선택지 제시
-4. **Supabase CLI auto-apply** — `supabase db push` 자동화
-5. **GitHub repo bootstrap** — `gh repo create` live path
+3. **Supabase CLI auto-apply** — `supabase db push` 자동화
+4. **GitHub repo bootstrap** — `gh repo create` live path
+5. **Multi-run tracking per space** — space 내 여러 run 간 status aggregation
