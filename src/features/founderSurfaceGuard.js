@@ -32,6 +32,8 @@ const CANONICAL_SURFACES = new Set([
   'clarification_surface',
   'document_review_surface',
   'decision_packet_surface',
+  'deliverable_bundle_surface',
+  'synthesis_surface',
   'executive_surface',
   'project_bootstrap',
   'existing_project_resolved',

@@ -236,3 +236,21 @@ export function formatFileIngestError(result) {
 
   return codeMessages[result.errorCode] || result.error || '파일 처리 중 알 수 없는 오류가 발생했습니다.';
 }
+
+/**
+ * Log file readiness diagnostics at startup.
+ */
+export function logFileReadinessDiagnostic() {
+  const diag = diagnoseFileReadiness();
+  try {
+    console.info(JSON.stringify({
+      event: 'file_readiness_diagnostic',
+      ts: new Date().toISOString(),
+      ready: diag.ready,
+      issues: diag.issues,
+      supported_types: diag.supported_types,
+      limitations: diag.limitations,
+    }));
+  } catch { /* */ }
+  return diag;
+}

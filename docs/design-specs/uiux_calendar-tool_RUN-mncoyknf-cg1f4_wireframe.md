@@ -1,0 +1,14 @@
+# Wireframe Notes — RUN-mncoyknf-cg1f4
+
+**Generated**: 2026-03-30T04:32:01.818Z
+
+## Layout Notes
+
+- (layout description)
+
+## Navigation Flow
+
+- (flow description)
+
+---
+_Auto-generated for `RUN-mncoyknf-cg1f4`_

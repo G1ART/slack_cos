@@ -172,6 +172,7 @@ import {
   loadDocumentContextFromDisk,
   flushDocumentContextToDisk,
 } from './src/features/slackDocumentContext.js';
+import { logFileReadinessDiagnostic } from './src/features/slackFileIntake.js';
 import {
   loadProjectIntakeSessionsFromDisk,
   flushProjectIntakeSessionsToDisk,
@@ -930,6 +931,7 @@ registerG1CosSlashCommand(slackApp);
   } catch (e) {
     console.warn(JSON.stringify({ startup_document_context_hydration_error: String(e?.message || e) }));
   }
+  logFileReadinessDiagnostic();
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {
     const st = getStoreCore();
