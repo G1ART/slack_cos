@@ -683,6 +683,225 @@ try {
   ok('canonical surface enforcement');
 } catch (e) { fail('canonical surface enforcement', e); }
 
+/* ===== vNext.5 Founder-Grade OS Hardening Tests ===== */
+console.log('\n--- vNext.5 OS Hardening Tests ---\n');
+
+/* TEST 22: council source surgery — synthesizeCouncil no longer generates internal metadata */
+try {
+  const councilMod = await import('../src/agents/council.js');
+  // We cannot easily call synthesizeCouncil directly since it's not exported,
+  // but we can verify via runCouncilMode shape if we mock callJSON.
+  // Instead, verify the contract: council return has diagnostics separate from text.
+  // We'll check council.js source to ensure no "내부 처리 정보" in the report builder.
+  const councilSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/agents/council.js'), 'utf8'
+  );
+
+  // The text body builder must NOT contain the internal metadata block
+  const reportSection = councilSrc.slice(
+    councilSrc.indexOf("let report = ''"),
+    councilSrc.indexOf('return {', councilSrc.indexOf("let report = ''"))
+  );
+  assert.ok(!reportSection.includes("report += '내부 처리 정보"), 'no 내부 처리 정보 in report builder');
+  assert.ok(!reportSection.includes("report += `- 협의 모드"), 'no 협의 모드 in report builder');
+  assert.ok(!reportSection.includes("report += `- 참여 페르소나"), 'no 참여 페르소나 in report builder');
+  assert.ok(!reportSection.includes("report += `- matrix trigger"), 'no matrix trigger in report builder');
+  assert.ok(!reportSection.includes("report += `- institutional memory"), 'no inst memory in report builder');
+
+  // Diagnostics must be a separate object
+  assert.ok(councilSrc.includes('diagnostics'), 'diagnostics object exists in council');
+
+  ok('council source surgery — no internal metadata in report');
+} catch (e) { fail('council source surgery', e); }
+
+/* TEST 23: hard canonical surface enforcement — non-canonical responder is BLOCKED */
+try {
+  const { finalizeSlackResponse } = await import('../src/features/topLevelRouter.js');
+
+  const out = finalizeSlackResponse({
+    responder: 'internal_orchestrator',
+    text: '이것은 내부 오케스트레이터 응답입니다',
+    raw_text: 'test',
+    normalized_text: 'test',
+  });
+
+  assert.ok(out.includes('내부 경로 오류'), 'non-canonical blocked with safe fallback');
+  assert.ok(!out.includes('내부 오케스트레이터'), 'original text not passed through');
+
+  // Canonical responder passes through normally
+  const out2 = finalizeSlackResponse({
+    responder: 'partner_surface',
+    text: '정상 응답입니다',
+    raw_text: 'test',
+    normalized_text: 'test',
+  });
+  assert.ok(out2.includes('정상 응답'), 'canonical partner_surface passes through');
+
+  // System responders also pass through
+  const out3 = finalizeSlackResponse({
+    responder: 'executive_surface',
+    text: '실행 응답',
+    raw_text: 'test',
+    normalized_text: 'test',
+  });
+  assert.ok(out3.includes('실행 응답'), 'executive_surface passes through');
+
+  ok('hard canonical enforcement — non-canonical blocked');
+} catch (e) { fail('hard canonical enforcement', e); }
+
+/* TEST 24: source leak regression — council text must be clean even without sanitizer */
+try {
+  const councilSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/agents/council.js'), 'utf8'
+  );
+
+  // Extract the synthesizeCouncil function body
+  const synthStart = councilSrc.indexOf('function synthesizeCouncil(');
+  const synthEnd = councilSrc.indexOf('\n}', synthStart + 100);
+  const synthBody = councilSrc.slice(synthStart, synthEnd + 2);
+
+  // Find all report += lines
+  const reportLines = synthBody.split('\n').filter(l => l.includes('report +='));
+
+  // None of them should contain internal metadata strings
+  const FORBIDDEN_STRINGS = [
+    '내부 처리 정보',
+    '협의 모드',
+    '참여 페르소나',
+    'matrix trigger',
+    'institutional memory 힌트 수',
+    '업무등록',
+    '실행 작업 후보',
+  ];
+
+  for (const line of reportLines) {
+    for (const forbidden of FORBIDDEN_STRINGS) {
+      assert.ok(!line.includes(forbidden), `report line must not contain "${forbidden}": ${line.trim().slice(0, 80)}`);
+    }
+  }
+
+  ok('source leak regression — council report builder clean');
+} catch (e) { fail('source leak regression', e); }
+
+/* TEST 25: council output sanitizer is defense-in-depth, not primary */
+try {
+  const { sanitizeFounderOutput } = await import('../src/features/founderSurfaceGuard.js');
+
+  // Even if somehow old-format council text appears, sanitizer catches it
+  const legacyText = [
+    '한 줄 요약',
+    '캘린더 앱 구축',
+    '',
+    '내부 처리 정보',
+    '- 협의 모드: matrix_cell',
+    '- 참여 페르소나: CTO, CFO',
+    '- matrix trigger: high_stakes',
+    '- institutional memory 힌트 수: 3',
+  ].join('\n');
+
+  const cleaned = sanitizeFounderOutput(legacyText);
+  assert.ok(!cleaned.includes('내부 처리 정보'), 'sanitizer still strips legacy format');
+  assert.ok(!cleaned.includes('참여 페르소나'), 'sanitizer still strips personas');
+  assert.ok(cleaned.includes('캘린더 앱 구축'), 'keeps valid content');
+
+  ok('sanitizer defense-in-depth verification');
+} catch (e) { fail('sanitizer defense-in-depth', e); }
+
+/* TEST 26: new canonical surfaces — deliverable_bundle_surface, synthesis_surface */
+try {
+  assert.ok(isCanonicalSurface('deliverable_bundle_surface'), 'deliverable_bundle_surface canonical');
+  assert.ok(isCanonicalSurface('synthesis_surface'), 'synthesis_surface canonical');
+  assert.ok(isCanonicalSurface('partner_surface'), 'partner_surface canonical');
+  assert.ok(!isCanonicalSurface('matrix_orchestrator'), 'matrix_orchestrator NOT canonical');
+  assert.ok(!isCanonicalSurface('council_internal'), 'council_internal NOT canonical');
+
+  ok('new canonical surfaces registered');
+} catch (e) { fail('new canonical surfaces', e); }
+
+/* TEST 27: restart OS regression — project space + slot ledger + document context survives */
+try {
+  resetLedger();
+  resetDocs();
+
+  // Build full state
+  const restartSlotFile = path.join(tmp, 'restart-os-slots.json');
+  const restartDocFile = path.join(tmp, 'restart-os-docs.json');
+
+  const slotState = {
+    thread_key: 'ch:OS-RESTART:01',
+    project_id: 'PROJ-os-restart',
+    slots: {
+      project_goal: { value: 'NYC Art Gallery MVP', resolved: true, resolved_at: '2026-01-01', source: 'founder' },
+      product_label: { value: 'ArtGallery', resolved: true, resolved_at: '2026-01-01', source: 'founder' },
+      city_scope: { value: 'NYC, LA, Seoul', resolved: true, resolved_at: '2026-01-01', source: 'founder' },
+      document_ingested: { value: 'Abstract GTM doc', resolved: true, resolved_at: '2026-01-02', source: 'file_ingest' },
+    },
+    created_at: '2026-01-01',
+    updated_at: '2026-01-02',
+  };
+  const docState = [{
+    threadKey: 'ch:OS-RESTART:01',
+    docs: [{
+      file_id: 'F-abstract',
+      filename: 'Abstract_GTM_Strategy.md',
+      text: 'NYC local art gallery go-to-market strategy details...',
+      mimetype: 'text/markdown',
+      ingested_at: '2026-01-02T00:00:00Z',
+      char_count: 55,
+      truncated: false,
+    }],
+  }];
+
+  process.env.FOUNDER_SLOT_LEDGER_FILE = restartSlotFile;
+  process.env.DOCUMENT_CONTEXT_FILE = restartDocFile;
+  await fs.writeFile(restartSlotFile, JSON.stringify([slotState]), 'utf8');
+  await fs.writeFile(restartDocFile, JSON.stringify(docState), 'utf8');
+
+  // Simulate full restart
+  resetLedger();
+  resetDocs();
+  await loadSlotLedgersFromDisk();
+  const { loadDocumentContextFromDisk: ldcd2 } = await import('../src/features/slackDocumentContext.js');
+  await ldcd2();
+
+  // Verify all state survived
+  assert.ok(isSlotResolved('ch:OS-RESTART:01', 'project_goal'), 'goal survives OS restart');
+  assert.ok(isSlotResolved('ch:OS-RESTART:01', 'document_ingested'), 'doc flag survives');
+  assert.equal(getResolvedSlots('ch:OS-RESTART:01').city_scope, 'NYC, LA, Seoul');
+  assert.ok(hasDocumentContext('ch:OS-RESTART:01'), 'doc context survives restart');
+  assert.ok(getMergedDocumentText('ch:OS-RESTART:01').includes('NYC local art gallery'), 'doc content intact');
+
+  // Continuation should activate — not re-kickoff
+  const synth2 = shouldActivateContextSynthesis({
+    text: '이 문서를 토대로 원래 요청을 더 구체화해',
+    hasDocumentContext: true,
+    resolvedSlotCount: Object.keys(getResolvedSlots('ch:OS-RESTART:01')).length,
+  });
+  assert.ok(synth2.activate, 'synthesis activates after OS restart');
+  assert.equal(synth2.intent, 'document_refine');
+
+  // Deliverable should also trigger
+  const deliv = detectDeliverableIntent('작업 시작해');
+  assert.ok(deliv.triggered, 'deliverable still triggers after restart');
+
+  process.env.FOUNDER_SLOT_LEDGER_FILE = path.join(tmp, 'founder-slot-ledger.json');
+  delete process.env.DOCUMENT_CONTEXT_FILE;
+
+  ok('restart OS regression — full state survives');
+} catch (e) { fail('restart OS regression', e); }
+
+/* TEST 28: file readiness diagnostic */
+try {
+  const { logFileReadinessDiagnostic } = await import('../src/features/slackFileIntake.js');
+  assert.equal(typeof logFileReadinessDiagnostic, 'function', 'diagnostic function exists');
+  const diag = logFileReadinessDiagnostic();
+  assert.ok(Array.isArray(diag.supported_types), 'has supported types');
+  assert.ok(diag.supported_types.includes('docx'), 'docx in readiness');
+  assert.ok(Array.isArray(diag.limitations), 'has limitations');
+
+  ok('file readiness diagnostic surface');
+} catch (e) { fail('file readiness diagnostic', e); }
+
 /* Cleanup */
 console.log(`\n=== ${passed} passed, ${failed} failed ===`);
 

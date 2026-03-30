@@ -358,11 +358,90 @@ Partner Surface 경로에 다음 순서로 배선:
 
 ---
 
-## 10. Next Patch Priorities
+---
+
+## 10. vNext.5 — Founder-Grade OS Hardening (2026-03-30)
+
+### Public-Main Reality Table (patch 전)
+
+| # | 항목 | 패치 전 | 패치 후 |
+|---|---|---|---|
+| 1-9 | startup hydration, persist, sanitizer | ✅ VERIFIED | ✅ 유지 |
+| **10** | **canonical surface enforcement HARD** | **❌ LOG ONLY** | **✅ force-convert (safe fallback)** |
+| **11** | **council source no internal metadata** | **❌ 232-236행에서 생성** | **✅ diagnostics 분리, report clean** |
+| 12-20 | routing, file intake, docx, persist | ✅ VERIFIED | ✅ 유지 |
+| **21** | **replay tests cover all regressions** | **❌ 별도 script에만** | **✅ 28 tests including hardening** |
+
+### 핵심 수술: Council Source Surgery
+
+**Before**: `synthesizeCouncil()` 이 `report` 텍스트 본문에 직접 "내부 처리 정보" 블록을 생성
+```
+report += '내부 처리 정보\n';
+report += `- 협의 모드: ${...}\n`;
+report += `- 참여 페르소나: ${...}\n`;
+report += `- matrix trigger: ${...}\n`;
+report += `- institutional memory 힌트 수: ${...}\n`;
+```
+
+**After**: 내부 메타데이터가 `diagnostics` 객체로 분리. `report`는 founder-safe 텍스트만 포함.
+- `synthesis.diagnostics` → `return { report, diagnostics, ... }`
+- `runCouncilMode` → `return { text, diagnostics, meta, ... }`
+- 로그 전용: `console.info(JSON.stringify({ event: 'council_diagnostics', ... }))`
+- `sanitizeFounderOutput`은 defense-in-depth로만 유지
+
+### Hard Canonical Surface Enforcement
+
+**Before**: `topLevelRouter.js`에서 non-canonical responder는 `logRouterEvent('non_canonical_surface_normalized')` — 경고만
+
+**After**: non-canonical + non-system responder → **safe fallback 강제 변환**
+```
+out = '[COS] 응답을 처리하는 중 내부 경로 오류가 발생했습니다. 다시 시도해 주세요.';
+```
+
+허용 responder:
+- Canonical: partner_surface, research_surface, kickoff_surface, execution_surface, clarification_surface, document_review_surface, decision_packet_surface, deliverable_bundle_surface, synthesis_surface, executive_surface, project_bootstrap, existing_project_*
+- System: council, query, planner, help, error, single, legacy_single, navigator, structured, executive_surface, execution_*
+
+### File Truth Alignment
+
+- `diagnoseFileReadiness()` — docx가 `supported_types`에 포함, `limitations`에서 제외
+- `logFileReadinessDiagnostic()` — app.js startup에서 호출, 파일 준비 상태 로그
+- mammoth 기반 .docx 텍스트 추출 경로 완전 정렬
+
+### Council 마커 정리
+
+- `topLevelRouter.js` — `COUNCIL_SYNTHESIS_MARKERS`에서 '내부 처리 정보', '- 협의 모드:' 제거 (더 이상 council이 생성하지 않으므로)
+
+### 신규 테스트 (7개, vNext.5)
+
+| # | 테스트 | 검증 |
+|---|---|---|
+| 22 | council source surgery | report builder에 내부 메타 문자열 없음 확인 |
+| 23 | hard canonical enforcement | non-canonical responder → safe fallback 강제 변환 |
+| 24 | source leak regression | council report의 모든 `report +=` 줄에 금지 문자열 없음 |
+| 25 | sanitizer defense-in-depth | 레거시 포맷이 남더라도 sanitizer가 잡음 |
+| 26 | new canonical surfaces | deliverable_bundle_surface, synthesis_surface 등록 |
+| 27 | restart OS regression | slot ledger + document context + deliverable/synthesis 전부 재시작 생존 |
+| 28 | file readiness diagnostic | startup 진단 함수 + docx in readiness |
+
+### 수정 파일
+
+| 파일 | 변경 |
+|---|---|
+| `src/agents/council.js` | "내부 처리 정보" 블록을 report에서 제거, diagnostics 분리 |
+| `src/features/topLevelRouter.js` | non-canonical → safe fallback 강제, council markers 정리 |
+| `src/features/founderSurfaceGuard.js` | deliverable_bundle_surface, synthesis_surface 추가 |
+| `src/features/slackFileIntake.js` | logFileReadinessDiagnostic() 추가 |
+| `app.js` | file readiness diagnostic startup 추가 |
+| `scripts/test-vnext3-founder-grade.mjs` | vNext.5 테스트 7개 추가 (총 28개) |
+
+---
+
+## 11. Next Patch Priorities
 
 1. **End-to-end LLM 검증** — 실제 Slack thread에서 deliverable bundle / context synthesis / topic guard 동작 확인
 2. **Live provider integration** — Vercel/Railway API create, Cursor cloud callback
 3. **Project space UI surface** — 대표가 "내 프로젝트 목록" 조회 가능
 4. **Supabase CLI auto-apply** — `supabase db push` 자동화
 5. **PDF parser 개선** — pdf-parse 등 text-layer 기반 PDF 추출
-6. **슬롯 LLM-assisted resolve** — tryAutoResolveSlots를 LLM 기반으로 확장 (패턴 한계 보완)
+6. **슬롯 LLM-assisted resolve** — tryAutoResolveSlots를 LLM 기반으로 확장

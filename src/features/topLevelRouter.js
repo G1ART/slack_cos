@@ -13,8 +13,6 @@ const COUNCIL_SYNTHESIS_MARKERS = [
   '가장 강한 반대 논리',
   '종합 추천안',
   '대표 결정 필요 여부',
-  '내부 처리 정보',
-  '- 협의 모드:',
 ];
 
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';
@@ -166,11 +164,18 @@ export function finalizeSlackResponse(p) {
     work_queue_id: work_queue_id ?? null,
   });
 
-  if (!isCanonicalSurface(responder) && responder !== 'council' && responder !== 'query'
-      && responder !== 'planner' && responder !== 'help' && responder !== 'error'
-      && responder !== 'single' && responder !== 'legacy_single' && responder !== 'navigator'
-      && responder !== 'structured') {
-    logRouterEvent('non_canonical_surface_normalized', { original_responder: responder });
+  const SYSTEM_RESPONDERS = new Set([
+    'council', 'query', 'planner', 'help', 'error',
+    'single', 'legacy_single', 'navigator', 'structured',
+    'executive_surface', 'execution_spine', 'execution_running_surface',
+    'execution_reporting_surface', 'escalation_surface',
+  ]);
+  if (!isCanonicalSurface(responder) && !SYSTEM_RESPONDERS.has(responder)) {
+    logRouterEvent('non_canonical_surface_blocked', {
+      original_responder: responder,
+      action: 'force_safe_fallback',
+    });
+    out = '[COS] 응답을 처리하는 중 내부 경로 오류가 발생했습니다. 다시 시도해 주세요.';
   }
 
   const debugMode = process.env.COS_DEBUG_MODE === '1';

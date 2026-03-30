@@ -228,15 +228,18 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
   report += `남아 있는 긴장 / 미해결 충돌\n${unresolved.length ? unresolved.map((u) => `- ${u}`).join('\n') : '- 없음'}\n\n`;
   report += `핵심 리스크\n${keyRisks.length ? keyRisks.map((r) => `- ${r}`).join('\n') : '- 없음'}\n\n`;
   report += `다음 행동\n${nextActions.length ? nextActions.map((a) => `- ${a}`).join('\n') : '- 없음'}\n\n`;
-  report += `대표 결정 필요 여부\n${decisionNeeded ? '예' : '아니오'}\n${decisionQuestion}\n\n`;
-  report += '내부 처리 정보\n';
-  report += `- 협의 모드: ${matrixInfo?.used ? 'matrix_cell' : 'council'}\n`;
-  report += `- 참여 페르소나: ${selectedPersonas.join(', ')}\n`;
-  report += `- matrix trigger: ${matrixInfo?.reasons?.length ? matrixInfo.reasons.join(' | ') : '없음'}\n`;
-  report += `- institutional memory 힌트 수: ${institutionalHints.length}\n`;
+  report += `대표 결정 필요 여부\n${decisionNeeded ? '예' : '아니오'}\n${decisionQuestion}`;
+
+  const diagnostics = {
+    council_mode: matrixInfo?.used ? 'matrix_cell' : 'council',
+    selected_personas: selectedPersonas,
+    matrix_trigger: matrixInfo?.reasons?.length ? matrixInfo.reasons : [],
+    institutional_memory_hint_count: institutionalHints.length,
+  };
 
   return {
     report: report.trim(),
+    diagnostics,
     oneLineSummary,
     recommendation,
     strongestObjection,
@@ -340,10 +343,19 @@ export async function runCouncilMode({
     personaOutputs.flatMap((p) => p.key_risks || [])
   );
 
+  try {
+    console.info(JSON.stringify({
+      event: 'council_diagnostics',
+      ts: new Date().toISOString(),
+      ...synthesis.diagnostics,
+    }));
+  } catch { /* never crash on diagnostics */ }
+
   return {
     text: synthesis.report,
     primaryLike: mapToPrimaryLike(synthesis),
     riskLike: mapToRiskLike({ ...synthesis, keyRisks: mergedRisks }),
+    diagnostics: synthesis.diagnostics,
     meta: {
       mode,
       selectedPersonas,
