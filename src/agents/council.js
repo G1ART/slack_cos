@@ -212,23 +212,32 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
     ? '리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.'
     : '현재는 조건부 실행 후 점검으로 진행 가능합니다.';
 
+  // Founder-grade report — no internal persona IDs, matrix labels, or council metadata
   let report = '';
-  report += `한 줄 요약\n${oneLineSummary}\n\n`;
-  report += `종합 추천안\n${recommendation}\n\n`;
-  report += '페르소나별 핵심 관점\n';
-  report += selectedPersonas
-    .map((id) => {
-      const p = personaOutputs.find((x) => x.personaId === id);
-      if (!p) return `- ${id}: 관점 생성 실패`;
-      return `- ${id}: ${normalizeLine(p.one_line_summary)} / 권고: ${normalizeLine(p.recommendation).slice(0, 120)}`;
+  report += `*요약*\n${oneLineSummary}\n\n`;
+  report += `*COS 권고*\n${recommendation}\n\n`;
+
+  const perspectiveLines = personaOutputs
+    .map((p) => {
+      const summary = normalizeLine(p.one_line_summary);
+      return summary ? `- ${summary}` : null;
     })
-    .join('\n');
-  report += '\n\n';
-  report += `가장 강한 반대 논리\n${strongestObjection}\n\n`;
-  report += `남아 있는 긴장 / 미해결 충돌\n${unresolved.length ? unresolved.map((u) => `- ${u}`).join('\n') : '- 없음'}\n\n`;
-  report += `핵심 리스크\n${keyRisks.length ? keyRisks.map((r) => `- ${r}`).join('\n') : '- 없음'}\n\n`;
-  report += `다음 행동\n${nextActions.length ? nextActions.map((a) => `- ${a}`).join('\n') : '- 없음'}\n\n`;
-  report += `대표 결정 필요 여부\n${decisionNeeded ? '예' : '아니오'}\n${decisionQuestion}`;
+    .filter(Boolean);
+  if (perspectiveLines.length) {
+    report += `*주요 관점*\n${perspectiveLines.join('\n')}\n\n`;
+  }
+
+  report += `*주요 반론*\n${strongestObjection}\n\n`;
+  if (unresolved.length) {
+    report += `*미해결 쟁점*\n${unresolved.map((u) => `- ${u}`).join('\n')}\n\n`;
+  }
+  if (keyRisks.length) {
+    report += `*리스크*\n${keyRisks.map((r) => `- ${r}`).join('\n')}\n\n`;
+  }
+  report += `*다음 행동*\n${nextActions.length ? nextActions.map((a) => `- ${a}`).join('\n') : '- 없음'}\n\n`;
+  report += decisionNeeded
+    ? `*대표 결정 필요*\n${decisionQuestion}`
+    : `${decisionQuestion}`;
 
   const diagnostics = {
     council_mode: matrixInfo?.used ? 'matrix_cell' : 'council',

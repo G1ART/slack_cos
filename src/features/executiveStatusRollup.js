@@ -133,13 +133,13 @@ export async function gatherExecutiveOperatingRollup() {
   const cwsPendingReview = cwsSpec.filter((s) => s && String(s.status || '') === 'pending_review');
   if (cwsPendingReview.length) {
     decisions.push(
-      `실행 큐 미승격 spec ${cwsPendingReview.length}건 — \`실행큐계획화 최근\` 또는 \`실행큐계획화 CWS-…\``,
+      `실행 대기 spec ${cwsPendingReview.length}건 — COS에 실행 전환을 요청하세요`,
     );
   }
   const cfbPendingReview = cwsFb.filter((s) => s && String(s.status || '') === 'pending_review');
   if (cfbPendingReview.length) {
     decisions.push(
-      `고객 피드백 미처리 ${cfbPendingReview.length}건 — 멘션·\`/g1cos 고객 피드백 목록\` · \`고객 피드백 CFB-…\` 드릴다운 또는 \`업무등록:\`로 작업화`,
+      `고객 피드백 미처리 ${cfbPendingReview.length}건 — \`/g1cos 고객 피드백 목록\`으로 확인 후 COS에 실행을 요청하세요`,
     );
   }
 
@@ -158,12 +158,12 @@ export async function gatherExecutiveOperatingRollup() {
   }
   if (cwsPendingReview.length) {
     next.push(
-      `실행 큐 → PLN·WRK — \`실행큐계획화 최근\` 또는 항목 id로 승격`,
+      `실행 대기 항목 → 계획/작업 전환이 필요합니다`,
     );
   }
   if (cfbPendingReview.length) {
     next.push(
-      `피드백 ${cfbPendingReview.length}건 처리 — 멘션에서 \`고객 피드백 CFB-…\` · \`실행 큐 목록\` / \`고객피드백목록\` (구조화)`,
+      `고객 피드백 ${cfbPendingReview.length}건 처리 필요`,
     );
   }
 
@@ -195,11 +195,11 @@ export async function gatherExecutiveOperatingRollup() {
   if (!has_operating_data) {
     return {
       progress_change:
-        '**운영 스냅샷 (v1)** — 아직 AWQ·PLN·WRK·실행 큐(spec) 로컬 항목이 없습니다. `결정비교:`·`계획등록:`·`툴제작:`·실행 명령으로 채워집니다.',
-      current_blockers: ['데이터 없음 — 위 플로우 시작 후 롤업'],
+        '**운영 스냅샷 (v1)** — 아직 운영 데이터가 없습니다. COS에 프로젝트·계획·실행을 요청하면 채워집니다.',
+      current_blockers: ['데이터 없음 — COS에 요청을 시작하세요'],
       decisions_needed: decisions.length
         ? decisions
-        : ['`결정비교:`로 선택지를 고정하면 승인·큐로 이어집니다'],
+        : ['COS에 비교 검토를 요청하면 선택지를 정리해 드립니다'],
       cos_next_action: next.length
         ? next
         : ['`프로젝트시작:` / `툴시작:` 목표 한 줄 → COS가 정렬 질문'],
