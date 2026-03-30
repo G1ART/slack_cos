@@ -733,7 +733,75 @@ npm test: ALL PASS
 
 ---
 
-## 14. Next Patch Priorities
+## 14. vNext.9a — Main Reconciliation (감사 기반 truth lock)
+
+### 감사 결과
+
+vNext.9a 패치 지시서의 12개 항목에 대해 strict audit 수행. **12/12 모두 public main에서 VERIFIED.**
+
+| # | 항목 | Public Main | 증거 |
+|---|---|---|---|
+| A1 | `buildDeployApprovalBlocks` | ✅ | spineRouter:532 |
+| A2 | `blocks:` return in deploy_ready | ✅ | spineRouter:997 |
+| A3 | exec deploy button handler | ✅ | registerHandlers:256 |
+| B4 | `detectDeployUrlAndCompletion` | ✅ | spineRouter:585 |
+| B5 | `ingestDeployUrl` | ✅ | spineRouter:605 |
+| B6 | `confirmDeployComplete` | ✅ | spineRouter:659 |
+| B7 | URL routing in spine turn | ✅ | spineRouter:957 |
+| C8 | `detectApprovalIntent` | ✅ | spineRouter:741 |
+| C9 | `applyApprovalDecision` (3 transitions) | ✅ | spineRouter:753 |
+| C10 | Approval wiring in spine turn | ✅ | spineRouter:943 |
+| D11 | Council — 7개 금지 문구 모두 부재 | ✅ | council.js:216-247 |
+| E12 | DEPLOY_STATUS_VALUES 10개 | ✅ | executionRun:234-238 |
+
+### Founder Journey (현재 상태)
+
+```
+founder: "캘린더 앱 만들자"
+→ COS scope lock → project space → execution run
+→ GitHub issue + branch + Cursor handoff + Supabase draft
+→ all lanes complete → deploy_ready
+
+COS: [승인 요청] + [배포 패킷] + [Block Kit: 배포 승인 | 추가 수정 | 보류]
+→ founder: "배포 승인" (button or text)
+→ run: approved_for_deploy / deploy_status: approved
+
+COS: "배포 후 URL을 이 스레드에 붙여 넣으세요."
+→ founder: "https://my-app.vercel.app"
+→ run: deploy_status: linkage_recorded
+
+COS: "이 URL이 실제 배포 결과면 '배포 완료'라고 답해 주세요."
+→ founder: "배포 완료"
+→ run: deployment_confirmed / deployed_manual_confirmed
+```
+
+### 코드 변경: 없음
+
+vNext.8 + vNext.9에서 모든 구현이 완료되어 코드 변경 불필요.
+
+### 테스트 검증
+
+```
+Golden Path: 22 passed, 0 failed
+npm test: ALL PASS (전체 스위트)
+```
+
+### 정제된 Remaining Limitations (vNext.9a 기준)
+
+1. **GitHub repo bootstrap**: `repos.create` live 미구현 — honest manual bridge
+2. **Vercel/Railway live deploy**: API 미구현 — deploy packet에 "수동 배포" 명시
+3. **LLM 기반 end-to-end**: 실제 Slack thread + OpenAI 호출 포함 테스트 미포함
+4. **Supabase auto-apply**: `supabase db push` 자동화 미구현
+
+**이전 limitation 중 해소된 것:**
+- ~~Approval Slack button 미구현~~ → vNext.9에서 Block Kit 구현 완료
+- ~~Deploy URL ingestion 미구현~~ → vNext.9에서 구현 완료
+- ~~Approval response routing 미구현~~ → vNext.8에서 구현 완료
+- ~~Council internal metadata 잔존~~ → vNext.8/9에서 제거 완료
+
+---
+
+## 15. Next Patch Priorities
 
 1. **End-to-end LLM 검증** — 실제 Slack thread에서 full-cycle execution loop 동작 확인
 2. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
