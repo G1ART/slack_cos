@@ -85,7 +85,7 @@ export function formatCustomerFeedbackIntakeComplete(p) {
   const gate =
     awq.status === 'pending_executive'
       ? `· 먼저: \`워크큐실행허가 ${awq.id}\` (대표 단일 승인 주체·향후 위임 가능)`
-      : '· COS 게이트(queued) — `업무등록:`·WRK 연결 후 `커서발행` 등';
+      : '· COS 게이트(queued) — 작업 연결 후 실행 진행 가능';
   return [
     formatWorkspaceQueueSaved(cfb),
     '',

@@ -73,8 +73,8 @@ assert.ok(/실행 큐 \(CWS·spec\):[^\n]*pending_review\s*:\s*1/u.test(rollup.p
 assert.ok(/피드백 큐 \(CFB\):[^\n]*pending_review\s*:\s*1/u.test(rollup.progress_change), rollup.progress_change);
 assert.ok(rollup.decisions_needed.some((d) => d.includes('승인')), rollup.decisions_needed);
 assert.ok(
-  rollup.decisions_needed.some((d) => d.includes('실행큐계획화')) ||
-    rollup.cos_next_action.some((n) => n.includes('실행큐계획화')),
+  rollup.decisions_needed.some((d) => d.includes('실행 대기') || d.includes('실행 전환')) ||
+    rollup.cos_next_action.some((n) => n.includes('실행 대기') || n.includes('전환')),
   JSON.stringify({ decisions: rollup.decisions_needed, next: rollup.cos_next_action }),
 );
 assert.ok(

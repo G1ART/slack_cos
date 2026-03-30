@@ -15,6 +15,7 @@ import {
   getExecutionRunByThread,
   updateRunStage,
   updateRunReport,
+  updateRunDeployStatus,
 } from './executionRun.js';
 import { collectOutboundStatus, formatOutboundStatusForSlack, retryRunOutbound } from './executionOutboundOrchestrator.js';
 import {
@@ -29,6 +30,42 @@ import {
   computeLaneDispatchPlan,
   scanPendingCursorResults,
 } from './executionDispatchLifecycle.js';
+
+/* ------------------------------------------------------------------ */
+/*  GitHub execution truth — honest status model                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Derive honest GitHub execution truth from run state.
+ * Distinguishes live API results from planned/artifact-only states.
+ */
+export function deriveGithubExecutionTruth(run) {
+  const git = run?.git_trace || {};
+  const artifacts = run?.artifacts?.fullstack_swe || {};
+  const ghDiag = diagnoseGithubConfig();
+
+  const repoStatus = git.repo ? 'linked' : ghDiag.configured ? 'configured_no_repo' : 'not_configured';
+  const issueStatus = git.issue_id ? 'issue_created_live' : artifacts.github_issue_id ? 'issue_created_live' : 'none';
+  const branchStatus = git.branch
+    ? (git.pr_id ? 'branch_created_live' : 'branch_seeded')
+    : artifacts.branch_name ? 'branch_planned' : 'none';
+  const prStatus = git.pr_id ? 'pr_created_live' : artifacts.pr_id ? 'pr_created_live' : artifacts.pr_url ? 'pr_created_live' : 'none';
+
+  return {
+    repo_bootstrap_status: repoStatus,
+    issue_status: issueStatus,
+    issue_id: git.issue_id || artifacts.github_issue_id || null,
+    issue_url: artifacts.github_issue_url || null,
+    branch_status: branchStatus,
+    branch_name: git.branch || artifacts.branch_name || null,
+    pr_status: prStatus,
+    pr_id: git.pr_id || artifacts.pr_id || null,
+    pr_url: artifacts.pr_url || null,
+    commit_shas: git.commit_shas || [],
+    github_configured: ghDiag.configured,
+    github_mode: ghDiag.mode,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Execution-phase renderers                                          */
@@ -312,18 +349,14 @@ export function renderPMCockpitPacket(run, opts = {}) {
     '',
   ];
 
-  // GitHub run truth
-  const ghParts = [];
-  if (gitTrace.repo) ghParts.push(`repo: ${gitTrace.repo}`);
-  if (gitTrace.issue_id) ghParts.push(`issue: #${gitTrace.issue_id}`);
-  if (gitTrace.branch) ghParts.push(`branch: ${gitTrace.branch}`);
-  if (gitTrace.pr_id) ghParts.push(`PR: #${gitTrace.pr_id}`);
-  if (gitTrace.commit_sha) ghParts.push(`sha: ${gitTrace.commit_sha.slice(0, 7)}`);
-  const ghRunStatus = ghParts.length
-    ? (gitTrace.pr_id ? 'pr_opened' : gitTrace.branch ? 'branch_seeded' : gitTrace.issue_id ? 'issue_created' : 'none')
-    : 'none';
-  lines.push(`*GitHub*: configured=${diagnoseGithubConfig().configured ? 'yes' : 'no'} · run=${ghRunStatus}`);
-  if (ghParts.length) lines.push(`  ${ghParts.join(' · ')}`);
+  // GitHub run truth (honest status model)
+  const ghTruth = deriveGithubExecutionTruth(run);
+  const ghSummaryParts = [];
+  if (ghTruth.issue_status !== 'none') ghSummaryParts.push(`issue: ${ghTruth.issue_status}${ghTruth.issue_id ? ` #${ghTruth.issue_id}` : ''}`);
+  if (ghTruth.branch_status !== 'none') ghSummaryParts.push(`branch: ${ghTruth.branch_status}${ghTruth.branch_name ? ` (${ghTruth.branch_name})` : ''}`);
+  if (ghTruth.pr_status !== 'none') ghSummaryParts.push(`PR: ${ghTruth.pr_status}${ghTruth.pr_id ? ` #${ghTruth.pr_id}` : ''}`);
+  lines.push(`*GitHub*: repo=${ghTruth.repo_bootstrap_status}`);
+  if (ghSummaryParts.length) lines.push(`  ${ghSummaryParts.join(' · ')}`);
 
   // Cursor truth
   const cursorSt = getCursorOperationalStatus(run.run_id);
@@ -463,6 +496,8 @@ export function renderDeployPacket(run, deployInfo = {}) {
     blocked.push(...deployInfo.manual_steps.map(s => `- ${s}`));
   }
 
+  const deployStatus = run.deploy_status || 'none';
+
   return [
     `*[배포 패킷]*`,
     `\`${run.run_id}\``,
@@ -470,10 +505,13 @@ export function renderDeployPacket(run, deployInfo = {}) {
     '*배포 대상 Provider*',
     providers.length ? providers.join('\n') : '- 설정된 배포 대상 없음',
     '',
-    `*배포 준비 상태*: ${deployInfo.deploy_readiness || 'not_ready'}`,
+    `*배포 상태*: \`${deployStatus}\``,
+    `*배포 준비*: ${deployInfo.deploy_readiness || 'not_ready'}`,
     blocked.length ? `\n*차단 사항*\n${blocked.join('\n')}` : '',
     '',
     deployInfo.next_action || '_배포 준비가 완료되면 대표 승인 후 진행합니다._',
+    '',
+    `_배포 완료 후: "배포 완료" 또는 deploy URL을 알려주세요._`,
   ].filter(Boolean).join('\n');
 }
 
@@ -523,6 +561,91 @@ export function renderOneLineStatus(run) {
 
 const ESCALATION_RE = /에스컬레이션|내\s*승인\s*없이는|대표\s*결정|escalat/i;
 const COMPLETION_RE = /실행\s*완료|프로젝트\s*완료|종료/i;
+
+const APPROVAL_APPROVE_RE = /배포\s*승인|deploy\s*approv|승인\s*진행|배포\s*진행/i;
+const APPROVAL_REWORK_RE = /추가\s*수정|수정\s*요청|rework|다시\s*수정|수정\s*후/i;
+const APPROVAL_HOLD_RE = /보류|hold|나중에|미루|일단\s*멈춰/i;
+
+/**
+ * Detect founder approval intent from text.
+ * Only meaningful when run.current_stage === 'deploy_ready'.
+ * @returns {'approve' | 'rework' | 'hold' | null}
+ */
+export function detectApprovalIntent(text) {
+  const t = String(text || '').trim();
+  if (APPROVAL_APPROVE_RE.test(t)) return 'approve';
+  if (APPROVAL_REWORK_RE.test(t)) return 'rework';
+  if (APPROVAL_HOLD_RE.test(t)) return 'hold';
+  return null;
+}
+
+/**
+ * Apply founder approval decision to run state.
+ * @returns {{ ok: boolean, response_text: string, new_stage: string, new_deploy_status: string }}
+ */
+export function applyApprovalDecision(run, decision, founderNote = '') {
+  if (!run) return { ok: false, response_text: '[COS] 실행 정보가 없습니다.', new_stage: '', new_deploy_status: '' };
+
+  const note = String(founderNote || '').trim();
+  const ts = new Date().toISOString();
+
+  if (decision === 'approve') {
+    updateRunStage(run.run_id, 'approved_for_deploy');
+    updateRunDeployStatus(run.run_id, { deploy_status: 'approved' });
+    updateRunReport(run.run_id, `[${ts}] 대표 배포 승인. ${note}`);
+    const deployPacket = buildUnifiedDeployPacket(run.run_id);
+    return {
+      ok: true,
+      new_stage: 'approved_for_deploy',
+      new_deploy_status: 'approved',
+      response_text: [
+        `*[배포 승인 확인]*`,
+        `\`${run.run_id}\` — 배포가 승인되었습니다.`,
+        '',
+        deployPacket?.manual_steps?.length
+          ? `*수동 배포 단계*\n${deployPacket.manual_steps.map(s => `- ${s}`).join('\n')}\n\n배포 완료 후 "배포 완료" 또는 deploy URL을 알려주세요.`
+          : '배포를 진행합니다.',
+        note ? `\n_대표 메모: ${note}_` : '',
+      ].filter(Boolean).join('\n'),
+    };
+  }
+
+  if (decision === 'rework') {
+    updateRunStage(run.run_id, 'in_progress_rework');
+    updateRunDeployStatus(run.run_id, { deploy_status: 'rework_requested' });
+    updateRunReport(run.run_id, `[${ts}] 대표 수정 요청. ${note}`);
+    return {
+      ok: true,
+      new_stage: 'in_progress_rework',
+      new_deploy_status: 'rework_requested',
+      response_text: [
+        `*[수정 요청 확인]*`,
+        `\`${run.run_id}\` — 추가 수정이 요청되었습니다.`,
+        note ? `\n*수정 사항:* ${note}` : '\n수정할 내용을 알려주시면 COS가 이어서 진행합니다.',
+        '\n수정 완료 후 COS가 다시 배포 승인을 요청합니다.',
+      ].filter(Boolean).join('\n'),
+    };
+  }
+
+  if (decision === 'hold') {
+    updateRunStage(run.run_id, 'paused_for_founder');
+    updateRunDeployStatus(run.run_id, { deploy_status: 'paused' });
+    updateRunReport(run.run_id, `[${ts}] 대표 보류 결정. ${note}`);
+    return {
+      ok: true,
+      new_stage: 'paused_for_founder',
+      new_deploy_status: 'paused',
+      response_text: [
+        `*[보류 확인]*`,
+        `\`${run.run_id}\` — 배포가 보류되었습니다.`,
+        note ? `\n_사유: ${note}_` : '',
+        '\n재개하려면 "배포 승인" 또는 "추가 수정 요청"을 말씀해 주세요.',
+      ].filter(Boolean).join('\n'),
+    };
+  }
+
+  return { ok: false, response_text: '[COS] 인식할 수 없는 승인 응답입니다.', new_stage: '', new_deploy_status: '' };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Main execution spine handler                                       */
@@ -637,6 +760,32 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
   }
 
   detectAndApplyCompletion(run.run_id);
+
+  // Auto-escalation for manual_blocked state
+  const autoEval = evaluateExecutionRunCompletion(run.run_id);
+  if (autoEval?.overall_status === 'manual_blocked') {
+    const blockerDesc = (autoEval.manual_required_lanes || []).map(l => `${l} lane: 수동 조치 필요`).join('\n');
+    return {
+      text: renderEscalationPacket(run, `실행 중 수동 조치가 필요한 lane이 있습니다.\n${blockerDesc}\n\n조치 후 "다시 시도해"로 재실행하거나, 필요 사항을 알려주세요.`),
+      response_type: 'execution_auto_escalation',
+      packet_id: run.packet_id,
+      run_id: run.run_id,
+    };
+  }
+
+  // Approval response detection — founder replies to deploy_ready approval packet
+  if (run.current_stage === 'deploy_ready' || run.current_stage === 'paused_for_founder') {
+    const approvalIntent = detectApprovalIntent(trimmed);
+    if (approvalIntent) {
+      const result = applyApprovalDecision(run, approvalIntent, trimmed);
+      return {
+        text: result.response_text,
+        response_type: `execution_approval_${approvalIntent}`,
+        packet_id: run.packet_id,
+        run_id: run.run_id,
+      };
+    }
+  }
 
   if (run.current_stage === 'deploy_ready') {
     const deployPacket = buildUnifiedDeployPacket(run.run_id);

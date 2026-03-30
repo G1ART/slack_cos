@@ -226,10 +226,26 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
   return run;
 }
 
+/**
+ * Valid deploy status transitions:
+ * none → manual_bridge_prepared → awaiting_founder_action → linkage_recorded → deploy_ready → deployed_manual_confirmed
+ * Any state can also transition to: not_ready (regression/reset)
+ */
+const DEPLOY_STATUS_VALUES = new Set([
+  'none', 'not_ready', 'manual_bridge_prepared', 'awaiting_founder_action',
+  'linkage_recorded', 'deploy_ready', 'deployed_manual_confirmed',
+  'approved', 'rework_requested', 'paused',
+]);
+
 export function updateRunDeployStatus(runId, { deploy_status, deploy_provider, deploy_url, deploy_error }) {
   const run = runsById.get(runId);
   if (!run) return false;
-  if (deploy_status) run.deploy_status = deploy_status;
+  if (deploy_status) {
+    if (!DEPLOY_STATUS_VALUES.has(deploy_status)) {
+      console.warn(`[deploy_status] unknown value: ${deploy_status}`);
+    }
+    run.deploy_status = deploy_status;
+  }
   if (deploy_provider) run.deploy_provider = deploy_provider;
   if (deploy_url !== undefined) run.deploy_url = deploy_url;
   if (deploy_error !== undefined) run.deploy_error = deploy_error;
@@ -237,6 +253,8 @@ export function updateRunDeployStatus(runId, { deploy_status, deploy_provider, d
   persistRun(run);
   return true;
 }
+
+export { DEPLOY_STATUS_VALUES };
 
 /* ------------------------------------------------------------------ */
 /*  Lookup                                                             */

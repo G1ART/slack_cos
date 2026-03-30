@@ -189,7 +189,7 @@ function formatCosWorkspaceQueueDrillDown(row) {
   if (!isFb && String(rec.status || '') === 'pending_review') {
     next.push(
       '*다음 액션:*',
-      `· \`실행큐계획화 ${rec.id}\` 또는 \`실행큐계획화 최근\``,
+      `· 이 항목을 실행으로 전환하려면 COS에 요청하세요`,
     );
   }
   if (isFb && String(rec.status || '') === 'pending_review') {
@@ -197,7 +197,7 @@ function formatCosWorkspaceQueueDrillDown(row) {
       '*다음 액션:*',
       rec.linked_awq_id
         ? `· 이미 **AWQ 초안** \`${rec.linked_awq_id}\` — \`워크큐 ${rec.linked_awq_id}\` · \`워크큐실행허가\`(pending_executive 시)`
-        : '· `업무등록:` · `계획등록:` 로 작업화하거나, 제품화가 필요하면 `실행큐:` 로 spec 추가',
+        : '· 작업으로 전환하거나, 제품화가 필요하면 COS에 실행을 요청하세요',
       '· 동일 스레드 `피드백: …` 로 보강 가능',
     );
   }
