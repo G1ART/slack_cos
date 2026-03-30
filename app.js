@@ -166,6 +166,9 @@ import {
   loadProjectSpacesFromDisk,
 } from './src/features/projectSpaceRegistry.js';
 import {
+  loadSlotLedgersFromDisk,
+} from './src/features/founderSlotLedger.js';
+import {
   loadProjectIntakeSessionsFromDisk,
   flushProjectIntakeSessionsToDisk,
   isActiveProjectIntake,
@@ -910,6 +913,12 @@ registerG1CosSlashCommand(slackApp);
     console.info(JSON.stringify({ startup_project_spaces_hydrated: psCount }));
   } catch (e) {
     console.warn(JSON.stringify({ startup_project_spaces_hydration_error: String(e?.message || e) }));
+  }
+  try {
+    const slCount = await loadSlotLedgersFromDisk();
+    console.info(JSON.stringify({ startup_slot_ledgers_hydrated: slCount }));
+  } catch (e) {
+    console.warn(JSON.stringify({ startup_slot_ledger_hydration_error: String(e?.message || e) }));
   }
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {

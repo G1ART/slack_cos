@@ -34,11 +34,9 @@ const sessions = new Map();
 let persistTimer = null;
 
 function persistEnabled() {
-  if (process.env.PROJECT_INTAKE_SESSION_PERSIST === '0' || process.env.PROJECT_INTAKE_SESSION_PERSIST === 'false') {
-    return false;
-  }
-  const v = String(process.env.PROJECT_INTAKE_SESSION_PERSIST || '').trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes';
+  const v = process.env.PROJECT_INTAKE_SESSION_PERSIST;
+  if (v === '0' || v === 'false') return false;
+  return true;
 }
 
 function intakeFilePath() {
