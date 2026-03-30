@@ -204,9 +204,9 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
   const nextActions = dedupeList(personaOutputs.flatMap((p) => p.next_actions || []), 6);
   const unresolved = dedupeList(personaOutputs.flatMap((p) => p.unresolved_tensions || []), 6);
 
-  const strongestObjection = objections[0] || '현재 가장 강한 반대 논리는 제한적입니다.';
+  const strongestObjection = objections[0] || '현재 반론은 제한적입니다.';
   const oneLineSummary = lines[0] || '협의 결과, 실행 가능한 안으로 수렴이 필요합니다.';
-  const recommendation = recommendations[0] || '핵심 리스크를 반영해 단계적으로 실행하세요.';
+  const recommendation = recommendations[0] || '주요 리스크를 반영해 단계적으로 실행하세요.';
   const decisionNeeded = route?.urgency === 'high' || isStrongObjection(strongestObjection);
   const decisionQuestion = decisionNeeded
     ? '리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.'

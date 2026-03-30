@@ -482,10 +482,10 @@ export function renderDeployPacket(run, deployInfo = {}) {
   const railway = deployInfo.railway || {};
 
   if (vercel.configured || vercel.manual_required) {
-    providers.push(`- Vercel: ${vercel.configured ? 'configured' : 'manual_required'}${vercel.project_id ? ` · project: ${vercel.project_id}` : ''}`);
+    providers.push(`- Vercel: ${vercel.manual_required ? 'live API 미구현 — 수동 배포' : 'configured'}${vercel.project_id ? ` · project: ${vercel.project_id}` : ''}`);
   }
   if (railway.configured || railway.manual_required) {
-    providers.push(`- Railway: ${railway.configured ? 'configured' : 'manual_required'}${railway.service_id ? ` · service: ${railway.service_id}` : ''}`);
+    providers.push(`- Railway: ${railway.manual_required ? 'live API 미구현 — 수동 배포' : 'configured'}${railway.service_id ? ` · service: ${railway.service_id}` : ''}`);
   }
 
   const blocked = [];
@@ -497,22 +497,189 @@ export function renderDeployPacket(run, deployInfo = {}) {
   }
 
   const deployStatus = run.deploy_status || 'none';
+  const deployUrl = run.deploy_url || null;
+
+  const nextAction = deployStatus === 'approved'
+    ? '배포를 진행한 뒤, 이 스레드에 배포 URL을 붙여 넣으세요.'
+    : deployStatus === 'linkage_recorded'
+      ? `URL 기록됨 (${deployUrl}). "배포 완료"라고 답하면 종료됩니다.`
+      : deployStatus === 'deployed_manual_confirmed'
+        ? '배포 완료가 확인되었습니다.'
+        : deployInfo.next_action || '아래 버튼을 누르거나 "배포 승인"이라고 답하세요.';
 
   return [
     `*[배포 패킷]*`,
     `\`${run.run_id}\``,
     '',
-    '*배포 대상 Provider*',
-    providers.length ? providers.join('\n') : '- 설정된 배포 대상 없음',
+    '*배포 대상*',
+    providers.length ? providers.join('\n') : '- 설정된 배포 대상 없음 (수동 배포 가능)',
     '',
     `*배포 상태*: \`${deployStatus}\``,
+    deployUrl ? `*배포 URL*: ${deployUrl}` : null,
     `*배포 준비*: ${deployInfo.deploy_readiness || 'not_ready'}`,
     blocked.length ? `\n*차단 사항*\n${blocked.join('\n')}` : '',
     '',
-    deployInfo.next_action || '_배포 준비가 완료되면 대표 승인 후 진행합니다._',
+    `*지금 필요한 행동*: ${nextAction}`,
     '',
-    `_배포 완료 후: "배포 완료" 또는 deploy URL을 알려주세요._`,
+    deployStatus !== 'deployed_manual_confirmed' ? '_URL만 보내면 자동으로 연결됩니다. 배포 완료 시 "배포 완료"라고 답하세요._' : null,
   ].filter(Boolean).join('\n');
+}
+
+/**
+ * Build Block Kit buttons for execution deploy approval.
+ * Returns a Slack blocks array, or null if not applicable.
+ */
+export function buildDeployApprovalBlocks(run) {
+  if (!run) return null;
+  const value = JSON.stringify({
+    run_id: run.run_id,
+    packet_id: run.packet_id || null,
+    current_stage: run.current_stage,
+    deploy_status: run.deploy_status || 'none',
+  });
+
+  return [
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: '배포 승인' },
+          style: 'primary',
+          action_id: 'g1cos_exec_deploy_approve',
+          value,
+        },
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: '추가 수정 요청' },
+          action_id: 'g1cos_exec_deploy_rework',
+          value,
+        },
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: '보류' },
+          action_id: 'g1cos_exec_deploy_hold',
+          value,
+        },
+      ],
+    },
+  ];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Deploy URL ingestion + deployed confirmation                       */
+/* ------------------------------------------------------------------ */
+
+const DEPLOY_RELEVANT_STAGES = new Set([
+  'approved_for_deploy', 'deploy_ready', 'awaiting_founder_action',
+  'linkage_recorded', 'deployed_manual_confirmed',
+]);
+
+const URL_RE = /https?:\/\/[^\s<>"']+/i;
+const DEPLOY_COMPLETE_RE = /배포\s*완료|배포\s*끝|live\s*확인|deploy\s*complete|배포\s*됐/i;
+
+/**
+ * Detect deploy URL in text and optionally deploy completion intent.
+ * @returns {{ url: string|null, isComplete: boolean, providerHint: string|null }}
+ */
+export function detectDeployUrlAndCompletion(text) {
+  const t = String(text || '').trim();
+  const urlMatch = t.match(URL_RE);
+  const url = urlMatch ? urlMatch[0] : null;
+  const isComplete = DEPLOY_COMPLETE_RE.test(t);
+
+  let providerHint = null;
+  if (url) {
+    if (/vercel\.app/i.test(url)) providerHint = 'vercel';
+    else if (/railway\.app/i.test(url)) providerHint = 'railway';
+    else providerHint = 'custom';
+  }
+
+  return { url, isComplete, providerHint };
+}
+
+/**
+ * Validate and ingest a deploy URL into a run.
+ * @returns {{ ok: boolean, response_text: string, new_deploy_status?: string, errorCode?: string }}
+ */
+export function ingestDeployUrl(run, url, providerHint, isComplete) {
+  if (!run) return { ok: false, response_text: '[COS] 실행 정보가 없습니다.', errorCode: 'no_active_run' };
+
+  if (!DEPLOY_RELEVANT_STAGES.has(run.current_stage)) {
+    return { ok: false, response_text: `현재 단계 (${run.current_stage})에서는 배포 URL을 기록할 수 없습니다.`, errorCode: 'wrong_stage' };
+  }
+
+  if (!url || !URL_RE.test(url)) {
+    return { ok: false, response_text: '유효한 https URL을 입력해 주세요.', errorCode: 'invalid_url' };
+  }
+
+  const ts = new Date().toISOString();
+
+  if (isComplete) {
+    updateRunDeployStatus(run.run_id, { deploy_status: 'deployed_manual_confirmed', deploy_url: url, deploy_provider: providerHint });
+    updateRunStage(run.run_id, 'deployment_confirmed');
+    updateRunReport(run.run_id, `[${ts}] 배포 완료 확인. URL: ${url} (${providerHint || 'unknown'})`);
+    return {
+      ok: true,
+      new_deploy_status: 'deployed_manual_confirmed',
+      response_text: [
+        `*[배포 완료 확인]*`,
+        `\`${run.run_id}\``,
+        '',
+        `*배포 URL*: ${url}`,
+        providerHint ? `*Provider*: ${providerHint}` : null,
+        `*상태*: \`deployed_manual_confirmed\``,
+        '',
+        '_프로젝트가 성공적으로 배포되었습니다._',
+      ].filter(Boolean).join('\n'),
+    };
+  }
+
+  updateRunDeployStatus(run.run_id, { deploy_status: 'linkage_recorded', deploy_url: url, deploy_provider: providerHint });
+  updateRunReport(run.run_id, `[${ts}] 배포 URL 기록: ${url} (${providerHint || 'unknown'})`);
+  return {
+    ok: true,
+    new_deploy_status: 'linkage_recorded',
+    response_text: [
+      `*[배포 URL 기록]*`,
+      `\`${run.run_id}\``,
+      '',
+      `*기록된 URL*: ${url}`,
+      providerHint ? `*Provider*: ${providerHint}` : null,
+      `*배포 상태*: \`linkage_recorded\``,
+      '',
+      '_이 URL이 실제 배포 결과면 "배포 완료"라고 답해 주세요._',
+    ].filter(Boolean).join('\n'),
+  };
+}
+
+/**
+ * Handle "배포 완료" text when run already has deploy_url.
+ */
+export function confirmDeployComplete(run) {
+  if (!run) return { ok: false, response_text: '[COS] 실행 정보가 없습니다.' };
+  if (!run.deploy_url) {
+    return { ok: false, response_text: '배포 URL이 아직 기록되지 않았습니다. URL을 먼저 이 스레드에 붙여 넣어 주세요.' };
+  }
+
+  const ts = new Date().toISOString();
+  updateRunDeployStatus(run.run_id, { deploy_status: 'deployed_manual_confirmed' });
+  updateRunStage(run.run_id, 'deployment_confirmed');
+  updateRunReport(run.run_id, `[${ts}] 대표가 배포 완료를 확인했습니다.`);
+
+  return {
+    ok: true,
+    new_deploy_status: 'deployed_manual_confirmed',
+    response_text: [
+      `*[배포 완료 확인]*`,
+      `\`${run.run_id}\``,
+      '',
+      `*배포 URL*: ${run.deploy_url}`,
+      `*상태*: \`deployed_manual_confirmed\``,
+      '',
+      '_프로젝트가 성공적으로 배포되었습니다._',
+    ].filter(Boolean).join('\n'),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -787,6 +954,33 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
     }
   }
 
+  // Deploy URL ingestion + deploy completion
+  if (DEPLOY_RELEVANT_STAGES.has(run.current_stage)) {
+    const { url, isComplete, providerHint } = detectDeployUrlAndCompletion(trimmed);
+
+    if (url) {
+      const result = ingestDeployUrl(run, url, providerHint, isComplete);
+      if (result.ok) {
+        return {
+          text: result.response_text,
+          response_type: isComplete ? 'execution_deploy_confirmed' : 'execution_deploy_url_recorded',
+          packet_id: run.packet_id,
+          run_id: run.run_id,
+        };
+      }
+    }
+
+    if (!url && isComplete) {
+      const result = confirmDeployComplete(run);
+      return {
+        text: result.response_text,
+        response_type: result.ok ? 'execution_deploy_confirmed' : 'execution_deploy_url_missing',
+        packet_id: run.packet_id,
+        run_id: run.run_id,
+      };
+    }
+  }
+
   if (run.current_stage === 'deploy_ready') {
     const deployPacket = buildUnifiedDeployPacket(run.run_id);
     const eval_ = evaluateExecutionRunCompletion(run.run_id);
@@ -800,6 +994,7 @@ export function tryFinalizeExecutionSpineTurn({ trimmed, metadata }) {
           ? '배포 준비 완료 — 승인 후 배포를 진행합니다.'
           : '수동 배포 필요 — 아래 안내를 따라 진행해 주세요.',
       }) + '\n\n' + renderDeployPacket(run, deployPacket || {}),
+      blocks: buildDeployApprovalBlocks(run),
       response_type: 'execution_approval_deploy',
       packet_id: run.packet_id,
       run_id: run.run_id,

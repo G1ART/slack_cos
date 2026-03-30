@@ -252,6 +252,41 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
     }
   });
 
+  // Execution deploy approval buttons (g1cos_exec_deploy_approve | rework | hold)
+  const execDeployActionPattern = /^g1cos_exec_deploy_(approve|rework|hold)$/;
+  const execDeployIntentMap = { approve: 'approve', rework: 'rework', hold: 'hold' };
+
+  slackApp.action(execDeployActionPattern, async ({ ack, body, action, client }) => {
+    try {
+      await ack();
+      const { applyApprovalDecision } = await import('../features/executionSpineRouter.js');
+      const { getExecutionRunById } = await import('../features/executionRun.js');
+
+      const intent = execDeployIntentMap[action.action_id?.match(execDeployActionPattern)?.[1]];
+      if (!intent) return;
+
+      let payload = null;
+      try { payload = JSON.parse(action?.value || '{}'); } catch { payload = {}; }
+      const runId = payload?.run_id;
+      if (!runId) return;
+
+      const run = getExecutionRunById(runId);
+      if (!run) return;
+
+      const result = applyApprovalDecision(run, intent, '');
+      const channel = body?.channel?.id;
+      const thread_ts = body?.container?.thread_ts || body?.message?.ts || undefined;
+
+      await client.chat.postMessage({
+        channel,
+        text: result.response_text,
+        ...(thread_ts ? { thread_ts } : {}),
+      });
+    } catch (error) {
+      console.error('EXEC_DEPLOY_BUTTON_ERROR:', error);
+    }
+  });
+
   async function handleDialogQueueButton({ ack, body, action, client, kind }) {
     try {
       await ack();

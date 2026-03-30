@@ -655,22 +655,88 @@ Golden Path: 14 passed, 0 failed
 npm test: ALL PASS (전체 스위트)
 ```
 
+---
+
+## 13. vNext.9 — Slack-Native Deploy Closure + Truth Reconciliation
+
+### Public-Main Truth Reconciliation
+
+| 항목 | Before vNext.9 | After vNext.9 |
+|---|---|---|
+| Deploy approval Block Kit buttons | ❌ text-only | ✅ `g1cos_exec_deploy_approve/rework/hold` |
+| Deploy button action handler | ❌ 없음 | ✅ registerHandlers.js에 전용 handler |
+| Deploy URL ingestion | ❌ 없음 | ✅ `detectDeployUrlAndCompletion` + `ingestDeployUrl` |
+| Deploy completion closure | ❌ 없음 | ✅ `confirmDeployComplete` → `deployed_manual_confirmed` |
+| Council fallback banned text | ⚠️ line 207/209에 잔존 | ✅ 제거 |
+| Deploy packet UX | generic text | ✅ founder action-centric (stage별 next action) |
+
+### Core Changes
+
+**A. Execution Deploy Approval Block Kit Buttons**
+- `buildDeployApprovalBlocks(run)` — 3개 버튼 (배포 승인/추가 수정 요청/보류)
+- action_id: `g1cos_exec_deploy_approve`, `g1cos_exec_deploy_rework`, `g1cos_exec_deploy_hold`
+- value에 `run_id`, `packet_id`, `current_stage`, `deploy_status` 포함
+- `registerHandlers.js`에 전용 action handler 추가
+- text fallback 유지 (Block Kit 실패 시에도 자연어 동작)
+
+**B. Deploy URL Ingestion + Linkage Recording**
+- `detectDeployUrlAndCompletion(text)` — URL + 완료 의도 동시 감지
+- `ingestDeployUrl(run, url, providerHint, isComplete)` — URL 검증 + state 전이
+  - URL만: `linkage_recorded`
+  - URL + 완료: `deployed_manual_confirmed` + `deployment_confirmed`
+- `confirmDeployComplete(run)` — URL 있을 때 "배포 완료" 응답 처리
+- provider hint: vercel.app / railway.app / custom
+- error codes: `invalid_url`, `wrong_stage`, `no_active_run`
+
+**C. Council Fallback Fix**
+- line 207: "가장 강한 반대 논리" → "반론"
+- line 209: "핵심 리스크" → "주요 리스크"
+
+**D. Deploy Packet UX**
+- stage별 next action 분기 (approved → URL 요청, linkage_recorded → 완료 확인, deployed → 확인 완료)
+- manual bridge 명시 (Vercel/Railway "live API 미구현 — 수동 배포")
+- URL 자동 연결 안내
+
+### State Transition Table
+
+| 대표 행동 | Before Stage | After Stage | Deploy Status |
+|---|---|---|---|
+| "배포 승인" | deploy_ready | approved_for_deploy | approved |
+| "추가 수정 요청" | deploy_ready | in_progress_rework | rework_requested |
+| "보류" | deploy_ready | paused_for_founder | paused |
+| URL 붙여넣기 | approved_for_deploy | (unchanged) | linkage_recorded |
+| URL + "배포 완료" | approved_for_deploy | deployment_confirmed | deployed_manual_confirmed |
+| "배포 완료" (URL 기록 후) | linkage_recorded | deployment_confirmed | deployed_manual_confirmed |
+
+### Modified Files
+
+| File | Changes |
+|---|---|
+| `src/features/executionSpineRouter.js` | `buildDeployApprovalBlocks`, `detectDeployUrlAndCompletion`, `ingestDeployUrl`, `confirmDeployComplete`, deploy packet UX, URL/completion routing |
+| `src/slack/registerHandlers.js` | `g1cos_exec_deploy_*` button action handler |
+| `src/agents/council.js` | fallback text fix (line 207, 209) |
+| `scripts/test-golden-path-full-cycle-mvp.mjs` | 22 tests (8 new) |
+
+### Test Results
+
+```
+Golden Path: 22 passed, 0 failed
+npm test: ALL PASS
+```
+
 ### Remaining Limitations
 
 1. **GitHub repo bootstrap**: `repos.create` 미구현 — honest manual bridge
-2. **Vercel/Railway live deploy**: API 미구현 — deploy packet + manual bridge
+2. **Vercel/Railway live deploy**: API 미구현 — deploy packet + manual bridge (명시)
 3. **LLM 기반 end-to-end**: 실제 Slack thread + LLM 호출 포함 테스트 미포함
 4. **Supabase auto-apply**: `supabase db push` 자동화 미구현
-5. **Approval Slack button**: 현재 text-based; Interactive Block Kit button 미구현
-6. **Deploy URL ingestion**: 대표가 deploy URL을 알려줄 때 자동 기록 미구현
 
 ---
 
-## 13. Next Patch Priorities
+## 14. Next Patch Priorities
 
 1. **End-to-end LLM 검증** — 실제 Slack thread에서 full-cycle execution loop 동작 확인
-2. **Deploy URL ingestion** — 대표가 배포 URL을 알려주면 run에 자동 기록
-3. **Interactive approval buttons** — Slack Block Kit actions로 승인/수정/보류
-4. **GitHub repo live create** — repos.create API (permissions 확보 시)
-5. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
-6. **Supabase CLI auto-apply** — `supabase db push` 자동화
+2. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
+3. **GitHub repo live create** — repos.create API (permissions 확보 시)
+4. **Supabase CLI auto-apply** — `supabase db push` 자동화
+5. **Monitoring/rollback surface** — 배포 후 모니터링·롤백 안내

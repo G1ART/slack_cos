@@ -1,16 +1,18 @@
 [
   {
-    "threadKey": "ch:GOLDENFULL:01",
+    "threadKey": "ch:FULLCLOSURE:01",
     "docs": [
       {
-        "file_id": "F1",
-        "filename": "spec.docx",
-        "text": "Full stack app for gallery management",
+        "file_id": "F99",
+        "filename": "req.docx",
+        "text": "Gallery calendar requirements",
         "mimetype": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "ingested_at": "2026-03-30T06:28:57.282Z",
-        "char_count": 40,
+        "ingested_at": "2026-03-30T06:52:13.575Z",
+        "char_count": 30,
         "truncated": false
       }
     ]
+  }
+]]
   }
 ]
