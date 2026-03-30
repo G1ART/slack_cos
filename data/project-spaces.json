@@ -1470,5 +1470,229 @@
     "status": "active",
     "created_at": "2026-03-30T00:01:45.358Z",
     "updated_at": "2026-03-30T00:01:45.358Z"
+  },
+  {
+    "project_id": "PROJ-mncfp5uz-rm29r",
+    "human_label": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:ClockCF:t:999888.77"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp5uy-04o3r"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:46.187Z",
+    "updated_at": "2026-03-30T00:12:46.188Z"
+  },
+  {
+    "project_id": "PROJ-mncfp629-6fh3a",
+    "human_label": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:CHENRY:t:1743000000.henry"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp629-24nnk"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:46.449Z",
+    "updated_at": "2026-03-30T00:12:46.451Z"
+  },
+  {
+    "project_id": "PROJ-mncfp69v-osw55",
+    "human_label": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:CHENRY2:t:1743000000.t2"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp69u-in9er"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:46.723Z",
+    "updated_at": "2026-03-30T00:12:46.724Z"
+  },
+  {
+    "project_id": "PROJ-mncfp79i-duo7z",
+    "human_label": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:CEXE:t:1744000000.exec"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp79h-s8ve0"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:48.006Z",
+    "updated_at": "2026-03-30T00:12:48.007Z"
+  },
+  {
+    "project_id": "PROJ-mncfp7hg-0nhjg",
+    "human_label": "툴제작: 더그린 갤러리 캘린더 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:COWT:t:9999.owt"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp7hf-0yj8p"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:48.292Z",
+    "updated_at": "2026-03-30T00:12:48.292Z"
+  },
+  {
+    "project_id": "PROJ-mncfp7p9-el8j6",
+    "human_label": "툴제작: 더그린 갤러리 캘린더 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:CCONV4:t:4000.4001"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp7p8-vkock"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:48.573Z",
+    "updated_at": "2026-03-30T00:12:48.573Z"
+  },
+  {
+    "project_id": "PROJ-mncfp959-hruc1",
+    "human_label": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "aliases": [],
+    "canonical_summary": "",
+    "repo_owner": null,
+    "repo_name": null,
+    "default_branch": "main",
+    "github_ready_status": "not_configured",
+    "cursor_workspace_root": "/Users/hyunminkim/g1-cos-slack",
+    "cursor_handoff_root": "docs/cursor-handoffs",
+    "supabase_project_ref": null,
+    "supabase_url": null,
+    "supabase_ready_status": "not_configured",
+    "vercel_project_id": null,
+    "vercel_project_url": null,
+    "vercel_ready_status": "not_configured",
+    "railway_project_id": null,
+    "railway_service_id": null,
+    "railway_ready_status": "not_configured",
+    "deploy_env_map": {},
+    "owner_thread_ids": [
+      "ch:CFIX30:t:1743100000.000030"
+    ],
+    "linked_playbook_ids": [],
+    "active_run_ids": [
+      "RUN-mncfp959-3x3y7"
+    ],
+    "status": "active",
+    "created_at": "2026-03-30T00:12:50.445Z",
+    "updated_at": "2026-03-30T00:12:50.446Z"
   }
 ]
