@@ -1,0 +1,25 @@
+[
+  {
+    "threadKey": "ch:TEST:doc-ctx",
+    "docs": [
+      {
+        "file_id": "F1",
+        "filename": "strategy.md",
+        "text": "NYC GTM plan: focus on...",
+        "mimetype": "",
+        "ingested_at": "2026-03-30T04:07:12.430Z",
+        "char_count": 25,
+        "truncated": false
+      },
+      {
+        "file_id": "F2",
+        "filename": "abstract.txt",
+        "text": "Abstract gallery vision",
+        "mimetype": "",
+        "ingested_at": "2026-03-30T04:07:12.430Z",
+        "char_count": 23,
+        "truncated": false
+      }
+    ]
+  }
+]

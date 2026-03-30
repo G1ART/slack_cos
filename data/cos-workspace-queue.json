@@ -2133,5 +2133,97 @@
       "thread_ts": "1743100000.000030"
     },
     "channel_context": null
+  },
+  {
+    "id": "CWS-mncnyp86-pg3pexz",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "body": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "created_at": "2026-03-30T04:04:08.118Z",
+    "source": {},
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mncnyp88-q0fxj4j",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 캘린더 MVP",
+    "body": "더그린 갤러리 캘린더 MVP",
+    "created_at": "2026-03-30T04:04:08.120Z",
+    "source": {},
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mncnyp89-2lkvm1h",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "body": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "created_at": "2026-03-30T04:04:08.121Z",
+    "source": {
+      "channel": "CFIX29",
+      "thread_ts": "1743000000.000029"
+    },
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mncnyp8c-cz6ylsu",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "[execution_approval_packet]",
+    "body": "[execution_approval_packet]\npacket_id: EPK-mncnyp8b-na3vw\nrun_id: RUN-mncnyp8b-ss37r\n초기목표: 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n대표 확인:\nMVP 가정은 정확해. 중심 사용은 개인/팀 일정 관리가 우선이야. 반복 일정도 필요해. 승인이 필요한 일정은 전시·대관·외부 대관만 관리자 승인이야. 진행해줘.",
+    "created_at": "2026-03-30T04:04:08.124Z",
+    "source": {
+      "channel": "CFIX30",
+      "thread_ts": "1743100000.000030"
+    },
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mnco2nqa-nlyy4z8",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "body": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "created_at": "2026-03-30T04:07:12.802Z",
+    "source": {},
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mnco2nqb-2m8b55m",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 캘린더 MVP",
+    "body": "더그린 갤러리 캘린더 MVP",
+    "created_at": "2026-03-30T04:07:12.803Z",
+    "source": {},
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mnco2nqd-hzhlt7l",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "body": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "created_at": "2026-03-30T04:07:12.805Z",
+    "source": {
+      "channel": "CFIX29",
+      "thread_ts": "1743000000.000029"
+    },
+    "channel_context": null
+  },
+  {
+    "id": "CWS-mnco2nqf-6vowk9e",
+    "kind": "spec_intake",
+    "status": "pending_review",
+    "title": "[execution_approval_packet]",
+    "body": "[execution_approval_packet]\npacket_id: EPK-mnco2nqe-zcyn8\nrun_id: RUN-mnco2nqe-srwnv\n초기목표: 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n대표 확인:\nMVP 가정은 정확해. 중심 사용은 개인/팀 일정 관리가 우선이야. 반복 일정도 필요해. 승인이 필요한 일정은 전시·대관·외부 대관만 관리자 승인이야. 진행해줘.",
+    "created_at": "2026-03-30T04:07:12.807Z",
+    "source": {
+      "channel": "CFIX30",
+      "thread_ts": "1743100000.000030"
+    },
+    "channel_context": null
   }
 ]

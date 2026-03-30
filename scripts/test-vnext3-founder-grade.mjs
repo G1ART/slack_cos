@@ -483,6 +483,206 @@ try {
   ok('canonical surface validation');
 } catch (e) { fail('canonical surface validation', e); }
 
+/* ===== vNext.4 Wiring Closure Tests ===== */
+console.log('\n--- vNext.4 Wiring Closure Tests ---\n');
+
+/* TEST 14: deliverableBundleRouter wired — detectDeliverableIntent works on real phrases */
+try {
+  const t1 = detectDeliverableIntent('작업 시작해');
+  assert.ok(t1.triggered, '작업 시작해 triggers');
+  assert.equal(t1.bundleType, 'product_lock_bundle');
+
+  const t2 = detectDeliverableIntent('이 문서 기준으로 구체화해');
+  assert.ok(t2.triggered, '문서 기준 구체화 triggers');
+  assert.equal(t2.bundleType, 'document_review_bundle');
+
+  const t3 = detectDeliverableIntent('1+2+3 시작해');
+  assert.ok(t3.triggered, '1+2+3 triggers');
+
+  const t4 = detectDeliverableIntent('지금까지 대화를 추출해서 MVP 락인해');
+  assert.ok(t4.triggered, 'MVP 락인 triggers');
+
+  const t5 = detectDeliverableIntent('안녕하세요');
+  assert.ok(!t5.triggered, '일상 인사는 trigger 안 됨');
+
+  const prompt = buildDeliverableBundlePrompt({
+    bundleType: 'strategy_refinement_bundle',
+    resolvedSlots: { project_goal: 'NYC Art Gallery', city_scope: 'NYC, LA, Seoul' },
+    documentContext: 'test doc content',
+    recentTranscript: 'prev conversation',
+  });
+  assert.ok(prompt.includes('NYC Art Gallery'), 'prompt includes resolved slots');
+  assert.ok(prompt.includes('test doc content'), 'prompt includes doc context');
+
+  ok('deliverableBundleRouter wiring verified');
+} catch (e) { fail('deliverableBundleRouter wiring', e); }
+
+/* TEST 15: contextSynthesis wired — full activation check */
+try {
+  const s1 = shouldActivateContextSynthesis({
+    text: '원래 요청을 이어서 정교화해',
+    hasDocumentContext: false,
+    resolvedSlotCount: 3,
+  });
+  assert.ok(s1.activate, 'continuation phrase activates');
+  assert.equal(s1.intent, 'continuation');
+
+  const s2 = shouldActivateContextSynthesis({
+    text: '이 문서를 토대로 원래 요청을 더 구체화해',
+    hasDocumentContext: true,
+    resolvedSlotCount: 2,
+  });
+  assert.ok(s2.activate, 'document refine activates');
+  assert.equal(s2.intent, 'document_refine');
+
+  const s3 = shouldActivateContextSynthesis({
+    text: '보통 대화입니다',
+    hasDocumentContext: true,
+    resolvedSlotCount: 3,
+  });
+  assert.ok(s3.activate, 'doc+slots → auto document_refine');
+
+  const prompt = buildContextSynthesisPrompt({
+    intent: 'document_refine',
+    resolvedSlots: { project_goal: 'Gallery App' },
+    documentContext: 'Abstract doc text...',
+    recentTranscript: 'previous conversation',
+    currentText: '이 문서 기준으로 구체화해',
+  });
+  assert.ok(prompt.includes('[CONTEXT SYNTHESIS]'), 'prompt header');
+  assert.ok(prompt.includes('Gallery App'), 'prompt includes resolved slot');
+  assert.ok(prompt.includes('Abstract doc text'), 'prompt includes doc context');
+
+  ok('contextSynthesis wiring verified');
+} catch (e) { fail('contextSynthesis wiring', e); }
+
+/* TEST 16: topicAnchorGuard wired — drift detection on real scenario */
+try {
+  const calendarCluster = deriveAnchorCluster({
+    projectSpace: { human_label: 'Calendar App', canonical_summary: '캘린더 일정 관리', aliases: ['calendar'] },
+    slotLedger: { slots: { project_goal: { value: '캘린더 일정 관리 앱' } } },
+    recentTranscript: '캘린더 앱 일정 예약 schedule',
+    playbookKind: 'product',
+  });
+  assert.ok(calendarCluster.domains.includes('calendar'), 'calendar domain detected');
+
+  // Calendar thread must not contain grants content
+  const grantsDraft = '보조금 지원 프로그램 grants compliance 규정 준수 파트너십 체결';
+  const drift1 = detectTopicDrift({ draftText: grantsDraft, anchorCluster: calendarCluster, currentRequestText: '벤치마크 초안 만들어줘' });
+  assert.ok(drift1.drifted, 'grants drift in calendar thread detected');
+  assert.ok(drift1.alienDomains.some(a => a.domain === 'grants'), 'grants as alien domain');
+
+  // Same-domain content should not drift
+  const calendarDraft = '캘린더 앱에서 반복 일정을 관리하고 대관 예약을 처리합니다';
+  const noDrift = detectTopicDrift({ draftText: calendarDraft, anchorCluster: calendarCluster, currentRequestText: '계속해줘' });
+  assert.ok(!noDrift.drifted, 'same-domain does not drift');
+
+  const reminder = buildAnchorReminder(calendarCluster, drift1);
+  assert.ok(reminder.includes('[TOPIC ANCHOR CONSTRAINT]'), 'reminder has header');
+  assert.ok(reminder.includes('calendar'), 'reminder mentions anchor domain');
+
+  ok('topicAnchorGuard wiring verified');
+} catch (e) { fail('topicAnchorGuard wiring', e); }
+
+/* TEST 17: founderSlotLedger auto-resolve from text */
+try {
+  const { tryAutoResolveSlots } = await import('../src/features/founderSlotLedger.js');
+  resetLedger();
+
+  const result = tryAutoResolveSlots('ch:auto-test:01', '프로젝트 목표는 NYC 아트 갤러리 앱 구축이고, 제품 이름은 ArtGallery입니다');
+  assert.ok(result.project_goal, 'project_goal auto-resolved');
+  assert.ok(result.product_label, 'product_label auto-resolved');
+  assert.ok(isSlotResolved('ch:auto-test:01', 'project_goal'), 'slot persisted');
+
+  // Second call should NOT re-resolve (already resolved)
+  const result2 = tryAutoResolveSlots('ch:auto-test:01', '프로젝트 목표는 다른 것');
+  assert.ok(!result2.project_goal, 'resolved slot not re-resolved');
+
+  ok('founderSlotLedger auto-resolve');
+} catch (e) { fail('founderSlotLedger auto-resolve', e); }
+
+/* TEST 18: docx support in slackFileIntake */
+try {
+  const readiness = diagnoseFileReadiness();
+  assert.ok(readiness.supported_types.includes('docx'), 'docx in supported types');
+  assert.ok(!readiness.limitations.some(l => l.includes('docx') && l.includes('미지원')), 'docx not listed as unsupported');
+
+  const files = extractFilesFromEvent({
+    files: [{ id: 'F1', name: 'test.docx', mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }],
+  });
+  assert.equal(files.length, 1, 'docx file extracted from event');
+  assert.equal(files[0].name, 'test.docx');
+
+  ok('docx support verified');
+} catch (e) { fail('docx support', e); }
+
+/* TEST 19: document context disk persistence */
+try {
+  resetDocs();
+  const { loadDocumentContextFromDisk, flushDocumentContextToDisk } = await import('../src/features/slackDocumentContext.js');
+
+  const docFile = path.join(tmp, 'doc-ctx-persist.json');
+  process.env.DOCUMENT_CONTEXT_FILE = docFile;
+  await fs.writeFile(docFile, '[]', 'utf8');
+
+  addDocumentToThread('ch:persist-test:01', {
+    file_id: 'F1',
+    filename: 'strategy.md',
+    text: 'NYC gallery strategy document content',
+    mimetype: 'text/markdown',
+  });
+
+  assert.ok(hasDocumentContext('ch:persist-test:01'), 'doc added');
+  await flushDocumentContextToDisk();
+
+  const raw = await fs.readFile(docFile, 'utf8');
+  const saved = JSON.parse(raw);
+  assert.ok(saved.length > 0, 'persisted to disk');
+  assert.equal(saved[0].threadKey, 'ch:persist-test:01');
+
+  // Simulate restart
+  resetDocs();
+  assert.ok(!hasDocumentContext('ch:persist-test:01'), 'cleared after reset');
+
+  const count = await loadDocumentContextFromDisk();
+  assert.ok(count > 0, 'hydrated from disk');
+  assert.ok(hasDocumentContext('ch:persist-test:01'), 'doc context restored');
+  assert.ok(getMergedDocumentText('ch:persist-test:01').includes('NYC gallery'), 'content intact');
+
+  delete process.env.DOCUMENT_CONTEXT_FILE;
+  ok('document context persistence + hydration');
+} catch (e) { fail('document context persistence', e); }
+
+/* TEST 20: startup hydration regression — all 5 systems have load functions */
+try {
+  const { loadConversationBufferFromDisk } = await import('../src/features/slackConversationBuffer.js');
+  const { loadProjectIntakeSessionsFromDisk } = await import('../src/features/projectIntakeSession.js');
+  const { loadProjectSpacesFromDisk } = await import('../src/features/projectSpaceRegistry.js');
+
+  assert.equal(typeof loadConversationBufferFromDisk, 'function', 'conv buffer load');
+  assert.equal(typeof loadProjectIntakeSessionsFromDisk, 'function', 'intake load');
+  assert.equal(typeof loadProjectSpacesFromDisk, 'function', 'project spaces load');
+  assert.equal(typeof loadSlotLedgersFromDisk, 'function', 'slot ledger load');
+
+  const { loadDocumentContextFromDisk: ldcfd } = await import('../src/features/slackDocumentContext.js');
+  assert.equal(typeof ldcfd, 'function', 'doc context load');
+
+  ok('startup hydration — all 5 state systems have loaders');
+} catch (e) { fail('startup hydration regression', e); }
+
+/* TEST 21: canonical surface enforcement — isCanonicalSurface covers new surfaces */
+try {
+  assert.ok(isCanonicalSurface('project_bootstrap'), 'project_bootstrap canonical');
+  assert.ok(isCanonicalSurface('existing_project_resolved'), 'existing_project_resolved canonical');
+  assert.ok(isCanonicalSurface('existing_project_unresolved'), 'existing_project_unresolved canonical');
+  assert.ok(isCanonicalSurface('clarification_surface'), 'clarification canonical');
+  assert.ok(isCanonicalSurface('decision_packet_surface'), 'decision_packet canonical');
+  assert.ok(!isCanonicalSurface('internal_orchestrator'), 'internal_orchestrator NOT canonical');
+  assert.ok(!isCanonicalSurface(''), 'empty string NOT canonical');
+
+  ok('canonical surface enforcement');
+} catch (e) { fail('canonical surface enforcement', e); }
+
 /* Cleanup */
 console.log(`\n=== ${passed} passed, ${failed} failed ===`);
 
