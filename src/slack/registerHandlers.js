@@ -2,6 +2,8 @@ import { shouldSkipEvent } from './eventDedup.js';
 import { replyInThread } from './reply.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
+import { extractFilesFromEvent, ingestSlackFile, formatFileIngestError } from '../features/slackFileIntake.js';
+import { addDocumentToThread } from '../features/slackDocumentContext.js';
 import {
   updateApprovalStatus,
   formatApprovalUpdate,
@@ -49,14 +51,35 @@ function isBlocksValidationError(error) {
  * - (별도) **`/g1cos`** 슬래시: `registerSlashCommands.js` — 조회·lineage; 응답 직후 **`recordSlashCommandExchange`**(DM은 `im:` 동일 키). 끄려면 `CONVERSATION_BUFFER_RECORD_SLASH=0`.
  */
 export function registerHandlers(slackApp, { handleUserText, formatError }) {
-  slackApp.event('app_mention', async ({ body, event, say }) => {
+  slackApp.event('app_mention', async ({ body, event, say, client }) => {
     try {
       if (shouldSkipEvent(body, event)) {
         return;
       }
 
-      const userText = getInboundCommandText(event);
-      if (!userText) {
+      const userText = getInboundCommandText(event) || '';
+
+      const files = extractFilesFromEvent(event);
+      let fileContext = '';
+      if (files.length) {
+        const tk = buildSlackThreadKey({
+          channel: event.channel,
+          ts: event.ts,
+          thread_ts: event.thread_ts,
+        });
+        for (const file of files) {
+          const result = await ingestSlackFile({ file, client });
+          if (result.ok) {
+            addDocumentToThread(tk, result);
+            fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
+          } else {
+            fileContext += `\n\n[파일 인제스트 실패: ${result.filename}] ${formatFileIngestError(result)}`;
+          }
+        }
+      }
+
+      const combinedText = (userText + fileContext).trim();
+      if (!combinedText) {
         await replyInThread(say, event.ts, '지시 내용을 함께 적어주세요.');
         return;
       }
@@ -68,9 +91,11 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         ts: event.ts,
         thread_ts: event.thread_ts || null,
         event_id: body?.event_id || null,
+        has_files: files.length > 0,
+        file_count: files.length,
       };
-      const answer = await handleUserText(userText, meta);
-      recordInboundSlackExchange(meta, userText, answer);
+      const answer = await handleUserText(combinedText, meta);
+      recordInboundSlackExchange(meta, combinedText, answer);
 
       try {
         await replyInThread(say, event.ts, answer);
@@ -98,12 +123,34 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
   slackApp.event('message', async ({ body, event, client }) => {
     try {
       if (event.channel_type !== 'im') return;
-      if (event.subtype) return;
+      if (event.subtype && event.subtype !== 'file_share') return;
       if (event.bot_id) return;
       if (shouldSkipEvent(body, event)) return;
 
-      const dmText = getInboundCommandText(event);
-      if (!dmText) return;
+      const dmText = getInboundCommandText(event) || '';
+
+      const files = extractFilesFromEvent(event);
+      let fileContext = '';
+      const threadKey = buildSlackThreadKey({
+        channel: event.channel,
+        ts: event.ts,
+        thread_ts: event.thread_ts,
+      });
+
+      for (const file of files) {
+        const result = await ingestSlackFile({ file, client });
+        if (result.ok) {
+          addDocumentToThread(threadKey, result);
+          fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
+          console.info(JSON.stringify({ event: 'slack_file_ingested', file_id: result.file_id, filename: result.filename, chars: result.char_count }));
+        } else {
+          fileContext += `\n\n[파일 인제스트 실패: ${result.filename}] ${formatFileIngestError(result)}`;
+          console.warn(JSON.stringify({ event: 'slack_file_ingest_failed', file_id: result.file_id, filename: result.filename, errorCode: result.errorCode }));
+        }
+      }
+
+      const combinedText = (dmText + fileContext).trim();
+      if (!combinedText) return;
 
       const meta = {
         source_type: 'direct_message',
@@ -112,9 +159,11 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         ts: event.ts,
         thread_ts: event.thread_ts || null,
         event_id: body?.event_id || null,
+        has_files: files.length > 0,
+        file_count: files.length,
       };
-      const answer = await handleUserText(dmText, meta);
-      recordInboundSlackExchange(meta, dmText, answer);
+      const answer = await handleUserText(combinedText, meta);
+      recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);
       try {

@@ -780,25 +780,10 @@ export async function runInboundAiRouter(ctx) {
       /** @type {string} */
       let councilResponseType = 'council';
       if (inferWorkCandidate(trimmed)) {
-        if (shouldSuppressWorkCandidateFooter(trimmed)) {
-          logRouterEvent('footer_blocked', { reason: 'suppress_planner_related', responder: 'council' });
-          logPlannerFc('planner_fallback_blocked', {
-            planner_fallback_blocked: true,
-            council_footer_suppressed: true,
-          });
-          councilResponseType = 'council_footer_suppressed';
-          out = councilFin(finalText, councilResponseType, true);
-        } else {
-          councilResponseType = 'council_with_work_hint';
-          out = councilFin(
-            `${finalText}\n\n실행 작업 후보로 보입니다. 필요하면 '업무등록: ${routedInput.slice(0, 80)}' 형태로 등록하세요.`,
-            councilResponseType,
-            false
-          );
-        }
-      } else {
-        out = councilFin(finalText, councilResponseType, false);
+        logRouterEvent('work_candidate_detected_internal', { responder: 'council' });
+        councilResponseType = 'council_work_candidate_internal';
       }
+      out = councilFin(finalText, councilResponseType, true);
       logCosToolRegistryBind({
         tool_id: 'council',
         pipeline: 'ai_council',

@@ -6,6 +6,7 @@
 import { markInboundTurnFinalize } from './inboundTurnTrace.js';
 import { getBuildInfo } from '../runtime/buildInfo.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from './projectIntakeSession.js';
+import { sanitizeFounderOutput } from './founderSurfaceGuard.js';
 
 const COUNCIL_SYNTHESIS_MARKERS = [
   '페르소나별 핵심 관점',
@@ -164,6 +165,9 @@ export function finalizeSlackResponse(p) {
     status_packet_id: status_packet_id ?? null,
     work_queue_id: work_queue_id ?? null,
   });
+
+  const debugMode = process.env.COS_DEBUG_MODE === '1';
+  out = sanitizeFounderOutput(out, { debugMode, responder });
 
   return out;
 }

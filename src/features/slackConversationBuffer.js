@@ -17,8 +17,11 @@ const slashBufferDisabled = () =>
   process.env.CONVERSATION_BUFFER_RECORD_SLASH === '0' ||
   process.env.CONVERSATION_BUFFER_RECORD_SLASH === 'false';
 
-const persistEnabled = () =>
-  process.env.CONVERSATION_BUFFER_PERSIST === '1' || process.env.CONVERSATION_BUFFER_PERSIST === 'true';
+const persistEnabled = () => {
+  const v = process.env.CONVERSATION_BUFFER_PERSIST;
+  if (v === '0' || v === 'false') return false;
+  return true;
+};
 
 const MAX_KEYS = Number(process.env.CONVERSATION_BUFFER_MAX_KEYS || 400) || 400;
 const MAX_MESSAGES = Number(process.env.CONVERSATION_BUFFER_MAX_MESSAGES || 24) || 24;

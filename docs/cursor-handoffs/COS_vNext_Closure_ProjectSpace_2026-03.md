@@ -166,10 +166,100 @@ linkRunToProjectSpace(space.project_id, 'RUN-abc123');
 
 ---
 
-## 8. Next Patch Priorities
+## 8. vNext.3 — Founder-Grade Surface Integrity + Slack File Intake + Context Lock (2026-03-30)
 
-1. **Live provider integration** — Vercel/Railway API create, Cursor cloud callback
-2. **Project space UI surface** — 대표가 "내 프로젝트 목록" 조회 가능
-3. **Supabase CLI auto-apply** — `supabase db push` 자동화
-4. **GitHub repo bootstrap** — `gh repo create` live path
-5. **Multi-run tracking per space** — space 내 여러 run 간 status aggregation
+**Patch**: vNext.3 — Founder-Grade Surface Integrity + Slack File Intake + Context Lock OS
+
+### Section 0 검증 결과
+
+| 가정 | 실제 |
+|---|---|
+| B. app.js에 loadProjectSpacesFromDisk 없음 | ❌ **vNext.1에서 이미 추가됨** |
+| C. existing_reference 라우팅 없음 | ❌ **vNext.1에서 이미 추가됨** |
+| D. getOrCreateProjectSpaceForBootstrap 없음 | ❌ **vNext.1에서 이미 추가됨** |
+| E. persistence opt-in (default OFF) | ✅ → **이번 패치에서 default ON으로 변경** |
+| F. founder-grade guard 모듈 없음 | ✅ → **이번 패치에서 신규 생성** |
+| G. Slack file intake 없음 | ✅ → **이번 패치에서 구현** |
+
+### 변경 요약
+
+| 항목 | 상태 |
+|---|---|
+| founderSurfaceGuard.js | ✅ 신규. sanitizeFounderOutput() — internal metadata 자동 제거. finalizeSlackResponse에 통합 |
+| council work-hint footer 제거 | ✅ "실행 작업 후보" / "업무등록:" 푸터 normal flow에서 완전 제거. internal log만 |
+| founderSlotLedger.js | ✅ 신규. 12개 slot, resolve/reopen/bulk, 디스크 persist + startup hydration |
+| topicAnchorGuard.js | ✅ 신규. domain cluster 추출, cross-project drift 감지 (calendar↔grants, GTM↔calendar) |
+| deliverableBundleRouter.js | ✅ 신규. 4종 bundle type, deliverable intent 감지, LLM prompt 생성 |
+| slackFileIntake.js | ✅ 신규. file event에서 파일 추출, fetch, text 파싱. 5종 실패 사유 정밀 반환 |
+| slackDocumentContext.js | ✅ 신규. thread별 문서 저장/조회/병합 |
+| contextSynthesis.js | ✅ 신규. continuation/correction/document_refine/synthesis_request 4종 감지 |
+| registerHandlers.js file intake 통합 | ✅ DM event.subtype='file_share' 허용, app_mention에도 파일 처리 추가 |
+| persistence default ON | ✅ conversation_buffer + intake_session 모두 기본 ON (0/false로만 비활성화) |
+| founderSlotLedger startup hydration | ✅ app.js에 loadSlotLedgersFromDisk() 추가 |
+
+### 차단되는 founder-facing 실패 패턴
+
+1. **"내부 처리 정보" / "참여 페르소나" / "matrix trigger" / "institutional memory"** — sanitizeFounderOutput이 자동 제거
+2. **"실행 작업 후보로 보입니다. 필요하면 '업무등록:...'"** — normal flow에서 완전 제거
+3. **Calendar thread에 grants/compliance 침투** — topicAnchorGuard drift 감지
+4. **Abstract GTM thread에 calendar kickoff 침투** — topicAnchorGuard drift 감지
+5. **Restart 후 킥오프 리셋** — founderSlotLedger persist + hydration으로 방지
+
+### Slack 파일 인제스트 실패 시 정밀 사유
+
+| 코드 | 메시지 |
+|---|---|
+| scope_missing | 앱에 files:read scope가 없어 파일 내용을 읽을 수 없습니다 |
+| no_url | 이 대화 유형(Slack Connect/admin policy)에서 파일 접근이 제한 |
+| unsupported_type | 파일 형식은 현재 파서가 지원하지 않습니다 |
+| empty_content | 파일 메타데이터 확인했지만 본문 추출 실패 |
+| fetch_failed | 파일 fetch 실패 (HTTP status) |
+
+### 신규 파일
+
+- `src/features/founderSurfaceGuard.js`
+- `src/features/founderSlotLedger.js`
+- `src/features/topicAnchorGuard.js`
+- `src/features/deliverableBundleRouter.js`
+- `src/features/contextSynthesis.js`
+- `src/features/slackFileIntake.js`
+- `src/features/slackDocumentContext.js`
+- `scripts/test-vnext3-founder-grade.mjs`
+
+### 수정 파일
+
+- `src/features/topLevelRouter.js` — sanitizeFounderOutput 통합
+- `src/features/runInboundAiRouter.js` — work-hint footer 제거
+- `src/slack/registerHandlers.js` — file intake 통합, subtype=file_share 허용
+- `src/features/slackConversationBuffer.js` — persistence default ON
+- `src/features/projectIntakeSession.js` — persistence default ON
+- `app.js` — founderSlotLedger hydration 추가
+- `package.json` — 새 테스트 스크립트 추가
+
+### 테스트 추가 (13개)
+
+| # | 테스트 | 검증 |
+|---|---|---|
+| 1 | founderSurfaceGuard strips internal metadata | 6종 internal pattern 제거, debug mode 보존 |
+| 2 | work-hint footer removal | 업무등록 푸터 제거, 원본 콘텐츠 보존 |
+| 3 | founderSlotLedger CRUD + hydration | resolve/reopen/bulk, 파일 기반 hydration |
+| 4 | topicAnchorGuard drift detection | calendar↔grants, GTM↔calendar 양방향 drift |
+| 5 | deliverableBundleRouter intent | 5종 trigger, prompt 생성 |
+| 6 | slackFileIntake readiness + errors | 진단, 에러 메시지 정밀도 |
+| 7 | slackDocumentContext | add/get/merge 기본 동작 |
+| 8 | contextSynthesis intent | 4종 continuation/correction 감지 |
+| 9 | persistence defaults ON | env 미설정 시 persist 활성화 |
+| 10 | calendar regression | grants drift 차단 |
+| 11 | abstract GTM regression | calendar drift 차단 |
+| 12 | restart continuation | slot ledger survives reload |
+| 13 | canonical surface validation | 허용/차단 surface 분류 |
+
+---
+
+## 9. Next Patch Priorities
+
+1. **LLM integration** — topicAnchorGuard/deliverableBundleRouter/contextSynthesis를 실제 LLM 호출 경로에 통합
+2. **Live provider integration** — Vercel/Railway API create, Cursor cloud callback
+3. **Project space UI surface** — 대표가 "내 프로젝트 목록" 조회 가능
+4. **Supabase CLI auto-apply** — `supabase db push` 자동화
+5. **PDF/DOCX parser** — slackFileIntake에 추가 파서 통합
