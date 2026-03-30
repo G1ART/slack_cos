@@ -571,6 +571,213 @@ try {
   ok('full golden path with approval closure — request → lock → run → deploy_ready → approve');
 } catch (e) { fail('full golden path with approval', e); }
 
+/* ================================================================== */
+/* TEST 15: Deploy packet renders Block Kit buttons                    */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, updateRunStage, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { buildDeployApprovalBlocks } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:BTN:01', goal_line: 'btn test', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+  updateRunStage(run.run_id, 'deploy_ready');
+
+  const blocks = buildDeployApprovalBlocks(run);
+  assert.ok(Array.isArray(blocks), 'blocks is array');
+  assert.equal(blocks[0].type, 'actions');
+  assert.equal(blocks[0].elements.length, 3);
+  assert.equal(blocks[0].elements[0].action_id, 'g1cos_exec_deploy_approve');
+  assert.equal(blocks[0].elements[1].action_id, 'g1cos_exec_deploy_rework');
+  assert.equal(blocks[0].elements[2].action_id, 'g1cos_exec_deploy_hold');
+
+  const val = JSON.parse(blocks[0].elements[0].value);
+  assert.equal(val.run_id, run.run_id);
+
+  ok('deploy packet renders Block Kit buttons');
+} catch (e) { fail('block kit buttons', e); }
+
+/* ================================================================== */
+/* TEST 16: Deploy URL ingest → linkage_recorded                       */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, updateRunStage, getExecutionRunById, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { detectDeployUrlAndCompletion, ingestDeployUrl } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:URL:01', goal_line: 'url test', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+  updateRunStage(run.run_id, 'approved_for_deploy');
+
+  const { url, isComplete, providerHint } = detectDeployUrlAndCompletion('배포 URL: https://my-app.vercel.app');
+  assert.equal(url, 'https://my-app.vercel.app');
+  assert.equal(isComplete, false);
+  assert.equal(providerHint, 'vercel');
+
+  const result = ingestDeployUrl(run, url, providerHint, false);
+  assert.ok(result.ok);
+  assert.equal(result.new_deploy_status, 'linkage_recorded');
+  assert.ok(result.response_text.includes('배포 URL 기록'));
+
+  const updated = getExecutionRunById(run.run_id);
+  assert.equal(updated.deploy_status, 'linkage_recorded');
+  assert.equal(updated.deploy_url, 'https://my-app.vercel.app');
+
+  ok('deploy URL ingest → linkage_recorded');
+} catch (e) { fail('URL ingest linkage', e); }
+
+/* ================================================================== */
+/* TEST 17: Deploy URL + completion → deployed_manual_confirmed        */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, updateRunStage, getExecutionRunById, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { detectDeployUrlAndCompletion, ingestDeployUrl } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:URLC:01', goal_line: 'url complete', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+  updateRunStage(run.run_id, 'approved_for_deploy');
+
+  const { url, isComplete, providerHint } = detectDeployUrlAndCompletion('배포 완료! https://gallery.railway.app');
+  assert.equal(url, 'https://gallery.railway.app');
+  assert.ok(isComplete);
+  assert.equal(providerHint, 'railway');
+
+  const result = ingestDeployUrl(run, url, providerHint, true);
+  assert.ok(result.ok);
+  assert.equal(result.new_deploy_status, 'deployed_manual_confirmed');
+  assert.ok(result.response_text.includes('배포 완료 확인'));
+
+  const updated = getExecutionRunById(run.run_id);
+  assert.equal(updated.deploy_status, 'deployed_manual_confirmed');
+  assert.equal(updated.current_stage, 'deployment_confirmed');
+
+  ok('deploy URL + completion → deployed_manual_confirmed');
+} catch (e) { fail('URL + complete', e); }
+
+/* ================================================================== */
+/* TEST 18: Deploy complete text without URL → graceful failure        */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, updateRunStage, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { confirmDeployComplete } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:NOURL:01', goal_line: 'no url', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+  updateRunStage(run.run_id, 'approved_for_deploy');
+
+  const result = confirmDeployComplete(run);
+  assert.equal(result.ok, false);
+  assert.ok(result.response_text.includes('URL'));
+
+  ok('deploy complete without URL → graceful failure');
+} catch (e) { fail('no URL complete', e); }
+
+/* ================================================================== */
+/* TEST 19: Invalid URL rejected                                       */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, updateRunStage, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { ingestDeployUrl } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:BAD:01', goal_line: 'bad url', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+  updateRunStage(run.run_id, 'approved_for_deploy');
+
+  const result = ingestDeployUrl(run, 'not-a-url', null, false);
+  assert.equal(result.ok, false);
+  assert.equal(result.errorCode, 'invalid_url');
+
+  ok('invalid URL rejected with honest reason');
+} catch (e) { fail('invalid URL', e); }
+
+/* ================================================================== */
+/* TEST 20: No active deploy run → URL ignored                         */
+/* ================================================================== */
+try {
+  const { createExecutionPacket, createExecutionRun, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { ingestDeployUrl } = await import('../src/features/executionSpineRouter.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({ thread_key: 'ch:WRONG:01', goal_line: 'wrong stage', locked_scope_summary: 't', includes: [], excludes: [] });
+  const run = createExecutionRun({ packet, metadata: {} });
+
+  const result = ingestDeployUrl(run, 'https://example.com', null, false);
+  assert.equal(result.ok, false);
+  assert.equal(result.errorCode, 'wrong_stage');
+
+  ok('no active deploy run → URL rejected with reason');
+} catch (e) { fail('wrong stage URL', e); }
+
+/* ================================================================== */
+/* TEST 21: Full golden path → approve → URL → deployed_confirmed      */
+/* ================================================================== */
+try {
+  const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, _resetForTest: resetSpaces } = await import('../src/features/projectSpaceRegistry.js');
+  const { createExecutionPacket, createExecutionRun, getExecutionRunById, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { detectAndApplyCompletion } = await import('../src/features/executionDispatchLifecycle.js');
+  const { detectApprovalIntent, applyApprovalDecision, detectDeployUrlAndCompletion, ingestDeployUrl, confirmDeployComplete } = await import('../src/features/executionSpineRouter.js');
+  const { addDocumentToThread, buildDocumentContextForExecution, _resetForTest: resetDoc } = await import('../src/features/slackDocumentContext.js');
+
+  resetSpaces(); resetRuns(); resetDoc();
+  const tk = 'ch:FULLCLOSURE:01';
+
+  addDocumentToThread(tk, { file_id: 'F99', filename: 'req.docx', text: 'Gallery calendar requirements', mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', char_count: 30 });
+
+  const space = createProjectSpace({ human_label: 'Gallery Cal', repo_owner: 'g1', repo_name: 'gal-cal', github_ready_status: 'ready' });
+  linkThreadToProjectSpace(space.project_id, tk);
+
+  const docCtx = buildDocumentContextForExecution(tk);
+  const packet = createExecutionPacket({ thread_key: tk, goal_line: 'Gallery Cal MVP', locked_scope_summary: 'gallery cal', includes: ['events'], excludes: [], project_id: space.project_id, document_context_summary: docCtx?.summary, document_sources: docCtx?.sources });
+  const run = createExecutionRun({ packet, metadata: {} });
+  linkRunToProjectSpace(space.project_id, run.run_id);
+
+  run.git_trace.repo = 'g1/gal-cal';
+  run.git_trace.issue_id = 1;
+  run.git_trace.branch = 'feat/gal-mvp';
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gal-cal.md';
+  run.supabase_trace.push({ status: 'draft_created' });
+
+  for (const ws of run.workstreams) { ws.outbound = ws.outbound || {}; ws.outbound.outbound_status = 'completed'; ws.outbound.outbound_provider = 'github'; }
+  detectAndApplyCompletion(run.run_id);
+  assert.equal(getExecutionRunById(run.run_id).current_stage, 'deploy_ready');
+
+  // Founder approves
+  applyApprovalDecision(run, 'approve', '');
+  assert.equal(getExecutionRunById(run.run_id).current_stage, 'approved_for_deploy');
+
+  // Founder pastes URL
+  const { url, providerHint } = detectDeployUrlAndCompletion('https://gal-cal.vercel.app');
+  ingestDeployUrl(run, url, providerHint, false);
+  assert.equal(getExecutionRunById(run.run_id).deploy_status, 'linkage_recorded');
+
+  // Founder confirms deploy
+  confirmDeployComplete(run);
+  const final = getExecutionRunById(run.run_id);
+  assert.equal(final.deploy_status, 'deployed_manual_confirmed');
+  assert.equal(final.current_stage, 'deployment_confirmed');
+  assert.equal(final.deploy_url, 'https://gal-cal.vercel.app');
+
+  ok('full golden path → approve → URL → deployed_confirmed');
+} catch (e) { fail('full deploy closure', e); }
+
+/* ================================================================== */
+/* TEST 22: Council report no banned fallback text                     */
+/* ================================================================== */
+try {
+  const councilContent = await fs.readFile(new URL('../src/agents/council.js', import.meta.url), 'utf8');
+  const fallbackSection = councilContent.substring(
+    councilContent.indexOf('const strongestObjection'),
+    councilContent.indexOf('const decisionNeeded')
+  );
+  assert.ok(!fallbackSection.includes('가장 강한 반대 논리'), 'no banned fallback: 가장 강한 반대 논리');
+  assert.ok(!fallbackSection.includes('핵심 리스크를 반영해'), 'no banned fallback: 핵심 리스크');
+
+  ok('council report no banned fallback text');
+} catch (e) { fail('council fallback', e); }
+
 /* Cleanup */
 console.log(`\n=== Golden Path: ${passed} passed, ${failed} failed ===`);
 
