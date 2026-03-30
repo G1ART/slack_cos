@@ -143,6 +143,33 @@ export async function flushDocumentContextToDisk() {
   await writeJsonArray(fp, data);
 }
 
+/**
+ * Build a summary object suitable for embedding in execution packets/artifacts.
+ * Returns { summary, sources } or null if no docs.
+ */
+export function buildDocumentContextForExecution(threadKey) {
+  const docs = documentsByThread.get(threadKey);
+  if (!docs || docs.length === 0) return null;
+
+  const sources = docs.map(d => ({
+    filename: d.filename,
+    mimetype: d.mimetype,
+    char_count: d.char_count,
+    ingested_at: d.ingested_at,
+  }));
+
+  const summaryParts = docs.map(d => {
+    const preview = d.text.slice(0, 500);
+    return `[${d.filename}] ${preview}${d.text.length > 500 ? '…' : ''}`;
+  });
+
+  return {
+    summary: summaryParts.join('\n\n'),
+    sources,
+    doc_count: docs.length,
+  };
+}
+
 export function _resetForTest() {
   documentsByThread.clear();
 }

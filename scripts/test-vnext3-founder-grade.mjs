@@ -902,6 +902,400 @@ try {
   ok('file readiness diagnostic surface');
 } catch (e) { fail('file readiness diagnostic', e); }
 
+/* ================================================================== */
+/*  vNext.6 — Full-Cycle MVP Closure tests                            */
+/* ================================================================== */
+
+/* TEST 29: GitHub branch/PR seed functions exist */
+try {
+  const gh = await import('../src/adapters/githubAdapter.js');
+  assert.equal(typeof gh.createBranchArtifact, 'function', 'createBranchArtifact exists');
+  assert.equal(typeof gh.createPullRequestArtifact, 'function', 'createPullRequestArtifact exists');
+
+  // Without auth configured, these should return graceful errors
+  const branchResult = await gh.createBranchArtifact({ repoTarget: { owner: 'test', repo: 'test' }, branchName: 'feat/test' });
+  assert.equal(branchResult.ok, false, 'branch fails without auth');
+  assert.equal(branchResult.errorCode, 'no_auth');
+
+  const prResult = await gh.createPullRequestArtifact({ repoTarget: { owner: 'test', repo: 'test' }, branchName: 'feat/test' });
+  assert.equal(prResult.ok, false, 'PR fails without auth');
+  assert.equal(prResult.errorCode, 'no_auth');
+
+  ok('GitHub branch/PR seed primitives');
+} catch (e) { fail('GitHub branch/PR seed primitives', e); }
+
+/* TEST 30: GitHub result intake parses branch/PR/commit fields */
+try {
+  const { parseGitHubResultIntake } = await import('../src/adapters/githubAdapter.js');
+  const result = parseGitHubResultIntake(`
+branch_name: feat/calendar-mvp
+PR #42
+pr_url: https://github.com/test/repo/pull/42
+commit_sha: abc1234def5678
+merge readiness: ready
+변경한 파일 목록
+- src/calendar.ts
+- src/api.ts
+테스트 실행 결과
+- all pass
+  `);
+  assert.equal(result.branch_name, 'feat/calendar-mvp');
+  assert.equal(result.pr_number, 42);
+  assert.equal(result.pr_url, 'https://github.com/test/repo/pull/42');
+  assert.equal(result.commit_sha, 'abc1234def5678');
+  assert.equal(result.sync_status, 'pr_ready');
+  assert.equal(result.merge_readiness, 'ready');
+  assert.ok(result.changed_files.length >= 1);
+
+  ok('GitHub result intake branch/PR/commit parsing');
+} catch (e) { fail('GitHub result intake parsing', e); }
+
+/* TEST 31: Deploy packet builders exist and return honest bridge */
+try {
+  const { buildVercelDeployPacket } = await import('../src/adapters/vercelAdapter.js');
+  const { buildRailwayDeployPacket } = await import('../src/adapters/railwayAdapter.js');
+
+  const vPacket = buildVercelDeployPacket({ project_id: 'PROJ-test', vercel_project_id: null });
+  assert.equal(vPacket.provider, 'vercel');
+  assert.equal(vPacket.manual_required, true);
+  assert.equal(vPacket.live_create_supported, false);
+  assert.ok(vPacket.exact_next_step);
+
+  const rPacket = buildRailwayDeployPacket({ project_id: 'PROJ-test', railway_project_id: null });
+  assert.equal(rPacket.provider, 'railway');
+  assert.equal(rPacket.manual_required, true);
+  assert.equal(rPacket.live_create_supported, false);
+  assert.ok(rPacket.exact_next_step);
+
+  ok('deploy packet builders (honest manual bridge)');
+} catch (e) { fail('deploy packet builders', e); }
+
+/* TEST 32: Approval + escalation + deploy packet renderers */
+try {
+  const { renderApprovalPacket, renderEscalationPacket, renderDeployPacket, renderOneLineStatus } = await import('../src/features/executionSpineRouter.js');
+  const mockRun = { run_id: 'RUN-test', project_goal: 'Calendar MVP', workstreams: [] };
+
+  const approval = renderApprovalPacket(mockRun, {
+    completed_work: ['GitHub issue 생성', 'Branch 생성'],
+    blockers: ['Supabase 미설정'],
+    decision_needed: '배포 승인',
+    options: ['배포 진행', '추가 테스트'],
+    recommendation: '테스트 후 배포 권장',
+  });
+  assert.ok(approval.includes('대표 승인 요청'), 'approval header');
+  assert.ok(approval.includes('RUN-test'), 'approval run_id');
+  assert.ok(approval.includes('완료된 작업'), 'approval completed');
+  assert.ok(approval.includes('차단 사항'), 'approval blockers');
+  assert.ok(approval.includes('COS 권장'), 'approval recommendation');
+
+  const escalation = renderEscalationPacket(mockRun, '배포 대상 충돌');
+  assert.ok(escalation.includes('에스컬레이션'), 'escalation header');
+  assert.ok(escalation.includes('배포 대상 충돌'), 'escalation text');
+
+  const deploy = renderDeployPacket(mockRun, {
+    vercel: { configured: false },
+    railway: { configured: true },
+    deploy_readiness: 'manual_required',
+    manual_steps: ['Vercel 토큰 설정'],
+  });
+  assert.ok(deploy.includes('배포 패킷'), 'deploy header');
+  assert.ok(deploy.includes('manual_required'), 'deploy readiness');
+
+  const oneline = renderOneLineStatus(mockRun);
+  assert.ok(oneline.includes('RUN-test'), 'oneline run_id');
+  assert.ok(oneline.includes('Calendar MVP'), 'oneline goal');
+
+  ok('approval/escalation/deploy/oneline packet renderers');
+} catch (e) { fail('packet renderers', e); }
+
+/* TEST 33: PM Cockpit detailed mode */
+try {
+  const { renderPMCockpitPacket } = await import('../src/features/executionSpineRouter.js');
+  const { createExecutionPacket, createExecutionRun, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  resetRuns();
+
+  const packet = createExecutionPacket({
+    thread_key: 'ch:PMTEST:01',
+    goal_line: 'PM Cockpit 테스트 프로젝트',
+    locked_scope_summary: 'PM Cockpit 테스트',
+    includes: ['dashboard'],
+    excludes: [],
+  });
+  const run = createExecutionRun({ packet, metadata: { user: 'testuser' } });
+
+  // Detailed mode
+  const detailed = renderPMCockpitPacket(run);
+  assert.ok(detailed.includes('PM Cockpit'), 'PM cockpit header');
+  assert.ok(detailed.includes(run.run_id), 'PM cockpit run_id');
+  assert.ok(detailed.includes('PM Cockpit 테스트 프로젝트'), 'PM cockpit goal');
+  assert.ok(detailed.includes('대표 필요 액션'), 'PM cockpit next action');
+
+  // Oneline mode
+  const oneline = renderPMCockpitPacket(run, { mode: 'oneline' });
+  assert.ok(oneline.includes(run.run_id), 'oneline has run_id');
+  assert.ok(oneline.length < 300, 'oneline is compact');
+
+  ok('PM cockpit detailed + oneline mode');
+} catch (e) { fail('PM cockpit modes', e); }
+
+/* TEST 34: Project space status for Slack */
+try {
+  const { createProjectSpace, renderProjectSpaceStatusForSlack, _resetForTest: resetSpaces } = await import('../src/features/projectSpaceRegistry.js');
+  resetSpaces();
+
+  const space = createProjectSpace({
+    human_label: 'Calendar MVP',
+    repo_owner: 'g1-platform',
+    repo_name: 'calendar-mvp',
+    github_ready_status: 'ready',
+    cursor_workspace_root: '/Users/test/calendar',
+    cursor_handoff_root: 'docs/cursor-handoffs',
+    supabase_ready_status: 'configured',
+    supabase_project_ref: 'cal-mvp-123',
+    vercel_ready_status: 'not_configured',
+    railway_ready_status: 'not_configured',
+    last_bootstrap_status: 'partial_manual',
+    last_deploy_status: 'none',
+  });
+
+  const status = renderProjectSpaceStatusForSlack(space);
+  assert.ok(status.includes('프로젝트 상태'), 'has header');
+  assert.ok(status.includes('Calendar MVP'), 'has label');
+  assert.ok(status.includes('g1-platform/calendar-mvp'), 'has repo');
+  assert.ok(status.includes('Supabase'), 'has supabase');
+  assert.ok(status.includes('부트스트랩'), 'has bootstrap status');
+  assert.ok(status.includes('배포 상태'), 'has deploy status');
+
+  const nullStatus = renderProjectSpaceStatusForSlack(null);
+  assert.ok(nullStatus.includes('찾을 수 없습니다'), 'null space handled');
+
+  ok('project space status for Slack');
+} catch (e) { fail('project space status', e); }
+
+/* TEST 35: Execution run carries project/document context */
+try {
+  const { createExecutionPacket, createExecutionRun, _resetForTest: resetRuns2 } = await import('../src/features/executionRun.js');
+  resetRuns2();
+
+  const packet = createExecutionPacket({
+    thread_key: 'ch:DOCEXEC:01',
+    goal_line: 'Document-enriched execution',
+    project_id: 'PROJ-doc-1',
+    project_label: 'Doc Test Project',
+    document_context_summary: 'NYC gallery market research summary...',
+    document_sources: [{ filename: 'research.docx', char_count: 5000 }],
+  });
+  assert.equal(packet.project_id, 'PROJ-doc-1');
+  assert.equal(packet.document_context_summary, 'NYC gallery market research summary...');
+  assert.equal(packet.document_sources.length, 1);
+
+  const run = createExecutionRun({ packet, metadata: { user: 'test' } });
+  assert.equal(run.project_id, 'PROJ-doc-1');
+  assert.equal(run.project_label, 'Doc Test Project');
+  assert.equal(run.document_context_summary, 'NYC gallery market research summary...');
+  assert.equal(run.deploy_readiness, 'not_ready');
+
+  ok('execution run carries project/document context');
+} catch (e) { fail('execution run doc context', e); }
+
+/* TEST 36: Deploy readiness evaluation */
+try {
+  const { evaluateDeployReadiness } = await import('../src/features/executionDispatchLifecycle.js');
+  const { createExecutionPacket, createExecutionRun, _resetForTest: resetRuns3 } = await import('../src/features/executionRun.js');
+  resetRuns3();
+
+  const packet = createExecutionPacket({
+    thread_key: 'ch:DEPLOY:01',
+    goal_line: 'Deploy readiness test',
+  });
+  const run = createExecutionRun({ packet, metadata: {} });
+
+  const eval_ = evaluateDeployReadiness(run.run_id);
+  assert.ok(eval_, 'evaluateDeployReadiness returns result');
+  assert.equal(eval_.run_id, run.run_id);
+  assert.ok(['not_ready', 'manual_required', 'ready'].includes(eval_.deploy_readiness));
+  assert.ok(typeof eval_.code_ready === 'boolean');
+  assert.ok(typeof eval_.has_deploy_target === 'boolean');
+  assert.ok(eval_.next_action);
+
+  ok('deploy readiness evaluation');
+} catch (e) { fail('deploy readiness evaluation', e); }
+
+/* TEST 37: Document context for execution builder */
+try {
+  const { addDocumentToThread, buildDocumentContextForExecution, _resetForTest: resetDoc2 } = await import('../src/features/slackDocumentContext.js');
+  resetDoc2();
+
+  addDocumentToThread('ch:EXECDOC:01', {
+    file_id: 'F001',
+    filename: 'market-research.pdf',
+    text: 'NYC art gallery market is growing at 15% annually...',
+    mimetype: 'application/pdf',
+    char_count: 50,
+  });
+
+  const execCtx = buildDocumentContextForExecution('ch:EXECDOC:01');
+  assert.ok(execCtx, 'execution doc context exists');
+  assert.equal(execCtx.doc_count, 1);
+  assert.ok(execCtx.summary.includes('market-research.pdf'));
+  assert.ok(execCtx.summary.includes('NYC'));
+  assert.equal(execCtx.sources[0].filename, 'market-research.pdf');
+
+  const noCtx = buildDocumentContextForExecution('ch:NOEXIST:01');
+  assert.equal(noCtx, null, 'no docs returns null');
+
+  ok('document context for execution builder');
+} catch (e) { fail('doc context for execution', e); }
+
+/* TEST 38: cosWorkspaceQueue no longer mentions 업무등록 in status line */
+try {
+  const queueSrc = await fs.readFile(
+    path.join(process.cwd(), 'src', 'features', 'cosWorkspaceQueue.js'), 'utf8'
+  );
+  const statusLine = queueSrc.match(/상태:.*COS.*자동/);
+  assert.ok(statusLine, 'status line says COS auto-proceeds');
+  const oldHint = queueSrc.includes("'업무등록:'") && queueSrc.includes("'계획등록:'") && queueSrc.includes("'커서발행'");
+  assert.ok(!oldHint, 'old command hint triplet removed from status message');
+
+  ok('cosWorkspaceQueue work-hint cleaned');
+} catch (e) { fail('cosWorkspaceQueue work-hint', e); }
+
+/* TEST 39: FULL-CYCLE MVP SCENARIO — request → lock → run → toolchain → result → approval → deploy */
+try {
+  const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, renderProjectSpaceStatusForSlack, _resetForTest: resetSpacesFC } = await import('../src/features/projectSpaceRegistry.js');
+  const { createExecutionPacket, createExecutionRun, updateRunStage, updateRunReport, updateLaneStatus, getExecutionRunById, _resetForTest: resetRunsFC } = await import('../src/features/executionRun.js');
+  const { evaluateExecutionRunCompletion, detectAndApplyCompletion, evaluateDeployReadiness } = await import('../src/features/executionDispatchLifecycle.js');
+  const { renderPMCockpitPacket, renderApprovalPacket, renderDeployPacket, renderOneLineStatus, renderEscalationPacket } = await import('../src/features/executionSpineRouter.js');
+  const { buildVercelDeployPacket } = await import('../src/adapters/vercelAdapter.js');
+  const { buildRailwayDeployPacket } = await import('../src/adapters/railwayAdapter.js');
+  const { addDocumentToThread: addDoc, buildDocumentContextForExecution: buildDocExec, _resetForTest: resetDocFC } = await import('../src/features/slackDocumentContext.js');
+
+  resetSpacesFC();
+  resetRunsFC();
+  resetDocFC();
+
+  // === STEP 1: Founder requests a new project ===
+  const threadKey = 'ch:FULLCYCLE:01';
+
+  // === STEP 2: Document uploaded and ingested ===
+  addDoc(threadKey, {
+    file_id: 'FDOC1',
+    filename: 'product-spec.pdf',
+    text: 'Calendar app for NYC art galleries. Core features: event listing, RSVP, artist profiles.',
+    mimetype: 'application/pdf',
+    char_count: 80,
+  });
+
+  // === STEP 3: COS locks scope, creates project space ===
+  const space = createProjectSpace({
+    human_label: 'NYC Gallery Calendar',
+    repo_owner: 'g1-platform',
+    repo_name: 'gallery-calendar',
+    github_ready_status: 'ready',
+    cursor_workspace_root: '/workspace/gallery-calendar',
+    cursor_handoff_root: 'docs/cursor-handoffs',
+    supabase_ready_status: 'configured',
+    supabase_project_ref: 'gallery-cal-ref',
+    vercel_ready_status: 'not_configured',
+    railway_ready_status: 'not_configured',
+    last_bootstrap_status: 'partial_manual',
+  });
+  linkThreadToProjectSpace(space.project_id, threadKey);
+
+  // === STEP 4: Execution run created with doc context ===
+  const docCtx = buildDocExec(threadKey);
+  const packet = createExecutionPacket({
+    thread_key: threadKey,
+    goal_line: 'NYC Gallery Calendar MVP',
+    locked_scope_summary: 'Calendar app: event listing, RSVP, artist profiles',
+    includes: ['event listing', 'RSVP', 'artist profiles'],
+    excludes: ['payment processing'],
+    project_id: space.project_id,
+    project_label: space.human_label,
+    document_context_summary: docCtx?.summary || null,
+    document_sources: docCtx?.sources || [],
+  });
+  assert.ok(packet.document_context_summary, 'packet has doc context');
+  assert.equal(packet.project_id, space.project_id);
+
+  const run = createExecutionRun({ packet, metadata: { user: 'founder' } });
+  linkRunToProjectSpace(space.project_id, run.run_id);
+  assert.equal(run.current_stage, 'execution_running');
+  assert.equal(run.project_id, space.project_id);
+
+  // === STEP 5: Toolchain seeds (simulated) ===
+  // GitHub: issue created
+  run.git_trace.repo = 'g1-platform/gallery-calendar';
+  run.git_trace.issue_id = 42;
+  // GitHub: branch seeded
+  run.git_trace.branch = 'feat/calendar-mvp';
+  // Cursor handoff created
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gallery-calendar.md';
+
+  // === STEP 6: Workstreams progress ===
+  const wsCount = run.workstreams.length;
+  for (const ws of run.workstreams) {
+    ws.outbound = ws.outbound || {};
+    ws.outbound.outbound_status = 'completed';
+    ws.outbound.outbound_provider = 'github';
+  }
+
+  // === STEP 7: Completion detected → deploy_ready ===
+  const completion = detectAndApplyCompletion(run.run_id);
+  assert.ok(completion, 'completion evaluation exists');
+  const updatedRun = getExecutionRunById(run.run_id);
+  assert.equal(updatedRun.current_stage, 'deploy_ready', 'stage transitions to deploy_ready');
+
+  // === STEP 8: Deploy packet produced ===
+  const deployEval = evaluateDeployReadiness(run.run_id);
+  assert.ok(deployEval, 'deploy eval exists');
+  assert.ok(['ready', 'manual_required', 'not_ready'].includes(deployEval.deploy_readiness));
+
+  const vercelPacket = buildVercelDeployPacket(space, run);
+  assert.equal(vercelPacket.provider, 'vercel');
+  assert.equal(vercelPacket.manual_required, true);
+
+  const deployText = renderDeployPacket(run, {
+    vercel: vercelPacket,
+    railway: buildRailwayDeployPacket(space, run),
+    deploy_readiness: deployEval.deploy_readiness,
+    manual_steps: deployEval.manual_steps,
+    env_missing: deployEval.env_missing,
+  });
+  assert.ok(deployText.includes('배포 패킷'), 'deploy packet rendered');
+
+  // === STEP 9: Approval packet for founder ===
+  const approvalText = renderApprovalPacket(updatedRun, {
+    completed_work: ['GitHub issue #42 생성', 'Branch feat/calendar-mvp 생성', 'Cursor handoff 생성'],
+    blockers: vercelPacket.manual_required ? ['Vercel 수동 설정 필요'] : [],
+    decision_needed: '배포 대상 설정 후 배포 승인',
+    options: ['Vercel 수동 배포', 'Railway 수동 배포', '추가 테스트 후 결정'],
+    recommendation: '테스트 커버리지 확인 후 Vercel 수동 배포 권장',
+  });
+  assert.ok(approvalText.includes('대표 승인 요청'), 'approval for founder');
+  assert.ok(approvalText.includes('완료된 작업'), 'shows completed work');
+  assert.ok(approvalText.includes('COS 권장'), 'shows recommendation');
+
+  // === STEP 10: PM cockpit shows full truth ===
+  const cockpit = renderPMCockpitPacket(updatedRun, { deployInfo: deployEval });
+  assert.ok(cockpit.includes('PM Cockpit'), 'cockpit header');
+  assert.ok(cockpit.includes(run.run_id), 'cockpit shows run');
+  assert.ok(cockpit.includes('대표 필요 액션'), 'cockpit shows next action');
+  assert.ok(cockpit.includes('issue'), 'cockpit shows GitHub truth');
+
+  // === STEP 11: Project status shows truth ===
+  const projectStatus = renderProjectSpaceStatusForSlack(space);
+  assert.ok(projectStatus.includes('NYC Gallery Calendar'), 'project status label');
+  assert.ok(projectStatus.includes('run 1개'), 'project shows active run');
+
+  // Oneline status for quick check
+  const oneline = renderOneLineStatus(updatedRun);
+  assert.ok(oneline.includes(run.run_id), 'oneline run');
+  assert.ok(oneline.includes('deploy_ready'), 'oneline deploy_ready');
+
+  ok('FULL-CYCLE MVP SCENARIO — request → lock → run → toolchain → result → approval → deploy');
+} catch (e) { fail('FULL-CYCLE MVP', e); }
+
 /* Cleanup */
 console.log(`\n=== ${passed} passed, ${failed} failed ===`);
 

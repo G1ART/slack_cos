@@ -24,6 +24,10 @@ import {
   ingestCursorResultFromFile,
 } from './executionResultIngestion.js';
 
+import { buildVercelDeployPacket } from '../adapters/vercelAdapter.js';
+import { buildRailwayDeployPacket } from '../adapters/railwayAdapter.js';
+import { getProjectSpaceById } from './projectSpaceRegistry.js';
+
 function logLifecycle(event, fields = {}) {
   try {
     console.info(JSON.stringify({ stage: event, ts: new Date().toISOString(), ...fields }));
@@ -198,14 +202,84 @@ export function detectAndApplyCompletion(runId) {
   if (!run) return null;
 
   if (eval_.overall_status === 'completed' && run.current_stage !== 'completed') {
-    updateRunStage(runId, 'execution_reporting');
-    updateRunReport(runId, `All ${eval_.completed_lanes.length} lanes completed.`);
-    logLifecycle('completion_detected', { run_id: runId, overall: 'completed' });
+    updateRunStage(runId, 'deploy_ready');
+    updateRunReport(runId, `All ${eval_.completed_lanes.length} lanes completed. Deploy decision required.`);
+    logLifecycle('completion_detected', { run_id: runId, overall: 'completed', stage_transition: 'deploy_ready' });
   } else if (eval_.overall_status === 'manual_blocked') {
     logLifecycle('completion_detected', { run_id: runId, overall: 'manual_blocked', blocking: eval_.blocking_lanes });
   }
 
   return eval_;
+}
+
+/**
+ * Evaluate deploy readiness for a run.
+ */
+export function evaluateDeployReadiness(runId) {
+  const run = getExecutionRunById(runId);
+  if (!run) return null;
+
+  const eval_ = evaluateExecutionRunCompletion(runId);
+  if (!eval_) return null;
+
+  const envMissing = [];
+  const vercelToken = process.env.VERCEL_TOKEN || process.env.VERCEL_API_TOKEN;
+  if (!vercelToken) envMissing.push('VERCEL_TOKEN');
+
+  const railwayToken = process.env.RAILWAY_TOKEN;
+  if (!railwayToken) envMissing.push('RAILWAY_TOKEN');
+
+  const hasDeployTarget = Boolean(vercelToken || railwayToken || run.deploy_provider);
+  const codeReady = eval_.overall_status === 'completed' || eval_.overall_status === 'partial';
+  const deployReadiness = codeReady && hasDeployTarget ? 'ready' : codeReady ? 'manual_required' : 'not_ready';
+
+  const manualSteps = [];
+  if (!hasDeployTarget) manualSteps.push('배포 대상 설정 (Vercel/Railway 토큰 또는 수동 배포)');
+  if (eval_.manual_required_lanes.length) manualSteps.push(`수동 조치 필요 lane: ${eval_.manual_required_lanes.join(', ')}`);
+
+  return {
+    run_id: runId,
+    deploy_readiness: deployReadiness,
+    code_ready: codeReady,
+    has_deploy_target: hasDeployTarget,
+    overall_status: eval_.overall_status,
+    env_missing: envMissing,
+    manual_steps: manualSteps,
+    vercel: { configured: Boolean(vercelToken) },
+    railway: { configured: Boolean(railwayToken) },
+    next_action: deployReadiness === 'ready'
+      ? '대표 승인 후 배포를 진행합니다.'
+      : deployReadiness === 'manual_required'
+        ? `수동 배포 필요: ${manualSteps.join('; ')}`
+        : '코드 실행이 완료되어야 배포 단계로 넘어갈 수 있습니다.',
+  };
+}
+
+/**
+ * Build a unified deploy packet with all providers for a run.
+ * Combines Vercel/Railway readiness and manual bridge info.
+ */
+export function buildUnifiedDeployPacket(runId) {
+  const run = getExecutionRunById(runId);
+  if (!run) return null;
+
+  const space = run.project_id ? getProjectSpaceById(run.project_id) : null;
+  const vercel = buildVercelDeployPacket(space, run);
+  const railway = buildRailwayDeployPacket(space, run);
+  const deployEval = evaluateDeployReadiness(runId);
+
+  return {
+    run_id: runId,
+    project_id: run.project_id,
+    overall_deploy_readiness: deployEval?.deploy_readiness || 'not_ready',
+    code_ready: deployEval?.code_ready || false,
+    providers: { vercel, railway },
+    env_missing: deployEval?.env_missing || [],
+    manual_steps: deployEval?.manual_steps || [],
+    next_action: deployEval?.next_action || '배포 준비 상태를 확인해 주세요.',
+    run_deploy_status: run.deploy_status || 'none',
+    run_deploy_url: run.deploy_url || null,
+  };
 }
 
 /* ------------------------------------------------------------------ */

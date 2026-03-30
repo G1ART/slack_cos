@@ -142,6 +142,10 @@ export function createExecutionPacket(opts) {
     excludes: opts.excludes || [],
     deferred_items: opts.deferred_items || [],
     approval_policy: opts.approval_rules || [],
+    project_id: opts.project_id || null,
+    project_label: opts.project_label || null,
+    document_context_summary: opts.document_context_summary || null,
+    document_sources: opts.document_sources || [],
     generated_at: new Date().toISOString(),
     originating_session_id: opts.session_id || '',
     requested_by: opts.requested_by || '',
@@ -194,6 +198,10 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
       uiux_design: { ui_spec_delta_path: null, wireframe_note_path: null, component_checklist_path: null },
       qa_qc: { acceptance_checklist_path: null, regression_case_list_path: null, smoke_test_plan_path: null },
     },
+    project_id: packet.project_id || metadata?.project_id || null,
+    project_label: packet.project_label || metadata?.project_label || null,
+    document_context_summary: packet.document_context_summary || null,
+    document_sources: packet.document_sources || [],
     originating_playbook_id: playbook_id || null,
     originating_task_kind: task_kind || null,
     outbound_dispatch_state: 'not_started',
@@ -201,6 +209,11 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     outbound_dispatch_attempts: 0,
     outbound_last_error: null,
     escalation_policy: 'bounded',
+    deploy_readiness: 'not_ready',
+    deploy_provider: packet.deploy_provider || metadata?.deploy_provider || null,
+    deploy_status: 'none',
+    deploy_url: null,
+    deploy_error: null,
     requested_by: packet.requested_by || String(metadata?.user || ''),
     approved_by: String(metadata?.user || ''),
     latest_report: null,
@@ -211,6 +224,18 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
 
   persistRun(run);
   return run;
+}
+
+export function updateRunDeployStatus(runId, { deploy_status, deploy_provider, deploy_url, deploy_error }) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  if (deploy_status) run.deploy_status = deploy_status;
+  if (deploy_provider) run.deploy_provider = deploy_provider;
+  if (deploy_url !== undefined) run.deploy_url = deploy_url;
+  if (deploy_error !== undefined) run.deploy_error = deploy_error;
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -456,3 +481,5 @@ export function clearExecutionRunsForTest() {
   runsByThread.clear();
   runsById.clear();
 }
+
+export const _resetForTest = clearExecutionRunsForTest;

@@ -509,12 +509,14 @@ try {
 try {
   const run = makeTestRun();
   await dispatchOutboundActionsForRun(run, {});
-  const cockpit = renderPMCockpitPacket(run);
-  assert.ok(cockpit.includes('Provider 준비 상태'), 'has readiness section');
-  assert.ok(cockpit.includes('Provider 실행 상태') || cockpit.includes('GitHub run:'), 'has run truth section');
-  assert.ok(cockpit.includes('GitHub run:'), 'github run truth present');
-  assert.ok(cockpit.includes('Cursor run:'), 'cursor run truth present');
-  assert.ok(cockpit.includes('Supabase run:'), 'supabase run truth present');
+  const after = getExecutionRunById(run.run_id);
+  const cockpit = renderPMCockpitPacket(after);
+  assert.ok(cockpit.includes('PM Cockpit'), 'has cockpit header');
+  assert.ok(cockpit.includes('GitHub'), 'github truth present');
+  assert.ok(cockpit.includes('Cursor'), 'cursor truth present');
+  assert.ok(cockpit.includes('Supabase'), 'supabase truth present');
+  assert.ok(cockpit.includes('배포 준비'), 'deploy readiness present');
+  assert.ok(cockpit.includes('대표 필요 액션'), 'founder next action present');
 
   ok('provider truth shows readiness + run state separately');
 } catch (e) { fail('provider truth shows readiness + run state separately', e); }

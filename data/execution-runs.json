@@ -1,8 +1,8 @@
 [
   {
-    "run_id": "RUN-mncovkol-r9yvp",
-    "packet_id": "EPK-mncovkol-4zimj",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncovkoh",
+    "run_id": "RUN-mncr4hpo-mmkcj",
+    "packet_id": "EPK-mncr4hpo-mvq4y",
+    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncr4hpm",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
     "includes": [
@@ -17,11 +17,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:29:41.877Z",
-    "updated_at": "2026-03-30T04:29:42.074Z",
+    "created_at": "2026-03-30T05:32:37.164Z",
+    "updated_at": "2026-03-30T05:32:37.215Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vkol1og",
+        "lane_id": "LANE-research-4hpopdo",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
         "inputs": [
@@ -47,14 +47,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md"
+            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:41.889Z",
+          "last_outbound_at": "2026-03-30T05:32:37.172Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vkol2mn",
+        "lane_id": "LANE-swe-4hpodzq",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
         "inputs": [
@@ -86,14 +86,14 @@
           "outbound_provider": "cursor",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md"
+            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.074Z",
+          "last_outbound_at": "2026-03-30T05:32:37.214Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-vkomfp3",
+        "lane_id": "LANE-uiux-4hpoaup",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
         "inputs": [
@@ -121,16 +121,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_wireframe.md"
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_spec.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_components.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:41.920Z",
+          "last_outbound_at": "2026-03-30T05:32:37.192Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vkomi1b",
+        "lane_id": "LANE-qa-4hpo81x",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
         "inputs": [
@@ -158,11 +158,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_smoke.md"
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_acceptance.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_regression.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_smoke.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:41.938Z",
+          "last_outbound_at": "2026-03-30T05:32:37.199Z",
           "last_error": null
         }
       }
@@ -174,22 +174,22 @@
       "pr_id": null,
       "commit_shas": [],
       "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md",
+      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md",
       "supabase_migration_ids": []
     },
     "cursor_trace": [
       {
-        "created_at": "2026-03-30T04:29:42.074Z",
+        "created_at": "2026-03-30T05:32:37.214Z",
         "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md",
+        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md",
         "status": "created"
       }
     ],
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovkol-r9yvp",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md"
+        "research_note_id": "RN-RUN-mncr4hpo-mmkcj",
+        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -197,48 +197,56 @@
         "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
         "pr_id": null,
         "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp.md",
+        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj.md",
         "supabase_schema_draft_path": null,
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncovkol-r9yvp`\n**packet_id**: `EPK-mncovkol-4zimj`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncr4hpo-mmkcj`\n**packet_id**: `EPK-mncr4hpo-mvq4y`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-          "run_id": "RUN-mncovkol-r9yvp",
-          "packet_id": "EPK-mncovkol-4zimj"
+          "run_id": "RUN-mncr4hpo-mmkcj",
+          "packet_id": "EPK-mncr4hpo-mvq4y"
         }
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_components.md"
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncovkol-r9yvp_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncr4hpo-mmkcj_smoke.md"
       }
     },
+    "project_id": "PROJ-mncr4hpo-a3z0g",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:29:41.881Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.166Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovkon-mdcth"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovl2x-cswhj",
-    "packet_id": "EPK-mncovl2x-c6p4y",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncovl2v",
+    "run_id": "RUN-mncr4i3o-1ofim",
+    "packet_id": "EPK-mncr4i3o-dvxp2",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncr4i3l",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "includes": [
@@ -253,11 +261,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:29:42.393Z",
-    "updated_at": "2026-03-30T04:29:42.396Z",
+    "created_at": "2026-03-30T05:32:37.668Z",
+    "updated_at": "2026-03-30T05:32:37.671Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vl2x7y3",
+        "lane_id": "LANE-research-4i3oa5a",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -285,7 +293,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-vl2x5co",
+        "lane_id": "LANE-swe-4i3okfl",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -318,7 +326,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vl2xbgh",
+        "lane_id": "LANE-uiux-4i3ooru",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -347,7 +355,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-vl2x2ae",
+        "lane_id": "LANE-qa-4i3o9vj",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -413,22 +421,30 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4i3p-6p5f2",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:42.396Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.671Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovl2y-a0k81"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovl2x-cswhj",
-    "packet_id": "EPK-mncovl2x-c6p4y",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncovl2v",
+    "run_id": "RUN-mncr4i3o-1ofim",
+    "packet_id": "EPK-mncr4i3o-dvxp2",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncr4i3l",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "includes": [
@@ -443,11 +459,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:29:42.393Z",
-    "updated_at": "2026-03-30T04:29:42.399Z",
+    "created_at": "2026-03-30T05:32:37.668Z",
+    "updated_at": "2026-03-30T05:32:37.674Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vl2x7y3",
+        "lane_id": "LANE-research-4i3oa5a",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -473,14 +489,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.399Z",
+          "last_outbound_at": "2026-03-30T05:32:37.674Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vl2x5co",
+        "lane_id": "LANE-swe-4i3okfl",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -513,7 +529,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vl2xbgh",
+        "lane_id": "LANE-uiux-4i3ooru",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -542,7 +558,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-vl2x2ae",
+        "lane_id": "LANE-qa-4i3o9vj",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -585,8 +601,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovl2x-cswhj",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+        "research_note_id": "RN-RUN-mncr4i3o-1ofim",
+        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -608,22 +624,30 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4i3p-6p5f2",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:42.396Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.671Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovl2y-a0k81"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovl2x-cswhj",
-    "packet_id": "EPK-mncovl2x-c6p4y",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncovl2v",
+    "run_id": "RUN-mncr4i3o-1ofim",
+    "packet_id": "EPK-mncr4i3o-dvxp2",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncr4i3l",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "includes": [
@@ -638,11 +662,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:29:42.393Z",
-    "updated_at": "2026-03-30T04:29:42.400Z",
+    "created_at": "2026-03-30T05:32:37.668Z",
+    "updated_at": "2026-03-30T05:32:37.675Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vl2x7y3",
+        "lane_id": "LANE-research-4i3oa5a",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -668,14 +692,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.399Z",
+          "last_outbound_at": "2026-03-30T05:32:37.674Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vl2x5co",
+        "lane_id": "LANE-swe-4i3okfl",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -708,7 +732,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vl2xbgh",
+        "lane_id": "LANE-uiux-4i3ooru",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -736,16 +760,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md"
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.400Z",
+          "last_outbound_at": "2026-03-30T05:32:37.675Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vl2x2ae",
+        "lane_id": "LANE-qa-4i3o9vj",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -788,8 +812,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovl2x-cswhj",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+        "research_note_id": "RN-RUN-mncr4i3o-1ofim",
+        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -801,9 +825,9 @@
         "supabase_schema_draft_path": null
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md"
       },
       "qa_qc": {
         "acceptance_checklist_path": null,
@@ -811,22 +835,30 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4i3p-6p5f2",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:42.396Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.671Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovl2y-a0k81"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovl2x-cswhj",
-    "packet_id": "EPK-mncovl2x-c6p4y",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncovl2v",
+    "run_id": "RUN-mncr4i3o-1ofim",
+    "packet_id": "EPK-mncr4i3o-dvxp2",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncr4i3l",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "includes": [
@@ -841,11 +873,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:29:42.393Z",
-    "updated_at": "2026-03-30T04:29:42.402Z",
+    "created_at": "2026-03-30T05:32:37.668Z",
+    "updated_at": "2026-03-30T05:32:37.677Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vl2x7y3",
+        "lane_id": "LANE-research-4i3oa5a",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -871,14 +903,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.399Z",
+          "last_outbound_at": "2026-03-30T05:32:37.674Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vl2x5co",
+        "lane_id": "LANE-swe-4i3okfl",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -909,12 +941,12 @@
           "outbound_provider": "github",
           "outbound_status": "drafted",
           "outbound_ref_ids": [],
-          "last_outbound_at": "2026-03-30T04:29:42.402Z",
+          "last_outbound_at": "2026-03-30T05:32:37.677Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-vl2xbgh",
+        "lane_id": "LANE-uiux-4i3ooru",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -942,16 +974,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md"
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.400Z",
+          "last_outbound_at": "2026-03-30T05:32:37.675Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vl2x2ae",
+        "lane_id": "LANE-qa-4i3o9vj",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -979,11 +1011,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_smoke.md"
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_acceptance.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_regression.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_smoke.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.402Z",
+          "last_outbound_at": "2026-03-30T05:32:37.676Z",
           "last_error": null
         }
       }
@@ -1002,8 +1034,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovl2x-cswhj",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+        "research_note_id": "RN-RUN-mncr4i3o-1ofim",
+        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -1016,43 +1048,51 @@
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncovl2x-cswhj`\n**packet_id**: `EPK-mncovl2x-c6p4y`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncr4i3o-1ofim`\n**packet_id**: `EPK-mncr4i3o-dvxp2`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncovl2x-cswhj",
-          "packet_id": "EPK-mncovl2x-c6p4y"
+          "run_id": "RUN-mncr4i3o-1ofim",
+          "packet_id": "EPK-mncr4i3o-dvxp2"
         }
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md"
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_smoke.md"
       }
     },
+    "project_id": "PROJ-mncr4i3p-6p5f2",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:42.396Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.671Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovl2y-a0k81"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovl2x-cswhj",
-    "packet_id": "EPK-mncovl2x-c6p4y",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncovl2v",
+    "run_id": "RUN-mncr4i3o-1ofim",
+    "packet_id": "EPK-mncr4i3o-dvxp2",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncr4i3l",
     "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "includes": [
@@ -1067,11 +1107,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:29:42.393Z",
-    "updated_at": "2026-03-30T04:29:42.404Z",
+    "created_at": "2026-03-30T05:32:37.668Z",
+    "updated_at": "2026-03-30T05:32:37.679Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vl2x7y3",
+        "lane_id": "LANE-research-4i3oa5a",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1097,14 +1137,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.399Z",
+          "last_outbound_at": "2026-03-30T05:32:37.674Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vl2x5co",
+        "lane_id": "LANE-swe-4i3okfl",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1136,14 +1176,14 @@
           "outbound_provider": "cursor",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.404Z",
+          "last_outbound_at": "2026-03-30T05:32:37.678Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-vl2xbgh",
+        "lane_id": "LANE-uiux-4i3ooru",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1171,16 +1211,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md"
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md",
+            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.400Z",
+          "last_outbound_at": "2026-03-30T05:32:37.675Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vl2x2ae",
+        "lane_id": "LANE-qa-4i3o9vj",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1208,11 +1248,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_smoke.md"
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_acceptance.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_regression.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_smoke.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:42.402Z",
+          "last_outbound_at": "2026-03-30T05:32:37.676Z",
           "last_error": null
         }
       }
@@ -1224,22 +1264,22 @@
       "pr_id": null,
       "commit_shas": [],
       "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md",
+      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md",
       "supabase_migration_ids": []
     },
     "cursor_trace": [
       {
-        "created_at": "2026-03-30T04:29:42.404Z",
+        "created_at": "2026-03-30T05:32:37.678Z",
         "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md",
+        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md",
         "status": "created"
       }
     ],
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovl2x-cswhj",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md"
+        "research_note_id": "RN-RUN-mncr4i3o-1ofim",
+        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -1247,47 +1287,55 @@
         "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
         "pr_id": null,
         "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj.md",
+        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim.md",
         "supabase_schema_draft_path": null,
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncovl2x-cswhj`\n**packet_id**: `EPK-mncovl2x-c6p4y`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncr4i3o-1ofim`\n**packet_id**: `EPK-mncr4i3o-dvxp2`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncovl2x-cswhj",
-          "packet_id": "EPK-mncovl2x-c6p4y"
+          "run_id": "RUN-mncr4i3o-1ofim",
+          "packet_id": "EPK-mncr4i3o-dvxp2"
         }
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_components.md"
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovl2x-cswhj_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4i3o-1ofim_smoke.md"
       }
     },
+    "project_id": "PROJ-mncr4i3p-6p5f2",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:29:42.396Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:37.671Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovl2y-a0k81"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovr8i-u8uem",
-    "packet_id": "EPK-mncovr8i-h62ga",
+    "run_id": "RUN-mncr4mfr-buxs8",
+    "packet_id": "EPK-mncr4mfr-nhj5m",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -1297,11 +1345,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:29:50.370Z",
-    "updated_at": "2026-03-30T04:29:50.371Z",
+    "created_at": "2026-03-30T05:32:43.287Z",
+    "updated_at": "2026-03-30T05:32:43.288Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vr8if39",
+        "lane_id": "LANE-research-4mfr4lb",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1329,7 +1377,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-vr8i456",
+        "lane_id": "LANE-swe-4mfrarv",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1362,7 +1410,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vr8izxo",
+        "lane_id": "LANE-uiux-4mfrv4k",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1391,7 +1439,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-vr8itdv",
+        "lane_id": "LANE-qa-4mfr05u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1457,21 +1505,29 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4mfs-ffugf",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:50.371Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:43.288Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovr8j-wx73e"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovr8i-u8uem",
-    "packet_id": "EPK-mncovr8i-h62ga",
+    "run_id": "RUN-mncr4mfr-buxs8",
+    "packet_id": "EPK-mncr4mfr-nhj5m",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -1481,11 +1537,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:29:50.370Z",
-    "updated_at": "2026-03-30T04:29:50.374Z",
+    "created_at": "2026-03-30T05:32:43.287Z",
+    "updated_at": "2026-03-30T05:32:43.292Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vr8if39",
+        "lane_id": "LANE-research-4mfr4lb",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1511,14 +1567,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.374Z",
+          "last_outbound_at": "2026-03-30T05:32:43.292Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vr8i456",
+        "lane_id": "LANE-swe-4mfrarv",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1551,7 +1607,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vr8izxo",
+        "lane_id": "LANE-uiux-4mfrv4k",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1580,7 +1636,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-vr8itdv",
+        "lane_id": "LANE-qa-4mfr05u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1623,8 +1679,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovr8i-u8uem",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+        "research_note_id": "RN-RUN-mncr4mfr-buxs8",
+        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -1646,21 +1702,29 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4mfs-ffugf",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:50.371Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:43.288Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovr8j-wx73e"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovr8i-u8uem",
-    "packet_id": "EPK-mncovr8i-h62ga",
+    "run_id": "RUN-mncr4mfr-buxs8",
+    "packet_id": "EPK-mncr4mfr-nhj5m",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -1670,11 +1734,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:29:50.370Z",
-    "updated_at": "2026-03-30T04:29:50.377Z",
+    "created_at": "2026-03-30T05:32:43.287Z",
+    "updated_at": "2026-03-30T05:32:43.297Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vr8if39",
+        "lane_id": "LANE-research-4mfr4lb",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1700,14 +1764,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.374Z",
+          "last_outbound_at": "2026-03-30T05:32:43.292Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vr8i456",
+        "lane_id": "LANE-swe-4mfrarv",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1740,7 +1804,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-vr8izxo",
+        "lane_id": "LANE-uiux-4mfrv4k",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1768,16 +1832,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md"
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.377Z",
+          "last_outbound_at": "2026-03-30T05:32:43.297Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vr8itdv",
+        "lane_id": "LANE-qa-4mfr05u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1820,8 +1884,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovr8i-u8uem",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+        "research_note_id": "RN-RUN-mncr4mfr-buxs8",
+        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -1833,9 +1897,9 @@
         "supabase_schema_draft_path": null
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md"
       },
       "qa_qc": {
         "acceptance_checklist_path": null,
@@ -1843,21 +1907,29 @@
         "smoke_test_plan_path": null
       }
     },
+    "project_id": "PROJ-mncr4mfs-ffugf",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:50.371Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:43.288Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovr8j-wx73e"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovr8i-u8uem",
-    "packet_id": "EPK-mncovr8i-h62ga",
+    "run_id": "RUN-mncr4mfr-buxs8",
+    "packet_id": "EPK-mncr4mfr-nhj5m",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -1867,11 +1939,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:29:50.370Z",
-    "updated_at": "2026-03-30T04:29:50.380Z",
+    "created_at": "2026-03-30T05:32:43.287Z",
+    "updated_at": "2026-03-30T05:32:43.301Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vr8if39",
+        "lane_id": "LANE-research-4mfr4lb",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1897,14 +1969,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.374Z",
+          "last_outbound_at": "2026-03-30T05:32:43.292Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vr8i456",
+        "lane_id": "LANE-swe-4mfrarv",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1935,12 +2007,12 @@
           "outbound_provider": "github",
           "outbound_status": "drafted",
           "outbound_ref_ids": [],
-          "last_outbound_at": "2026-03-30T04:29:50.380Z",
+          "last_outbound_at": "2026-03-30T05:32:43.301Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-vr8izxo",
+        "lane_id": "LANE-uiux-4mfrv4k",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1968,16 +2040,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md"
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.377Z",
+          "last_outbound_at": "2026-03-30T05:32:43.297Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vr8itdv",
+        "lane_id": "LANE-qa-4mfr05u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -2005,11 +2077,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_acceptance.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_regression.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_smoke.md"
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_acceptance.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_regression.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_smoke.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.379Z",
+          "last_outbound_at": "2026-03-30T05:32:43.300Z",
           "last_error": null
         }
       }
@@ -2028,8 +2100,8 @@
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovr8i-u8uem",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+        "research_note_id": "RN-RUN-mncr4mfr-buxs8",
+        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -2042,42 +2114,50 @@
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncovr8i-u8uem`\n**packet_id**: `EPK-mncovr8i-h62ga`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncr4mfr-buxs8`\n**packet_id**: `EPK-mncr4mfr-nhj5m`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncovr8i-u8uem",
-          "packet_id": "EPK-mncovr8i-h62ga"
+          "run_id": "RUN-mncr4mfr-buxs8",
+          "packet_id": "EPK-mncr4mfr-nhj5m"
         }
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md"
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_smoke.md"
       }
     },
+    "project_id": "PROJ-mncr4mfs-ffugf",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:29:50.371Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:43.288Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovr8j-wx73e"
+    "latest_report": null
   },
   {
-    "run_id": "RUN-mncovr8i-u8uem",
-    "packet_id": "EPK-mncovr8i-h62ga",
+    "run_id": "RUN-mncr4mfr-buxs8",
+    "packet_id": "EPK-mncr4mfr-nhj5m",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -2087,11 +2167,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:29:50.370Z",
-    "updated_at": "2026-03-30T04:29:50.382Z",
+    "created_at": "2026-03-30T05:32:43.287Z",
+    "updated_at": "2026-03-30T05:32:43.304Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-vr8if39",
+        "lane_id": "LANE-research-4mfr4lb",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -2117,14 +2197,14 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.374Z",
+          "last_outbound_at": "2026-03-30T05:32:43.292Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-swe-vr8i456",
+        "lane_id": "LANE-swe-4mfrarv",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -2156,14 +2236,14 @@
           "outbound_provider": "cursor",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+            "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.382Z",
+          "last_outbound_at": "2026-03-30T05:32:43.303Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-vr8izxo",
+        "lane_id": "LANE-uiux-4mfrv4k",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -2191,16 +2271,16 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md"
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md",
+            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.377Z",
+          "last_outbound_at": "2026-03-30T05:32:43.297Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-qa-vr8itdv",
+        "lane_id": "LANE-qa-4mfr05u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -2228,11 +2308,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_acceptance.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_regression.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_smoke.md"
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_acceptance.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_regression.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_smoke.md"
           ],
-          "last_outbound_at": "2026-03-30T04:29:50.379Z",
+          "last_outbound_at": "2026-03-30T05:32:43.300Z",
           "last_error": null
         }
       }
@@ -2244,22 +2324,22 @@
       "pr_id": null,
       "commit_shas": [],
       "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md",
+      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md",
       "supabase_migration_ids": []
     },
     "cursor_trace": [
       {
-        "created_at": "2026-03-30T04:29:50.382Z",
+        "created_at": "2026-03-30T05:32:43.303Z",
         "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md",
+        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md",
         "status": "created"
       }
     ],
     "supabase_trace": [],
     "artifacts": {
       "research_benchmark": {
-        "research_note_id": "RN-RUN-mncovr8i-u8uem",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md"
+        "research_note_id": "RN-RUN-mncr4mfr-buxs8",
+        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md"
       },
       "fullstack_swe": {
         "github_issue_id": null,
@@ -2267,3162 +2347,50 @@
         "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
         "pr_id": null,
         "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem.md",
+        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8.md",
         "supabase_schema_draft_path": null,
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncovr8i-u8uem`\n**packet_id**: `EPK-mncovr8i-h62ga`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncr4mfr-buxs8`\n**packet_id**: `EPK-mncr4mfr-nhj5m`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncovr8i-u8uem",
-          "packet_id": "EPK-mncovr8i-h62ga"
+          "run_id": "RUN-mncr4mfr-buxs8",
+          "packet_id": "EPK-mncr4mfr-nhj5m"
         }
       },
       "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_components.md"
+        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_components.md"
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncovr8i-u8uem_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncr4mfr-buxs8_smoke.md"
       }
     },
+    "project_id": "PROJ-mncr4mfs-ffugf",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:29:50.371Z",
+    "outbound_dispatched_at": "2026-03-30T05:32:43.288Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
     "requested_by": "",
     "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncovr8j-wx73e"
-  },
-  {
-    "run_id": "RUN-mncoy9ck-cm4la",
-    "packet_id": "EPK-mncoy9ck-b3jmp",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncoy9ca",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:31:47.157Z",
-    "updated_at": "2026-03-30T04:31:47.168Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9cln3n",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9cl68n",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9cl7f4",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9cltfg",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": null,
-        "research_note_path": null
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.168Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9co-2l4rx"
-  },
-  {
-    "run_id": "RUN-mncoy9ck-cm4la",
-    "packet_id": "EPK-mncoy9ck-b3jmp",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncoy9ca",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:31:47.157Z",
-    "updated_at": "2026-03-30T04:31:47.178Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9cln3n",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.178Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9cl68n",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9cl7f4",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9cltfg",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9ck-cm4la",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.168Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9co-2l4rx"
-  },
-  {
-    "run_id": "RUN-mncoy9ck-cm4la",
-    "packet_id": "EPK-mncoy9ck-b3jmp",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncoy9ca",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:31:47.157Z",
-    "updated_at": "2026-03-30T04:31:47.188Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9cln3n",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.178Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9cl68n",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9cl7f4",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.188Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9cltfg",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9ck-cm4la",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.168Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9co-2l4rx"
-  },
-  {
-    "run_id": "RUN-mncoy9ck-cm4la",
-    "packet_id": "EPK-mncoy9ck-b3jmp",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncoy9ca",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:31:47.157Z",
-    "updated_at": "2026-03-30T04:31:47.193Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9cln3n",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.178Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9cl68n",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "github",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [],
-          "last_outbound_at": "2026-03-30T04:31:47.192Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9cl7f4",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.188Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9cltfg",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.192Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9ck-cm4la",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoy9ck-cm4la`\n**packet_id**: `EPK-mncoy9ck-b3jmp`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-          "run_id": "RUN-mncoy9ck-cm4la",
-          "packet_id": "EPK-mncoy9ck-b3jmp"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.168Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9co-2l4rx"
-  },
-  {
-    "run_id": "RUN-mncoy9ck-cm4la",
-    "packet_id": "EPK-mncoy9ck-b3jmp",
-    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mncoy9ca",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
-    "created_at": "2026-03-30T04:31:47.157Z",
-    "updated_at": "2026-03-30T04:31:47.203Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9cln3n",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.178Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9cl68n",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name",
-          "cursor_handoff_path"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "cursor",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.202Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9cl7f4",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.188Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9cltfg",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.192Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md",
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [
-      {
-        "created_at": "2026-03-30T04:31:47.202Z",
-        "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md",
-        "status": "created"
-      }
-    ],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9ck-cm4la",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la.md",
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoy9ck-cm4la`\n**packet_id**: `EPK-mncoy9ck-b3jmp`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
-          "run_id": "RUN-mncoy9ck-cm4la",
-          "packet_id": "EPK-mncoy9ck-b3jmp"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mncoy9ck-cm4la_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.168Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9co-2l4rx"
-  },
-  {
-    "run_id": "RUN-mncoy9uf-knrk8",
-    "packet_id": "EPK-mncoy9uf-80n4m",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncoy9u6",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:31:47.799Z",
-    "updated_at": "2026-03-30T04:31:47.808Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9uftor",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9ufkae",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9ufwn9",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9ufmjj",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": null,
-        "research_note_path": null
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.808Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9uh-v52sm"
-  },
-  {
-    "run_id": "RUN-mncoy9uf-knrk8",
-    "packet_id": "EPK-mncoy9uf-80n4m",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncoy9u6",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:31:47.799Z",
-    "updated_at": "2026-03-30T04:31:47.898Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9uftor",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.898Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9ufkae",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9ufwn9",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9ufmjj",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9uf-knrk8",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.808Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9uh-v52sm"
-  },
-  {
-    "run_id": "RUN-mncoy9uf-knrk8",
-    "packet_id": "EPK-mncoy9uf-80n4m",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncoy9u6",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:31:47.799Z",
-    "updated_at": "2026-03-30T04:31:47.954Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9uftor",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.898Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9ufkae",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9ufwn9",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.954Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9ufmjj",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9uf-knrk8",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.808Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9uh-v52sm"
-  },
-  {
-    "run_id": "RUN-mncoy9uf-knrk8",
-    "packet_id": "EPK-mncoy9uf-80n4m",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncoy9u6",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:31:47.799Z",
-    "updated_at": "2026-03-30T04:31:48.078Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9uftor",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.898Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9ufkae",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "github",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [],
-          "last_outbound_at": "2026-03-30T04:31:48.078Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9ufwn9",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.954Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9ufmjj",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:48.075Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9uf-knrk8",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoy9uf-knrk8`\n**packet_id**: `EPK-mncoy9uf-80n4m`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncoy9uf-knrk8",
-          "packet_id": "EPK-mncoy9uf-80n4m"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.808Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9uh-v52sm"
-  },
-  {
-    "run_id": "RUN-mncoy9uf-knrk8",
-    "packet_id": "EPK-mncoy9uf-80n4m",
-    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mncoy9u6",
-    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [
-      "멤버·팀 일정 보기/등록(v1)",
-      "승인 규칙 반영(v1)"
-    ],
-    "excludes": [
-      "외부 공개 블랙아웃 링크(v2+)",
-      "가격/결제 안내 트리거(v2+)"
-    ],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
-    "created_at": "2026-03-30T04:31:47.799Z",
-    "updated_at": "2026-03-30T04:31:48.113Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-y9uftor",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.898Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-y9ufkae",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name",
-          "cursor_handoff_path"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "cursor",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:48.112Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-y9ufwn9",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md",
-            "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:47.954Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-y9ufmjj",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_acceptance.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_regression.md",
-            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:31:48.075Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md",
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [
-      {
-        "created_at": "2026-03-30T04:31:48.112Z",
-        "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md",
-        "status": "created"
-      }
-    ],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoy9uf-knrk8",
-        "research_note_path": "docs/research-notes/research_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8.md",
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoy9uf-knrk8`\n**packet_id**: `EPK-mncoy9uf-80n4m`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncoy9uf-knrk8",
-          "packet_id": "EPK-mncoy9uf-80n4m"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoy9uf-knrk8_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:31:47.808Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoy9uh-v52sm"
-  },
-  {
-    "run_id": "RUN-mncoymmp-x47yy",
-    "packet_id": "EPK-mncoymmp-zmqut",
-    "session_id": "",
-    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [],
-    "excludes": [],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:32:04.369Z",
-    "updated_at": "2026-03-30T04:32:04.371Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-ymmpf48",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-ymmp0xu",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-ymmpax6",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-ymmpuro",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": null,
-        "research_note_path": null
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:32:04.371Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoymmr-ulkku"
-  },
-  {
-    "run_id": "RUN-mncoymmp-x47yy",
-    "packet_id": "EPK-mncoymmp-zmqut",
-    "session_id": "",
-    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [],
-    "excludes": [],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:32:04.369Z",
-    "updated_at": "2026-03-30T04:32:04.391Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-ymmpf48",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.391Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-ymmp0xu",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-ymmpax6",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-ymmpuro",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoymmp-x47yy",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": null,
-        "wireframe_note_path": null,
-        "component_checklist_path": null
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:32:04.371Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoymmr-ulkku"
-  },
-  {
-    "run_id": "RUN-mncoymmp-x47yy",
-    "packet_id": "EPK-mncoymmp-zmqut",
-    "session_id": "",
-    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [],
-    "excludes": [],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:32:04.369Z",
-    "updated_at": "2026-03-30T04:32:04.408Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-ymmpf48",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.391Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-ymmp0xu",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-ymmpax6",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.408Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-ymmpuro",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": null,
-          "outbound_status": "pending",
-          "outbound_ref_ids": [],
-          "last_outbound_at": null,
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": null,
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoymmp-x47yy",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": null,
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": null,
-        "regression_case_list_path": null,
-        "smoke_test_plan_path": null
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:32:04.371Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoymmr-ulkku"
-  },
-  {
-    "run_id": "RUN-mncoymmp-x47yy",
-    "packet_id": "EPK-mncoymmp-zmqut",
-    "session_id": "",
-    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [],
-    "excludes": [],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:32:04.369Z",
-    "updated_at": "2026-03-30T04:32:04.462Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-ymmpf48",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.391Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-ymmp0xu",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "github",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [],
-          "last_outbound_at": "2026-03-30T04:32:04.462Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-ymmpax6",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.408Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-ymmpuro",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_acceptance.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_regression.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.459Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": null,
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoymmp-x47yy",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": null,
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoymmp-x47yy`\n**packet_id**: `EPK-mncoymmp-zmqut`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncoymmp-x47yy",
-          "packet_id": "EPK-mncoymmp-zmqut"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-03-30T04:32:04.371Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoymmr-ulkku"
-  },
-  {
-    "run_id": "RUN-mncoymmp-x47yy",
-    "packet_id": "EPK-mncoymmp-zmqut",
-    "session_id": "",
-    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-    "includes": [],
-    "excludes": [],
-    "deferred_items": [],
-    "current_stage": "execution_running",
-    "status": "active",
-    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-03-30T04:32:04.369Z",
-    "updated_at": "2026-03-30T04:32:04.487Z",
-    "workstreams": [
-      {
-        "lane_id": "LANE-research-ymmpf48",
-        "lane_type": "research_benchmark",
-        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "market_context"
-        ],
-        "outputs": [
-          "research_note_artifact"
-        ],
-        "dependencies": [],
-        "owner_agent": "deep_research",
-        "status": "pending",
-        "git_artifacts": [
-          "research_note_id",
-          "research_note_path"
-        ],
-        "external_tools_needed": [
-          "web_search",
-          "competitor_analysis"
-        ],
-        "done_criteria": "research note delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.391Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-swe-ymmp0xu",
-        "lane_type": "fullstack_swe",
-        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "github_issue",
-          "branch_pr_seed",
-          "cursor_handoff"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "fullstack_swe",
-        "status": "pending",
-        "git_artifacts": [
-          "github_draft_payload",
-          "branch_name",
-          "cursor_handoff_path"
-        ],
-        "external_tools_needed": [
-          "cursor",
-          "github",
-          "supabase"
-        ],
-        "done_criteria": "PR seed + schema draft ready",
-        "outbound": {
-          "outbound_provider": "cursor",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.485Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-uiux-ymmpax6",
-        "lane_type": "uiux_design",
-        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "research_note"
-        ],
-        "outputs": [
-          "ui_spec_delta",
-          "wireframe_note",
-          "component_checklist"
-        ],
-        "dependencies": [
-          "research_benchmark"
-        ],
-        "owner_agent": "uiux_design",
-        "status": "pending",
-        "git_artifacts": [
-          "ui_spec_delta_path",
-          "wireframe_note_path",
-          "component_checklist_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "UI spec + component checklist delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md",
-            "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.408Z",
-          "last_error": null
-        }
-      },
-      {
-        "lane_id": "LANE-qa-ymmpuro",
-        "lane_type": "qa_qc",
-        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-        "inputs": [
-          "locked_scope",
-          "swe_output"
-        ],
-        "outputs": [
-          "test_checklist",
-          "smoke_cases",
-          "regression_additions"
-        ],
-        "dependencies": [
-          "fullstack_swe"
-        ],
-        "owner_agent": "qa_qc",
-        "status": "pending",
-        "git_artifacts": [
-          "acceptance_checklist_path",
-          "regression_case_list_path",
-          "smoke_test_plan_path"
-        ],
-        "external_tools_needed": [],
-        "done_criteria": "test checklist + smoke cases delivered",
-        "outbound": {
-          "outbound_provider": "internal",
-          "outbound_status": "drafted",
-          "outbound_ref_ids": [
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_acceptance.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_regression.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_smoke.md"
-          ],
-          "last_outbound_at": "2026-03-30T04:32:04.459Z",
-          "last_error": null
-        }
-      }
-    ],
-    "git_trace": {
-      "repo": null,
-      "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-      "issue_id": null,
-      "pr_id": null,
-      "commit_shas": [],
-      "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md",
-      "supabase_migration_ids": []
-    },
-    "cursor_trace": [
-      {
-        "created_at": "2026-03-30T04:32:04.485Z",
-        "dispatch_mode": "auto_generated",
-        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md",
-        "status": "created"
-      }
-    ],
-    "supabase_trace": [],
-    "artifacts": {
-      "research_benchmark": {
-        "research_note_id": "RN-RUN-mncoymmp-x47yy",
-        "research_note_path": "docs/research-notes/research_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md"
-      },
-      "fullstack_swe": {
-        "github_issue_id": null,
-        "github_issue_url": null,
-        "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-        "pr_id": null,
-        "pr_url": null,
-        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy.md",
-        "supabase_schema_draft_path": null,
-        "github_draft_payload": {
-          "kind": "github_issue_draft",
-          "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mncoymmp-x47yy`\n**packet_id**: `EPK-mncoymmp-zmqut`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "labels": [
-            "cos-execution",
-            "task"
-          ],
-          "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mncoymmp-x47yy",
-          "packet_id": "EPK-mncoymmp-zmqut"
-        }
-      },
-      "uiux_design": {
-        "ui_spec_delta_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_spec.md",
-        "wireframe_note_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_wireframe.md",
-        "component_checklist_path": "docs/design-specs/uiux_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_components.md"
-      },
-      "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mncoymmp-x47yy_smoke.md"
-      }
-    },
-    "originating_playbook_id": null,
-    "originating_task_kind": null,
-    "outbound_dispatch_state": "completed",
-    "outbound_dispatched_at": "2026-03-30T04:32:04.371Z",
-    "outbound_dispatch_attempts": 1,
-    "outbound_last_error": null,
-    "escalation_policy": "bounded",
-    "requested_by": "",
-    "approved_by": "",
-    "latest_report": null,
-    "project_id": "PROJ-mncoymmr-ulkku"
+    "latest_report": null
   }
 ]

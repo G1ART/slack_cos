@@ -57,6 +57,9 @@ export function createProjectSpace(opts = {}) {
     owner_thread_ids: opts.owner_thread_ids || [],
     linked_playbook_ids: opts.linked_playbook_ids || [],
     active_run_ids: opts.active_run_ids || [],
+    last_bootstrap_status: opts.last_bootstrap_status || 'not_bootstrapped',
+    last_deploy_status: opts.last_deploy_status || 'none',
+    last_deploy_at: opts.last_deploy_at || null,
     status: opts.status || 'active',
     created_at: ts,
     updated_at: ts,
@@ -209,6 +212,65 @@ export async function loadProjectSpacesFromDisk() {
     }
   }
   return arr.length;
+}
+
+/**
+ * Render a compact, founder-facing project space status for Slack.
+ * Shows real infra/status truth — not just labels.
+ */
+/**
+ * Compact founder-facing project space status for Slack.
+ * @param {object} space
+ * @param {{ runs?: object[] }} opts - optional active run objects for inline status
+ */
+export function renderProjectSpaceStatusForSlack(space, opts = {}) {
+  if (!space) return '[COS] 프로젝트 공간을 찾을 수 없습니다.';
+  const lines = [
+    `*[프로젝트 상태]*`,
+    `\`${space.project_id}\` · ${space.human_label || '(라벨 없음)'}`,
+    '',
+  ];
+
+  const ghStatus = space.github_ready_status === 'ready'
+    ? `✅ ${space.repo_owner}/${space.repo_name}`
+    : `⚠️ ${space.github_ready_status || 'not_configured'}`;
+  lines.push(`*GitHub*: ${ghStatus}`);
+
+  const cursorStatus = space.cursor_workspace_root ? '✅ 연결됨' : '⚠️ 미설정';
+  lines.push(`*Cursor*: ${cursorStatus}${space.cursor_handoff_root ? ` · handoff: ${space.cursor_handoff_root}` : ''}`);
+
+  const supaStatus = space.supabase_ready_status === 'configured'
+    ? `✅ ${space.supabase_project_ref || ''}`
+    : `⚠️ ${space.supabase_ready_status || 'not_configured'}`;
+  lines.push(`*Supabase*: ${supaStatus}`);
+
+  const vercelStatus = space.vercel_ready_status === 'ready'
+    ? `✅ ${space.vercel_project_id || ''}`
+    : `⚠️ ${space.vercel_ready_status || 'not_configured'}`;
+  lines.push(`*Vercel*: ${vercelStatus}`);
+
+  const railwayStatus = space.railway_ready_status === 'ready'
+    ? `✅ ${space.railway_service_id || space.railway_project_id || ''}`
+    : `⚠️ ${space.railway_ready_status || 'not_configured'}`;
+  lines.push(`*Railway*: ${railwayStatus}`);
+
+  lines.push('');
+  const runCount = space.active_run_ids?.length || 0;
+  lines.push(`*실행 현황*: run ${runCount}개`);
+
+  const runs = opts.runs || [];
+  for (const run of runs.slice(0, 3)) {
+    const stage = run.current_stage || 'unknown';
+    const goal = String(run.project_goal || '').slice(0, 50);
+    const deploy = run.deploy_status && run.deploy_status !== 'none' ? ` · deploy: ${run.deploy_status}` : '';
+    lines.push(`  └ \`${run.run_id}\` ${goal} — ${stage}${deploy}`);
+  }
+  if (runs.length > 3) lines.push(`  └ ... +${runs.length - 3}개 더`);
+
+  lines.push(`*부트스트랩*: ${space.last_bootstrap_status || 'not_bootstrapped'}`);
+  lines.push(`*배포 상태*: ${space.last_deploy_status || 'none'}${space.last_deploy_at ? ` (${space.last_deploy_at})` : ''}`);
+
+  return lines.join('\n');
 }
 
 export function _resetForTest() {
