@@ -4,8 +4,10 @@
 
 import {
   createProjectSpace,
+  getProjectSpaceByThread,
   linkThreadToProjectSpace,
   updateProjectSpace,
+  searchProjectSpacesWithScore,
 } from './projectSpaceRegistry.js';
 import { diagnoseGithubConfig } from './executionDispatchLifecycle.js';
 import { diagnoseVercelReadiness, buildVercelBootstrapDraft } from '../adapters/vercelAdapter.js';
@@ -17,11 +19,32 @@ function logBootstrap(event, fields = {}) {
   } catch { /* */ }
 }
 
+const STRONG_LABEL_MATCH_THRESHOLD = 12;
+
 /**
- * Build a bootstrap plan for a new project space.
- * @param {{ label: string, aliases?: string[], threadKey?: string, repoOwner?: string, repoName?: string, metadata?: object }} opts
+ * Idempotent bootstrap: reuse an existing space linked to the same thread
+ * or one with a strong label match before creating a new one.
  */
-export function bootstrapProjectSpace(opts = {}) {
+export function getOrCreateProjectSpaceForBootstrap(opts = {}) {
+  if (opts.threadKey) {
+    const existing = getProjectSpaceByThread(opts.threadKey);
+    if (existing) {
+      logBootstrap('bootstrap_reused_thread_linked', { project_id: existing.project_id });
+      return { space: existing, reused: true };
+    }
+  }
+
+  if (opts.label) {
+    const scored = searchProjectSpacesWithScore(opts.label);
+    if (scored.length && scored[0].score >= STRONG_LABEL_MATCH_THRESHOLD) {
+      logBootstrap('bootstrap_reused_label_match', {
+        project_id: scored[0].space.project_id,
+        score: scored[0].score,
+      });
+      return { space: scored[0].space, reused: true };
+    }
+  }
+
   const ghDiag = diagnoseGithubConfig();
   const vercelDiag = diagnoseVercelReadiness();
   const railwayDiag = diagnoseRailwayReadiness();
@@ -42,17 +65,36 @@ export function bootstrapProjectSpace(opts = {}) {
     vercel_ready_status: vercelDiag.configured ? 'ready' : 'not_configured',
     railway_project_id: opts.railwayProjectId || null,
     railway_ready_status: railwayDiag.configured ? 'ready' : 'not_configured',
+    bootstrap_source: opts.bootstrapSource || 'user_request',
   });
+
+  return { space, reused: false };
+}
+
+/**
+ * Build a bootstrap plan for a new project space. Idempotent — reuses
+ * an existing thread-linked or strong-label-matching space.
+ * @param {{ label: string, aliases?: string[], threadKey?: string, repoOwner?: string, repoName?: string, metadata?: object }} opts
+ */
+export function bootstrapProjectSpace(opts = {}) {
+  const { space, reused } = getOrCreateProjectSpaceForBootstrap(opts);
 
   if (opts.threadKey) {
     linkThreadToProjectSpace(space.project_id, opts.threadKey);
   }
 
+  const ghDiag = diagnoseGithubConfig();
+  const vercelDiag = diagnoseVercelReadiness();
+  const railwayDiag = diagnoseRailwayReadiness();
   const plan = buildBootstrapPlan(space, { ghDiag, vercelDiag, railwayDiag });
 
-  logBootstrap('project_space_bootstrapped', { project_id: space.project_id, label: space.human_label });
+  logBootstrap('project_space_bootstrapped', {
+    project_id: space.project_id,
+    label: space.human_label,
+    reused,
+  });
 
-  return { space, plan };
+  return { space, plan, reused };
 }
 
 function buildBootstrapPlan(space, diags) {

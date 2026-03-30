@@ -125,23 +125,65 @@ export function getProjectSpaceByThread(threadKey) {
   return pid ? spacesById.get(pid) || null : null;
 }
 
-/** Full-text alias/label search across all spaces */
+/**
+ * Score-based search across all spaces. Returns {space, score}[] sorted desc.
+ * Callers needing raw scores should use searchProjectSpacesWithScore().
+ */
 export function searchProjectSpaces(query) {
+  return searchProjectSpacesWithScore(query).map((r) => r.space);
+}
+
+/**
+ * Tokenized + phrase-aware search. Each token is scored independently;
+ * exact alias hits score highest. Returns {space, score}[] sorted desc.
+ */
+export function searchProjectSpacesWithScore(query) {
   const q = String(query || '').toLowerCase().trim();
   if (!q) return [];
+  const tokens = extractSearchTokens(q);
+  if (tokens.length === 0) return [];
+
   const results = [];
   for (const space of spacesById.values()) {
     let score = 0;
-    if (space.human_label.toLowerCase().includes(q)) score += 10;
-    if (space.repo_name && space.repo_name.toLowerCase().includes(q)) score += 8;
-    for (const alias of space.aliases) {
-      if (alias.toLowerCase() === q) { score += 15; break; }
-      if (alias.toLowerCase().includes(q)) { score += 5; break; }
+    const labelLow = space.human_label.toLowerCase();
+    const repoLow = (space.repo_name || '').toLowerCase();
+    const summaryLow = space.canonical_summary.toLowerCase();
+    const aliasesLow = space.aliases.map((a) => a.toLowerCase());
+
+    for (const alias of aliasesLow) {
+      if (alias === q) { score += 20; break; }
     }
-    if (space.canonical_summary.toLowerCase().includes(q)) score += 3;
+
+    for (const token of tokens) {
+      for (const alias of aliasesLow) {
+        if (alias === token) { score += 15; break; }
+        if (alias.includes(token)) { score += 6; break; }
+      }
+      if (labelLow === token) score += 12;
+      else if (labelLow.includes(token)) score += 8;
+      if (repoLow && repoLow === token) score += 12;
+      else if (repoLow && repoLow.includes(token)) score += 7;
+      if (summaryLow.includes(token)) score += 2;
+    }
+
     if (score > 0) results.push({ space, score });
   }
-  return results.sort((a, b) => b.score - a.score).map((r) => r.space);
+  return results.sort((a, b) => b.score - a.score);
+}
+
+const STOP_WORDS = new Set([
+  '그', '이', '저', '에', '를', '을', '의', '로', '에서', '하고', '해줘', '해',
+  '반영', '피드백', '기존', '지난번', '이전에', '프로젝트', '앱', '서비스',
+  'the', 'a', 'an', 'that', 'this', 'project', 'app', 'existing', 'previous',
+]);
+
+function extractSearchTokens(text) {
+  return text
+    .replace(/["""''「」\[\](){}!?.,;:~@#$%^&*+=<>/\\|`]/g, ' ')
+    .split(/\s+/)
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 }
 
 function persistSpace(space) {
