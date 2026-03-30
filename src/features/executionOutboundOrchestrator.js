@@ -24,6 +24,8 @@ import {
   isGithubAuthConfigured,
   resolveGitHubRepoTarget,
   createIssueArtifact,
+  createBranchArtifact,
+  createPullRequestArtifact,
   getGithubAuthMode,
 } from '../adapters/githubAdapter.js';
 
@@ -176,25 +178,58 @@ export async function ensureGithubIssueForRun(run, metadata = {}) {
         issue_id: String(a.issue_number || a.issue_id),
         branch: branchName,
       });
+
+      // Branch seed — automatic after issue creation
+      let branchResult = null;
+      try {
+        branchResult = await createBranchArtifact({ repoTarget, branchName });
+        if (branchResult.ok) {
+          logOutbound('branch_seeded', { run_id: run.run_id, branch: branchName, already_exists: branchResult.already_exists || false });
+        }
+      } catch (branchErr) {
+        logOutbound('branch_seed_failed', { run_id: run.run_id, error: String(branchErr?.message || branchErr).slice(0, 200) });
+      }
+
+      // PR seed — only if branch was successfully created/exists
+      let prResult = null;
+      if (branchResult?.ok) {
+        try {
+          const prTitle = `[COS] ${String(run.project_goal || 'Execution').slice(0, 60)}`;
+          const prBody = `## COS Execution Run\n- Run: \`${run.run_id}\`\n- Issue: #${a.issue_number || ''}\n- Goal: ${run.project_goal || ''}\n\n${run.locked_mvp_summary || ''}`;
+          prResult = await createPullRequestArtifact({ repoTarget, branchName, title: prTitle, body: prBody });
+          if (prResult.ok) {
+            const prId = prResult.pr_number || null;
+            const prUrl = prResult.pr_url || null;
+            attachRunArtifact(run.run_id, 'fullstack_swe', { pr_id: prId, pr_url: prUrl });
+            updateRunGitTrace(run.run_id, { pr_id: String(prId || '') });
+            logOutbound('pr_seeded', { run_id: run.run_id, pr_number: prId, pr_url: prUrl });
+          }
+        } catch (prErr) {
+          logOutbound('pr_seed_failed', { run_id: run.run_id, error: String(prErr?.message || prErr).slice(0, 200) });
+        }
+      }
+
       updateLaneOutbound(run.run_id, 'fullstack_swe', {
         provider: 'github',
         status: 'dispatched',
-        ref_ids: [String(a.issue_number || a.issue_id), a.issue_url].filter(Boolean),
+        ref_ids: [String(a.issue_number || a.issue_id), a.issue_url, prResult?.pr_url].filter(Boolean),
         error: null,
       });
 
       logOutbound('outbound_dispatch_succeeded', {
         run_id: run.run_id, lane_type: 'fullstack_swe', provider: 'github', mode: 'live',
         issue_id: a.issue_number || a.issue_id, issue_url: a.issue_url,
+        branch_seeded: Boolean(branchResult?.ok), pr_seeded: Boolean(prResult?.ok),
       });
-      logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'fullstack_swe', artifact: 'github_issue' });
-      logOutbound('git_trace_updated', { run_id: run.run_id, repo: `${repoTarget.owner}/${repoTarget.repo}`, issue_id: a.issue_number });
 
       return {
         mode: 'live',
         issue_id: a.issue_number || a.issue_id,
         issue_url: a.issue_url,
         branch_name: branchName,
+        branch_seeded: Boolean(branchResult?.ok),
+        pr_number: prResult?.pr_number || null,
+        pr_url: prResult?.pr_url || null,
       };
     }
 
@@ -242,6 +277,14 @@ function buildGithubIssueBody(run) {
     '## Workstreams',
     ...(run.workstreams || []).map((w) => `- **${w.lane_type}**: ${w.objective.slice(0, 120)}`),
   ];
+
+  if (run.document_context_summary) {
+    lines.push('', '## Document Context', String(run.document_context_summary).slice(0, 2000));
+  }
+  if (run.document_sources?.length) {
+    lines.push('', '### Source Documents', ...run.document_sources.map(s => `- ${s.filename || s.name || 'unknown'} (${s.mimetype || ''})`));
+  }
+
   return lines.filter((l) => l !== null).join('\n');
 }
 
@@ -325,6 +368,9 @@ export async function ensureCursorHandoffForRun(run) {
       '',
       '---',
       '',
+      run.document_context_summary ? `## Document Context\n\n${String(run.document_context_summary).slice(0, 3000)}` : null,
+      run.document_sources?.length ? `### Source Documents\n${run.document_sources.map(s => `- ${s.filename || s.name || 'unknown'}`).join('\n')}` : null,
+      run.document_context_summary ? '' : null,
       '## Requirements for Cursor Agent',
       '',
       '1. Read locked scope above',

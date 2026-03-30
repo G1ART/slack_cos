@@ -46,3 +46,27 @@ export function buildVercelManualInstructions(space) {
     result_drop_note: 'Vercel 프로젝트 연결 후 project space를 업데이트해주세요.',
   };
 }
+
+/**
+ * Build normalized deploy packet for Vercel.
+ */
+export function buildVercelDeployPacket(space, run) {
+  const diag = diagnoseVercelReadiness();
+  const hasProject = Boolean(space?.vercel_project_id);
+  const readiness = diag.configured && hasProject ? 'configured' : 'manual_required';
+  return {
+    provider: 'vercel',
+    readiness,
+    manual_required: !diag.configured || !hasProject,
+    env_required: diag.missing,
+    project_linkage: space?.vercel_project_id || null,
+    project_url: space?.vercel_project_url || null,
+    exact_next_step: readiness === 'configured'
+      ? 'git push 후 자동 배포 또는 Vercel dashboard에서 수동 트리거'
+      : !diag.configured
+        ? `VERCEL_TOKEN 환경변수 설정 후 프로젝트 연결`
+        : 'Vercel 프로젝트 생성/연결 후 vercel_project_id를 project space에 등록',
+    result_update_path: `project space ${space?.project_id} 또는 data/deploy-results/${run?.run_id || 'unknown'}.json`,
+    live_create_supported: false,
+  };
+}

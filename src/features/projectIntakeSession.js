@@ -69,13 +69,13 @@ async function writeIntakeFile() {
  * `ensureStorage` 직후·부팅 시 호출.
  */
 export async function loadProjectIntakeSessionsFromDisk() {
-  if (!persistEnabled()) return;
+  if (!persistEnabled()) return 0;
   const fp = intakeFilePath();
   try {
     const raw = await fs.readFile(fp, 'utf8');
     const data = JSON.parse(raw);
     const ver = data.version;
-    if ((ver !== 1 && ver !== 2) || !Array.isArray(data.entries)) return;
+    if ((ver !== 1 && ver !== 2) || !Array.isArray(data.entries)) return 0;
     sessions.clear();
     for (const row of data.entries) {
       if (!Array.isArray(row) || row.length < 2) continue;
@@ -101,11 +101,13 @@ export async function loadProjectIntakeSessionsFromDisk() {
       seedSpecMvpDefaultsFromProblem(spec);
       sessions.set(key, { ...base, spec });
     }
+    return sessions.size;
   } catch (e) {
     const code = /** @type {NodeJS.ErrnoException} */ (e).code;
     if (code !== 'ENOENT') {
       console.warn('[project_intake] load failed:', e?.message || e);
     }
+    return 0;
   }
 }
 

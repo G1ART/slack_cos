@@ -911,8 +911,18 @@ registerG1CosSlashCommand(slackApp);
   assertSocketModeMajorAtLeast2({ logger: console });
 
   await ensureStorage();
-  await loadConversationBufferFromDisk();
-  await loadProjectIntakeSessionsFromDisk();
+  try {
+    const cbCount = await loadConversationBufferFromDisk();
+    console.info(JSON.stringify({ startup_conversation_buffer_hydrated: cbCount ?? 0 }));
+  } catch (e) {
+    console.warn(JSON.stringify({ startup_conversation_buffer_hydration_error: String(e?.message || e) }));
+  }
+  try {
+    const isCount = await loadProjectIntakeSessionsFromDisk();
+    console.info(JSON.stringify({ startup_intake_sessions_hydrated: isCount ?? 0 }));
+  } catch (e) {
+    console.warn(JSON.stringify({ startup_intake_sessions_hydration_error: String(e?.message || e) }));
+  }
   try {
     const psCount = await loadProjectSpacesFromDisk();
     console.info(JSON.stringify({ startup_project_spaces_hydrated: psCount }));

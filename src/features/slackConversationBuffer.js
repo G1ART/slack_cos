@@ -78,12 +78,12 @@ function schedulePersist() {
  * `ensureStorage` 직후 호출 — 디스크에 저장된 버킷을 메모리로 복구.
  */
 export async function loadConversationBufferFromDisk() {
-  if (!persistEnabled() || disabled()) return;
+  if (!persistEnabled() || disabled()) return 0;
   const fp = bufferFilePath();
   try {
     const raw = await fs.readFile(fp, 'utf8');
     const data = JSON.parse(raw);
-    if (data.version !== 1 || !Array.isArray(data.buckets)) return;
+    if (data.version !== 1 || !Array.isArray(data.buckets)) return 0;
     buckets.clear();
     for (const row of data.buckets) {
       if (!Array.isArray(row) || row.length < 2) continue;
@@ -93,11 +93,13 @@ export async function loadConversationBufferFromDisk() {
       }
     }
     evictIfNeeded();
+    return buckets.size;
   } catch (e) {
     const code = /** @type {NodeJS.ErrnoException} */ (e).code;
     if (code !== 'ENOENT') {
       console.warn('[conversation_buffer] load failed:', e?.message || e);
     }
+    return 0;
   }
 }
 

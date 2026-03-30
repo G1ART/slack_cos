@@ -430,6 +430,93 @@ export async function getIssueStatus({ owner, repo, issue_number }) {
   return resp.data;
 }
 
+/**
+ * Create a branch from the default branch HEAD.
+ * Returns { ok, branch_name, sha, ref } or { ok: false, error, errorCode }.
+ */
+export async function createBranchArtifact({ repoTarget, branchName }) {
+  if (!isGithubAuthConfigured()) {
+    return { ok: false, error: 'GitHub auth not configured', errorCode: 'no_auth' };
+  }
+  if (!repoTarget?.owner || !repoTarget?.repo || !branchName) {
+    return { ok: false, error: 'Missing repo target or branch name', errorCode: 'missing_params' };
+  }
+
+  try {
+    const gh = await getOctokitForIssues();
+    const { data: repoData } = await gh.repos.get({ owner: repoTarget.owner, repo: repoTarget.repo });
+    const defaultBranch = repoData.default_branch || 'main';
+
+    const { data: refData } = await gh.git.getRef({
+      owner: repoTarget.owner,
+      repo: repoTarget.repo,
+      ref: `heads/${defaultBranch}`,
+    });
+    const baseSha = refData.object.sha;
+
+    const { data: newRef } = await gh.git.createRef({
+      owner: repoTarget.owner,
+      repo: repoTarget.repo,
+      ref: `refs/heads/${branchName}`,
+      sha: baseSha,
+    });
+
+    return {
+      ok: true,
+      branch_name: branchName,
+      sha: baseSha,
+      ref: newRef.ref,
+      base_branch: defaultBranch,
+    };
+  } catch (err) {
+    if (err.status === 422 && String(err.message).includes('Reference already exists')) {
+      return { ok: true, branch_name: branchName, already_exists: true };
+    }
+    return { ok: false, error: String(err?.message || err), errorCode: 'branch_create_failed' };
+  }
+}
+
+/**
+ * Create a pull request.
+ * Returns { ok, pr_number, pr_url, pr_state } or { ok: false, error, errorCode }.
+ */
+export async function createPullRequestArtifact({ repoTarget, branchName, title, body }) {
+  if (!isGithubAuthConfigured()) {
+    return { ok: false, error: 'GitHub auth not configured', errorCode: 'no_auth' };
+  }
+  if (!repoTarget?.owner || !repoTarget?.repo || !branchName) {
+    return { ok: false, error: 'Missing repo target or branch name', errorCode: 'missing_params' };
+  }
+
+  try {
+    const gh = await getOctokitForIssues();
+    const { data: repoData } = await gh.repos.get({ owner: repoTarget.owner, repo: repoTarget.repo });
+    const defaultBranch = repoData.default_branch || 'main';
+
+    const { data: pr } = await gh.pulls.create({
+      owner: repoTarget.owner,
+      repo: repoTarget.repo,
+      title: title || branchName,
+      head: branchName,
+      base: defaultBranch,
+      body: body || '',
+    });
+
+    return {
+      ok: true,
+      pr_number: pr.number,
+      pr_url: pr.html_url,
+      pr_state: pr.state,
+      pr_id: pr.id,
+    };
+  } catch (err) {
+    if (err.status === 422 && String(err.message).includes('A pull request already exists')) {
+      return { ok: true, already_exists: true, error: 'PR already exists' };
+    }
+    return { ok: false, error: String(err?.message || err), errorCode: 'pr_create_failed' };
+  }
+}
+
 function inferGitHubKind(workItem) {
   const kind = workItem.github_kind;
   if (kind === 'issue' || kind === 'branch' || kind === 'pr' || kind === 'mixed') return kind;
@@ -671,6 +758,9 @@ export function parseGitHubResultIntake(text) {
     raw.match(/(?:branch_name|Branch)\s*[:=]\s*([^\n\r]+)/i)?.[1]?.trim() || null;
   const issue_title = raw.match(/(?:issue_title|Issue)\s*[:=]\s*([^\n\r]+)/i)?.[1]?.trim() || null;
   const pr_title = raw.match(/(?:pr_title|PR)\s*[:=]\s*([^\n\r]+)/i)?.[1]?.trim() || null;
+  const pr_number = raw.match(/(?:pr_number|PR\s*#?)\s*[:=]?\s*(\d+)/i)?.[1] ? Number(raw.match(/(?:pr_number|PR\s*#?)\s*[:=]?\s*(\d+)/i)[1]) : null;
+  const pr_url = raw.match(/(?:pr_url|PR\s*URL)\s*[:=]\s*(https?:\/\/[^\s\n]+)/i)?.[1]?.trim() || null;
+  const commit_sha = raw.match(/(?:commit_sha|commit|sha)\s*[:=]\s*([a-f0-9]{7,40})/i)?.[1]?.trim() || null;
 
   const review_summary =
     raw.match(/(?:review_summary|대표 검토 요약)\s*[:=]\s*([\s\S]+?)(?:\n\n|$)/i)?.[1]?.trim() ||
@@ -687,11 +777,20 @@ export function parseGitHubResultIntake(text) {
     return 'unknown';
   })();
 
+  const sync_status = merge_readiness === 'ready' ? 'pr_ready' :
+    pr_number ? 'pr_opened' :
+    branch_name ? 'branch_seeded' :
+    'scoped_only';
+
   return {
     repo_key: null,
     branch_name,
     issue_title,
     pr_title,
+    pr_number,
+    pr_url,
+    commit_sha,
+    sync_status,
     changed_files,
     tests_run,
     tests_passed,

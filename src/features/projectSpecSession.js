@@ -18,6 +18,7 @@ import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
 import { resolveProjectSpaceForThread } from './projectSpaceResolver.js';
 import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
 import { bootstrapProjectSpace } from './projectSpaceBootstrap.js';
+import { buildDocumentContextForExecution } from './slackDocumentContext.js';
 import {
   createProjectSpecSession,
   seedSpecMvpDefaultsFromProblem,
@@ -318,6 +319,7 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
 
     if (!previewOnly) {
       const threadKey = buildSlackThreadKey(metadata);
+      const docCtx = buildDocumentContextForExecution(threadKey);
       const packet = createExecutionPacket({
         thread_key: threadKey,
         goal_line: spec.problem_statement || '',
@@ -328,6 +330,8 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
         approval_rules: spec.approval_rules || [],
         session_id: spec.session_id || '',
         requested_by: String(metadata?.user || ''),
+        document_context_summary: docCtx?.summary || null,
+        document_sources: docCtx?.sources || [],
       });
 
       const run = createExecutionRun({ packet, metadata });

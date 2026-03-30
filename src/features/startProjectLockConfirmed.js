@@ -22,6 +22,7 @@ import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
 import { resolveProjectSpaceForThread } from './projectSpaceResolver.js';
 import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
 import { bootstrapProjectSpace } from './projectSpaceBootstrap.js';
+import { buildDocumentContextForExecution } from './slackDocumentContext.js';
 
 function parseTranscriptCosChunks(transcript) {
   const t = String(transcript || '').trim();
@@ -256,6 +257,7 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
   const threadKey = buildSlackThreadKey(metadata);
   const sess = getProjectIntakeSession(metadata);
 
+  const docCtx = buildDocumentContextForExecution(threadKey);
   const packet = createExecutionPacket({
     thread_key: threadKey,
     goal_line: goalLine,
@@ -266,6 +268,8 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
     approval_rules: sess?.spec?.approval_rules || [],
     session_id: sess?.spec?.session_id || '',
     requested_by: String(metadata?.user || ''),
+    document_context_summary: docCtx?.summary || null,
+    document_sources: docCtx?.sources || [],
   });
 
   const run = createExecutionRun({ packet, metadata });

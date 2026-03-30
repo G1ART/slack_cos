@@ -44,3 +44,27 @@ export function buildRailwayManualInstructions(space) {
     result_drop_note: 'Railway 프로젝트 연결 후 project space를 업데이트해주세요.',
   };
 }
+
+/**
+ * Build normalized deploy packet for Railway.
+ */
+export function buildRailwayDeployPacket(space, run) {
+  const diag = diagnoseRailwayReadiness();
+  const hasService = Boolean(space?.railway_service_id || space?.railway_project_id);
+  const readiness = diag.configured && hasService ? 'configured' : 'manual_required';
+  return {
+    provider: 'railway',
+    readiness,
+    manual_required: !diag.configured || !hasService,
+    env_required: diag.missing,
+    project_linkage: space?.railway_project_id || null,
+    service_linkage: space?.railway_service_id || null,
+    exact_next_step: readiness === 'configured'
+      ? 'git push 후 자동 배포 또는 Railway dashboard에서 수동 트리거'
+      : !diag.configured
+        ? `RAILWAY_TOKEN 환경변수 설정 후 프로젝트 연결`
+        : 'Railway 프로젝트/서비스 생성 후 railway_project_id를 project space에 등록',
+    result_update_path: `project space ${space?.project_id} 또는 data/deploy-results/${run?.run_id || 'unknown'}.json`,
+    live_create_supported: false,
+  };
+}

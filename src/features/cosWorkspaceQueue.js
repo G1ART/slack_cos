@@ -174,7 +174,7 @@ export function formatWorkspaceQueueSaved(record, { natural = false } = {}) {
       : '';
   return [
     `*${label} 저장*${via} — \`${record.id}\``,
-    `상태: \`${record.status}\` — COS·에이전트가 이어가거나, 필요 시 \`업무등록:\` · \`계획등록:\` · \`커서발행\`으로 연결하면 됩니다.`,
+    `상태: \`${record.status}\` — COS가 자동으로 다음 단계를 진행합니다.`,
     promote,
     '',
     '*요약*',

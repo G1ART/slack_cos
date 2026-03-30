@@ -372,9 +372,8 @@ try {
   assert.ok(report.includes('Dispatch'), 'has dispatch state');
 
   const cockpit = renderPMCockpitPacket(after);
-  assert.ok(cockpit.includes('PM 진행 보고'), 'has cockpit header');
-  assert.ok(cockpit.includes('research_benchmark'));
-  assert.ok(cockpit.includes('fullstack_swe'));
+  assert.ok(cockpit.includes('PM Cockpit'), 'has cockpit header');
+  assert.ok(cockpit.includes(after.run_id), 'cockpit has run_id');
 
   // PM intent detection
   assert.equal(detectPMIntent('retry 해줘'), 'retry');
