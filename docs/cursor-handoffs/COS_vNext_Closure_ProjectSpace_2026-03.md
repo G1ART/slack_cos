@@ -256,10 +256,113 @@ linkRunToProjectSpace(space.project_id, 'RUN-abc123');
 
 ---
 
-## 9. Next Patch Priorities
+---
 
-1. **LLM integration** — topicAnchorGuard/deliverableBundleRouter/contextSynthesis를 실제 LLM 호출 경로에 통합
+## 9. vNext.4 — Founder-Grade Wiring Closure (2026-03-30)
+
+### Public-Main Reality Table (patch 전)
+
+| # | 항목 | 상태 |
+|---|---|---|
+| 1 | app.js loads conversation buffer | ✅ VERIFIED |
+| 2 | app.js loads intake sessions | ✅ VERIFIED |
+| 3 | app.js loads project spaces | ✅ VERIFIED |
+| 4 | app.js loads slot ledgers | ✅ VERIFIED |
+| 5 | conversation buffer persist default-on | ✅ VERIFIED |
+| 6 | intake session persist default-on | ✅ VERIFIED |
+| 7 | sanitizeFounderOutput on outbound | ✅ VERIFIED |
+| 8 | council/work-hint footer removed at source | ✅ VERIFIED |
+| 9 | existing_reference routing wired | ✅ VERIFIED |
+| 10 | deliverableBundleRouter wired in router | ❌→✅ THIS PATCH |
+| 11 | contextSynthesis wired in router | ❌→✅ THIS PATCH |
+| 12 | topicAnchorGuard before outbound | ❌→✅ THIS PATCH |
+| 13 | file_share in DM | ✅ VERIFIED |
+| 14 | app_mention file handling | ✅ VERIFIED |
+| 15 | docx extraction supported | ❌→✅ THIS PATCH |
+| 16 | document context persists across restart | ❌→✅ THIS PATCH |
+
+### 이 patch에서 추가/변경된 배선
+
+#### 3) deliverableBundleRouter + contextSynthesis + topicAnchorGuard → runInboundAiRouter.js
+
+Partner Surface 경로에 다음 순서로 배선:
+
+1. **founderSlotLedger** — `tryAutoResolveSlots()` 자동 resolve (inbound 텍스트 파싱)
+2. **resolvedSlots / documentText** — LLM 입력에 확정 슬롯 + 문서 컨텍스트 주입
+3. **detectDeliverableIntent** — "작업 시작해", "1+2+3 시작해" 등 → deliverable bundle prompt 생성 → LLM 호출
+4. **shouldActivateContextSynthesis** — "원래 요청을 이어서", "이 문서 토대로 구체화해" 등 → synthesis prompt → LLM 호출
+5. **topicAnchorGuard** — partner surface 응답에 대해 drift detection → drift 시 anchor reminder로 regeneration
+6. **documentText** — thread에 인제스트된 문서가 있으면 일반 대화에도 자동 inject
+
+#### 4) founderSlotLedger 활성 사용
+
+- `tryAutoResolveSlots()` — 패턴 기반 자동 slot resolve (project_goal, product_label, city_scope 등)
+- 확정 슬롯은 LLM 입력에 `[이미 확정된 사항 — 다시 묻지 마세요]` 블록으로 주입
+- deliverable/synthesis prompt에도 resolved slots 전달
+
+#### 5) DOCX 지원 (mammoth)
+
+- `slackFileIntake.js` — `mammoth` 라이브러리로 .docx 텍스트 추출
+- SUPPORTED_MIMETYPES + PARSEABLE_EXTENSIONS에 docx 추가
+- `diagnoseFileReadiness()` limitations에서 docx 미지원 제거
+
+#### 6) Document Context 디스크 영속성
+
+- `slackDocumentContext.js` — `persistDocContext()` / `loadDocumentContextFromDisk()` / `flushDocumentContextToDisk()` 추가
+- `app.js` startup — document context hydration 추가 (5번째 state system)
+- `app.js` shutdown — `flushDocumentContextToDisk()` 추가
+
+#### 7) handleExistingProjectReference — named handler
+
+- `runInboundAiRouter.js`에서 `handleExistingProjectReference()` 함수로 추출
+- resolved → bind + continue, ambiguous → candidates, unresolved → clarification
+
+#### 8) Canonical surface enforcement
+
+- `topLevelRouter.js`에서 `isCanonicalSurface(responder)` 검증
+- non-canonical responder 시 경고 로그
+
+### Startup hydration 현황 (5 state systems)
+
+| System | Import | Hydration | Flush | Default |
+|---|---|---|---|---|
+| conversation buffer | ✅ | ✅ startup | ✅ shutdown | ON |
+| intake sessions | ✅ | ✅ startup | ✅ shutdown | ON |
+| project spaces | ✅ | ✅ startup | - (on-write) | ON |
+| slot ledgers | ✅ | ✅ startup | - (on-write) | ON |
+| document context | ✅ | ✅ startup | ✅ shutdown | ON |
+
+### 신규 테스트 (8개, vNext.4)
+
+| # | 테스트 | 검증 |
+|---|---|---|
+| 14 | deliverableBundleRouter wiring | 5종 trigger + prompt 생성 + slot 주입 |
+| 15 | contextSynthesis wiring | continuation/document_refine/auto-activate |
+| 16 | topicAnchorGuard wiring | calendar→grants drift 차단 + same-domain 통과 |
+| 17 | founderSlotLedger auto-resolve | 텍스트 파싱 자동 resolve + 재resolve 차단 |
+| 18 | docx support | PARSEABLE_EXTENSIONS + diagnoseFileReadiness 반영 |
+| 19 | document context persistence | persist → clear → hydrate → content intact |
+| 20 | startup hydration regression | 5개 state system 전부 load function 존재 |
+| 21 | canonical surface enforcement | 정상/비정상 surface 분류 |
+
+### 수정 파일
+
+- `src/features/runInboundAiRouter.js` — deliverable/synthesis/topicGuard/ledger 배선, handleExistingProjectReference 추출
+- `src/features/topLevelRouter.js` — isCanonicalSurface 검증 추가
+- `src/features/founderSlotLedger.js` — tryAutoResolveSlots() 추가
+- `src/features/slackFileIntake.js` — docx 지원 (mammoth), BINARY_EXTENSIONS, extractDocxText()
+- `src/features/slackDocumentContext.js` — 디스크 persist/load/flush 전체 구현
+- `app.js` — document context hydration + shutdown flush
+- `scripts/test-vnext3-founder-grade.mjs` — vNext.4 테스트 8개 추가
+- `package.json` — mammoth 의존성
+
+---
+
+## 10. Next Patch Priorities
+
+1. **End-to-end LLM 검증** — 실제 Slack thread에서 deliverable bundle / context synthesis / topic guard 동작 확인
 2. **Live provider integration** — Vercel/Railway API create, Cursor cloud callback
 3. **Project space UI surface** — 대표가 "내 프로젝트 목록" 조회 가능
 4. **Supabase CLI auto-apply** — `supabase db push` 자동화
-5. **PDF/DOCX parser** — slackFileIntake에 추가 파서 통합
+5. **PDF parser 개선** — pdf-parse 등 text-layer 기반 PDF 추출
+6. **슬롯 LLM-assisted resolve** — tryAutoResolveSlots를 LLM 기반으로 확장 (패턴 한계 보완)

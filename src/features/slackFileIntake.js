@@ -2,7 +2,7 @@
  * Slack File Intake — Slack에서 공유된 파일을 인제스트하여
  * 텍스트 추출 후 대화/프로젝트 컨텍스트에 연결.
  *
- * 지원: txt, md, csv, json, pdf(text-only fallback)
+ * 지원: txt, md, csv, json, html, docx, 코드 파일
  * 실패 시 정확한 사유를 반환 (scope 부족, 형식 미지원, fetch 실패 등)
  */
 
@@ -12,11 +12,15 @@ const SUPPORTED_MIMETYPES = new Set([
   'text/csv',
   'application/json',
   'text/html',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
 const PARSEABLE_EXTENSIONS = new Set([
   'txt', 'md', 'csv', 'json', 'html', 'htm', 'js', 'ts', 'py', 'rb', 'sh', 'yaml', 'yml', 'toml',
+  'docx',
 ]);
+
+const BINARY_EXTENSIONS = new Set(['docx']);
 
 /**
  * Extract files from a Slack event payload.
@@ -56,7 +60,7 @@ export function diagnoseFileReadiness(ctx = {}) {
     supported_types: [...PARSEABLE_EXTENSIONS],
     limitations: [
       'pdf: text-layer만 추출 (이미지 기반 PDF 미지원)',
-      'docx/xlsx: 현재 미지원 (향후 추가 예정)',
+      'xlsx/pptx: 현재 미지원 (향후 추가 예정)',
       'Slack Connect 대화에서 외부 조직 파일은 접근이 제한될 수 있음',
     ],
   };
@@ -157,7 +161,13 @@ export async function ingestSlackFile({ file, client }) {
 
     const contentType = response.headers.get('content-type') || '';
     const buffer = await response.arrayBuffer();
-    const text = new TextDecoder('utf-8').decode(buffer);
+
+    let text;
+    if (BINARY_EXTENSIONS.has(ext) || ext === 'docx') {
+      text = await extractDocxText(Buffer.from(buffer));
+    } else {
+      text = new TextDecoder('utf-8').decode(buffer);
+    }
 
     if (!text || text.trim().length === 0) {
       return {
@@ -190,6 +200,21 @@ export async function ingestSlackFile({ file, client }) {
       file_id: fileId,
       filename,
     };
+  }
+}
+
+/**
+ * Extract plain text from a .docx buffer using mammoth.
+ * Falls back gracefully if mammoth is unavailable.
+ */
+async function extractDocxText(buffer) {
+  try {
+    const mammoth = await import('mammoth');
+    const result = await mammoth.default.extractRawText({ buffer });
+    return result.value || '';
+  } catch (err) {
+    console.warn('[slackFileIntake] docx extraction failed:', err?.message || String(err));
+    return '';
   }
 }
 

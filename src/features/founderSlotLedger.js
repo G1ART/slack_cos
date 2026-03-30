@@ -166,6 +166,55 @@ export async function loadSlotLedgersFromDisk() {
   return arr.length;
 }
 
+/**
+ * Try to auto-resolve slots from founder's controlling text.
+ * Lightweight keyword-based extraction — not LLM.
+ */
+export function tryAutoResolveSlots(threadKey, text, opts = {}) {
+  if (!text || !threadKey) return {};
+  const t = String(text);
+  const resolved = {};
+
+  const goalRe = /(?:프로젝트\s*목(?:표|적)|project\s*goal)[:\s은는이가]*(.{5,100})/i;
+  const labelRe = /(?:제품\s*(?:이름|명|레이블)|product\s*(?:name|label))[:\s은는이가]*(.{2,50})/i;
+  const userProblemRe = /(?:핵심\s*(?:문제|고민|pain)|primary\s*(?:problem|pain))[:\s은는이가]*(.{5,100})/i;
+  const useCaseRe = /(?:핵심\s*(?:사용\s*사례|use\s*case))[:\s은는이가]*(.{5,100})/i;
+  const segmentsRe = /(?:사용자\s*(?:세그먼트|타겟|대상)|user\s*segment)[:\s은는이가]*(.{3,80})/i;
+  const cityRe = /(?:도시\s*범위|city\s*scope)[:\s은는이가]*(.{2,50})/i;
+  const benchmarkRe = /(?:벤치마크\s*(?:패밀리|family))[:\s은는이가]*(.{3,50})/i;
+
+  const tests = [
+    ['project_goal', goalRe],
+    ['product_label', labelRe],
+    ['primary_user_problem', userProblemRe],
+    ['primary_use_case', useCaseRe],
+    ['user_segments', segmentsRe],
+    ['city_scope', cityRe],
+    ['benchmark_family', benchmarkRe],
+  ];
+
+  for (const [slotName, re] of tests) {
+    if (isSlotResolved(threadKey, slotName)) continue;
+    const m = t.match(re);
+    if (m?.[1]) {
+      const val = m[1].replace(/[.。,，;；\s]+$/, '').trim();
+      if (val.length >= 2) {
+        resolved[slotName] = val;
+      }
+    }
+  }
+
+  if (opts.hasDocument && !isSlotResolved(threadKey, 'document_ingested')) {
+    resolved.document_ingested = `문서 인제스트 (${new Date().toISOString().slice(0, 10)})`;
+  }
+
+  if (Object.keys(resolved).length > 0) {
+    resolveSlotsBulk(threadKey, resolved, opts.source || 'auto_extract');
+  }
+
+  return resolved;
+}
+
 export function _resetForTest() {
   ledgerByThread.clear();
 }

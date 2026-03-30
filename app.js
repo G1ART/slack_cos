@@ -169,6 +169,10 @@ import {
   loadSlotLedgersFromDisk,
 } from './src/features/founderSlotLedger.js';
 import {
+  loadDocumentContextFromDisk,
+  flushDocumentContextToDisk,
+} from './src/features/slackDocumentContext.js';
+import {
   loadProjectIntakeSessionsFromDisk,
   flushProjectIntakeSessionsToDisk,
   isActiveProjectIntake,
@@ -920,6 +924,12 @@ registerG1CosSlashCommand(slackApp);
   } catch (e) {
     console.warn(JSON.stringify({ startup_slot_ledger_hydration_error: String(e?.message || e) }));
   }
+  try {
+    const dcCount = await loadDocumentContextFromDisk();
+    console.info(JSON.stringify({ startup_document_context_hydrated: dcCount }));
+  } catch (e) {
+    console.warn(JSON.stringify({ startup_document_context_hydration_error: String(e?.message || e) }));
+  }
   initStoreCore({ storageMode: process.env.STORAGE_MODE });
   try {
     const st = getStoreCore();
@@ -953,6 +963,7 @@ registerG1CosSlashCommand(slackApp);
     beforeStop: async () => {
       await Promise.resolve(flushConversationBufferToDisk());
       await flushProjectIntakeSessionsToDisk();
+      await flushDocumentContextToDisk();
       if (ciHookServer) {
         await new Promise((resolve, reject) => {
           ciHookServer.close((err) => (err ? reject(err) : resolve()));

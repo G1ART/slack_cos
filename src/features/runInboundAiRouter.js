@@ -77,6 +77,11 @@ import { ensureExecutionRunDispatched } from './executionDispatchLifecycle.js';
 import { resolveProjectSpaceForThread, detectProjectIntent, renderProjectResolutionSurface } from './projectSpaceResolver.js';
 import { bootstrapProjectSpace, renderBootstrapPlanForSlack } from './projectSpaceBootstrap.js';
 import { linkRunToProjectSpace, linkThreadToProjectSpace } from './projectSpaceRegistry.js';
+import { detectDeliverableIntent, buildDeliverableBundlePrompt, bundleTypeLabel } from './deliverableBundleRouter.js';
+import { detectContinuationIntent, buildContextSynthesisPrompt, shouldActivateContextSynthesis } from './contextSynthesis.js';
+import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEvent } from './topicAnchorGuard.js';
+import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
+import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -954,40 +959,133 @@ export async function runInboundAiRouter(ctx) {
   }
 
   if (projectIntent === 'existing_reference') {
-    const resolved = resolveProjectSpaceForThread({ threadKey, text: trimmed, metadata });
-    logRouterEvent('existing_project_resolve_attempt', {
-      resolved: resolved.resolved,
-      reason: resolved.reason,
-      project_id: resolved.project_id || null,
-      candidate_count: resolved.candidates?.length || 0,
-    });
-
-    if (resolved.resolved) {
-      linkThreadToProjectSpace(resolved.project_id, threadKey);
-      return finalizeSlackResponse({
-        responder: 'partner_surface',
-        text: renderProjectResolutionSurface(resolved),
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'existing_project_resolved',
-        council_blocked: true,
-        response_type: 'existing_project_resolved',
-        project_id: resolved.project_id,
-      });
-    }
-
-    return finalizeSlackResponse({
-      responder: 'partner_surface',
-      text: renderProjectResolutionSurface(resolved),
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'existing_project_unresolved',
-      council_blocked: true,
-      response_type: 'existing_project_unresolved',
-    });
+    return handleExistingProjectReference({ threadKey, trimmed, metadata, routerCtx });
   }
 
-  // Partner Surface — COS natural partner (default for all non-council, non-research)
+  // ---------- Founder-grade context enrichment ----------
+  const projectSpace = resolveProjectSpaceForThread({ threadKey, text: trimmed, metadata })?.space || null;
+  const ledger = getOrCreateLedger(threadKey, projectSpace?.project_id);
+
+  const autoResolved = tryAutoResolveSlots(threadKey, trimmed, {
+    hasDocument: hasDocumentContext(threadKey),
+    source: 'founder_inbound',
+  });
+  if (Object.keys(autoResolved).length > 0) {
+    logRouterEvent('slots_auto_resolved', { count: Object.keys(autoResolved).length, slots: Object.keys(autoResolved) });
+  }
+
+  const resolvedSlots = getResolvedSlots(threadKey);
+  const unresolvedSlots = getUnresolvedSlots(threadKey);
+  const documentText = getMergedDocumentText(threadKey);
+  const priorDialog = getConversationTranscript(threadKey);
+
+  // ---------- Deliverable bundle detection ----------
+  const deliverableIntent = detectDeliverableIntent(trimmed);
+  if (deliverableIntent.triggered) {
+    logRouterEvent('deliverable_bundle_triggered', {
+      bundleType: deliverableIntent.bundleType,
+      resolved_slot_count: Object.keys(resolvedSlots).length,
+    });
+
+    const bundlePrompt = buildDeliverableBundlePrompt({
+      bundleType: deliverableIntent.bundleType,
+      resolvedSlots,
+      documentContext: documentText,
+      recentTranscript: priorDialog,
+    });
+
+    try {
+      const bundleText = await runCosNaturalPartner({
+        callText,
+        userText: bundlePrompt,
+        channelContext,
+        route,
+        priorTranscript: priorDialog || '',
+      });
+
+      const anchorCluster = deriveAnchorCluster({
+        projectSpace,
+        slotLedger: ledger,
+        recentTranscript: priorDialog,
+        playbookKind: taskKind,
+      });
+      const drift = detectTopicDrift({ draftText: bundleText, anchorCluster, currentRequestText: trimmed });
+      if (drift.drifted) {
+        logDriftEvent(drift, { threadKey, phase: 'deliverable_bundle' });
+        const reminder = buildAnchorReminder(anchorCluster, drift);
+        const retryText = await runCosNaturalPartner({
+          callText,
+          userText: `${bundlePrompt}\n\n${reminder}`,
+          channelContext,
+          route,
+          priorTranscript: priorDialog || '',
+        });
+        return finalizeSlackResponse({
+          responder: 'partner_surface',
+          text: retryText,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: 'deliverable_bundle',
+          council_blocked: true,
+          response_type: `deliverable_${deliverableIntent.bundleType}`,
+        });
+      }
+
+      return finalizeSlackResponse({
+        responder: 'partner_surface',
+        text: bundleText,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'deliverable_bundle',
+        council_blocked: true,
+        response_type: `deliverable_${deliverableIntent.bundleType}`,
+      });
+    } catch (error) {
+      console.error('DELIVERABLE_BUNDLE_ERROR:', error);
+    }
+  }
+
+  // ---------- Context synthesis / continuation detection ----------
+  const synthCheck = shouldActivateContextSynthesis({
+    text: trimmed,
+    hasDocumentContext: hasDocumentContext(threadKey),
+    resolvedSlotCount: Object.keys(resolvedSlots).length,
+  });
+  if (synthCheck.activate) {
+    logRouterEvent('context_synthesis_activated', { intent: synthCheck.intent, threadKey });
+
+    const synthPrompt = buildContextSynthesisPrompt({
+      intent: synthCheck.intent,
+      resolvedSlots,
+      documentContext: documentText,
+      recentTranscript: priorDialog,
+      currentText: trimmed,
+    });
+
+    try {
+      const synthText = await runCosNaturalPartner({
+        callText,
+        userText: synthPrompt,
+        channelContext,
+        route,
+        priorTranscript: priorDialog || '',
+      });
+
+      return finalizeSlackResponse({
+        responder: 'partner_surface',
+        text: synthText,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'context_synthesis',
+        council_blocked: true,
+        response_type: `synthesis_${synthCheck.intent}`,
+      });
+    } catch (error) {
+      console.error('CONTEXT_SYNTHESIS_ERROR:', error);
+    }
+  }
+
+  // ---------- Partner Surface — COS natural partner (default) ----------
   logRouterEvent('router_responder_selected', {
     responder: 'partner_surface',
     command_name: 'cos_natural',
@@ -1001,16 +1099,46 @@ export async function runInboundAiRouter(ctx) {
     task_kind: taskKind,
   });
 
-  const priorDialog = getConversationTranscript(threadKey);
-
   try {
+    let llmInput = trimmed;
+    if (documentText && !deliverableIntent.triggered && !synthCheck.activate) {
+      llmInput = `${trimmed}\n\n[Thread에 첨부된 문서 컨텍스트]\n${documentText}`;
+    }
+    if (Object.keys(resolvedSlots).length > 0) {
+      const slotCtx = Object.entries(resolvedSlots).map(([k, v]) => `${k}: ${v}`).join('\n');
+      llmInput = `${llmInput}\n\n[이미 확정된 사항 — 다시 묻지 마세요]\n${slotCtx}`;
+    }
+
     const dialogText = await runCosNaturalPartner({
       callText,
-      userText: trimmed,
+      userText: llmInput,
       channelContext,
       route,
       priorTranscript: priorDialog || '',
     });
+
+    // Topic anchor guard — drift check on outbound draft
+    const anchorCluster = deriveAnchorCluster({
+      projectSpace,
+      slotLedger: ledger,
+      recentTranscript: priorDialog,
+      playbookKind: taskKind,
+    });
+    let finalDialogText = dialogText;
+    if (anchorCluster.domains.length > 0) {
+      const drift = detectTopicDrift({ draftText: dialogText, anchorCluster, currentRequestText: trimmed });
+      if (drift.drifted) {
+        logDriftEvent(drift, { threadKey, phase: 'partner_surface' });
+        const reminder = buildAnchorReminder(anchorCluster, drift);
+        finalDialogText = await runCosNaturalPartner({
+          callText,
+          userText: `${llmInput}\n\n${reminder}`,
+          channelContext,
+          route,
+          priorTranscript: priorDialog || '',
+        });
+      }
+    }
 
     await appendJsonRecord(INTERACTIONS_FILE, {
       id: makeId('INT'),
@@ -1031,8 +1159,8 @@ export async function runInboundAiRouter(ctx) {
       currentUserText: trimmed,
     });
     const dialogWithHint = hintPlanId
-      ? `${dialogText}\n\n${formatThreadPlanFollowUpFooter(hintPlanId)}`
-      : dialogText;
+      ? `${finalDialogText}\n\n${formatThreadPlanFollowUpFooter(hintPlanId)}`
+      : finalDialogText;
     if (hintPlanId) {
       logRouterEvent('dialog_thread_plan_hint', { plan_id: hintPlanId });
     }
@@ -1066,4 +1194,42 @@ export async function runInboundAiRouter(ctx) {
       response_type: 'legacy_single_after_partner_error',
     });
   }
+}
+
+/**
+ * Handle explicit existing-project reference routing.
+ * Outcomes: resolved → bind + continue, ambiguous → candidates, unresolved → clarification.
+ */
+function handleExistingProjectReference({ threadKey, trimmed, metadata, routerCtx }) {
+  const resolved = resolveProjectSpaceForThread({ threadKey, text: trimmed, metadata });
+  logRouterEvent('existing_project_resolve_attempt', {
+    resolved: resolved.resolved,
+    reason: resolved.reason,
+    project_id: resolved.project_id || null,
+    candidate_count: resolved.candidates?.length || 0,
+  });
+
+  if (resolved.resolved) {
+    linkThreadToProjectSpace(resolved.project_id, threadKey);
+    return finalizeSlackResponse({
+      responder: 'partner_surface',
+      text: renderProjectResolutionSurface(resolved),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'existing_project_resolved',
+      council_blocked: true,
+      response_type: 'existing_project_resolved',
+      project_id: resolved.project_id,
+    });
+  }
+
+  return finalizeSlackResponse({
+    responder: 'partner_surface',
+    text: renderProjectResolutionSurface(resolved),
+    raw_text: routerCtx.raw_text,
+    normalized_text: routerCtx.normalized_text,
+    command_name: 'existing_project_unresolved',
+    council_blocked: true,
+    response_type: 'existing_project_unresolved',
+  });
 }
