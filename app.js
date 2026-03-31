@@ -146,6 +146,7 @@ import {
 } from './src/storage/core/migrateJsonToSupabase.js';
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
+import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
 import { runInboundTurnTraceScope, setInboundTurnSlackRouteLabel } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
@@ -850,6 +851,23 @@ async function handleUserText(userText, metadata = {}) {
     if (metadata.slack_route_label) {
       setInboundTurnSlackRouteLabel(metadata.slack_route_label);
     }
+
+    // Constitutional pipeline v1.1 — work_object → work_phase → policy → packet → surface
+    const pipelineResult = await founderRequestPipeline({
+      text: inputNorm,
+      metadata: {
+        ...metadata,
+        has_active_intake: _intakeActive,
+        intake_session: _intakeSess,
+      },
+      route_label: metadata.slack_route_label,
+    });
+    if (pipelineResult != null) {
+      return pipelineResult.blocks
+        ? { text: pipelineResult.text, blocks: pipelineResult.blocks }
+        : pipelineResult.text;
+    }
+
     const routed = await runInboundCommandRouter({
       userText,
       metadata,

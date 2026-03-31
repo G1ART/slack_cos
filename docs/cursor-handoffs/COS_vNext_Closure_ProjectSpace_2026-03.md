@@ -832,10 +832,59 @@ npm test: ALL PASS (전체 스위트)
 
 ---
 
-## 16. Next Patch Priorities
+## 16. COS Constitutional Reset v1.1 (2026-03-31)
 
-1. **End-to-end LLM 검증** — 실제 Slack thread에서 full-cycle execution loop 동작 확인
-2. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
-3. **GitHub repo live create** — repos.create API (permissions 확보 시)
-4. **Supabase CLI auto-apply** — `supabase db push` 자동화
+**아키텍처 중심축 전환**: `intent → authority → surface` → `work_object → work_phase → policy → packet → surface`
+
+### 핵심 변경
+- **Constitution v1.1**: `docs/architecture/COS_CONSTITUTION_v1.md` 전면 재작성 — Work-State-First Chief of Staff OS
+- **founderContracts.js**: `WorkPhase`(discover/align/lock/seed/execute/review/approve/deploy/monitor/exception/utility), `PolicyContext`/`PolicyDecision`, `RiskClass`, `Capability`, `Actor` 추가. `FounderSurfaceType` OS surfaces 20종.
+- **workObjectResolver.js** (신규): ProjectSpace/ExecutionRun/IntakeSession 래핑 — pipeline 첫 단계 "이 turn이 어떤 work object에 속하는가?"
+- **workPhaseResolver.js** (신규): IntakeStage + Run.current_stage → unified WorkPhase 매핑
+- **policyEngine.js** (신규): `f(actor, work_state, risk_class, capability) → PolicyDecision` — `founderAuthority.js` 교체
+- **packetAssembler.js** (신규): executor 결과 → founder-facing 운영 패킷 조립 (renderer 앞단)
+- **founderSurfaceRegistry.js**: policy + phase → surface type 해석
+- **founderRenderer.js**: OS surface 렌더러 20종 + Freedom Levels (L0/L1/L2) + internal marker hard block
+- **founderRequestPipeline.js**: 전면 재작성 — workObjectResolver → workPhaseResolver → intentClassifier(signal) → policyEngine → routeToExecutor → packetAssembler → renderer
+- **founderAuthority.js**: 삭제 (policyEngine.js로 교체)
+- **app.js**: pipeline 시그니처 v1.1 (`intake_session` 전달 + blocks 반환)
+
+### 변경 파일 목록
+| 파일 | 작업 |
+|---|---|
+| `docs/architecture/COS_CONSTITUTION_v1.md` | 전면 재작성 |
+| `src/core/founderContracts.js` | 전면 재작성 (확장) |
+| `src/core/workObjectResolver.js` | **신규** |
+| `src/core/workPhaseResolver.js` | **신규** |
+| `src/core/policyEngine.js` | **신규** |
+| `src/core/packetAssembler.js` | **신규** |
+| `src/core/founderSurfaceRegistry.js` | 전면 재작성 |
+| `src/core/founderRenderer.js` | 전면 재작성 |
+| `src/core/founderRequestPipeline.js` | 전면 재작성 |
+| `src/core/founderAuthority.js` | **삭제** |
+| `app.js` | pipeline 시그니처 변경 |
+| `package.json` | constitutional tests 7개 추가 |
+| `scripts/tests-constitutional/*.mjs` | **신규** 7개 |
+
+### Constitutional Tests (7개)
+- `test-work-object-resolver.mjs` — 14 assertions
+- `test-work-phase-resolver.mjs` — 16 assertions
+- `test-policy-engine.mjs` — 33 assertions
+- `test-packet-assembler.mjs` — 25 assertions
+- `test-founder-renderer-v11.mjs` — 26 assertions
+- `test-golden-path-pipeline.mjs` — 43 assertions
+- `test-council-object-only.mjs` — 20 assertions
+
+### Owner actions (v1.1)
+1. **로컬**: `npm test` — 기존 40+ 테스트 + constitutional 7개 = 전체 통과
+2. **슬랙 스모크**: `@G1COS 버전` → runtime_meta_surface; `@G1COS COS responder는 어떻게 동작해?` → meta_debug_surface; `@G1COS 도움말` → help_surface; `@G1COS 오늘부터 테스트용 작은 프로젝트 하나 시작하자` → executive_kickoff_surface
+
+---
+
+## 17. Next Patch Priorities
+
+1. **Golden path live 검증** — 실제 Slack thread에서 kickoff→lock→execute→approve→deploy 전체 경로 pipeline 통과 확인
+2. **Legacy router freeze** — command/AI router에서 pipeline 처리 가능한 경로 점진 이관 (structured commands + query 렌더러)
+3. **Council object-only 강제** — `synthesizeCouncil`이 object만 반환하도록 live 코드 패치
+4. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
 5. **Monitoring/rollback surface** — 배포 후 모니터링·롤백 안내

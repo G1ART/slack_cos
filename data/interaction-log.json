@@ -12312,5 +12312,228 @@
     ],
     "matrix_reasons": [],
     "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774934651799-q9h1fx",
+    "created_at": "2026-03-31T05:24:11.800Z",
+    "user_text": "COS responder는 어떻게 동작해?",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774934639.585559",
+      "event_id": "Ev0APQ9L1XDZ"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "사용자는 COS responder의 동작 방식에 대한 일반 설명을 요청하고 있으며, 전략·재무·제품·엔지니어링·운영의 특정 실행 판단이 아니라 개념 설명에 가깝다. 대외발신이나 되돌리기 어려운 결정도 아니다."
+    },
+    "primary": {
+      "one_line_summary": "COS responder는 입력 의도를 분류하고, 정해진 정책·도구·응답 포맷에 따라 가장 비용 효율적인 답변을 생성하는 응답 오케스트레이션 계층으로 이해하면 된다.",
+      "recommendation": "COS responder를 설계할 때는 입력 분류 → 정책 적용 → 도구 호출 여부 판단 → 응답 생성 → 로깅/평가의 5단계로 단순화하고, 각 단계별 성공 지표를 먼저 정의하라.",
+      "strongest_objection": "정의와 범위를 먼저 고정하지 않으면 COS responder는 결국 '아무거나 처리하는 비싼 라우터'가 되어 ROI가 급격히 떨어진다.",
+      "key_risks": [
+        "입력 분류 기준이 모호해 불필요한 모델 호출 비용이 증가함",
+        "도구 호출 조건이 느슨해 지연시간과 실패율이 커짐",
+        "응답 품질 평가 기준이 없어 개선 우선순위를 못 잡음",
+        "예외 처리 범위가 넓어지며 유지보수 복잡도가 급증함",
+        "의도 분류 실패로 잘못된 워크플로우를 타는 리스크",
+        "정책·권한 규칙이 응답 품질보다 뒤로 밀려 사고를 유발하는 리스크",
+        "컨텍스트 윈도우 한계나 상태 관리 오류로 이전 정보가 왜곡되는 리스크",
+        "에러 처리·에스컬레이션 기준이 약해 저신뢰 답변이 그대로 배포되는 리스크"
+      ],
+      "next_actions": [
+        "COS responder의 대상 작업 3~5개만 먼저 확정하라.",
+        "각 작업별로 입력 유형, 허용 도구, 출력 포맷, 성공 KPI를 표로 정리하라.",
+        "가장 호출량이 높은 1개 시나리오만 MVP로 구현해 비용·정확도·지연시간을 측정하라.",
+        "측정 결과 기준으로 라우팅 규칙과 도구 호출 임계값을 조정하라.",
+        "현재 COS responder의 입력→판단→출력 흐름을 단계별로 도식화하라.",
+        "각 단계의 실패 모드와 차단 조건을 정의하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "정의와 범위를 먼저 고정하지 않으면 COS responder는 결국 '아무거나 처리하는 비싼 라우터'가 되어 ROI가 급격히 떨어진다.",
+      "hidden_risks": [
+        "입력 분류 기준이 모호해 불필요한 모델 호출 비용이 증가함",
+        "도구 호출 조건이 느슨해 지연시간과 실패율이 커짐",
+        "응답 품질 평가 기준이 없어 개선 우선순위를 못 잡음",
+        "예외 처리 범위가 넓어지며 유지보수 복잡도가 급증함",
+        "의도 분류 실패로 잘못된 워크플로우를 타는 리스크",
+        "정책·권한 규칙이 응답 품질보다 뒤로 밀려 사고를 유발하는 리스크",
+        "컨텍스트 윈도우 한계나 상태 관리 오류로 이전 정보가 왜곡되는 리스크",
+        "에러 처리·에스컬레이션 기준이 약해 저신뢰 답변이 그대로 배포되는 리스크",
+        "운영자가 내부 동작을 과신해 모니터링·감사를 소홀히 하는 리스크"
+      ],
+      "reconsider_triggers": [
+        "유연한 범용성 확대와 운영 복잡도 증가 사이의 충돌",
+        "정확도 개선을 위한 다단계 추론과 응답 속도/비용 사이의 충돌",
+        "응답 속도와 검증 강도 사이의 충돌",
+        "자동화 확대와 책임 추적 가능성 사이의 충돌"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774934871375-pc0dnu",
+    "created_at": "2026-03-31T05:27:51.375Z",
+    "user_text": "responder surface sanitize 한 줄로만 말해.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774934862.758579",
+      "event_id": "Ev0APQA355S7"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "표현/응답 방식에 대한 단순 요청으로, 전략·운영·제품·기술·요약 업무 분류 대상이 아님"
+    },
+    "primary": {
+      "one_line_summary": "ROI 관점에선 범위가 불명확해 우선 최소 스펙·대상 표면·측정 지표를 먼저 고정해야 한다.",
+      "recommendation": "responder surface sanitize는 적용 표면 1종과 성공 지표 1개를 정해 1주 파일럿으로 검증하라.",
+      "strongest_objection": "문제 정의와 측정 기준 없이 시작하면 리소스만 쓰고 성과를 증명할 수 없다.",
+      "key_risks": [
+        "적용 범위 과다로 인한 집중도 저하",
+        "효과 측정 불가로 ROI 판단 실패",
+        "운영 복잡도 증가 대비 효용 미흡",
+        "근본 원인 미해결",
+        "우회 경로 잔존",
+        "안전하다는 오인 신호",
+        "사후 수정 비용 확대"
+      ],
+      "next_actions": [
+        "적용 표면 1종 선정",
+        "성공 지표 1개 정의",
+        "1주 파일럿 설계",
+        "위협모델 기준으로 sanitize 대상과 제외 대상을 분리하라",
+        "로그·에러·캐시·서드파티 전송까지 점검하라",
+        "우회 테스트 실패 시 배포 중단 조건을 명시하라"
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "문제 정의와 측정 기준 없이 시작하면 리소스만 쓰고 성과를 증명할 수 없다.",
+      "hidden_risks": [
+        "적용 범위 과다로 인한 집중도 저하",
+        "효과 측정 불가로 ROI 판단 실패",
+        "운영 복잡도 증가 대비 효용 미흡",
+        "근본 원인 미해결",
+        "우회 경로 잔존",
+        "안전하다는 오인 신호",
+        "사후 수정 비용 확대"
+      ],
+      "reconsider_triggers": [
+        "속도 우선 vs 측정 정밀도",
+        "속도 대 검증 범위",
+        "표면 개선 대 구조 개선"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774935768172-461xsd",
+    "created_at": "2026-03-31T05:42:48.172Z",
+    "user_text": "responder surface sanitize 한 줄로만 말해.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774935758.508469",
+      "event_id": "Ev0APQC7BMNX"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "engineering",
+      "primary_agent": "engineering",
+      "include_risk": true,
+      "urgency": "medium",
+      "reason": "‘responder surface sanitize’는 구현/보안·입력처리 성격의 기술 요청으로 보이며, 기술 리스크가 있어 engineering으로 분류."
+    },
+    "primary": {
+      "one_line_summary": "응답 표면 전반에 민감정보·오용 가능 출력이 노출되지 않도록 공통 sanitize 계층을 최소 침습적으로 먼저 적용하는 것이 최우선입니다.",
+      "recommendation": "responder 진입·출력 지점에 공통 sanitize 레이어를 추가하고 로그·스트리밍·에러메시지까지 동일 정책으로 단계적 적용하되 기능 플래그로 즉시 롤백 가능하게 구현하십시오.",
+      "strongest_objection": "출력 경로별 예외를 정리하지 않은 채 일괄 적용하면 정상 응답 훼손과 운영 장애를 동시에 유발할 수 있습니다.",
+      "key_risks": [
+        "스트리밍·에러·캐시 경로 누락",
+        "과잉 마스킹으로 품질 저하",
+        "정책 불일치로 롤백 복잡도 증가",
+        "성과 지표 없이 품질 개선이 미학적 작업으로 끝날 위험",
+        "로드맵이 분산되어 핵심 전환 과제가 지연될 위험",
+        "사용자 만족 상승이 실제 매출로 이어지지 않을 위험",
+        "겉보기 리스크 축소로 인한 오판",
+        "이해관계자 신뢰 저하"
+      ],
+      "next_actions": [
+        "출력 경로 인벤토리 작성",
+        "최소 규칙셋 정의",
+        "플래그 기반 카나리 배포",
+        "로그 포함 회귀 테스트 추가",
+        "성공 지표 1개를 전환율 또는 유지율로 고정하라",
+        "sanitize가 그 지표를 2주 내 개선하는지 A/B 테스트하라"
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "출력 경로별 예외를 정리하지 않은 채 일괄 적용하면 정상 응답 훼손과 운영 장애를 동시에 유발할 수 있습니다.",
+      "hidden_risks": [
+        "스트리밍·에러·캐시 경로 누락",
+        "과잉 마스킹으로 품질 저하",
+        "정책 불일치로 롤백 복잡도 증가",
+        "성과 지표 없이 품질 개선이 미학적 작업으로 끝날 위험",
+        "로드맵이 분산되어 핵심 전환 과제가 지연될 위험",
+        "사용자 만족 상승이 실제 매출로 이어지지 않을 위험",
+        "겉보기 리스크 축소로 인한 오판",
+        "이해관계자 신뢰 저하",
+        "재검토 타이밍 상실"
+      ],
+      "reconsider_triggers": [
+        "보안 강도와 응답 품질",
+        "적용 속도와 경로 완전성",
+        "브랜드 신뢰 개선과 단기 매출 기여의 균형",
+        "응답 안전성 강화와 답변 속도의 균형",
+        "속도와 검증 깊이의 충돌"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "engineering",
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
   }
 ]
