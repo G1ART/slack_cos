@@ -1,12 +1,20 @@
 /**
  * Top-level Slack responder lockdown — planner/query vs Council 불변식.
  * @see docs/cursor-handoffs/Router_Lockdown_260318_handoff.md
+ *
+ * vNext.10 — founder_output_trace, council 예외 제거( query 만 휴리스틱 스킵 ).
  */
 
-import { markInboundTurnFinalize } from './inboundTurnTrace.js';
+import { markInboundTurnFinalize, getInboundTurnTraceStore } from './inboundTurnTrace.js';
 import { getBuildInfo } from '../runtime/buildInfo.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from './projectIntakeSession.js';
-import { sanitizeFounderOutput, isCanonicalSurface } from './founderSurfaceGuard.js';
+import {
+  sanitizeFounderOutput,
+  isCanonicalSurface,
+  containsOldCouncilMarkers,
+  containsPersonaLiterals,
+  containsApprovalQueueRaw,
+} from './founderSurfaceGuard.js';
 
 const COUNCIL_SYNTHESIS_MARKERS = [
   '페르소나별 핵심 관점',
@@ -17,10 +25,6 @@ const COUNCIL_SYNTHESIS_MARKERS = [
 
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';
 
-/**
- * Council synthesizeCouncil 본문 또는 inferWorkCandidate 푸터와 유사하면 true.
- * @param {string} text
- */
 /** 조회 계약 헤더 — 저장된 plan/work 본문에 Council 키워드가 섞여도 오탐하지 않음 */
 const QUERY_CONTRACT_HEADER_RE =
   /^\[계획상세\]|\[계획진행\]|\[계획발행목록\]|\[업무상세\]|\[업무검토\]/;
@@ -56,7 +60,34 @@ export function logRouterEvent(event, fields = {}) {
 }
 
 /**
- * 비-Council 응답에 Council 시그니처가 섞이면 안전한 짧은 오류로 대체.
+ * 테스트·검증용 — founder_output_trace 페이로드 빌더.
+ */
+export function buildFounderOutputTraceRecord({
+  inbound_turn_id,
+  responder,
+  response_type,
+  source_formatter,
+  slack_route_label,
+  raw_before_sanitize,
+  sanitized,
+  raw_for_detection,
+}) {
+  return {
+    stage: 'founder_output_trace',
+    inbound_turn_id: inbound_turn_id ?? null,
+    responder,
+    response_type,
+    source_formatter: source_formatter ?? 'unspecified',
+    slack_route_label: slack_route_label ?? null,
+    raw_preview: String(raw_before_sanitize ?? '').slice(0, 160),
+    sanitized_preview: String(sanitized ?? '').slice(0, 160),
+    contains_old_council_markers: containsOldCouncilMarkers(raw_for_detection ?? ''),
+    contains_persona_literals: containsPersonaLiterals(raw_for_detection ?? ''),
+    contains_approval_queue: containsApprovalQueueRaw(raw_for_detection ?? ''),
+  };
+}
+
+/**
  * @param {{
  *   responder: string,
  *   text: string,
@@ -74,6 +105,8 @@ export function logRouterEvent(event, fields = {}) {
  *   status_packet_id?: string | null,
  *   work_queue_id?: string | null,
  *   via?: string | null,
+ *   source_formatter?: string,
+ *   slack_route_label?: string | null,
  * }} p
  */
 export function finalizeSlackResponse(p) {
@@ -95,7 +128,12 @@ export function finalizeSlackResponse(p) {
     work_queue_id = null,
   } = p;
 
+  const sourceFormatter = p.source_formatter ?? 'unspecified';
+  const traceStore = getInboundTurnTraceStore();
+  const slackRouteLabel = p.slack_route_label ?? traceStore?.slack_route_label ?? null;
+
   let out = String(text ?? '');
+  const rawForTraceDetection = out;
   const blocked =
     council_blocked ??
     [
@@ -115,10 +153,13 @@ export function finalizeSlackResponse(p) {
       'escalation_surface',
       'executive_surface',
       'structured',
+      'runtime_meta_surface',
+      'meta_debug_surface',
     ].includes(responder);
 
   // 조회(formatPlanDetail 등)는 저장 필드에 Council류 문구가 섞여도 **절대** 여기서 덮어쓰지 않음
-  if (responder !== 'council' && responder !== 'query' && looksLikeCouncilSynthesisBody(out)) {
+  // vNext.10: council 도 동일 규칙 — 구형 Council 본문은 founder-facing 에서 차단
+  if (responder !== 'query' && looksLikeCouncilSynthesisBody(out)) {
     logRouterEvent('final_response_council_leak_detected', {
       responder,
       command_name,
@@ -146,13 +187,17 @@ export function finalizeSlackResponse(p) {
     packet_id: packet_id ?? null,
     status_packet_id: status_packet_id ?? null,
     work_queue_id: work_queue_id ?? null,
+    source_formatter: sourceFormatter,
+    slack_route_label: slackRouteLabel,
   });
 
   try {
     const _bi = getBuildInfo();
     const via = p.via || command_name || response_type;
     console.info(`[G1COS ROUTE END] sha=${_bi.release_sha_short} responder=${responder} via=${via} response_type=${response_type} council_blocked=${blocked}`);
-  } catch { /* never crash on diagnostics */ }
+  } catch {
+    /* never crash on diagnostics */
+  }
 
   markInboundTurnFinalize({
     responder,
@@ -165,10 +210,22 @@ export function finalizeSlackResponse(p) {
   });
 
   const SYSTEM_RESPONDERS = new Set([
-    'council', 'query', 'planner', 'help', 'error',
-    'single', 'legacy_single', 'navigator', 'structured',
-    'executive_surface', 'execution_spine', 'execution_running_surface',
-    'execution_reporting_surface', 'escalation_surface',
+    'council',
+    'query',
+    'planner',
+    'help',
+    'error',
+    'single',
+    'legacy_single',
+    'navigator',
+    'structured',
+    'executive_surface',
+    'execution_spine',
+    'execution_running_surface',
+    'execution_reporting_surface',
+    'escalation_surface',
+    'runtime_meta_surface',
+    'meta_debug_surface',
   ]);
   if (!isCanonicalSurface(responder) && !SYSTEM_RESPONDERS.has(responder)) {
     logRouterEvent('non_canonical_surface_blocked', {
@@ -178,8 +235,25 @@ export function finalizeSlackResponse(p) {
     out = '[COS] 응답을 처리하는 중 내부 경로 오류가 발생했습니다. 다시 시도해 주세요.';
   }
 
+  const rawBeforeSanitize = out;
   const debugMode = process.env.COS_DEBUG_MODE === '1';
   out = sanitizeFounderOutput(out, { debugMode, responder });
+
+  try {
+    const tracePayload = buildFounderOutputTraceRecord({
+      inbound_turn_id: traceStore?.turn_id ?? null,
+      responder,
+      response_type,
+      source_formatter: sourceFormatter,
+      slack_route_label: slackRouteLabel,
+      raw_before_sanitize: rawBeforeSanitize,
+      sanitized: out,
+      raw_for_detection: rawForTraceDetection,
+    });
+    console.info(JSON.stringify(tracePayload));
+  } catch {
+    /* never crash */
+  }
 
   return out;
 }

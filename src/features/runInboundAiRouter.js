@@ -82,6 +82,12 @@ import { detectContinuationIntent, buildContextSynthesisPrompt, shouldActivateCo
 import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEvent } from './topicAnchorGuard.js';
 import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
+import {
+  classifyFounderRoutingLock,
+  formatRuntimeMetaSurfaceText,
+  formatMetaDebugSurfaceText,
+} from './inboundFounderRoutingLock.js';
+import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -278,10 +284,71 @@ export async function runInboundAiRouter(ctx) {
     callJSON,
   } = ctx;
 
+  const threadKey = buildSlackThreadKey(metadata);
+
+  const founderRouteLock = classifyFounderRoutingLock(trimmed);
+  if (founderRouteLock?.kind === 'version') {
+    logRouterEvent('router_responder_selected', {
+      responder: 'runtime_meta_surface',
+      command_name: 'routing_lock_version',
+      via: 'inboundFounderRoutingLock',
+    });
+    return finalizeSlackResponse({
+      responder: 'runtime_meta_surface',
+      text: formatRuntimeMetaSurfaceText(),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'version',
+      council_blocked: true,
+      response_type: 'routing_lock_version',
+      source_formatter: 'inboundFounderRoutingLock:version',
+      slack_route_label: metadata.slack_route_label ?? null,
+    });
+  }
+  if (founderRouteLock?.kind === 'meta_debug') {
+    logRouterEvent('router_responder_selected', {
+      responder: 'meta_debug_surface',
+      command_name: 'routing_lock_meta',
+      via: 'inboundFounderRoutingLock',
+    });
+    return finalizeSlackResponse({
+      responder: 'meta_debug_surface',
+      text: formatMetaDebugSurfaceText(),
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'meta_debug',
+      council_blocked: true,
+      response_type: 'routing_lock_meta_debug',
+      source_formatter: 'inboundFounderRoutingLock:meta_debug',
+      slack_route_label: metadata.slack_route_label ?? null,
+    });
+  }
+  if (founderRouteLock?.kind === 'kickoff_test') {
+    const surfKick = await tryExecutiveSurfaceResponse(trimmed, metadata, {});
+    if (surfKick?.response_type === 'start_project') {
+      logRouterEvent('router_responder_selected', {
+        responder: 'executive_surface',
+        command_name: 'start_project',
+        via: 'inboundFounderRoutingLock_kickoff',
+      });
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: surfKick.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        command_name: 'start_project',
+        council_blocked: true,
+        response_type: surfKick.response_type,
+        source_formatter: 'inboundFounderRoutingLock:kickoff_tryExecutiveSurfaceResponse',
+        slack_route_label: metadata.slack_route_label ?? null,
+        packet_id: surfKick.packet_id ?? null,
+        status_packet_id: surfKick.status_packet_id ?? null,
+      });
+    }
+  }
+
   const queryFirst = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);
   if (queryFirst != null) return queryFirst;
-
-  const threadKey = buildSlackThreadKey(metadata);
 
   const intakeCancelAi = tryFinalizeProjectIntakeCancel(trimmed, metadata);
   if (intakeCancelAi != null) {
@@ -723,6 +790,8 @@ export async function runInboundAiRouter(ctx) {
         council_blocked: false,
         response_type,
         footer_blocked,
+        source_formatter: 'runCouncilMode:synthesizeCouncil',
+        slack_route_label: metadata.slack_route_label ?? null,
       });
 
     const priorCouncil = getConversationTranscript(threadKey);
@@ -761,7 +830,7 @@ export async function runInboundAiRouter(ctx) {
       }
 
       const finalText = approvalItem
-        ? `${council.text}\n\n승인 대기열\n- 상태: pending\n- 승인 ID: ${approvalItem.id}`
+        ? `${council.text}${formatFounderApprovalAppendix(approvalItem.id)}`
         : council.text;
 
       await appendJsonRecord(INTERACTIONS_FILE, {
@@ -805,6 +874,8 @@ export async function runInboundAiRouter(ctx) {
         normalized_text: routerCtx.normalized_text,
         council_blocked: true,
         response_type: 'legacy_single_after_council_error',
+        source_formatter: 'runLegacySingleFlow:after_council_error',
+        slack_route_label: metadata.slack_route_label ?? null,
       });
     }
   }
@@ -1192,6 +1263,8 @@ export async function runInboundAiRouter(ctx) {
       normalized_text: routerCtx.normalized_text,
       council_blocked: true,
       response_type: 'legacy_single_after_partner_error',
+      source_formatter: 'runLegacySingleFlow:after_partner_error',
+      slack_route_label: metadata.slack_route_label ?? null,
     });
   }
 }

@@ -116,7 +116,8 @@ try {
   assert.ok(!cleaned.includes('matrix trigger'), 'no matrix trigger');
   assert.ok(!cleaned.includes('matrix_cell'), 'no matrix_cell');
   assert.ok(!cleaned.includes('institutional memory'), 'no inst memory');
-  assert.ok(cleaned.includes('종합 추천안') || cleaned.includes('결론'), 'keeps valid content');
+  assert.ok(!cleaned.includes('종합 추천안'), 'strips old council heading');
+  assert.ok(cleaned.includes('결론'), 'keeps conclusion line');
 
   const detect = detectInternalLeakage(leaked);
   assert.ok(detect.leaked, 'leak detected');
