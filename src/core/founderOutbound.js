@@ -8,6 +8,7 @@
 // FOUNDERRAWOUTBOUND_FORBIDDEN — grep marker for migration enforcement
 
 import { FOUNDER_SURFACE_VALUES, SAFE_FALLBACK_TEXT } from './founderContracts.js';
+import { sanitizeFounderOutput, founderHardBlockRemaining, FOUNDER_HARD_BLOCK_FALLBACK } from '../features/founderSurfaceGuard.js';
 
 const INTERNAL_MARKER_SUBSTRINGS = [
   '종합 추천안',
@@ -80,17 +81,20 @@ export async function sendFounderResponse(opts) {
     text = SAFE_FALLBACK_TEXT;
   }
 
-  // 2. Hard block: internal markers must not reach founder
-  if (containsInternalMarkers(text)) {
+  // 2a. Sanitize: strip legacy Council sections/markers (same guard as finalizeSlackResponse)
+  text = sanitizeFounderOutput(text, { responder: responder_kind });
+
+  // 2b. Hard block: if markers survived sanitization, replace entirely
+  if (containsInternalMarkers(text) || founderHardBlockRemaining(text)) {
     emitTrace({
       intent,
       surface_type,
       responder_kind,
-      error: 'internal_markers_detected',
+      error: 'internal_markers_detected_after_sanitize',
       preview: text.slice(0, 200),
       ...trace,
     });
-    text = SAFE_FALLBACK_TEXT;
+    text = FOUNDER_HARD_BLOCK_FALLBACK;
   }
 
   // 3. Build Slack payload
