@@ -822,6 +822,14 @@ npm test: ALL PASS (전체 스위트)
 1. **로컬**: `npm test`
 2. **슬랙 스모크**: `@봇 버전` → runtime 패킷; 동일 스레드에서 `COS responder는 어떻게 동작해?` → meta 패킷; `오늘부터 테스트용 작은 프로젝트 하나 시작하자` → start_project 흐름. 배포 로그에서 `founder_output_trace` JSON grep.
 
+### vNext.10b (같은 § 보강, 2026-03-31)
+
+- **`founderRoutingLockFinalize.js`**: 멘션/DM **명령 라우터 최상단** + `runInboundAiRouter` 동일 락 — `tryExecutiveSurfaceResponse` 앞에 메타/버전/테스트 킥오프가 먼저 처리됨.
+- **`topLevelRouter`**: `query` 외 전 responder에 **페르소나 줄·승인 대기열 형태·구형 마커** 선제 차단; `founder_output_trace`에 `route_label`, `passed_finalize`, `passed_sanitize`.
+- **`founderOutboundGate.js`**: 멘션/ DM / 버튼 / 쿼리 네비 `postMessage` 직전 2차 sanitize; `COS_ENFORCE_FOUNDER_GATE=1`이면 ALS 상 finalize 누락 시 throw(회귀).
+- **메타 한 줄 지시** (`한 줄로만 말해` 등): `inboundFounderRoutingLock` `META_BRIEF_DIRECTIVE`.
+- **`/g1cos 버전`**: `finalizeSlackResponse` + `formatRuntimeMetaSurfaceText` 로 SLACK 과 동일 트레이스.
+
 ---
 
 ## 16. Next Patch Priorities

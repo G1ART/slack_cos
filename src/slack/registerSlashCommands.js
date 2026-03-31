@@ -11,7 +11,8 @@ import { tryFinalizeSlackQueryRoute } from '../features/queryOnlyRoute.js';
 import { tryFinalizeG1CosLineageTransport } from '../features/g1cosLineageTransport.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
 import { recordSlashCommandExchange } from '../features/slackConversationBuffer.js';
-import { getBuildInfo } from '../runtime/buildInfo.js';
+import { formatRuntimeMetaSurfaceText } from '../features/inboundFounderRoutingLock.js';
+import { finalizeSlackResponse } from '../features/topLevelRouter.js';
 
 /** @param {*} slackApp Bolt App 인스턴스 */
 export function registerG1CosSlashCommand(slackApp) {
@@ -48,17 +49,17 @@ export function registerG1CosSlashCommand(slackApp) {
     ].join('\n');
 
     if (/^(?:version|버전|runtime\s*status)$/i.test(trimmed)) {
-      const bi = getBuildInfo();
-      const vText = [
-        `*[G1 COS Runtime]*`,
-        `- sha: \`${bi.release_sha_short}\` (\`${bi.release_sha}\`)`,
-        `- branch: \`${bi.branch}\``,
-        `- started_at: ${bi.started_at}`,
-        `- pid: ${bi.pid}`,
-        `- hostname: ${bi.hostname}`,
-        `- runtime_mode: ${bi.runtime_mode}`,
-        `- intake_persist: ${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'}`,
-      ].join('\n');
+      const vText = finalizeSlackResponse({
+        responder: 'runtime_meta_surface',
+        text: formatRuntimeMetaSurfaceText(),
+        raw_text: displayRaw,
+        normalized_text: trimmed,
+        command_name: 'version',
+        council_blocked: true,
+        response_type: 'routing_lock_version',
+        source_formatter: 'slash_g1cos:version',
+        slack_route_label: 'slash_finalize',
+      });
       await respond({ response_type: 'in_channel', text: vText });
       recordSlashCommandExchange(command, displayRaw, vText);
       return;

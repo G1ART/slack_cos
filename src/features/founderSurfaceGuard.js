@@ -65,6 +65,9 @@ const OLD_COUNCIL_MARKER_SUBSTRINGS = [
   '핵심 리스크',
   '대표 결정 필요 여부',
   '내부 처리 정보',
+  'strategy_finance:',
+  'risk_review:',
+  '참여 페르소나:',
 ];
 
 let _personaBulletRe = null;

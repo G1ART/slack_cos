@@ -7,7 +7,6 @@
 
 import { markInboundTurnFinalize, getInboundTurnTraceStore } from './inboundTurnTrace.js';
 import { getBuildInfo } from '../runtime/buildInfo.js';
-import { isActiveProjectIntake, getProjectIntakeSession } from './projectIntakeSession.js';
 import {
   sanitizeFounderOutput,
   isCanonicalSurface,
@@ -71,14 +70,20 @@ export function buildFounderOutputTraceRecord({
   raw_before_sanitize,
   sanitized,
   raw_for_detection,
+  passed_finalize,
+  passed_sanitize,
 }) {
+  const route_label = slack_route_label ?? null;
   return {
     stage: 'founder_output_trace',
     inbound_turn_id: inbound_turn_id ?? null,
     responder,
     response_type,
     source_formatter: source_formatter ?? 'unspecified',
-    slack_route_label: slack_route_label ?? null,
+    slack_route_label: route_label,
+    route_label,
+    passed_finalize: passed_finalize !== false,
+    passed_sanitize: passed_sanitize !== false,
     raw_preview: String(raw_before_sanitize ?? '').slice(0, 160),
     sanitized_preview: String(sanitized ?? '').slice(0, 160),
     contains_old_council_markers: containsOldCouncilMarkers(raw_for_detection ?? ''),
@@ -157,9 +162,14 @@ export function finalizeSlackResponse(p) {
       'meta_debug_surface',
     ].includes(responder);
 
-  // 조회(formatPlanDetail 등)는 저장 필드에 Council류 문구가 섞여도 **절대** 여기서 덮어쓰지 않음
-  // vNext.10: council 도 동일 규칙 — 구형 Council 본문은 founder-facing 에서 차단
-  if (responder !== 'query' && looksLikeCouncilSynthesisBody(out)) {
+  // 조회(query)만 예외 — council 포함 전 responder 동일 차단 (vNext.10b).
+  const councilShapeLeak =
+    responder !== 'query' &&
+    (looksLikeCouncilSynthesisBody(out) ||
+      containsOldCouncilMarkers(out) ||
+      containsPersonaLiterals(out) ||
+      containsApprovalQueueRaw(out));
+  if (councilShapeLeak) {
     logRouterEvent('final_response_council_leak_detected', {
       responder,
       command_name,
@@ -249,6 +259,8 @@ export function finalizeSlackResponse(p) {
       raw_before_sanitize: rawBeforeSanitize,
       sanitized: out,
       raw_for_detection: rawForTraceDetection,
+      passed_finalize: true,
+      passed_sanitize: true,
     });
     console.info(JSON.stringify(tracePayload));
   } catch {

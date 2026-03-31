@@ -40,7 +40,7 @@ import {
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
-import { getBuildInfo } from '../runtime/buildInfo.js';
+import { tryFinalizeInboundFounderRoutingLock } from './founderRoutingLockFinalize.js';
 
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
@@ -104,30 +104,9 @@ export async function runInboundCommandRouter(ctx) {
   const trimmed = normalizeSlackUserPayload(String(userText ?? '').trim());
   const routerCtx = { raw_text: userText, normalized_text: trimmed };
 
-  if (/^(?:버전|version|runtime\s*status)$/i.test(trimmed)) {
-    const bi = getBuildInfo();
-    const versionText = [
-      `*[G1 COS Runtime]*`,
-      `- sha: \`${bi.release_sha_short}\` (\`${bi.release_sha}\`)`,
-      `- branch: \`${bi.branch}\``,
-      `- started_at: ${bi.started_at}`,
-      `- pid: ${bi.pid}`,
-      `- hostname: ${bi.hostname}`,
-      `- runtime_mode: ${bi.runtime_mode}`,
-      `- intake_persist: ${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'}`,
-    ].join('\n');
-    logRouterEvent('router_responder_selected', { responder: 'version', command_name: 'version' });
-    logRouterEvent('router_responder_locked', { responder: 'version' });
-    const response = finalizeSlackResponse({
-      responder: 'executive_surface',
-      text: versionText,
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'version',
-      council_blocked: true,
-      response_type: 'version',
-    });
-    return { done: true, response };
+  const founderLockFirst = await tryFinalizeInboundFounderRoutingLock({ trimmed, routerCtx, metadata });
+  if (founderLockFirst != null) {
+    return { done: true, response: founderLockFirst };
   }
 
   if (trimmed === '도움말') {
