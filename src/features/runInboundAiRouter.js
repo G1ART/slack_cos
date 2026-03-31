@@ -281,7 +281,11 @@ export async function runInboundAiRouter(ctx) {
     makeId,
     callText,
     callJSON,
+    founder_route = false,
   } = ctx;
+
+  const founderCouncilDisabled =
+    founder_route && process.env.COS_DISABLE_COUNCIL_ON_FOUNDER !== '0';
 
   const threadKey = buildSlackThreadKey(metadata);
 
@@ -540,6 +544,25 @@ export async function runInboundAiRouter(ctx) {
 
   const councilParsed = parseCouncilCommand(trimmed);
   const explicitCouncil = isCouncilCommand(trimmed);
+
+  if (founderCouncilDisabled && explicitCouncil) {
+    logRouterEvent('founder_route_council_branch_disabled', {
+      responder: 'council',
+      command_name: 'council_explicit',
+      founder_route: true,
+    });
+    console.error('[FOUNDER_ROUTE_HARD_KILL] explicit council command blocked');
+    return finalizeSlackResponse({
+      responder: 'error',
+      text: '[COS] founder 경로에서는 council이 비활성화되어 있습니다. kickoff/help/status/approval/deploy 명령으로 진행해 주세요.',
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'council_disabled_founder_route',
+      council_blocked: true,
+      response_type: 'founder_council_disabled',
+      founder_route: true,
+    });
+  }
 
   const probeCouncil = normalizePlannerInputForRoute(trimmed);
   const latePlanner = analyzePlannerResponderLock(probeCouncil);
