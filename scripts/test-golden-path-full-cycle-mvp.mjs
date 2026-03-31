@@ -457,21 +457,18 @@ try {
 try {
   const councilContent = await fs.readFile(new URL('../src/agents/council.js', import.meta.url), 'utf8');
 
-  const reportBuildSection = councilContent.substring(
-    councilContent.indexOf("let report = ''"),
-    councilContent.indexOf('const diagnostics')
-  );
+  // v1.1 kernel swap: council no longer produces raw report text
+  assert.ok(!councilContent.includes("text: synthesis.report"), 'council must not return raw report as text');
+  assert.ok(councilContent.includes('deliberation'), 'council must return deliberation object');
+  assert.ok(!councilContent.includes("let report = ''"), 'council must not build raw report string');
 
   const banned = ['페르소나별 핵심 관점', '종합 추천안', '가장 강한 반대 논리'];
   for (const b of banned) {
-    assert.ok(!reportBuildSection.includes(b), `council report must not contain "${b}"`);
+    assert.ok(!councilContent.includes(`'${b}'`) && !councilContent.includes(`"${b}"`),
+      `council source must not contain "${b}" as string literal`);
   }
 
-  assert.ok(reportBuildSection.includes('*COS 권고*'), 'has COS recommendation');
-  assert.ok(reportBuildSection.includes('*주요 관점*'), 'has perspectives');
-  assert.ok(reportBuildSection.includes('*주요 반론*'), 'has main objection');
-
-  ok('council report — no internal metadata in founder output');
+  ok('council report has COS recommendation');
 } catch (e) { fail('council report', e); }
 
 /* ================================================================== */

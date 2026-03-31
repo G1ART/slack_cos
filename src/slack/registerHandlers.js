@@ -1,9 +1,5 @@
 import { shouldSkipEvent } from './eventDedup.js';
-import { replyInThread } from './reply.js';
-import {
-  gateFounderFacingTextForSlackPost,
-  postFounderGatedThreadReply,
-} from './founderOutboundGate.js';
+import { sendFounderResponse } from '../core/founderOutbound.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
 import { extractFilesFromEvent, ingestSlackFile, formatFileIngestError } from '../features/slackFileIntake.js';
@@ -21,16 +17,17 @@ import { getChannelContext } from '../storage/channelContext.js';
 import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
 
+// FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
+
 /**
- * @param {string|{ text: string, blocks?: object[] }} answer
- * @returns {{ text: string, blocks?: object[] }}
+ * @param {string|{ text: string, blocks?: object[], surface_type?: string }} answer
+ * @returns {{ text: string, blocks?: object[], surface_type?: string }}
  */
 function resolvePostPayload(answer) {
   if (typeof answer === 'string') return { text: answer };
-  return { text: answer?.text || '', blocks: answer?.blocks };
+  return { text: answer?.text || '', blocks: answer?.blocks, surface_type: answer?.surface_type };
 }
 
-/** 플래너·조회 등 app.js 직접 반환까지 스레드 버퍼에 남겨, 후속 dialog 가 PLN 맥락을 본다. */
 function recordInboundSlackExchange(metadata, userInboundText, answer) {
   const key = buildSlackThreadKey(metadata);
   const u = String(userInboundText || '').trim();
@@ -39,22 +36,6 @@ function recordInboundSlackExchange(metadata, userInboundText, answer) {
   if (plain) recordConversationTurn(key, 'assistant', plain);
 }
 
-/** Slack blocks 검증/전송 실패 시 텍스트만 재시도할지 여부 */
-function isBlocksValidationError(error) {
-  const msg = error?.message || String(error);
-  return (
-    /action_id.*already exists/i.test(msg) ||
-    /invalid_blocks/i.test(msg) ||
-    /block_kit/i.test(msg)
-  );
-}
-
-/**
- * Slack 텍스트 진입 (`app.js` 의 `handleUserText` → `runInboundCommandRouter` + `runInboundAiRouter`):
- * - app_mention: 채널에서 @봇 멘션
- * - message: DM(channel_type===im) 만. 일반 채널에서 멘션 없이내면 이 앱은 이벤트를 받지 않음.
- * - (별도) **`/g1cos`** 슬래시: `registerSlashCommands.js` — 조회·lineage; 응답 직후 **`recordSlashCommandExchange`**(DM은 `im:` 동일 키). 끄려면 `CONVERSATION_BUFFER_RECORD_SLASH=0`.
- */
 export function registerHandlers(slackApp, { handleUserText, formatError }) {
   slackApp.event('app_mention', async ({ body, event, say, client }) => {
     try {
@@ -85,7 +66,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
 
       const combinedText = (userText + fileContext).trim();
       if (!combinedText) {
-        await replyInThread(say, event.ts, '지시 내용을 함께 적어주세요.');
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: '지시 내용을 함께 적어주세요.',
+          surface_type: 'safe_fallback_surface',
+        });
         return;
       }
 
@@ -103,27 +89,23 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       const answer = await handleUserText(combinedText, meta);
       recordInboundSlackExchange(meta, combinedText, answer);
 
-      try {
-        await postFounderGatedThreadReply(say, event.ts, answer);
-      } catch (err) {
-        if (isBlocksValidationError(err) && typeof answer === 'object' && answer?.blocks) {
-          console.warn(
-            'SLACK_BLOCKS_FALLBACK (app_mention): posting text only; original error:',
-            err?.message || err
-          );
-          const fb = gateFounderFacingTextForSlackPost(answer.text || '');
-          await replyInThread(say, event.ts, fb);
-        } else {
-          throw err;
-        }
-      }
+      const payload = resolvePostPayload(answer);
+      await sendFounderResponse({
+        say,
+        thread_ts: event.ts,
+        rendered_text: payload.text,
+        rendered_blocks: payload.blocks,
+        surface_type: payload.surface_type || 'safe_fallback_surface',
+        trace: { route_label: 'mention_ai_router' },
+      });
     } catch (error) {
       console.error('APP_MENTION_ERROR:', error);
-      await replyInThread(
+      await sendFounderResponse({
         say,
-        event.ts,
-        `에러가 발생했습니다.\n${formatError(error)}`
-      );
+        thread_ts: event.ts,
+        rendered_text: `에러가 발생했습니다.\n${formatError(error)}`,
+        surface_type: 'exception_surface',
+      });
     }
   });
 
@@ -174,42 +156,29 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);
-      const safePayload = {
-        ...payload,
-        text: gateFounderFacingTextForSlackPost(payload.text || ''),
-      };
-      try {
-        await client.chat.postMessage({
-          channel: event.channel,
-          ...safePayload,
-        });
-      } catch (err) {
-        if (isBlocksValidationError(err) && payload.blocks) {
-          console.warn(
-            'SLACK_BLOCKS_FALLBACK (dm): posting text only; original error:',
-            err?.message || err
-          );
-          await client.chat.postMessage({
-            channel: event.channel,
-            text: gateFounderFacingTextForSlackPost(payload.text || ''),
-          });
-        } else {
-          throw err;
-        }
-      }
+      await sendFounderResponse({
+        client,
+        channel: event.channel,
+        rendered_text: payload.text,
+        rendered_blocks: payload.blocks,
+        surface_type: payload.surface_type || 'safe_fallback_surface',
+        trace: { route_label: 'dm_ai_router' },
+      });
     } catch (error) {
       console.error('DM_ERROR:', error);
 
       if (event?.channel) {
-        await client.chat.postMessage({
+        await sendFounderResponse({
+          client,
           channel: event.channel,
-          text: `에러가 발생했습니다.\n${formatError(error)}`,
+          rendered_text: `에러가 발생했습니다.\n${formatError(error)}`,
+          surface_type: 'exception_surface',
         });
       }
     }
   });
 
-  // Interactive approval buttons (action_id: approval_<index>_approve | hold | reject | detail)
+  // Interactive approval buttons
   const approvalActionPattern = /^approval_\d+_(approve|hold|reject|detail)$/;
   const actionIdToIntent = { approve: '승인', hold: '보류', reject: '폐기', detail: '상세' };
 
@@ -238,11 +207,13 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       if (intent === '상세') {
         const item = await getApprovalByInternalId(payload.approvalId);
         if (!item) return;
-        const text = gateFounderFacingTextForSlackPost(formatApprovalDetail(item));
-        await client.chat.postMessage({
+        await sendFounderResponse({
+          client,
           channel,
-          text,
-          ...(thread_ts ? { thread_ts } : {}),
+          thread_ts,
+          rendered_text: formatApprovalDetail(item),
+          surface_type: 'approval_packet_surface',
+          trace: { route_label: 'approval_detail_button' },
         });
         return;
       }
@@ -253,19 +224,21 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         '',
         { approved_by: body?.user?.id, source: body }
       );
-      const text = gateFounderFacingTextForSlackPost(formatApprovalUpdate(result));
 
-      await client.chat.postMessage({
+      await sendFounderResponse({
+        client,
         channel,
-        text,
-        ...(thread_ts ? { thread_ts } : {}),
+        thread_ts,
+        rendered_text: formatApprovalUpdate(result),
+        surface_type: 'approval_packet_surface',
+        trace: { route_label: 'approval_update_button' },
       });
     } catch (error) {
       console.error('APPROVAL_BUTTON_ERROR:', error);
     }
   });
 
-  // Execution deploy approval buttons (g1cos_exec_deploy_approve | rework | hold)
+  // Execution deploy approval buttons
   const execDeployActionPattern = /^g1cos_exec_deploy_(approve|rework|hold)$/;
   const execDeployIntentMap = { approve: 'approve', rework: 'rework', hold: 'hold' };
 
@@ -291,10 +264,13 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       const channel = body?.channel?.id;
       const thread_ts = body?.container?.thread_ts || body?.message?.ts || undefined;
 
-      await client.chat.postMessage({
+      await sendFounderResponse({
+        client,
         channel,
-        text: gateFounderFacingTextForSlackPost(result.response_text),
-        ...(thread_ts ? { thread_ts } : {}),
+        thread_ts,
+        rendered_text: result.response_text,
+        surface_type: 'deploy_packet_surface',
+        trace: { route_label: 'exec_deploy_button' },
       });
     } catch (error) {
       console.error('EXEC_DEPLOY_BUTTON_ERROR:', error);
@@ -352,10 +328,13 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
           '\n\n_참고: 원문이 길어 일부만 담겼을 수 있습니다. 전체는 `실행큐에 올려줘` + 다음 줄로 다시 내도 됩니다._';
       }
 
-      await client.chat.postMessage({
+      await sendFounderResponse({
+        client,
         channel,
-        ...(thread_ts ? { thread_ts } : {}),
-        text: gateFounderFacingTextForSlackPost(msg),
+        thread_ts,
+        rendered_text: msg,
+        surface_type: 'structured_command_surface',
+        trace: { route_label: 'dialog_queue_button' },
       });
     } catch (error) {
       console.error('DIALOG_QUEUE_BUTTON_ERROR:', error);
@@ -372,7 +351,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
     handleDialogQueueButton({ ...args, kind: 'skip' })
   );
 
-  // 조회 응답 하단 — 관련 조회 한 줄 (`action_id`: g1cos_query_nav_0 …)
+  // Query nav buttons
   slackApp.action(/^g1cos_query_nav_\d+$/, async ({ ack, body, action, client }) => {
     try {
       await ack();
@@ -401,31 +380,15 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         body?.message?.thread_ts || body?.message?.ts || body?.container?.thread_ts || undefined;
 
       const payload = resolvePostPayload(out);
-      const gatedPayload = {
-        ...payload,
-        text: gateFounderFacingTextForSlackPost(payload.text || ''),
-      };
-      try {
-        await client.chat.postMessage({
-          channel,
-          ...(thread_ts ? { thread_ts } : {}),
-          ...gatedPayload,
-        });
-      } catch (err) {
-        if (isBlocksValidationError(err) && payload.blocks) {
-          console.warn(
-            'SLACK_BLOCKS_FALLBACK (query_nav_button): posting text only; original error:',
-            err?.message || err
-          );
-          await client.chat.postMessage({
-            channel,
-            ...(thread_ts ? { thread_ts } : {}),
-            text: gateFounderFacingTextForSlackPost(payload.text || ''),
-          });
-        } else {
-          throw err;
-        }
-      }
+      await sendFounderResponse({
+        client,
+        channel,
+        thread_ts,
+        rendered_text: payload.text,
+        rendered_blocks: payload.blocks,
+        surface_type: 'query_surface',
+        trace: { route_label: 'query_nav_button' },
+      });
     } catch (error) {
       console.error('QUERY_NAV_BUTTON_ERROR:', error);
     }

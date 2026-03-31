@@ -1,9 +1,7 @@
 /**
- * Bolt slash commands — `/g1cos`: 조회 + **M4** lineage (`패킷 PKT-…` / `워크큐 AWQ-…` read-only).
- * 응답 후 `recordSlashCommandExchange` 로 대화 버퍼에 남김 — `CONVERSATION_BUFFER_RECORD_SLASH=0` 이면 생략.
- * Slack 앱 설정에서 Slash Command 를 등록해야 이벤트가 들어온다.
- *
- * @see docs/cursor-handoffs/COS_NorthStar_Workflow_2026-03.md
+ * Bolt slash commands — `/g1cos`: 조회 + lineage (Council·LLM 없음).
+ * All founder-facing text validated through founderOutbound.validateFounderText.
+ * FOUNDERRAWOUTBOUND_FORBIDDEN — no raw text bypasses validation.
  */
 
 import { normalizeSlackUserPayload } from './slackTextNormalize.js';
@@ -12,9 +10,12 @@ import { tryFinalizeG1CosLineageTransport } from '../features/g1cosLineageTransp
 import { logRouterEvent } from '../features/topLevelRouter.js';
 import { recordSlashCommandExchange } from '../features/slackConversationBuffer.js';
 import { formatRuntimeMetaSurfaceText } from '../features/inboundFounderRoutingLock.js';
-import { finalizeSlackResponse } from '../features/topLevelRouter.js';
+import { validateFounderText } from '../core/founderOutbound.js';
 
-/** @param {*} slackApp Bolt App 인스턴스 */
+function safeText(text) {
+  return validateFounderText(text).text;
+}
+
 export function registerG1CosSlashCommand(slackApp) {
   slackApp.command('/g1cos', async ({ ack, command, respond }) => {
     await ack();
@@ -49,17 +50,7 @@ export function registerG1CosSlashCommand(slackApp) {
     ].join('\n');
 
     if (/^(?:version|버전|runtime\s*status)$/i.test(trimmed)) {
-      const vText = finalizeSlackResponse({
-        responder: 'runtime_meta_surface',
-        text: formatRuntimeMetaSurfaceText(),
-        raw_text: displayRaw,
-        normalized_text: trimmed,
-        command_name: 'version',
-        council_blocked: true,
-        response_type: 'routing_lock_version',
-        source_formatter: 'slash_g1cos:version',
-        slack_route_label: 'slash_finalize',
-      });
+      const vText = safeText(formatRuntimeMetaSurfaceText());
       await respond({ response_type: 'in_channel', text: vText });
       recordSlashCommandExchange(command, displayRaw, vText);
       return;
@@ -80,7 +71,7 @@ export function registerG1CosSlashCommand(slackApp) {
         response_type: lineageHit.response_type,
         channel_id: command.channel_id,
       });
-      await respond({ response_type: 'in_channel', text: lineageHit.text });
+      await respond({ response_type: 'in_channel', text: safeText(lineageHit.text) });
       recordSlashCommandExchange(command, displayRaw, lineageHit.text);
       return;
     }
@@ -105,7 +96,7 @@ export function registerG1CosSlashCommand(slackApp) {
     });
 
     if (typeof finalized === 'object' && finalized?.blocks) {
-      const outText = finalized.text || '';
+      const outText = safeText(finalized.text || '');
       await respond({
         response_type: 'in_channel',
         text: outText,
@@ -113,7 +104,7 @@ export function registerG1CosSlashCommand(slackApp) {
       });
       recordSlashCommandExchange(command, displayRaw, outText);
     } else {
-      const outText = typeof finalized === 'string' ? finalized : finalized?.text || '';
+      const outText = safeText(typeof finalized === 'string' ? finalized : finalized?.text || '');
       await respond({
         response_type: 'in_channel',
         text: outText,

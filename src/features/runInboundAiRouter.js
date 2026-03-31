@@ -60,6 +60,7 @@ import {
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
+import { renderDeliberation } from '../core/founderRenderer.js';
 import {
   interpretTask,
   isResearchSurfaceCandidate,
@@ -82,9 +83,7 @@ import { detectContinuationIntent, buildContextSynthesisPrompt, shouldActivateCo
 import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEvent } from './topicAnchorGuard.js';
 import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
-import { classifyFounderRoutingLock } from './inboundFounderRoutingLock.js';
-// GREP_FOUNDERRLOCK_IMPORT
-import { tryFinalizeInboundFounderRoutingLock } from './founderRoutingLockFinalize.js';
+// Legacy routing lock removed — pipeline handles version/meta/kickoff (v1.1 kernel swap)
 import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
 
 /**
@@ -109,16 +108,7 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
     return { responder: 'help' };
   }
 
-  const founderLockPrev = classifyFounderRoutingLock(trimmed);
-  if (founderLockPrev?.kind === 'version') {
-    return { responder: 'runtime_meta_surface', surfaceResponseType: 'routing_lock_version' };
-  }
-  if (founderLockPrev?.kind === 'meta_debug') {
-    return { responder: 'meta_debug_surface', surfaceResponseType: 'routing_lock_meta_debug' };
-  }
-  if (founderLockPrev?.kind === 'kickoff_test') {
-    return { responder: 'executive_surface', surfaceResponseType: 'start_project' };
-  }
+  // Legacy classifyFounderRoutingLock + kickoff_test removed — pipeline handles (v1.1)
 
   const intakeCancelPrev = tryFinalizeProjectIntakeCancel(trimmed, meta);
   if (intakeCancelPrev != null) {
@@ -295,11 +285,7 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
-  // GREP_FOUNDERRLOCK_CALLSITE — GREP_FOUNDERRLOCK_VERSION_RETURN | META_RETURN | KICKOFF_RETURN 는 founderRoutingLockFinalize.js
-  const founderLockHit = await tryFinalizeInboundFounderRoutingLock({ trimmed, routerCtx, metadata });
-  if (founderLockHit != null) {
-    return founderLockHit;
-  }
+  // Legacy routing lock callsite removed — pipeline handles (v1.1)
 
   const queryFirst = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);
   if (queryFirst != null) return queryFirst;
@@ -783,9 +769,10 @@ export async function runInboundAiRouter(ctx) {
         });
       }
 
+      const rendered = renderDeliberation(council.deliberation);
       const finalText = approvalItem
-        ? `${council.text}${formatFounderApprovalAppendix(approvalItem.id)}`
-        : council.text;
+        ? `${rendered.text}${formatFounderApprovalAppendix(approvalItem.id)}`
+        : rendered.text;
 
       await appendJsonRecord(INTERACTIONS_FILE, {
         id: makeId('INT'),

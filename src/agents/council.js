@@ -212,32 +212,9 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
     ? '리스크를 수용하고 즉시 진행할지, 조건부 보류 후 보완할지 결정이 필요합니다.'
     : '현재는 조건부 실행 후 점검으로 진행 가능합니다.';
 
-  // Founder-grade report — no internal persona IDs, matrix labels, or council metadata
-  let report = '';
-  report += `*요약*\n${oneLineSummary}\n\n`;
-  report += `*COS 권고*\n${recommendation}\n\n`;
-
-  const perspectiveLines = personaOutputs
-    .map((p) => {
-      const summary = normalizeLine(p.one_line_summary);
-      return summary ? `- ${summary}` : null;
-    })
+  const viewpoints = personaOutputs
+    .map((p) => normalizeLine(p.one_line_summary))
     .filter(Boolean);
-  if (perspectiveLines.length) {
-    report += `*주요 관점*\n${perspectiveLines.join('\n')}\n\n`;
-  }
-
-  report += `*주요 반론*\n${strongestObjection}\n\n`;
-  if (unresolved.length) {
-    report += `*미해결 쟁점*\n${unresolved.map((u) => `- ${u}`).join('\n')}\n\n`;
-  }
-  if (keyRisks.length) {
-    report += `*리스크*\n${keyRisks.map((r) => `- ${r}`).join('\n')}\n\n`;
-  }
-  report += `*다음 행동*\n${nextActions.length ? nextActions.map((a) => `- ${a}`).join('\n') : '- 없음'}\n\n`;
-  report += decisionNeeded
-    ? `*대표 결정 필요*\n${decisionQuestion}`
-    : `${decisionQuestion}`;
 
   const diagnostics = {
     council_mode: matrixInfo?.used ? 'matrix_cell' : 'council',
@@ -247,7 +224,6 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
   };
 
   return {
-    report: report.trim(),
     diagnostics,
     oneLineSummary,
     recommendation,
@@ -255,6 +231,7 @@ function synthesizeCouncil({ personaOutputs, selectedPersonas, route, matrixInfo
     unresolvedTensions: unresolved,
     keyRisks,
     nextActions,
+    viewpoints,
     decisionNeeded,
     decisionQuestion,
   };
@@ -361,7 +338,18 @@ export async function runCouncilMode({
   } catch { /* never crash on diagnostics */ }
 
   return {
-    text: synthesis.report,
+    deliberation: {
+      one_line_summary: synthesis.oneLineSummary,
+      recommendation: synthesis.recommendation,
+      viewpoints: synthesis.viewpoints || [],
+      objections: [synthesis.strongestObjection].filter(Boolean),
+      risks: mergedRisks,
+      tensions: synthesis.unresolvedTensions || [],
+      next_actions: synthesis.nextActions || [],
+      decision_needed: synthesis.decisionNeeded,
+      decision_question: synthesis.decisionQuestion,
+      approval_needed: false,
+    },
     primaryLike: mapToPrimaryLike(synthesis),
     riskLike: mapToRiskLike({ ...synthesis, keyRisks: mergedRisks }),
     diagnostics: synthesis.diagnostics,

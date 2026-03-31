@@ -40,8 +40,6 @@ import {
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
-import { tryFinalizeInboundFounderRoutingLock } from './founderRoutingLockFinalize.js';
-
 /** 구조화 명령 턴 trace·로그용 라벨(첫 토큰, 콜론 앞만). */
 function structuredCommandTraceLabel(trimmed) {
   const t = String(trimmed || '').trim();
@@ -104,10 +102,7 @@ export async function runInboundCommandRouter(ctx) {
   const trimmed = normalizeSlackUserPayload(String(userText ?? '').trim());
   const routerCtx = { raw_text: userText, normalized_text: trimmed };
 
-  const founderLockFirst = await tryFinalizeInboundFounderRoutingLock({ trimmed, routerCtx, metadata });
-  if (founderLockFirst != null) {
-    return { done: true, response: founderLockFirst };
-  }
+  // Legacy routing lock removed — pipeline handles version/meta/kickoff (v1.1 kernel swap)
 
   if (trimmed === '도움말') {
     logRouterEvent('router_responder_selected', { responder: 'help', command_name: '도움말' });
