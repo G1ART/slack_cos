@@ -112,6 +112,7 @@ export function buildFounderOutputTraceRecord({
  *   via?: string | null,
  *   source_formatter?: string,
  *   slack_route_label?: string | null,
+ *   founder_route?: boolean,
  * }} p
  */
 export function finalizeSlackResponse(p) {
@@ -131,6 +132,7 @@ export function finalizeSlackResponse(p) {
     packet_id = null,
     status_packet_id = null,
     work_queue_id = null,
+    founder_route = false,
   } = p;
 
   const sourceFormatter = p.source_formatter ?? 'unspecified';
@@ -139,6 +141,19 @@ export function finalizeSlackResponse(p) {
 
   let out = String(text ?? '');
   const rawForTraceDetection = out;
+  let skipSanitize = false;
+
+  if (founder_route && responder === 'council') {
+    logRouterEvent('founder_route_council_hard_kill', {
+      responder,
+      command_name,
+      target_id,
+      preview: out.slice(0, 240),
+    });
+    console.error('[FOUNDER_ROUTE_HARD_KILL] responder=council blocked');
+    out = '[COS] founder 경로에서는 council이 비활성화되어 있습니다. 요청을 실행 가능한 명령으로 다시 말씀해 주세요.';
+    skipSanitize = true;
+  }
   const blocked =
     council_blocked ??
     [
@@ -247,7 +262,9 @@ export function finalizeSlackResponse(p) {
 
   const rawBeforeSanitize = out;
   const debugMode = process.env.COS_DEBUG_MODE === '1';
-  out = sanitizeFounderOutput(out, { debugMode, responder });
+  if (!skipSanitize) {
+    out = sanitizeFounderOutput(out, { debugMode, responder });
+  }
 
   try {
     const tracePayload = buildFounderOutputTraceRecord({

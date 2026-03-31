@@ -208,6 +208,9 @@ const openai = new OpenAI({
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-5.4';
 const RUNTIME_MODE = getRuntimeMode();
+const APP_STARTED_AT = new Date().toISOString();
+const INSTANCE_ID = process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || `pid-${process.pid}`;
+const FOUNDER_ROUTE_MODE = 'council_disabled';
 
 const AGENT_OPTIONS = [
   'general_cos',
@@ -313,6 +316,10 @@ function formatGithubIssuePersistFailedLines({ cmd, workId, runId, artifact, dup
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isFounderFacingRoute(metadata = {}) {
+  return metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
 }
 
 async function callJSON({ instructions, input, schemaName, schema }) {
@@ -844,6 +851,7 @@ async function handleUserText(userText, metadata = {}) {
   const _threadKey = buildSlackThreadKey(metadata);
   const _intakeActive = isActiveProjectIntake(metadata);
   const _intakeSess = _intakeActive ? getProjectIntakeSession(metadata) : null;
+  const founderRoute = isFounderFacingRoute(metadata);
 
   console.info(`[G1COS ROUTE BEGIN] sha=${_bi.release_sha_short} thread_key=${_threadKey} source=${metadata.source_type || 'unknown'} channel=${metadata.channel || ''} user=${metadata.user || ''} active_intake=${_intakeActive} text="${inputNorm.slice(0, 120)}"`);
 
@@ -918,6 +926,21 @@ async function handleUserText(userText, metadata = {}) {
       },
     });
     if (routed.done) return routed.response;
+
+    if (founderRoute) {
+      console.error('[FOUNDER_ROUTE_HARD_KILL] runInboundAiRouter disabled for founder path');
+      return finalizeSlackResponseFromTopLevel({
+        responder: 'error',
+        text: '[COS] founder 경로는 deterministic 모드(council disabled)입니다. kickoff/help/status/approval/deploy 중심으로 다시 요청해 주세요.',
+        raw_text: userText,
+        normalized_text: inputNorm,
+        command_name: 'founder_deterministic_fallback',
+        council_blocked: true,
+        response_type: 'founder_deterministic_fallback',
+        founder_route: true,
+      });
+    }
+
     return runInboundAiRouter({
       ...routed.aiCtx,
       runPlannerHardLockedBranch,
@@ -925,6 +948,7 @@ async function handleUserText(userText, metadata = {}) {
       makeId,
       callText,
       callJSON,
+      founder_route: founderRoute,
     });
   });
 }
@@ -1014,6 +1038,10 @@ registerG1CosSlashCommand(slackApp);
   });
   await runStartupChecks({ model: MODEL, logger: console });
   console.log(formatBuildBanner());
+  const _bootBuild = getBuildInfo();
+  console.log(
+    `[G1COS BOOT] git_sha=${_bootBuild.release_sha} instance_id=${INSTANCE_ID} pid=${process.pid} started_at=${APP_STARTED_AT} founder_route_mode=${FOUNDER_ROUTE_MODE}`
+  );
   console.log(`[G1COS BOOT] model=${MODEL} intake_persist=${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'} fast_spec_promote=${process.env.COS_FAST_SPEC_PROMOTE || '0'}`);
   console.log(`[G1COS BOOT] pipeline_loaded=${typeof founderRequestPipeline === 'function'} constitution=v1.1`);
   console.log('[startup] Starting G1 COS v6...');

@@ -972,3 +972,29 @@ Slack smoke 테스트에서 `@G1COS 버전`이 **old Council 포맷**(종합 추
 
 - `npm test` 전체 통과 (`38 passed, 0 failed`).
 - 회귀 테스트 `sanitizer defense-in-depth keeps valid content` 재통과.
+
+---
+
+## 20. Nuclear Fix — Founder Path Council Hard Kill (2026-03-31)
+
+### 목표
+
+- Founder-facing 경로(DM/app_mention)에서 Council을 "차단"이 아니라 "호출 불가" 상태로 고정.
+- Founder path는 deterministic 경로만 사용하고 AI tail(`runInboundAiRouter`)은 비활성화.
+
+### 적용 내용
+
+| 파일 | 변경 |
+|---|---|
+| `app.js` | founder route 판별(`direct_message`,`channel_mention`) 추가, founder path에서 `runInboundAiRouter` 미호출 + deterministic fallback 고정 |
+| `app.js` | 부트 로그 강제 출력 추가: `git_sha`, `instance_id`, `pid`, `started_at`, `founder_route_mode=council_disabled` |
+| `src/features/topLevelRouter.js` | `founder_route=true && responder==='council'`일 때 sanitize 없이 즉시 hard fallback + error log |
+| `src/features/runInboundAiRouter.js` | founder route 전용 council branch feature flag 차단(`COS_DISABLE_COUNCIL_ON_FOUNDER`, 기본 disable) |
+| `scripts/tests-constitutional/test-founder-council-hard-kill.mjs` | founder kickoff/meta/follow-up no-council + founder route council responder hard-fail 회귀 테스트 추가 |
+| `package.json` | constitutional test chain에 `test-founder-council-hard-kill.mjs` 추가 |
+
+### Owner actions
+
+- Railway 로그에서 아래 부트 라인이 실제 출력되는지 확인:
+  - `founder_route_mode=council_disabled`
+  - `git_sha=... instance_id=... pid=... started_at=...`
