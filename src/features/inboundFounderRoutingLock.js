@@ -1,16 +1,21 @@
 /**
  * vNext.10 — Simple founder inputs must not enter Council / opaque AI paths.
  * @see patch vNext.10 routing lock spec
+ *
+ * GREP_INBOUND_FOUNDER_ROUTING_LOCK_MODULE — consumed at runInboundAiRouter entry
+ * (import `classifyFounderRoutingLock` from `./inboundFounderRoutingLock.js`).
  */
 
 import { normalizeSlackUserPayload } from '../slack/slackTextNormalize.js';
 import { getBuildInfo } from '../runtime/buildInfo.js';
 
-const KICKOFF_TEST_PHRASE = '오늘부터 테스트용 작은 프로젝트 하나 시작하자';
+export const KICKOFF_TEST_PHRASE = '오늘부터 테스트용 작은 프로젝트 하나 시작하자';
 
 const META_DEBUG_RE =
   /(responder|surface|sanitize|finalizeSlackResponse|founderSurfaceGuard|topLevelRouter|씽크|싱크)/i;
-const META_QUESTION_HINT = /(메타|어떻게|무엇|동작|라우팅|설명|why|how|which\s+path)/i;
+const META_QUESTION_HINT =
+  /(메타|어떻게|무엇|동작|라우팅|설명|why|how|which\s+path|뭐(야|예요|임|에요)|알려|질문)/i;
+const META_QUESTION_MARKERS = /[?？]|입니까|인가요|되나요|됩니까|일까요/;
 
 /**
  * @param {string} trimmed normalizeSlackUserPayload 결과
@@ -24,7 +29,7 @@ export function classifyFounderRoutingLock(trimmed) {
     return { kind: 'version' };
   }
 
-  if (META_DEBUG_RE.test(t) && META_QUESTION_HINT.test(t)) {
+  if (META_DEBUG_RE.test(t) && (META_QUESTION_HINT.test(t) || META_QUESTION_MARKERS.test(t))) {
     return { kind: 'meta_debug' };
   }
 
@@ -34,6 +39,14 @@ export function classifyFounderRoutingLock(trimmed) {
   }
 
   return null;
+}
+
+/**
+ * GREP: surfaceLineForFounderKickoffLock — `runInboundAiRouter` 의 `kickoff_test` 분기에서
+ * `tryExecutiveSurfaceResponse` 가 executive / start_project 면으로 빠지도록 붙이는 접두.
+ */
+export function surfaceLineForFounderKickoffLock(trimmed) {
+  return `툴제작: ${String(trimmed || '').trim()}`;
 }
 
 export function formatRuntimeMetaSurfaceText() {

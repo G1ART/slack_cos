@@ -82,10 +82,12 @@ import { detectContinuationIntent, buildContextSynthesisPrompt, shouldActivateCo
 import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEvent } from './topicAnchorGuard.js';
 import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
+/* GREP_INBOUND_FOUNDER_ROUTING_LOCK_CALL_SITE — classifyFounderRoutingLock runs first in runInboundAiRouter after ctx destructure */
 import {
   classifyFounderRoutingLock,
   formatRuntimeMetaSurfaceText,
   formatMetaDebugSurfaceText,
+  surfaceLineForFounderKickoffLock,
 } from './inboundFounderRoutingLock.js';
 import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
 
@@ -286,6 +288,7 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
+  /* inboundFounderRoutingLock: 버전 → runtime_meta_surface, 메타 질문 → meta_debug_surface, 테스트 킥오프 문장 → executive start_project */
   const founderRouteLock = classifyFounderRoutingLock(trimmed);
   if (founderRouteLock?.kind === 'version') {
     logRouterEvent('router_responder_selected', {
@@ -324,7 +327,7 @@ export async function runInboundAiRouter(ctx) {
     });
   }
   if (founderRouteLock?.kind === 'kickoff_test') {
-    const surfKick = await tryExecutiveSurfaceResponse(trimmed, metadata, {});
+    const surfKick = await tryExecutiveSurfaceResponse(surfaceLineForFounderKickoffLock(trimmed), metadata, {});
     if (surfKick?.response_type === 'start_project') {
       logRouterEvent('router_responder_selected', {
         responder: 'executive_surface',
