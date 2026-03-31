@@ -82,13 +82,9 @@ import { detectContinuationIntent, buildContextSynthesisPrompt, shouldActivateCo
 import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEvent } from './topicAnchorGuard.js';
 import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
-/* GREP_INBOUND_FOUNDER_ROUTING_LOCK_CALL_SITE — classifyFounderRoutingLock runs first in runInboundAiRouter after ctx destructure */
-import {
-  classifyFounderRoutingLock,
-  formatRuntimeMetaSurfaceText,
-  formatMetaDebugSurfaceText,
-  surfaceLineForFounderKickoffLock,
-} from './inboundFounderRoutingLock.js';
+import { classifyFounderRoutingLock } from './inboundFounderRoutingLock.js';
+// GREP_FOUNDERRLOCK_IMPORT
+import { tryFinalizeInboundFounderRoutingLock } from './founderRoutingLockFinalize.js';
 import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
 
 /**
@@ -111,6 +107,17 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
 
   if (trimmed === '도움말' || trimmed === '운영도움말') {
     return { responder: 'help' };
+  }
+
+  const founderLockPrev = classifyFounderRoutingLock(trimmed);
+  if (founderLockPrev?.kind === 'version') {
+    return { responder: 'runtime_meta_surface', surfaceResponseType: 'routing_lock_version' };
+  }
+  if (founderLockPrev?.kind === 'meta_debug') {
+    return { responder: 'meta_debug_surface', surfaceResponseType: 'routing_lock_meta_debug' };
+  }
+  if (founderLockPrev?.kind === 'kickoff_test') {
+    return { responder: 'executive_surface', surfaceResponseType: 'start_project' };
   }
 
   const intakeCancelPrev = tryFinalizeProjectIntakeCancel(trimmed, meta);
@@ -288,66 +295,10 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
-  /* inboundFounderRoutingLock: 버전 → runtime_meta_surface, 메타 질문 → meta_debug_surface, 테스트 킥오프 문장 → executive start_project */
-  const founderRouteLock = classifyFounderRoutingLock(trimmed);
-  if (founderRouteLock?.kind === 'version') {
-    logRouterEvent('router_responder_selected', {
-      responder: 'runtime_meta_surface',
-      command_name: 'routing_lock_version',
-      via: 'inboundFounderRoutingLock',
-    });
-    return finalizeSlackResponse({
-      responder: 'runtime_meta_surface',
-      text: formatRuntimeMetaSurfaceText(),
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'version',
-      council_blocked: true,
-      response_type: 'routing_lock_version',
-      source_formatter: 'inboundFounderRoutingLock:version',
-      slack_route_label: metadata.slack_route_label ?? null,
-    });
-  }
-  if (founderRouteLock?.kind === 'meta_debug') {
-    logRouterEvent('router_responder_selected', {
-      responder: 'meta_debug_surface',
-      command_name: 'routing_lock_meta',
-      via: 'inboundFounderRoutingLock',
-    });
-    return finalizeSlackResponse({
-      responder: 'meta_debug_surface',
-      text: formatMetaDebugSurfaceText(),
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'meta_debug',
-      council_blocked: true,
-      response_type: 'routing_lock_meta_debug',
-      source_formatter: 'inboundFounderRoutingLock:meta_debug',
-      slack_route_label: metadata.slack_route_label ?? null,
-    });
-  }
-  if (founderRouteLock?.kind === 'kickoff_test') {
-    const surfKick = await tryExecutiveSurfaceResponse(surfaceLineForFounderKickoffLock(trimmed), metadata, {});
-    if (surfKick?.response_type === 'start_project') {
-      logRouterEvent('router_responder_selected', {
-        responder: 'executive_surface',
-        command_name: 'start_project',
-        via: 'inboundFounderRoutingLock_kickoff',
-      });
-      return finalizeSlackResponse({
-        responder: 'executive_surface',
-        text: surfKick.text,
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'start_project',
-        council_blocked: true,
-        response_type: surfKick.response_type,
-        source_formatter: 'inboundFounderRoutingLock:kickoff_tryExecutiveSurfaceResponse',
-        slack_route_label: metadata.slack_route_label ?? null,
-        packet_id: surfKick.packet_id ?? null,
-        status_packet_id: surfKick.status_packet_id ?? null,
-      });
-    }
+  // GREP_FOUNDERRLOCK_CALLSITE — GREP_FOUNDERRLOCK_VERSION_RETURN | META_RETURN | KICKOFF_RETURN 는 founderRoutingLockFinalize.js
+  const founderLockHit = await tryFinalizeInboundFounderRoutingLock({ trimmed, routerCtx, metadata });
+  if (founderLockHit != null) {
+    return founderLockHit;
   }
 
   const queryFirst = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);

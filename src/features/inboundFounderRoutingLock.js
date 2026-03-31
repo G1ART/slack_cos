@@ -16,6 +16,9 @@ const META_DEBUG_RE =
 const META_QUESTION_HINT =
   /(메타|어떻게|무엇|동작|라우팅|설명|why|how|which\s+path|뭐(야|예요|임|에요)|알려|질문)/i;
 const META_QUESTION_MARKERS = /[?？]|입니까|인가요|되나요|됩니까|일까요/;
+/** "한 줄로만 말해" 등 지시형 메타 요청 */
+const META_BRIEF_DIRECTIVE =
+  /한\s*줄|줄로\s*만|짧게|말해\s*줘|말해$|만\s*말해|요약\s*만|답\s*만/u;
 
 /**
  * @param {string} trimmed normalizeSlackUserPayload 결과
@@ -29,7 +32,10 @@ export function classifyFounderRoutingLock(trimmed) {
     return { kind: 'version' };
   }
 
-  if (META_DEBUG_RE.test(t) && (META_QUESTION_HINT.test(t) || META_QUESTION_MARKERS.test(t))) {
+  if (
+    META_DEBUG_RE.test(t) &&
+    (META_QUESTION_HINT.test(t) || META_QUESTION_MARKERS.test(t) || META_BRIEF_DIRECTIVE.test(t))
+  ) {
     return { kind: 'meta_debug' };
   }
 

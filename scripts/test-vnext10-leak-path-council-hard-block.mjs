@@ -7,6 +7,9 @@ import assert from 'node:assert/strict';
 const { sanitizeFounderOutput, formatFounderApprovalAppendix } = await import('../src/features/founderSurfaceGuard.js');
 
 const { finalizeSlackResponse, buildFounderOutputTraceRecord } = await import('../src/features/topLevelRouter.js');
+const { tryFinalizeInboundFounderRoutingLock } = await import('../src/features/founderRoutingLockFinalize.js');
+const { runInboundTurnTraceScope } = await import('../src/features/inboundTurnTrace.js');
+const { gateFounderFacingTextForSlackPost } = await import('../src/slack/founderOutboundGate.js');
 const {
   classifyFounderRoutingLock,
   formatMetaDebugSurfaceText,
@@ -77,6 +80,24 @@ try {
   fail('council old-style hard block', e);
 }
 
+try {
+  const personaOnly = '- strategy_finance: 반대\n- risk_review: 우려';
+  const outP = finalizeSlackResponse({
+    responder: 'council',
+    text: personaOnly,
+    raw_text: 't',
+    normalized_text: 't',
+    response_type: 'test_council_persona_only',
+    source_formatter: 'test:persona_only',
+    slack_route_label: 'mention_ai_router',
+  });
+  assert.ok(!outP.includes('strategy_finance'), 'persona lines leak block');
+  assert.ok(!outP.includes('risk_review'));
+  ok('council responder persona-only leak blocked');
+} catch (e) {
+  fail('council persona-only leak', e);
+}
+
 /* 5–7 routing lock */
 try {
   const kick = '오늘부터 테스트용 작은 프로젝트 하나 시작하자';
@@ -105,6 +126,31 @@ try {
   fail('meta routing lock', e);
 }
 
+try {
+  const oneLine = classifyFounderRoutingLock('responder surface sanitize 한 줄로만 말해');
+  assert.equal(oneLine?.kind, 'meta_debug');
+  ok('meta brief directive (한 줄로만) routing lock');
+} catch (e) {
+  fail('meta brief directive routing lock', e);
+}
+
+try {
+  const routed = await tryFinalizeInboundFounderRoutingLock({
+    trimmed: 'responder surface sanitize 한 줄로만 말해',
+    routerCtx: {
+      raw_text: 'x',
+      normalized_text: 'responder surface sanitize 한 줄로만 말해',
+    },
+    metadata: { slack_route_label: 'mention_ai_router' },
+  });
+  assert.ok(routed && typeof routed === 'string');
+  assert.ok(routed.includes('운영 메타'), 'meta_debug_surface body');
+  assert.ok(!routed.includes('종합 추천안'));
+  ok('tryFinalizeInboundFounderRoutingLock meta surface string');
+} catch (e) {
+  fail('founderRoutingLockFinalize meta', e);
+}
+
 /* 8 trace builder */
 try {
   const rec = buildFounderOutputTraceRecord({
@@ -119,6 +165,9 @@ try {
   });
   assert.equal(rec.source_formatter, 'unit:trace');
   assert.equal(rec.slack_route_label, 'dm_ai_router');
+  assert.equal(rec.route_label, 'dm_ai_router');
+  assert.equal(rec.passed_finalize, true);
+  assert.equal(rec.passed_sanitize, true);
   assert.ok(rec.contains_old_council_markers);
   assert.equal(rec.stage, 'founder_output_trace');
   ok('buildFounderOutputTraceRecord has source_formatter + route + flags');
@@ -165,6 +214,28 @@ try {
   ok('formatFounderApproval appendix founder-safe');
 } catch (e) {
   fail('approval appendix', e);
+}
+
+try {
+  const prevEnforce = process.env.COS_ENFORCE_FOUNDER_GATE;
+  process.env.COS_ENFORCE_FOUNDER_GATE = '1';
+  try {
+    await runInboundTurnTraceScope({ channel: 'C1', user: 'U1', ts: '1.0' }, 'ping', async () => {
+      try {
+        gateFounderFacingTextForSlackPost('any');
+        throw new Error('expected gate throw without finalize');
+      } catch (e) {
+        assert.ok(String(e.message).includes('finalize'), e.message);
+      }
+      return 'inner';
+    });
+    ok('gate enforces finalize when COS_ENFORCE_FOUNDER_GATE=1');
+  } finally {
+    if (prevEnforce === undefined) delete process.env.COS_ENFORCE_FOUNDER_GATE;
+    else process.env.COS_ENFORCE_FOUNDER_GATE = prevEnforce;
+  }
+} catch (e) {
+  fail('gate finalize enforcement', e);
 }
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);

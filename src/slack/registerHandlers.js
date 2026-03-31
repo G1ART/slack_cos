@@ -1,5 +1,9 @@
 import { shouldSkipEvent } from './eventDedup.js';
 import { replyInThread } from './reply.js';
+import {
+  gateFounderFacingTextForSlackPost,
+  postFounderGatedThreadReply,
+} from './founderOutboundGate.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
 import { extractFilesFromEvent, ingestSlackFile, formatFileIngestError } from '../features/slackFileIntake.js';
@@ -100,14 +104,15 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       recordInboundSlackExchange(meta, combinedText, answer);
 
       try {
-        await replyInThread(say, event.ts, answer);
+        await postFounderGatedThreadReply(say, event.ts, answer);
       } catch (err) {
         if (isBlocksValidationError(err) && typeof answer === 'object' && answer?.blocks) {
           console.warn(
             'SLACK_BLOCKS_FALLBACK (app_mention): posting text only; original error:',
             err?.message || err
           );
-          await replyInThread(say, event.ts, answer.text || '');
+          const fb = gateFounderFacingTextForSlackPost(answer.text || '');
+          await replyInThread(say, event.ts, fb);
         } else {
           throw err;
         }
@@ -169,10 +174,14 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);
+      const safePayload = {
+        ...payload,
+        text: gateFounderFacingTextForSlackPost(payload.text || ''),
+      };
       try {
         await client.chat.postMessage({
           channel: event.channel,
-          ...payload,
+          ...safePayload,
         });
       } catch (err) {
         if (isBlocksValidationError(err) && payload.blocks) {
@@ -182,7 +191,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
           );
           await client.chat.postMessage({
             channel: event.channel,
-            text: payload.text || '',
+            text: gateFounderFacingTextForSlackPost(payload.text || ''),
           });
         } else {
           throw err;
@@ -229,7 +238,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       if (intent === '상세') {
         const item = await getApprovalByInternalId(payload.approvalId);
         if (!item) return;
-        const text = formatApprovalDetail(item);
+        const text = gateFounderFacingTextForSlackPost(formatApprovalDetail(item));
         await client.chat.postMessage({
           channel,
           text,
@@ -244,7 +253,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         '',
         { approved_by: body?.user?.id, source: body }
       );
-      const text = formatApprovalUpdate(result);
+      const text = gateFounderFacingTextForSlackPost(formatApprovalUpdate(result));
 
       await client.chat.postMessage({
         channel,
@@ -284,7 +293,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
 
       await client.chat.postMessage({
         channel,
-        text: result.response_text,
+        text: gateFounderFacingTextForSlackPost(result.response_text),
         ...(thread_ts ? { thread_ts } : {}),
       });
     } catch (error) {
@@ -346,7 +355,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       await client.chat.postMessage({
         channel,
         ...(thread_ts ? { thread_ts } : {}),
-        text: msg,
+        text: gateFounderFacingTextForSlackPost(msg),
       });
     } catch (error) {
       console.error('DIALOG_QUEUE_BUTTON_ERROR:', error);
@@ -392,11 +401,15 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         body?.message?.thread_ts || body?.message?.ts || body?.container?.thread_ts || undefined;
 
       const payload = resolvePostPayload(out);
+      const gatedPayload = {
+        ...payload,
+        text: gateFounderFacingTextForSlackPost(payload.text || ''),
+      };
       try {
         await client.chat.postMessage({
           channel,
           ...(thread_ts ? { thread_ts } : {}),
-          ...payload,
+          ...gatedPayload,
         });
       } catch (err) {
         if (isBlocksValidationError(err) && payload.blocks) {
@@ -407,7 +420,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
           await client.chat.postMessage({
             channel,
             ...(thread_ts ? { thread_ts } : {}),
-            text: payload.text || '',
+            text: gateFounderFacingTextForSlackPost(payload.text || ''),
           });
         } else {
           throw err;
