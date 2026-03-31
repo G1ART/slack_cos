@@ -881,10 +881,38 @@ npm test: ALL PASS (전체 스위트)
 
 ---
 
+### v1.1 Kernel Swap (2026-03-31 — GPT 감사 후 후속 패치)
+
+GPT 코드 감사에서 지적된 "코어 파일은 만들었지만 런타임 주 경로를 안 바꿨다"를 해결한 실질적 kernel swap.
+
+**수술 완료:**
+
+1. **council.js source surgery** — `text: synthesis.report` 완전 제거. `deliberation` object-only 반환. report 빌드 코드 삭제.
+2. **runInboundAiRouter.js** — `council.text` → `renderDeliberation(council.deliberation)` 교체. Legacy routing lock (`tryFinalizeInboundFounderRoutingLock`, `classifyFounderRoutingLock`) 완전 제거.
+3. **registerHandlers.js** — 모든 `client.chat.postMessage` / `replyInThread` / `postFounderGatedThreadReply` → `sendFounderResponse` 단일 경유. `founderOutboundGate.js` import 제거.
+4. **registerSlashCommands.js** — 모든 `respond()` 텍스트에 `validateFounderText()` 적용. `finalizeSlackResponse` import 제거.
+5. **runInboundCommandRouter.js** — `tryFinalizeInboundFounderRoutingLock` 호출 제거 (pipeline이 처리).
+6. **app.js** — pipeline 반환에 `surface_type` 포함, 항상 object 반환.
+7. **test-golden-path-full-cycle-mvp.mjs** — council report 테스트를 object-only 검증으로 업데이트.
+8. **test-kernel-swap-verification.mjs** — 32 assertions: pipeline wiring, council object-only, sendFounderResponse 단일화, legacy lock 제거, core module 존재 검증.
+
+| 파일 | 변경 |
+|---|---|
+| `src/agents/council.js` | `text: synthesis.report` 삭제, `deliberation` object 반환, report 빌드 코드 삭제 |
+| `src/features/runInboundAiRouter.js` | `renderDeliberation` import + 사용, legacy lock 제거 |
+| `src/features/runInboundCommandRouter.js` | legacy lock 제거 |
+| `src/slack/registerHandlers.js` | 전면 교체 → `sendFounderResponse` 단일 경유 |
+| `src/slack/registerSlashCommands.js` | `validateFounderText` 적용 |
+| `app.js` | pipeline 반환 `surface_type` 포함 |
+| `scripts/test-golden-path-full-cycle-mvp.mjs` | council test 업데이트 |
+| `scripts/tests-constitutional/test-kernel-swap-verification.mjs` | **신규** 32 assertions |
+
+---
+
 ## 17. Next Patch Priorities
 
 1. **Golden path live 검증** — 실제 Slack thread에서 kickoff→lock→execute→approve→deploy 전체 경로 pipeline 통과 확인
 2. **Legacy router freeze** — command/AI router에서 pipeline 처리 가능한 경로 점진 이관 (structured commands + query 렌더러)
-3. **Council object-only 강제** — `synthesizeCouncil`이 object만 반환하도록 live 코드 패치
+3. **founderOutboundGate.js 삭제** — registerHandlers에서 import 완전 제거됨, 파일 자체도 삭제 가능
 4. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
 5. **Monitoring/rollback surface** — 배포 후 모니터링·롤백 안내

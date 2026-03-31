@@ -863,9 +863,11 @@ async function handleUserText(userText, metadata = {}) {
       route_label: metadata.slack_route_label,
     });
     if (pipelineResult != null) {
-      return pipelineResult.blocks
-        ? { text: pipelineResult.text, blocks: pipelineResult.blocks }
-        : pipelineResult.text;
+      return {
+        text: pipelineResult.text,
+        blocks: pipelineResult.blocks,
+        surface_type: pipelineResult.trace?.surface_type,
+      };
     }
 
     const routed = await runInboundCommandRouter({
