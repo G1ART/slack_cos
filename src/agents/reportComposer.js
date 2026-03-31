@@ -30,29 +30,15 @@ export function composeFinalReport({ route, primary, risk, channelContext, appro
   const allRisks = mergeRisks(primary.key_risks, risk?.hidden_risks || []);
   const decisionState = deriveDecisionState(route, primary, risk);
 
-  let report = '';
-  report += `한 줄 요약\n${primary.one_line_summary}\n\n`;
-  report += `추천안\n${primary.recommendation}\n\n`;
-  report += `가장 강한 반대 논리\n${strongestObjection}\n\n`;
-  report += `핵심 리스크\n${bulletList(allRisks)}\n\n`;
-  report += `다음 행동\n${bulletList(primary.next_actions)}\n\n`;
-  report += `대표 결정 필요 여부\n${yesNo(decisionState.decisionNeeded)}\n`;
-  report += `${decisionState.decisionQuestion}\n\n`;
-
-  if (risk?.reconsider_triggers?.length) {
-    report += `재검토 트리거\n${bulletList(risk.reconsider_triggers)}\n\n`;
+  const lines = [];
+  if (primary.one_line_summary) lines.push(`*요약*\n${primary.one_line_summary}`);
+  if (primary.recommendation) lines.push(`*COS 권고*\n${primary.recommendation}`);
+  if (strongestObjection) lines.push(`*주요 반론*\n${strongestObjection}`);
+  if (allRisks?.length) lines.push(`*리스크*\n${bulletList(allRisks)}`);
+  if (primary.next_actions?.length) lines.push(`*다음 행동*\n${bulletList(primary.next_actions)}`);
+  if (decisionState.decisionNeeded) {
+    lines.push(`*대표 결정 필요*\n${decisionState.decisionQuestion}`);
   }
 
-  if (approvalItem) {
-    report += `승인 대기열\n- 상태: pending\n- 승인 ID: ${approvalItem.id}\n\n`;
-  }
-
-  report += `내부 처리 정보\n`;
-  report += `- 채널 기본 설정: ${channelContext || '없음'}\n`;
-  report += `- 분류: ${route.task_type}\n`;
-  report += `- 주 담당 에이전트: ${route.primary_agent}\n`;
-  report += `- 리스크 검토 포함: ${yesNo(route.include_risk)}\n`;
-  report += `- 긴급도: ${route.urgency}`;
-
-  return report.trim();
+  return lines.join('\n\n').trim() || '검토 결과를 요약할 수 없습니다. 다시 시도해 주세요.';
 }

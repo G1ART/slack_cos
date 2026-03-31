@@ -853,21 +853,27 @@ async function handleUserText(userText, metadata = {}) {
     }
 
     // Constitutional pipeline v1.1 — work_object → work_phase → policy → packet → surface
-    const pipelineResult = await founderRequestPipeline({
-      text: inputNorm,
-      metadata: {
-        ...metadata,
-        has_active_intake: _intakeActive,
-        intake_session: _intakeSess,
-      },
-      route_label: metadata.slack_route_label,
-    });
-    if (pipelineResult != null) {
-      return {
-        text: pipelineResult.text,
-        blocks: pipelineResult.blocks,
-        surface_type: pipelineResult.trace?.surface_type,
-      };
+    try {
+      const pipelineResult = await founderRequestPipeline({
+        text: inputNorm,
+        metadata: {
+          ...metadata,
+          has_active_intake: _intakeActive,
+          intake_session: _intakeSess,
+        },
+        route_label: metadata.slack_route_label,
+      });
+      if (pipelineResult != null) {
+        console.info(`[G1COS PIPELINE HIT] surface=${pipelineResult.trace?.surface_type} intent=${pipelineResult.trace?.intent_signal} text="${(pipelineResult.text || '').slice(0, 80)}"`);
+        return {
+          text: pipelineResult.text,
+          blocks: pipelineResult.blocks,
+          surface_type: pipelineResult.trace?.surface_type,
+        };
+      }
+      console.info(`[G1COS PIPELINE MISS] text="${inputNorm.slice(0, 80)}" — delegating to legacy routers`);
+    } catch (pipelineErr) {
+      console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
     const routed = await runInboundCommandRouter({
@@ -1009,6 +1015,7 @@ registerG1CosSlashCommand(slackApp);
   await runStartupChecks({ model: MODEL, logger: console });
   console.log(formatBuildBanner());
   console.log(`[G1COS BOOT] model=${MODEL} intake_persist=${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'} fast_spec_promote=${process.env.COS_FAST_SPEC_PROMOTE || '0'}`);
+  console.log(`[G1COS BOOT] pipeline_loaded=${typeof founderRequestPipeline === 'function'} constitution=v1.1`);
   console.log('[startup] Starting G1 COS v6...');
   console.log('[startup] Runtime mode:', RUNTIME_MODE);
   console.log('[startup] Model:', MODEL);
