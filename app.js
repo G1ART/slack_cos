@@ -146,7 +146,7 @@ import {
 } from './src/storage/core/migrateJsonToSupabase.js';
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
-import { runInboundTurnTraceScope } from './src/features/inboundTurnTrace.js';
+import { runInboundTurnTraceScope, setInboundTurnSlackRouteLabel } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
 import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
@@ -847,6 +847,9 @@ async function handleUserText(userText, metadata = {}) {
   console.info(`[G1COS ROUTE BEGIN] sha=${_bi.release_sha_short} thread_key=${_threadKey} source=${metadata.source_type || 'unknown'} channel=${metadata.channel || ''} user=${metadata.user || ''} active_intake=${_intakeActive} text="${inputNorm.slice(0, 120)}"`);
 
   return runInboundTurnTraceScope(metadata, inputNorm, async () => {
+    if (metadata.slack_route_label) {
+      setInboundTurnSlackRouteLabel(metadata.slack_route_label);
+    }
     const routed = await runInboundCommandRouter({
       userText,
       metadata,

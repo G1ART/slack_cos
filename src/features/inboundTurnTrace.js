@@ -43,6 +43,22 @@ function inferLinkageFromTargetId(target_id) {
  *   work_queue_id?: string | null,
  * }} fields
  */
+/**
+ * @returns {{ turn_id: string, thread_key: string, slack_route_label?: string, finalize?: object } | null}
+ */
+export function getInboundTurnTraceStore() {
+  return inboundTurnAls.getStore() || null;
+}
+
+/**
+ * Slack 진입 경로 라벨 (registerHandlers meta → app.js).
+ * @param {string} label
+ */
+export function setInboundTurnSlackRouteLabel(label) {
+  const store = inboundTurnAls.getStore();
+  if (store && label) store.slack_route_label = String(label);
+}
+
 export function markInboundTurnFinalize(fields) {
   if (traceDisabled()) return;
   const store = inboundTurnAls.getStore();

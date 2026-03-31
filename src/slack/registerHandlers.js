@@ -15,6 +15,7 @@ import { normalizeSlackUserPayload } from './slackTextNormalize.js';
 import { appendWorkspaceQueueItem, formatWorkspaceQueueSaved } from '../features/cosWorkspaceQueue.js';
 import { getChannelContext } from '../storage/channelContext.js';
 import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
+import { logRouterEvent } from '../features/topLevelRouter.js';
 
 /**
  * @param {string|{ text: string, blocks?: object[] }} answer
@@ -86,6 +87,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
 
       const meta = {
         source_type: 'channel_mention',
+        slack_route_label: 'mention_ai_router',
         channel: event.channel,
         user: event.user,
         ts: event.ts,
@@ -154,6 +156,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
 
       const meta = {
         source_type: 'direct_message',
+        slack_route_label: 'dm_ai_router',
         channel: event.channel,
         user: event.user,
         ts: event.ts,
@@ -204,6 +207,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
   slackApp.action(approvalActionPattern, async ({ ack, body, action, client }) => {
     try {
       await ack();
+      logRouterEvent('slack_interactive_route', { route: 'approval_queue', action_id: action?.action_id });
 
       const payloadRaw = action?.value;
       if (!payloadRaw) return;
@@ -259,6 +263,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
   slackApp.action(execDeployActionPattern, async ({ ack, body, action, client }) => {
     try {
       await ack();
+      logRouterEvent('slack_interactive_route', { route: 'execution_button', action_id: action?.action_id });
       const { applyApprovalDecision } = await import('../features/executionSpineRouter.js');
       const { getExecutionRunById } = await import('../features/executionRun.js');
 
@@ -369,9 +374,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       const trimmed = normalizeSlackUserPayload(queryLine.trim());
       if (!trimmed) return;
 
+      logRouterEvent('slack_interactive_route', { route: 'query_nav_button' });
+
       const routerCtx = {
         raw_text: `[query_nav_button] ${queryLine}`,
         normalized_text: trimmed,
+        slack_route_label: 'query_nav_button',
       };
 
       const out = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);

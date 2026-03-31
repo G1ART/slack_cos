@@ -21,7 +21,7 @@ export function registerG1CosSlashCommand(slackApp) {
     const rawArg = String(command.text || '').trim();
     const displayRaw = `/g1cos${rawArg ? ` ${rawArg}` : ''}`;
     const trimmed = normalizeSlackUserPayload(rawArg);
-    const routerCtx = { raw_text: displayRaw, normalized_text: trimmed };
+    const routerCtx = { raw_text: displayRaw, normalized_text: trimmed, slack_route_label: 'slash_finalize' };
 
     logRouterEvent('slash_command_entered', {
       command: '/g1cos',
@@ -73,6 +73,7 @@ export function registerG1CosSlashCommand(slackApp) {
 
     const lineageHit = await tryFinalizeG1CosLineageTransport(trimmed, routerCtx);
     if (lineageHit != null) {
+      logRouterEvent('slack_interactive_route', { route: 'slash_lineage', response_type: lineageHit.response_type });
       logRouterEvent('slash_lineage_transport', {
         command: '/g1cos',
         response_type: lineageHit.response_type,
@@ -96,6 +97,7 @@ export function registerG1CosSlashCommand(slackApp) {
       return;
     }
 
+    logRouterEvent('slack_interactive_route', { route: 'slash_finalize', response_type: 'query' });
     logRouterEvent('slash_command_query_returned', {
       command: '/g1cos',
       channel_id: command.channel_id,

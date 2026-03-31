@@ -265,7 +265,7 @@ export async function handleQueryOnlyCommands(trimmed) {
 /**
  * 조회 명령이면 finalize까지 한 Slack 문자열을 반환. app.js 상단·runInboundAiRouter 방어선에서 공통 사용.
  * @param {string} trimmed `normalizeSlackUserPayload` 결과
- * @param {{ raw_text: unknown, normalized_text: string }} routerCtx
+ * @param {{ raw_text: unknown, normalized_text: string, slack_route_label?: string | null }} routerCtx
  * @returns {Promise<string | { text: string, blocks: object[] } | null>}
  */
 export async function tryFinalizeSlackQueryRoute(trimmed, routerCtx) {
@@ -330,6 +330,8 @@ export async function tryFinalizeSlackQueryRoute(trimmed, routerCtx) {
     query_match: true,
     council_blocked: true,
     response_type,
+    source_formatter: 'tryFinalizeSlackQueryRoute',
+    slack_route_label: routerCtx.slack_route_label ?? null,
   });
   return wrapQueryFinalizePlainText(plain, { effectiveQueryLine: effectiveLine });
 }

@@ -801,7 +801,30 @@ npm test: ALL PASS (전체 스위트)
 
 ---
 
-## 15. Next Patch Priorities
+## 15. vNext.10 — Leak Path Trace + Council Hard Block (2026-03-31)
+
+### 목표
+- (`founder_output_trace`) 로그 한 줄로 턴 단위 **responder / response_type / source_formatter / slack_route_label / raw vs sanitize preview / marker 플래그** 확인.
+- **Council 포함** 전 responder에 대해 구형 Council 헤더·페르소나 bullet·레거시 `승인 대기열` 블록 **하드 제거**(조회 `query` 응답은 기존 계약대로 원문 신뢰).
+- 소수 **founder 테스트 입력**은 Council 경로로 가지 않도록 라우팅 락(`runtime_meta_surface` / `meta_debug_surface` / 킥오프 문구 → `tryExecutiveSurfaceResponse`).
+
+### 주요 변경 파일
+- `src/features/founderSurfaceGuard.js` — 구형 섬션 스트립 + `getPersonaRegistryKeys()` 기반 `- id:` 줄 제거 + `formatFounderApprovalAppendix`
+- `src/features/topLevelRouter.js` — `looksLikeCouncilSynthesisBody` 를 **council 에도 적용**, `buildFounderOutputTraceRecord`/`founder_output_trace` JSON 로그, `final_response_return` 에 `source_formatter`/`slack_route_label`
+- `src/features/inboundTurnTrace.js` — `getInboundTurnTraceStore`, `setInboundTurnSlackRouteLabel`
+- `src/features/inboundFounderRoutingLock.js` — 버전·메타·테스트용 킥오프 문구 분류
+- `src/features/runInboundAiRouter.js` — 라우팅 락 선행, Council 승인 말미를 `formatFounderApprovalAppendix` 로 교체, `source_formatter` 일부 경로
+- `app.js`, `src/slack/registerHandlers.js` — `slack_route_label` (`mention_ai_router` / `dm_ai_router`), 인터랙티브/쿼리 네비 로깅
+- `src/slack/registerSlashCommands.js`, `src/features/queryOnlyRoute.js` — slash / 조회 finalize 메타
+- `scripts/test-vnext10-leak-path-council-hard-block.mjs`, `package.json` test 스크립트
+
+### Owner actions (vNext.10)
+1. **로컬**: `npm test`
+2. **슬랙 스모크**: `@봇 버전` → runtime 패킷; 동일 스레드에서 `COS responder는 어떻게 동작해?` → meta 패킷; `오늘부터 테스트용 작은 프로젝트 하나 시작하자` → start_project 흐름. 배포 로그에서 `founder_output_trace` JSON grep.
+
+---
+
+## 16. Next Patch Priorities
 
 1. **End-to-end LLM 검증** — 실제 Slack thread에서 full-cycle execution loop 동작 확인
 2. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
