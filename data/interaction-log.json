@@ -12754,5 +12754,517 @@
     ],
     "matrix_reasons": [],
     "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774943507122-1tuwo2",
+    "created_at": "2026-03-31T07:51:47.122Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774943498.069509",
+      "event_id": "Ev0APR4SS6HZ"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "단어 한 개로만 제공되어 의도가 불명확합니다. 현재로서는 특정 전략/운영/제품/엔지니어링/요약 작업으로 분류하기 어렵고, 일반 문의로 처리하는 것이 적절합니다."
+    },
+    "primary": {
+      "one_line_summary": "전략/재무 관점 응답 모드가 활성화된 버전입니다.",
+      "recommendation": "우선순위, 예산, ROI 기준으로만 다음 안건을 평가하도록 질문을 구체화하세요.",
+      "strongest_objection": "평가 대상이 없어서 자원 배분이나 기대값 판단을 내릴 수 없습니다.",
+      "key_risks": [
+        "맥락 부족으로 잘못된 우선순위 제안 가능성",
+        "측정 기준 부재로 실행안이 분산될 위험",
+        "검토 대상이 불명확해 우선순위 판단이 왜곡될 수 있음",
+        "변경 범위 미확정으로 일정·예산 초과 가능성을 숨길 수 있음",
+        "대외 영향과 되돌리기 비용을 사전에 평가할 수 없음"
+      ],
+      "next_actions": [
+        "검토할 안건 1개를 공유하세요.",
+        "목표, 예산, 기간, 기대효과를 함께 제시하세요.",
+        "버전 번호와 제품/문서/모델 등 대상 유형을 공유하라.",
+        "직전 버전 대비 핵심 변경점 3개 이내로 정리하라.",
+        "이번 결정의 목표 KPI와 허용 가능한 실패 비용을 명시하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "평가 대상이 없어서 자원 배분이나 기대값 판단을 내릴 수 없습니다.",
+      "hidden_risks": [
+        "맥락 부족으로 잘못된 우선순위 제안 가능성",
+        "측정 기준 부재로 실행안이 분산될 위험",
+        "검토 대상이 불명확해 우선순위 판단이 왜곡될 수 있음",
+        "변경 범위 미확정으로 일정·예산 초과 가능성을 숨길 수 있음",
+        "대외 영향과 되돌리기 비용을 사전에 평가할 수 없음"
+      ],
+      "reconsider_triggers": [
+        "속도 우선 vs 검증 우선"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774943515316-jihnvi",
+    "created_at": "2026-03-31T07:51:55.316Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774943505.994809",
+      "event_id": "Ev0APU41JG7P"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "'버전'만으로는 구체적 의도가 불명확해 일반 문의로 분류합니다. 전략·재무·제품·기술·운영 판단 요청이 명시되지 않았고, 즉시성도 낮습니다."
+    },
+    "primary": {
+      "one_line_summary": "현재 요청은 판단 대상이 없어 전략/재무 관점의 버전 권고를 내리기 어렵습니다.",
+      "recommendation": "비교할 버전 후보 2개 이상과 각 버전의 목표, 예상 비용, 기대 효과, 출시 시점을 먼저 정리해 보내주세요.",
+      "strongest_objection": "버전 정보 없이 의사결정하면 ROI와 우선순위를 검증할 수 없어 잘못된 집중이 발생합니다.",
+      "key_risks": [
+        "저효율 버전에 리소스 투입",
+        "대표 시간 분산",
+        "출시 지연 대비 성과 불확실",
+        "검토 대상 버전이 무엇인지 불명확함",
+        "변경 범위와 영향도가 없어 우선순위 판단 불가",
+        "예산·일정·되돌리기 비용 정보 부재",
+        "대외 리스크와 실패 시 파급효과 평가 불가"
+      ],
+      "next_actions": [
+        "비교 대상 버전명을 정리한다.",
+        "각 버전별 개발비용과 일정 추정을 적는다.",
+        "각 버전별 기대 매출 또는 핵심 KPI 영향을 적는다.",
+        "의사결정 기준(매출, 학습, 속도 중 우선순위)을 정한다.",
+        "버전명과 대상 제품/문서를 특정하라.",
+        "이번 버전의 핵심 변경점 3개 이내로 정리하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "버전 정보 없이 의사결정하면 ROI와 우선순위를 검증할 수 없어 잘못된 집중이 발생합니다.",
+      "hidden_risks": [
+        "저효율 버전에 리소스 투입",
+        "대표 시간 분산",
+        "출시 지연 대비 성과 불확실",
+        "검토 대상 버전이 무엇인지 불명확함",
+        "변경 범위와 영향도가 없어 우선순위 판단 불가",
+        "예산·일정·되돌리기 비용 정보 부재",
+        "대외 리스크와 실패 시 파급효과 평가 불가"
+      ],
+      "reconsider_triggers": [
+        "속도 우선 vs 완성도 우선",
+        "단기 매출 vs 장기 제품 경쟁력"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774943516818-d31drf",
+    "created_at": "2026-03-31T07:51:56.818Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774943503.565639",
+      "event_id": "Ev0AQ146EFGC"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "단일 단어 요청으로 의도가 불명확하며 특정 전략/운영/제품/엔지니어링/요약 작업으로 판단하기 어렵습니다. 추가 맥락이 필요한 일반 분류입니다."
+    },
+    "primary": {
+      "one_line_summary": "질문이 불완전해 판단 대상이 없습니다.",
+      "recommendation": "검토할 버전의 범위와 비교 기준(예: 비용, 일정, 예상 매출, 리소스)을 먼저 명확히 보내주세요.",
+      "strongest_objection": "버전 정보 없이 의사결정하면 우선순위와 기대값을 잘못 배분할 가능성이 큽니다.",
+      "key_risks": [
+        "잘못된 버전에 리소스를 투입할 위험",
+        "ROI가 낮은 선택을 할 위험",
+        "대표 시간과 팀 집중도가 분산될 위험",
+        "검토 범위 불명확으로 핵심 리스크 누락",
+        "변경 영향도 미확인 상태에서 일정·예산 오판",
+        "외부 커뮤니케이션 또는 고객 영향 과소평가"
+      ],
+      "next_actions": [
+        "비교할 버전명과 목적을 공유하세요.",
+        "각 버전별 예상 비용·기간·성과 지표를 정리하세요.",
+        "의사결정 마감 시점을 알려주세요.",
+        "버전 식별자와 변경사항 요약을 제출하라.",
+        "이번 버전의 성공 기준과 실패 기준을 수치로 정의하라.",
+        "출시 일정, 롤백 가능성, 의사결정 데드라인을 공유하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "버전 정보 없이 의사결정하면 우선순위와 기대값을 잘못 배분할 가능성이 큽니다.",
+      "hidden_risks": [
+        "잘못된 버전에 리소스를 투입할 위험",
+        "ROI가 낮은 선택을 할 위험",
+        "대표 시간과 팀 집중도가 분산될 위험",
+        "검토 범위 불명확으로 핵심 리스크 누락",
+        "변경 영향도 미확인 상태에서 일정·예산 오판",
+        "외부 커뮤니케이션 또는 고객 영향 과소평가"
+      ],
+      "reconsider_triggers": [
+        "속도보다 정확한 판단을 우선할지 여부",
+        "속도 우선인지 안정성 우선인지 불명확"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774943627124-3h2mpf",
+    "created_at": "2026-03-31T07:53:47.124Z",
+    "user_text": "responder surface sanitize 한 줄로만 말해.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774943616.875409",
+      "event_id": "Ev0APVEKNCLE"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "engineering",
+      "primary_agent": "engineering",
+      "include_risk": true,
+      "urgency": "medium",
+      "reason": "‘responder surface sanitize’는 구현/보안 성격의 기술 요청으로 보이며, 한 줄 응답 형식 제약이 있어 engineering으로 분류."
+    },
+    "primary": {
+      "one_line_summary": "입력·출력 경계에서 응답 표면을 최소화하고 일관된 정규화·이스케이프를 강제해 안전한 기본값을 만든다.",
+      "recommendation": "모든 responder 경로에 공통 sanitize 레이어를 삽입하고 기능 플래그로 점진 적용하라.",
+      "strongest_objection": "전역 적용을 서두르면 기존 포맷 의존 클라이언트가 깨져 운영 장애로 이어질 수 있다.",
+      "key_risks": [
+        "기존 응답 포맷 호환성 저하",
+        "이중 sanitize로 내용 손실 발생",
+        "예외 경로 누락으로 우회 가능성 잔존",
+        "과도한 축약으로 메시지 왜곡",
+        "CTA 부재로 실행력 저하",
+        "측정 불가능한 표현 사용",
+        "근본 취약점 미해결",
+        "안전하다는 오판 유발"
+      ],
+      "next_actions": [
+        "적용 대상 responder 목록화",
+        "sanitize 규칙 최소셋 정의",
+        "플래그 기반 카나리 배포 설계",
+        "핵심 목적 1개만 남겨 문장 작성",
+        "불필요한 수식어 제거",
+        "성과 측정 가능한 표현으로 교체"
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "전역 적용을 서두르면 기존 포맷 의존 클라이언트가 깨져 운영 장애로 이어질 수 있다.",
+      "hidden_risks": [
+        "기존 응답 포맷 호환성 저하",
+        "이중 sanitize로 내용 손실 발생",
+        "예외 경로 누락으로 우회 가능성 잔존",
+        "과도한 축약으로 메시지 왜곡",
+        "CTA 부재로 실행력 저하",
+        "측정 불가능한 표현 사용",
+        "근본 취약점 미해결",
+        "안전하다는 오판 유발",
+        "배포 후 수정 비용 증가",
+        "대외 신뢰 훼손"
+      ],
+      "reconsider_triggers": [
+        "안전성 강화와 응답 표현력 유지의 충돌",
+        "간결성 vs 설득력",
+        "브랜드 톤 유지 vs 정보 밀도",
+        "속도 대 검증 깊이"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "engineering",
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774944063699-d006j1",
+    "created_at": "2026-03-31T08:01:03.699Z",
+    "user_text": "갤러리와 미술학원을 겸하는 공간의 내부 멤버 (나아가서 링크를 받은 외부 손님들) 들의 스케줄을 공동으로 관리할 수 있는 캘린더야. 벤치마킹을 통해서 필수적인 기능과 부가적인 기능, 그리고 전체적인 구현을 위한 최적의 아키텍쳐를 마련해줘.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774944046.684259",
+      "event_id": "Ev0AQAF7H2JD"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "product_ux",
+      "primary_agent": "product_ux",
+      "include_risk": true,
+      "urgency": "medium",
+      "reason": "공동 스케줄 캘린더의 필수/부가 기능 정의와 벤치마킹, 전체 구현 아키텍처 설계 요청으로 제품 방향과 사용자 흐름이 핵심이다. 동시에 아키텍처 언급이 있으나 주된 질문은 기능 우선순위와 서비스 구조 결정이라 product_ux가 적합하다. 제품 방향과 되돌리기 어려운 구조 결정이 포함되어 risk를 true로 둔다."
+    },
+    "primary": {
+      "one_line_summary": "공동 스케줄 캘린더의 핵심은 ‘권한별 보기/예약/공유’ 3가지이며, 초기 범위는 운영 혼선과 이중예약을 줄이는 데 집중해야 한다.",
+      "recommendation": "MVP는 내부 멤버용 권한 기반 캘린더와 외부 링크 공유형 예약/조회 기능에 한정하고, 리소스 중복 방지·승인 플로우·알림 로그를 포함한 웹 우선 아키텍처로 6~8주 내 검증 가능하게 설계하라.",
+      "strongest_objection": "갤러리 운영, 수업 운영, 외부 초대 손님 관리까지 한 번에 풀려 하면 캘린더가 아니라 복잡한 ERP가 되어 초기 도입과 유지가 실패할 가능성이 가장 크다.",
+      "key_risks": [
+        "공간/강사/전시/수업 리소스 모델을 초기에 과도하게 일반화해 구현 복잡도가 커질 위험",
+        "외부 링크 공유 범위와 권한 설정이 모호하면 개인정보 및 운영 정보 노출 위험",
+        "승인 없는 자유 수정 구조일 경우 이중 예약과 책임 소재 불명확 문제 발생",
+        "모바일 사용 비중이 높은데 반응형 품질이 낮으면 현장 운영 채택률이 떨어질 위험",
+        "Google Calendar 등 기존 도구와 차별점이 불명확하면 전환 유인이 약할 위험",
+        "내부 운영용 일정과 외부 공개 가능 일정의 가시성 경계가 섞여 개인정보 및 운영정보가 노출될 수 있다.",
+        "공간 예약, 수업 일정, 개인 일정이 같은 엔진에서 충돌할 때 정책이 불명확하면 현장 운영 혼선이 발생한다.",
+        "Google Calendar 등 외부 연동을 양방향으로 시작하면 중복 생성·수정 충돌·권한 불일치가 잦다."
+      ],
+      "next_actions": [
+        "내부 사용자군을 운영자·강사·스태프·외부 손님 4종으로 나누고 각자의 핵심 행동 3개씩만 정의하라.",
+        "벤치마킹 범위를 Google Calendar, Calendly, Notion Calendar, Acuity Scheduling, Teamup 중심으로 좁혀 필수/차별 기능 매트릭스를 작성하라.",
+        "MVP 데이터 모델을 이벤트·리소스·참여자·권한·공유링크 5개 엔티티로 고정하고 추가 확장은 후순위로 미뤄라.",
+        "성공지표를 이중 예약 감소율, 예약 처리 시간, 외부 링크 통한 일정 확인/신청 완료율로 설정하라.",
+        "운영 시나리오를 내부 멤버·강사·원장·외부 손님 기준으로 나누고, 각 역할별 조회/수정/초대 권한표를 먼저 확정하라.",
+        "MVP 범위를 ‘공간 예약 + 수업 일정 + 링크 공유 + 알림’으로 고정하고, 출결·결제·CRM은 후속 모듈로 분리하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "갤러리 운영, 수업 운영, 외부 초대 손님 관리까지 한 번에 풀려 하면 캘린더가 아니라 복잡한 ERP가 되어 초기 도입과 유지가 실패할 가능성이 가장 크다.",
+      "hidden_risks": [
+        "공간/강사/전시/수업 리소스 모델을 초기에 과도하게 일반화해 구현 복잡도가 커질 위험",
+        "외부 링크 공유 범위와 권한 설정이 모호하면 개인정보 및 운영 정보 노출 위험",
+        "승인 없는 자유 수정 구조일 경우 이중 예약과 책임 소재 불명확 문제 발생",
+        "모바일 사용 비중이 높은데 반응형 품질이 낮으면 현장 운영 채택률이 떨어질 위험",
+        "Google Calendar 등 기존 도구와 차별점이 불명확하면 전환 유인이 약할 위험",
+        "내부 운영용 일정과 외부 공개 가능 일정의 가시성 경계가 섞여 개인정보 및 운영정보가 노출될 수 있다.",
+        "공간 예약, 수업 일정, 개인 일정이 같은 엔진에서 충돌할 때 정책이 불명확하면 현장 운영 혼선이 발생한다.",
+        "Google Calendar 등 외부 연동을 양방향으로 시작하면 중복 생성·수정 충돌·권한 불일치가 잦다.",
+        "링크 공유 방식이 과도하게 개방되면 비인가 접근과 잘못된 수정이 발생할 수 있다.",
+        "모바일 사용 비중이 높은데 초기 UX가 무거우면 현장 채택률이 낮아진다.",
+        "운영 주체별 권한 구조가 불명확하면 일정 충돌과 수정 책임 문제가 발생함",
+        "외부 링크 공유 범위가 과하면 개인정보·내부 운영 정보가 노출될 수 있음",
+        "수업/대관/전시/상담의 예약 규칙이 다르면 단일 UI가 복잡해져 사용성이 떨어짐",
+        "Google/Naver/Kakao 등 외부 캘린더 연동 시 동기화 충돌과 중복 생성 이슈가 생길 수 있음",
+        "대표/운영진이 수동 조정에 계속 개입하면 시스템 도입 효과가 낮아짐",
+        "역할별 권한 경계가 불명확하면 내부 멤버, 강사, 운영자, 외부 손님 간 일정 노출 사고가 발생할 수 있음",
+        "갤러리 전시/행사와 학원 수업은 예약 단위, 반복성, 승인 규칙이 달라 단일 로직으로 묶으면 운영 예외가 누적됨",
+        "외부 링크 공유는 편하지만 비인가 재전파, 잘못된 수정, 개인정보 노출 리스크가 큼",
+        "구글 캘린더 수준의 동기화 기대를 만들면 연동 안정성·중복수정·충돌해결 비용이 커짐",
+        "알림/리마인더를 과도하게 넣으면 운영 채널이 스팸화되어 실제 중요한 변경 공지가 묻힐 수 있음",
+        "초기부터 결제·대관·출결까지 붙이면 캘린더보다 ERP가 되어 개발 우선순위가 무너짐"
+      ],
+      "reconsider_triggers": [
+        "외부 손님에게 ‘조회만’ 줄지 ‘예약 신청’까지 열지에 따라 권한 구조가 크게 달라진다.",
+        "갤러리 전시 중심 캘린더와 미술학원 수업 중심 캘린더를 하나의 UI로 통합할지 분리할지 결정이 필요하다.",
+        "기존 Google Calendar 연동을 MVP에 넣을지 수동 운영으로 시작할지에 따라 개발 난이도가 달라진다.",
+        "외부 손님에게 얼마나 수정 권한을 줄지와 운영 안전성 간 충돌이 남는다.",
+        "범용 캘린더 경험을 따를지, 학원/갤러리 운영 특화 UX를 우선할지 판단이 필요하다.",
+        "외부 캘린더 연동 편의와 데이터 정합성 통제 사이의 균형이 남는다."
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "product_ux",
+      "engineering",
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774944240208-lj32lm",
+    "created_at": "2026-03-31T08:04:00.208Z",
+    "user_text": "Council 답변하지 말고 내가 묻는 말에 정확하게 대답해.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774944232.605739",
+      "event_id": "Ev0APU6PFUUD"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "메타 지시사항으로, 특정 업무 분류 대상이 아닌 응답 방식 요청이다."
+    },
+    "primary": {
+      "one_line_summary": "알겠습니다. 앞으로는 Council 형식 없이 질문에만 정확히 답하겠습니다.",
+      "recommendation": "질문을 주시면 전략·재무 관점에서 핵심만 간결하게 답변하겠습니다.",
+      "strongest_objection": "현재는 구체적 질문이 없어 실질적 판단이나 권고를 할 수 없습니다.",
+      "key_risks": [
+        "질문 범위가 불명확하면 답변 정확도가 떨어질 수 있습니다.",
+        "질문 의도 오해",
+        "필요한 전제 누락",
+        "범위 밖 답변으로 인한 불만"
+      ],
+      "next_actions": [
+        "구체적인 질문 1개를 보내주세요.",
+        "질문을 구체적으로 보내달라",
+        "필요하면 답변 형식도 함께 지정해달라"
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "현재는 구체적 질문이 없어 실질적 판단이나 권고를 할 수 없습니다.",
+      "hidden_risks": [
+        "질문 범위가 불명확하면 답변 정확도가 떨어질 수 있습니다.",
+        "질문 의도 오해",
+        "필요한 전제 누락",
+        "범위 밖 답변으로 인한 불만"
+      ],
+      "reconsider_triggers": [
+        "간결성 vs 필요한 맥락 제공"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1774944269696-oz1n4u",
+    "created_at": "2026-03-31T08:04:29.696Z",
+    "user_text": "더그린 갤러리 &amp; 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1774944256.260849",
+      "event_id": "Ev0AQRT0461W"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "ops_grants",
+      "primary_agent": "ops_grants",
+      "include_risk": false,
+      "urgency": "medium",
+      "reason": "멤버들의 스케줄 관리용 캘린더 구축은 운영/절차/협업 체계 설계에 해당한다. 대외 제출이나 되돌리기 어려운 전략 판단은 아니며, 팀 운영 효율화 과제로 보는 것이 적절하다."
+    },
+    "primary": {
+      "one_line_summary": "공용 캘린더는 필요하지만, 권한·입력 규칙·운영 책임자를 먼저 정하지 않으면 곧 무용지물이 됩니다.",
+      "recommendation": "구글 캘린더 기반의 단일 운영 캘린더를 만들고, 공간 사용·전시 일정·수업/모임·개인 작업실 예약을 분리한 하위 캘린더 구조와 입력 규칙, 승인 담당자 1명을 함께 확정해 바로 시범 운영하세요.",
+      "strongest_objection": "운영 규칙 없이 캘린더만 만들면 중복 예약, 미입력, 책임 공방이 발생해 실제 운영 효율이 오히려 떨어집니다.",
+      "key_risks": [
+        "멤버별 입력 방식이 달라 일정 신뢰도가 낮아짐",
+        "수정/삭제 권한이 과도하면 기록 관리가 어려워짐",
+        "공간 예약과 대외 일정이 섞여 가독성이 떨어짐",
+        "운영 담당자 없이 방치되면 2~4주 내 사용률이 급감함",
+        "입력 책임자가 불명확해 캘린더가 빠르게 방치될 수 있음",
+        "개인 일정까지 포함하면 업데이트 피로로 사용률이 하락할 수 있음",
+        "도구를 복잡하게 고르면 초기 세팅과 교육 비용이 과도해질 수 있음",
+        "운영 규칙 없이 시작하면 중복 예약과 예외 처리로 오히려 혼선이 생길 수 있음"
+      ],
+      "next_actions": [
+        "캘린더 용도 3~4개로 구분하고 하위 캘린더 구조를 확정한다.",
+        "멤버별 권한을 보기/작성/승인으로 나눠 설정한다.",
+        "일정 입력 규칙(제목 형식, 시간 단위, 필수 정보, 수정 기한)을 1페이지로 문서화한다.",
+        "2주 시범 운영 후 중복 예약·누락 사례를 점검해 규칙을 조정한다.",
+        "구글 캘린더 또는 노션 캘린더 중 하나만 선택해 단일 도구로 시작하기",
+        "캘린더 범위를 공간 예약·수업·전시·행사·운영 당번으로 한정하기"
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "운영 규칙 없이 캘린더만 만들면 중복 예약, 미입력, 책임 공방이 발생해 실제 운영 효율이 오히려 떨어집니다.",
+      "hidden_risks": [
+        "멤버별 입력 방식이 달라 일정 신뢰도가 낮아짐",
+        "수정/삭제 권한이 과도하면 기록 관리가 어려워짐",
+        "공간 예약과 대외 일정이 섞여 가독성이 떨어짐",
+        "운영 담당자 없이 방치되면 2~4주 내 사용률이 급감함",
+        "입력 책임자가 불명확해 캘린더가 빠르게 방치될 수 있음",
+        "개인 일정까지 포함하면 업데이트 피로로 사용률이 하락할 수 있음",
+        "도구를 복잡하게 고르면 초기 세팅과 교육 비용이 과도해질 수 있음",
+        "운영 규칙 없이 시작하면 중복 예약과 예외 처리로 오히려 혼선이 생길 수 있음",
+        "누가 입력·수정·승인하는지 불명확해 데이터 신뢰도가 빠르게 하락함",
+        "갤러리 일정과 아뜰리에 개인 일정이 한곳에 섞여 우선순위 충돌이 발생함",
+        "알림 과다 또는 누락으로 실제 운영에서 캘린더를 보지 않게 될 수 있음",
+        "툴 선택을 성급히 하면 기존 메신저·예약 방식과 중복되어 이중 관리 비용이 생김",
+        "외부 공개 범위 설정이 잘못되면 작가·고객·행사 정보 노출 리스크가 생김"
+      ],
+      "reconsider_triggers": [
+        "개방형 자율 입력과 관리자 승인형 운영 중 어느 수준으로 통제할지",
+        "멤버 개인 일정 공개 범위를 어디까지 허용할지",
+        "공용 운영 캘린더만으로 충분한지, 멤버 개인 일정 관리까지 확장할지",
+        "노션처럼 유연한 도구와 구글 캘린더처럼 사용성이 쉬운 도구 중 무엇이 더 적합한지",
+        "공용 가시성을 높일수록 개인 일정 프라이버시가 약해짐",
+        "세부 규칙을 늘릴수록 정확도는 오르지만 입력 부담이 커짐"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "ops_grants",
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
   }
 ]

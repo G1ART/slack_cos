@@ -10,6 +10,7 @@
 import { getPersonaRegistryKeys } from '../agents/personas.js';
 
 const BLOCKED_PATTERNS = [
+  /(?:^|\n)\s*한\s*줄\s*요약\s*(?=\n|$)/g,
   /내부\s*처리\s*정보/g,
   /협의\s*모드:\s*(?:matrix_cell|council)/g,
   /참여\s*페르소나:\s*[^\n]+/g,
@@ -28,6 +29,8 @@ export const OLD_STYLE_COUNCIL_SECTION_HEADERS = [
   '페르소나별 핵심 관점',
   '대표 결정 필요 여부',
   '가장 강한 반대 논리',
+  '남아 있는 긴장 / 미해결 충돌',
+  '남아 있는 긴장',
   '종합 추천안',
   '핵심 리스크',
   '승인 대기열',

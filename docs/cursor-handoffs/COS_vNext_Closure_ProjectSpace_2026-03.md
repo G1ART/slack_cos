@@ -942,3 +942,33 @@ Slack smoke 테스트에서 `@G1COS 버전`이 **old Council 포맷**(종합 추
 4. **founderOutboundGate.js 삭제** — registerHandlers에서 import 완전 제거됨, 파일 자체도 삭제 가능
 5. **Project space 목록 조회** — 대표가 "내 프로젝트 목록" Slack에서 조회
 6. **Monitoring/rollback surface** — 배포 후 모니터링·롤백 안내
+
+---
+
+## 19. Council Leak Hotfix (2026-03-31 01:10 KST)
+
+### 증상
+
+- 동일 런타임 sha(`06e91df`)에서도 자연어 입력이 턴마다 다른 라우트로 떨어지며,
+  일부 턴에서 old Council 블록(`한 줄 요약`, `종합 추천안`, `페르소나별 핵심 관점`, `내부 처리 정보`)이 founder-facing으로 재노출됨.
+
+### 원인
+
+1. `partner_surface` 자연어 생성 경로에서 LLM이 Council 형식을 흉내 내는 경우가 발생.
+2. `sendFounderResponse`는 기존에 단순 substring hard-block만 수행하고, `sanitizeFounderOutput`를 재사용하지 않아 2차 방어가 약함.
+3. legacy 마커 차단 목록이 일부 패턴(헤더 라인형) 기준으로 충분히 정교하지 않았음.
+
+### 적용한 핫픽스
+
+| 파일 | 변경 |
+|---|---|
+| `src/features/cosNaturalPartner.js` | Council 형식 흉내 금지 규칙 강화(헤더/페르소나 bullet/내부 메타 전면 금지) |
+| `src/core/founderOutbound.js` | `sanitizeFounderOutput` + `founderHardBlockRemaining`를 outbound gate에 추가하여 2차 차단 |
+| `src/features/founderSurfaceGuard.js` | old Council 섹션 헤더 strip 범위 보강(`남아 있는 긴장` 계열), `한 줄 요약`은 헤더 라인만 제거하도록 정교화 |
+| `src/core/founderRenderer.js` | 내부 마커 감지 목록 정합화 |
+| `src/features/topLevelRouter.js` | leak 감지 마커 정합화(과검출 없이 차단 유지) |
+
+### 검증
+
+- `npm test` 전체 통과 (`38 passed, 0 failed`).
+- 회귀 테스트 `sanitizer defense-in-depth keeps valid content` 재통과.
