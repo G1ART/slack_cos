@@ -16,6 +16,11 @@ import { appendWorkspaceQueueItem, formatWorkspaceQueueSaved } from '../features
 import { getChannelContext } from '../storage/channelContext.js';
 import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
+import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
+import {
+  containsPersonaLiterals,
+  containsApprovalQueueRaw,
+} from '../features/founderSurfaceGuard.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
 
@@ -34,6 +39,39 @@ function recordInboundSlackExchange(metadata, userInboundText, answer) {
   const plain = resolvePostPayload(answer).text?.trim() || '';
   if (u) recordConversationTurn(key, 'user', u);
   if (plain) recordConversationTurn(key, 'assistant', plain);
+}
+
+function hasLegacyCouncilShape(text) {
+  const t = String(text || '');
+  return (
+    /(?:^|\n)\s*(한\s*줄\s*요약|종합\s*추천안|페르소나별\s*핵심\s*관점|가장\s*강한\s*반대\s*논리|내부\s*처리\s*정보)\s*(?=\n|$)/u.test(t) ||
+    containsPersonaLiterals(t) ||
+    containsApprovalQueueRaw(t)
+  );
+}
+
+async function forceFounderRecoveryIfNeeded(combinedText, meta, payload) {
+  if (!hasLegacyCouncilShape(payload.text)) return payload;
+  const recovered = await founderRequestPipeline({
+    text: combinedText,
+    metadata: {
+      ...meta,
+      founder_hard_recover: true,
+    },
+    route_label: meta.slack_route_label,
+  });
+  if (!recovered?.text || hasLegacyCouncilShape(recovered.text)) {
+    return {
+      text: '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. 입력을 founder kernel 계약으로 재정렬 중입니다.',
+      surface_type: 'safe_fallback_surface',
+    };
+  }
+  return {
+    text: recovered.text,
+    blocks: recovered.blocks,
+    surface_type: recovered.trace?.surface_type || 'dialogue_surface',
+    trace: { ...(recovered.trace || {}), forced_recovery_at_outbound: true },
+  };
 }
 
 export function registerHandlers(slackApp, { handleUserText, formatError }) {
@@ -89,7 +127,8 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       const answer = await handleUserText(combinedText, meta);
       recordInboundSlackExchange(meta, combinedText, answer);
 
-      const payload = resolvePostPayload(answer);
+      const rawPayload = resolvePostPayload(answer);
+      const payload = await forceFounderRecoveryIfNeeded(combinedText, meta, rawPayload);
       await sendFounderResponse({
         say,
         thread_ts: event.ts,
@@ -155,7 +194,8 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
       const answer = await handleUserText(combinedText, meta);
       recordInboundSlackExchange(meta, combinedText, answer);
 
-      const payload = resolvePostPayload(answer);
+      const rawPayload = resolvePostPayload(answer);
+      const payload = await forceFounderRecoveryIfNeeded(combinedText, meta, rawPayload);
       await sendFounderResponse({
         client,
         channel: event.channel,

@@ -179,7 +179,6 @@ import {
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
 import {
-  containsOldCouncilMarkers,
   containsPersonaLiterals,
   containsApprovalQueueRaw,
 } from './src/features/founderSurfaceGuard.js';
@@ -333,10 +332,20 @@ function mergeInboundAudit(partial) {
 
 function founderLeakDetected(text) {
   const t = String(text || '');
+  const legacyCouncilHeaderRe =
+    /(?:^|\n)\s*(한\s*줄\s*요약|종합\s*추천안|페르소나별\s*핵심\s*관점|가장\s*강한\s*반대\s*논리|남아\s*있는\s*긴장(?:\s*\/\s*미해결\s*충돌)?|대표\s*결정\s*필요\s*여부|내부\s*처리\s*정보)\s*(?=\n|$)/u;
+  const councilMetaLineRe =
+    /(?:^|\n)\s*-\s*(협의\s*모드|참여\s*페르소나|matrix\s*trigger|institutional\s*memory\s*힌트\s*수)\s*:/u;
   return (
-    containsOldCouncilMarkers(t) ||
+    legacyCouncilHeaderRe.test(t) ||
+    councilMetaLineRe.test(t) ||
     containsPersonaLiterals(t) ||
-    containsApprovalQueueRaw(t)
+    containsApprovalQueueRaw(t) ||
+    /(?:^|\n)\s*종합\s*추천안\s*(?=\n|$)/u.test(t) ||
+    /(?:^|\n)\s*페르소나별\s*핵심\s*관점\s*(?=\n|$)/u.test(t) ||
+    /(?:^|\n)\s*내부\s*처리\s*정보\s*(?=\n|$)/u.test(t) ||
+    // Legacy broad marker fallback (kept only for strongest marker).
+    t.includes('종합 추천안')
   );
 }
 
