@@ -152,7 +152,6 @@ import {
   getInboundTurnTraceStore,
 } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
-import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
   loadConversationBufferFromDisk,
@@ -178,10 +177,6 @@ import {
 } from './src/features/projectIntakeSession.js';
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
-import {
-  containsPersonaLiterals,
-  containsApprovalQueueRaw,
-} from './src/features/founderSurfaceGuard.js';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -328,38 +323,6 @@ function mergeInboundAudit(partial) {
   const s = getInboundTurnTraceStore();
   if (!s) return;
   s.inbound_audit = { ...(s.inbound_audit || {}), ...partial };
-}
-
-function founderLeakDetected(text) {
-  const t = String(text || '');
-  const legacyCouncilHeaderRe =
-    /(?:^|\n)\s*(한\s*줄\s*요약|종합\s*추천안|페르소나별\s*핵심\s*관점|가장\s*강한\s*반대\s*논리|남아\s*있는\s*긴장(?:\s*\/\s*미해결\s*충돌)?|대표\s*결정\s*필요\s*여부|내부\s*처리\s*정보)\s*(?=\n|$)/u;
-  const councilMetaLineRe =
-    /(?:^|\n)\s*-\s*(협의\s*모드|참여\s*페르소나|matrix\s*trigger|institutional\s*memory\s*힌트\s*수)\s*:/u;
-  return (
-    legacyCouncilHeaderRe.test(t) ||
-    councilMetaLineRe.test(t) ||
-    containsPersonaLiterals(t) ||
-    containsApprovalQueueRaw(t) ||
-    /(?:^|\n)\s*종합\s*추천안\s*(?=\n|$)/u.test(t) ||
-    /(?:^|\n)\s*페르소나별\s*핵심\s*관점\s*(?=\n|$)/u.test(t) ||
-    /(?:^|\n)\s*내부\s*처리\s*정보\s*(?=\n|$)/u.test(t) ||
-    // Legacy broad marker fallback (kept only for strongest marker).
-    t.includes('종합 추천안')
-  );
-}
-
-async function recoverFounderDialogueFromLeak(inputNorm, metadata, routeLabel) {
-  const recovered = await founderRequestPipeline({
-    text: inputNorm,
-    metadata: {
-      ...metadata,
-      founder_hard_recover: true,
-    },
-    route_label: routeLabel,
-  });
-  if (!recovered || founderLeakDetected(recovered.text)) return null;
-  return recovered;
 }
 
 async function callJSON({ instructions, input, schemaName, schema }) {
@@ -784,6 +747,64 @@ async function handleUserText(userText, metadata = {}) {
       setInboundTurnSlackRouteLabel(metadata.slack_route_label);
     }
 
+    // Founder Front Door — single generation pipeline only.
+    // No command-router / AI-router fallback for founder natural-language path.
+    if (founderRoute) {
+      try {
+        const founderOnly = await founderRequestPipeline({
+          text: inputNorm,
+          metadata: {
+            ...metadata,
+            has_active_intake: _intakeActive,
+            intake_session: _intakeSess,
+          },
+          route_label: metadata.slack_route_label,
+        });
+        if (founderOnly) {
+          mergeInboundAudit({
+            routing_exit: 'founder_kernel_single_path',
+            passed_pipeline: true,
+            founder_route: true,
+            legacy_command_router_used: false,
+            legacy_ai_router_used: false,
+          });
+          return {
+            text: founderOnly.text,
+            blocks: founderOnly.blocks,
+            surface_type: founderOnly.trace?.surface_type || 'dialogue_surface',
+            trace: {
+              ...(founderOnly.trace || {}),
+              passed_outbound_validation: true,
+              single_founder_kernel_path: true,
+            },
+          };
+        }
+      } catch (pipelineErr) {
+        console.error('[FOUNDER_KERNEL_SINGLE_PATH_ERROR]', pipelineErr);
+      }
+
+      mergeInboundAudit({
+        routing_exit: 'founder_kernel_hard_fail',
+        passed_pipeline: false,
+        founder_route: true,
+        legacy_command_router_used: false,
+        legacy_ai_router_used: false,
+        hard_fail_reason: 'invariant_breach',
+      });
+      return {
+        text: '[COS] founder 단일 생성 경로에서 계약 위반이 감지되어 차단했습니다. 입력을 운영 문제 정의 문장으로 정렬해 다시 진행하겠습니다.',
+        surface_type: 'safe_fallback_surface',
+        trace: {
+          hard_fail_reason: 'invariant_breach',
+          passed_pipeline: false,
+          passed_renderer: true,
+          passed_outbound_validation: false,
+          legacy_router_used: false,
+          single_founder_kernel_path: true,
+        },
+      };
+    }
+
     // Constitutional pipeline v1.1 — work_object → work_phase → policy → packet → surface
     try {
       const pipelineResult = await founderRequestPipeline({
@@ -796,53 +817,6 @@ async function handleUserText(userText, metadata = {}) {
         route_label: metadata.slack_route_label,
       });
       if (pipelineResult != null) {
-        if (founderRoute && founderLeakDetected(pipelineResult.text)) {
-          const recovered = await recoverFounderDialogueFromLeak(
-            inputNorm,
-            {
-              ...metadata,
-              has_active_intake: _intakeActive,
-              intake_session: _intakeSess,
-            },
-            metadata.slack_route_label,
-          );
-          if (recovered) {
-            mergeInboundAudit({
-              routing_exit: 'pipeline_leak_auto_recovered',
-              founder_route: true,
-              legacy_command_router_used: false,
-              legacy_ai_router_used: false,
-            });
-            return {
-              text: recovered.text,
-              blocks: recovered.blocks,
-              surface_type: recovered.trace?.surface_type || 'dialogue_surface',
-              trace: {
-                ...(recovered.trace || {}),
-                leak_auto_recovered: true,
-                passed_outbound_validation: true,
-              },
-            };
-          }
-          mergeInboundAudit({
-            routing_exit: 'pipeline_leak_hard_kill',
-            founder_route: true,
-            legacy_command_router_used: false,
-            legacy_ai_router_used: false,
-            hard_fail_reason: 'invariant_breach',
-          });
-          return {
-            text: '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. founder kernel을 통해 대화 계약으로 다시 정렬해 진행합니다.',
-            surface_type: 'safe_fallback_surface',
-            trace: {
-              hard_fail_reason: 'invariant_breach',
-              passed_pipeline: true,
-              passed_renderer: true,
-              passed_outbound_validation: false,
-              legacy_router_used: false,
-            },
-          };
-        }
         mergeInboundAudit({
           routing_exit: 'pipeline',
           passed_pipeline: true,
@@ -943,54 +917,6 @@ async function handleUserText(userText, metadata = {}) {
         })
       : { done: false, aiCtx: { userText, metadata, channelContext: null } };
     if (routed.done) {
-      const routedText = typeof routed.response === 'string' ? routed.response : routed.response?.text;
-      if (founderRoute && founderLeakDetected(routedText)) {
-        const recovered = await recoverFounderDialogueFromLeak(
-          inputNorm,
-          {
-            ...metadata,
-            has_active_intake: _intakeActive,
-            intake_session: _intakeSess,
-          },
-          metadata.slack_route_label,
-        );
-        if (recovered) {
-          mergeInboundAudit({
-            routing_exit: 'command_router_leak_auto_recovered',
-            founder_route: true,
-            legacy_command_router_used: shouldRunCommandRouter,
-            legacy_ai_router_used: false,
-          });
-          return {
-            text: recovered.text,
-            blocks: recovered.blocks,
-            surface_type: recovered.trace?.surface_type || 'dialogue_surface',
-            trace: {
-              ...(recovered.trace || {}),
-              leak_auto_recovered: true,
-              passed_outbound_validation: true,
-            },
-          };
-        }
-        mergeInboundAudit({
-          routing_exit: 'command_router_leak_hard_kill',
-          founder_route: true,
-          legacy_command_router_used: shouldRunCommandRouter,
-          legacy_ai_router_used: false,
-          hard_fail_reason: 'invariant_breach',
-        });
-        return {
-          text: '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. 구조화 조회/명령 또는 founder kernel 경로만 허용됩니다.',
-          surface_type: 'safe_fallback_surface',
-          trace: {
-            hard_fail_reason: 'invariant_breach',
-            passed_pipeline: false,
-            passed_renderer: true,
-            passed_outbound_validation: false,
-            legacy_router_used: shouldRunCommandRouter,
-          },
-        };
-      }
       const commandRouterExit = shouldRunCommandRouter ? 'command_router' : 'pipeline_miss_non_command';
       mergeInboundAudit({
         routing_exit: commandRouterExit,
@@ -1010,44 +936,6 @@ async function handleUserText(userText, metadata = {}) {
         }),
       );
       return routed.response;
-    }
-
-    if (founderRoute) {
-      mergeInboundAudit({
-        routing_exit: 'founder_deterministic_fallback',
-        passed_pipeline: false,
-        founder_route: true,
-        legacy_command_router_used: false,
-        legacy_ai_router_used: false,
-      });
-      console.error('[FOUNDER_ROUTE_HARD_KILL] runInboundAiRouter disabled for founder path');
-      console.info(
-        JSON.stringify({
-          event: 'G1COS_FOUNDER_DOOR',
-          routing_exit: 'founder_deterministic_fallback',
-          founder_route: true,
-          passed_pipeline: false,
-          legacy_command_router_used: false,
-          legacy_ai_router_used: false,
-        }),
-      );
-      return finalizeSlackResponseFromTopLevel({
-        responder: 'error',
-        text: [
-          '[COS] 대표 경로는 **파이프라인·구조화 명령**으로만 처리됩니다. (Council·AI 라우터 미사용)',
-          '- 정렬/킥오프: 목표를 한 줄로 보내거나 `툴제작:` 접두를 사용하세요.',
-          '- 조회: `계획상세:`, `업무상세:` 등 접두를 사용하세요.',
-          '- 메타: `버전`, `도움말`, responder 관련 질문은 짧은 고정 응답으로 처리됩니다.',
-          '- 배포·승인·실행: 스레드에 열린 run/인테이크 상태에 맞는 지시를 사용하세요.',
-          '반복되면 `버전`으로 배포 SHA를 확인하세요.',
-        ].join('\n'),
-        raw_text: userText,
-        normalized_text: inputNorm,
-        command_name: 'founder_deterministic_fallback',
-        council_blocked: true,
-        response_type: 'founder_deterministic_fallback',
-        founder_route: true,
-      });
     }
 
     mergeInboundAudit({

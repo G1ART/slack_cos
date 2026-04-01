@@ -80,6 +80,8 @@
 | `runInboundAiRouter`에서 founder 전용 분기/파라미터 제거 + 오류 시 legacy single fallback 제거(직접 error surface) | 완료 |
 | `app.js`에서 `runLegacySingleFlow` 제거 및 founder 경로에서 command-router 호출 시 `structuredOnly: true` 강제 | 완료 |
 | leak 탐지 오탐 수정: `핵심 리스크/검증 포인트` 같은 정상 Dialogue 헤더를 Council 혼입으로 잘못 판정하지 않도록 `app.js` 판정식을 "구형 Council 헤더 정확 일치"로 축소 | 완료 |
+| 최종 송신 게이트 고정: `sendFounderResponse`에서 구형 Council 헤더가 감지되면 founder dialogue contract를 즉시 재생성해 전송 (차단문/오락가락 방지) | 완료 |
+| marker 오탐 제거: `founderSurfaceGuard`의 broad marker에서 `핵심 리스크` 제거해 정상 Dialogue가 fallback으로 떨어지지 않게 조정 | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

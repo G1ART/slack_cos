@@ -65,7 +65,6 @@ const OLD_COUNCIL_MARKER_SUBSTRINGS = [
   '종합 추천안',
   '페르소나별 핵심 관점',
   '가장 강한 반대 논리',
-  '핵심 리스크',
   '대표 결정 필요 여부',
   '내부 처리 정보',
   'strategy_finance:',
