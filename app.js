@@ -144,6 +144,10 @@ import {
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
+import {
+  classifyFounderRoutingLock,
+  formatRuntimeMetaSurfaceText,
+} from './src/features/inboundFounderRoutingLock.js';
 import { classifyFounderIntent } from './src/core/founderIntentClassifier.js';
 import { FounderIntent } from './src/core/founderContracts.js';
 import {
@@ -315,7 +319,16 @@ function makeId(prefix) {
 }
 
 function isFounderFacingRoute(metadata = {}) {
-  return metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
+  const sourceType = String(metadata.source_type || '').toLowerCase();
+  const routeLabel = String(metadata.slack_route_label || '').toLowerCase();
+  const channel = String(metadata.channel || '');
+  return (
+    sourceType === 'direct_message' ||
+    sourceType === 'channel_mention' ||
+    routeLabel === 'dm_ai_router' ||
+    routeLabel === 'mention_ai_router' ||
+    channel.startsWith('D')
+  );
 }
 
 /** Reconstruction audit — merged into inbound-turn-trace JSONL when enabled. */
@@ -743,6 +756,29 @@ async function handleUserText(userText, metadata = {}) {
   console.info(`[G1COS ROUTE BEGIN] sha=${_bi.release_sha_short} thread_key=${_threadKey} source=${metadata.source_type || 'unknown'} channel=${metadata.channel || ''} user=${metadata.user || ''} active_intake=${_intakeActive} text="${inputNorm.slice(0, 120)}"`);
 
   return runInboundTurnTraceScope(metadata, inputNorm, async () => {
+    const founderLock = classifyFounderRoutingLock(inputNorm);
+    if (founderLock?.kind === 'version') {
+      mergeInboundAudit({
+        routing_exit: 'runtime_meta_lock',
+        founder_route: isFounderFacingRoute(metadata),
+        passed_pipeline: true,
+        legacy_command_router_used: false,
+        legacy_ai_router_used: false,
+      });
+      return {
+        text: formatRuntimeMetaSurfaceText(),
+        surface_type: 'runtime_meta_surface',
+        trace: {
+          responder: 'founder_kernel',
+          responder_kind: 'founder_kernel',
+          response_type: 'runtime_meta_surface',
+          passed_pipeline: true,
+          passed_renderer: true,
+          passed_outbound_validation: true,
+        },
+      };
+    }
+
     if (metadata.slack_route_label) {
       setInboundTurnSlackRouteLabel(metadata.slack_route_label);
     }
@@ -947,6 +983,11 @@ async function handleUserText(userText, metadata = {}) {
     });
     return runInboundAiRouter({
       ...routed.aiCtx,
+      metadata: {
+        ...(routed.aiCtx?.metadata || {}),
+        interface_mode: 'cos_chat',
+        allow_council: false,
+      },
       runPlannerHardLockedBranch,
       makeId,
       callText,

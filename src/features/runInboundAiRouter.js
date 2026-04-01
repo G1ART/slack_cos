@@ -282,9 +282,15 @@ export async function runInboundAiRouter(ctx) {
     callJSON,
   } = ctx;
 
+  const sourceType = String(metadata?.source_type || '').toLowerCase();
+  const routeLabel = String(metadata?.slack_route_label || '').toLowerCase();
+  const channel = String(metadata?.channel || '');
   const founderRoute =
-    metadata?.source_type === 'direct_message' ||
-    metadata?.source_type === 'channel_mention';
+    sourceType === 'direct_message' ||
+    sourceType === 'channel_mention' ||
+    routeLabel === 'dm_ai_router' ||
+    routeLabel === 'mention_ai_router' ||
+    channel.startsWith('D');
 
   // Absolute founder guard: even if caller misroutes,
   // founder-facing turns are forced through founder kernel only.
@@ -374,7 +380,12 @@ export async function runInboundAiRouter(ctx) {
     });
   }
 
-  if (!isCouncilCommand(trimmed)) {
+  const councilRequested = isCouncilCommand(trimmed);
+  const councilEnabled =
+    metadata?.allow_council === true || String(metadata?.interface_mode || '') !== 'cos_chat';
+  const explicitCouncil = councilEnabled && councilRequested;
+
+  if (!explicitCouncil) {
     const intakeEarly = await tryProjectIntakeExecutiveContinue(trimmed, metadata);
     if (intakeEarly != null) {
       logRouterEvent('router_responder_selected', {
@@ -572,7 +583,6 @@ export async function runInboundAiRouter(ctx) {
   }
 
   const councilParsed = parseCouncilCommand(trimmed);
-  const explicitCouncil = isCouncilCommand(trimmed);
 
   const probeCouncil = normalizePlannerInputForRoute(trimmed);
   const latePlanner = analyzePlannerResponderLock(probeCouncil);
@@ -712,6 +722,18 @@ export async function runInboundAiRouter(ctx) {
 
   const routedInput = councilParsed?.question || trimmed;
   const route = await routeTask(routedInput, channelContext);
+
+  if (councilRequested && !councilEnabled) {
+    return finalizeSlackResponse({
+      responder: 'partner_surface',
+      text: '[COS] 현재 대화 모드에서는 협의모드를 직접 열지 않습니다. 먼저 COS와 범위를 잠그면, 이후 실행 단계에서 필요한 내부 오케스트레이션을 진행하겠습니다.',
+      raw_text: routerCtx.raw_text,
+      normalized_text: routerCtx.normalized_text,
+      command_name: 'council_disabled_in_chat_mode',
+      council_blocked: true,
+      response_type: 'council_disabled_in_chat_mode',
+    });
+  }
 
   if (explicitCouncil) {
     if (isActiveProjectIntake(metadata)) {

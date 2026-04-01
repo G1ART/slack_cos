@@ -42,6 +42,7 @@ import {
 import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
+import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
 
 /**
  * Utility intents the pipeline handles regardless of work object state.
@@ -134,6 +135,41 @@ async function executeLock(normalized, metadata, workContext) {
 
 async function executeSpine(normalized, metadata, workContext) {
   const run = workContext.run || null;
+  const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
+  if (completion?.overall_status === 'completed') {
+    return {
+      packet: buildHandoffPacket({
+        project_ref: run?.project_id || 'project_space_pending',
+        run_ref: run?.run_id || 'run_pending',
+        dispatched_workstreams: completion.completed_lanes?.length
+          ? completion.completed_lanes
+          : ['research_benchmark', 'fullstack_swe', 'uiux_design', 'qa_qc'],
+        provider_truth: [
+          `github: ${run?.git_trace?.repo ? 'live_or_bridge' : 'manual_bridge'}`,
+          `cursor: ${run?.cursor_trace?.length ? 'live_or_bridge' : 'manual_bridge'}`,
+          `supabase: ${run?.supabase_trace?.length ? 'live_or_bridge' : 'optional'}`,
+        ],
+        founder_next_action: '완료 결과를 확인하고 배포/확장 여부를 결정해 주세요.',
+      }),
+    };
+  }
+  if (completion?.overall_status === 'manual_blocked' || completion?.overall_status === 'failed') {
+    return {
+      packet: buildStatusPacket({
+        current_stage: run?.current_stage || 'execute',
+        completed: completion.completed_lanes?.length ? completion.completed_lanes : ['scope lock 완료', 'run 생성'],
+        in_progress: [],
+        blocker: completion.next_actions?.join(' | ') || run?.outbound_last_error || '수동 의사결정 필요',
+        provider_truth: [
+          `github: ${run?.git_trace?.repo ? 'live_or_bridge' : 'manual_bridge'}`,
+          `cursor: ${run?.cursor_trace?.length ? 'live_or_bridge' : 'manual_bridge'}`,
+          `supabase: ${run?.supabase_trace?.length ? 'live_or_bridge' : 'optional'}`,
+        ],
+        next_actions: completion.next_actions?.length ? completion.next_actions : ['블로커 해소 의사결정'],
+        founder_action_required: '크리티컬 의사결정이 필요합니다. 우선순위/재시도/수동조치를 확정해 주세요.',
+      }),
+    };
+  }
   return {
     packet: buildStatusPacket({
       current_stage: run?.current_stage || 'execute',
@@ -143,8 +179,8 @@ async function executeSpine(normalized, metadata, workContext) {
       provider_truth: run
         ? ['github: live_or_bridge', 'cursor: live_or_bridge', 'supabase: optional']
         : ['github: 없음', 'cursor: 없음', 'supabase: 없음'],
-      next_actions: ['핵심 실행 항목 3개 확정', '우선순위 지정', '승인/배포 전환 준비'],
-      founder_action_required: '실행 우선순위 확인',
+      next_actions: ['오케스트레이션 실행 중'],
+      founder_action_required: '현재 오케스트레이션 진행 중입니다. 크리티컬 결정/완료 시점에만 확인하면 됩니다.',
     }),
   };
 }
@@ -174,7 +210,15 @@ async function executeDeploy(normalized, metadata, workContext) {
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = normalizeFounderMetaCommandLine(String(text || '').trim());
-  const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
+  const sourceType = String(metadata.source_type || '').toLowerCase();
+  const routeLabelNorm = String(metadata.slack_route_label || route_label || '').toLowerCase();
+  const channel = String(metadata.channel || '');
+  const founderRoute =
+    sourceType === 'direct_message' ||
+    sourceType === 'channel_mention' ||
+    routeLabelNorm === 'dm_ai_router' ||
+    routeLabelNorm === 'mention_ai_router' ||
+    channel.startsWith('D');
   const callText = typeof metadata.callText === 'function' ? metadata.callText : null;
   const threadKey = buildSlackThreadKey(metadata);
   const gold = classifyGoldContract(normalized, metadata);
@@ -239,6 +283,16 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     intentResult.intent === FounderIntent.QUERY_LOOKUP ||
     intentResult.intent === FounderIntent.STRUCTURED_COMMAND
   ) {
+    if (founderRoute) {
+      return renderScopeLockOnlyDialogue(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        '현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 잠금에만 집중합니다.',
+      );
+    }
     return null;
   }
 
@@ -380,6 +434,7 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
       project_id: workContext.project_id || null,
     });
     const run = createExecutionRun({ packet: execPacket, metadata });
+    ensureExecutionRunDispatched(run, metadata);
     transitionProjectIntakeStage(metadata, 'execution_ready', {
       packet_id: execPacket.packet_id,
       run_id: run.run_id,
@@ -468,6 +523,40 @@ function buildSeparateProductClarificationPacket(workContext, normalized) {
     next_step:
       '“같은 프로덕트” 또는 “별도 프로덕트”로만 답해주시면, 같은 스레드 유지/새 스레드 분리 중 하나로 즉시 정렬하겠습니다.',
   };
+}
+
+function renderScopeLockOnlyDialogue(normalized, metadata, workContext, intentResult, route_label, message) {
+  const packet = {
+    ...buildDialoguePacket(normalized, 'followup'),
+    reframed_problem: message,
+    next_step: '요청을 스코프 락인 질문(포함/제외/성공기준/제약)으로 바꿔주시면 즉시 이어서 잠그겠습니다.',
+  };
+  const quality = validateDialogueContract(packet);
+  if (!quality.ok) {
+    return founderKernelHardFail(
+      normalized,
+      metadata,
+      workContext,
+      intentResult,
+      route_label,
+      FounderHardFailReason.INVARIANT_BREACH,
+      'scope_lock_only_dialogue_quality_fail',
+    );
+  }
+  const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, packet);
+  return buildResult(rendered, {
+    workContext,
+    phaseResult: { phase: WorkPhase.ALIGN, phase_source: 'scope_lock_only_dialogue', confidence: 1 },
+    intentResult,
+    policy: evaluatePolicy({
+      actor: Actor.FOUNDER,
+      work_object_type: workContext.primary_type,
+      work_phase: WorkPhase.ALIGN,
+      intent_signal: intentResult.intent,
+      metadata,
+    }),
+    route_label,
+  });
 }
 
 async function buildAdaptiveDialoguePacket(normalized, metadata, mode, callText) {

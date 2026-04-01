@@ -18,6 +18,7 @@ import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
 import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
+import { classifyFounderRoutingLock, formatRuntimeMetaSurfaceText } from '../features/inboundFounderRoutingLock.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
 
@@ -77,6 +78,18 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         return;
       }
 
+      const routingLock = classifyFounderRoutingLock(combinedText);
+      if (routingLock?.kind === 'version') {
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: formatRuntimeMetaSurfaceText(),
+          surface_type: 'runtime_meta_surface',
+          trace: { route_label: 'mention_ai_router', responder: 'founder_kernel' },
+        });
+        return;
+      }
+
       const meta = {
         source_type: 'channel_mention',
         slack_route_label: 'mention_ai_router',
@@ -99,7 +112,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         route_label: meta.slack_route_label,
       });
       const answer = founderPipelineResult ?? {
-        text: '[COS] founder front door는 전략 대화/상태/승인/배포/메타 경로만 처리합니다. 조회/구조화 명령은 접두어로 입력해 주세요.',
+        text: '[COS] 현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 정렬부터 이어가겠습니다.',
         surface_type: 'safe_fallback_surface',
       };
       recordInboundSlackExchange(meta, combinedText, answer);
@@ -156,6 +169,18 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const combinedText = (dmText + fileContext).trim();
       if (!combinedText) return;
 
+      const routingLock = classifyFounderRoutingLock(combinedText);
+      if (routingLock?.kind === 'version') {
+        await sendFounderResponse({
+          client,
+          channel: event.channel,
+          rendered_text: formatRuntimeMetaSurfaceText(),
+          surface_type: 'runtime_meta_surface',
+          trace: { route_label: 'dm_ai_router', responder: 'founder_kernel' },
+        });
+        return;
+      }
+
       const meta = {
         source_type: 'direct_message',
         slack_route_label: 'dm_ai_router',
@@ -178,7 +203,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         route_label: meta.slack_route_label,
       });
       const answer = founderPipelineResult ?? {
-        text: '[COS] founder front door는 전략 대화/상태/승인/배포/메타 경로만 처리합니다. 조회/구조화 명령은 접두어로 입력해 주세요.',
+        text: '[COS] 현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 정렬부터 이어가겠습니다.',
         surface_type: 'safe_fallback_surface',
       };
       recordInboundSlackExchange(meta, combinedText, answer);

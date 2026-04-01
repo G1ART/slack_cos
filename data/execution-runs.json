@@ -9734,5 +9734,2818 @@
     "requested_by": "U_FOUNDER",
     "approved_by": "U_FOUNDER",
     "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfuvocp-71ad3",
+    "packet_id": "EPK-mnfuvocp-kcczb",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:41:02.857Z",
+    "updated_at": "2026-04-01T09:41:02.857Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-vocpjrw",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-vocp772",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-vocp0ak",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-vocp2ol",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfuwtix-hijdw",
+    "packet_id": "EPK-mnfuwtix-tvjzi",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:41:56.217Z",
+    "updated_at": "2026-04-01T09:41:56.217Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-wtixp6a",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-wtixcfr",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-wtixrxe",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-wtixdhw",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfuyd6z-k4txq",
+    "packet_id": "EPK-mnfuyd6z-n5g4z",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:43:08.363Z",
+    "updated_at": "2026-04-01T09:43:08.363Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-yd6z8cv",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-yd6z38q",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-yd6z21v",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-yd6zhg7",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv43u1-su2j5",
+    "packet_id": "EPK-mnfv43u1-3lbvh",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:47:36.169Z",
+    "updated_at": "2026-04-01T09:47:36.170Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-43u1iw8",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-43u1q1d",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-43u1w93",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-43u1g3q",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:47:36.170Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv43uz-y6bg5",
+    "packet_id": "EPK-mnfv43uz-c2rwh",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:47:36.203Z",
+    "updated_at": "2026-04-01T09:47:36.211Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-43uztdi",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.211Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-43uzvad",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-43uz5y9",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-43uzyj2",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv43uz-y6bg5",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:47:36.203Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv43uz-y6bg5",
+    "packet_id": "EPK-mnfv43uz-c2rwh",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:47:36.203Z",
+    "updated_at": "2026-04-01T09:47:36.215Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-43uztdi",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.211Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-43uzvad",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-43uz5y9",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.215Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-43uzyj2",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv43uz-y6bg5",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:47:36.203Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv43uz-y6bg5",
+    "packet_id": "EPK-mnfv43uz-c2rwh",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:47:36.203Z",
+    "updated_at": "2026-04-01T09:47:36.221Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-43uztdi",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.211Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-43uzvad",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "github",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [],
+          "last_outbound_at": "2026-04-01T09:47:36.221Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-43uz5y9",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.215Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-43uzyj2",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_acceptance.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_regression.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.220Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv43uz-y6bg5",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnfv43uz-y6bg5`\n**packet_id**: `EPK-mnfv43uz-c2rwh`\n\n## Goal\n운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n\n## Locked MVP Summary\n핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그\n\n## Includes\n- 핵심 일정 등록/수정\n- 권한 기반 접근제어\n- 충돌 방지 룰\n- 알림/승인 로그\n\n## Excludes\n- 결제/정산\n- 고급 BI 분석\n- 복수 외부 플랫폼 동시 연동\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **uiux_design**: view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+          "run_id": "RUN-mnfv43uz-y6bg5",
+          "packet_id": "EPK-mnfv43uz-c2rwh"
+        }
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_smoke.md"
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:47:36.203Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv43uz-y6bg5",
+    "packet_id": "EPK-mnfv43uz-c2rwh",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:47:36.203Z",
+    "updated_at": "2026-04-01T09:47:36.237Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-43uztdi",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.211Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-43uzvad",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.237Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-43uz5y9",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.215Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-43uzyj2",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_acceptance.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_regression.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:47:36.220Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-01T09:47:36.237Z",
+        "dispatch_mode": "auto_generated",
+        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv43uz-y6bg5",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5.md",
+        "supabase_schema_draft_path": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnfv43uz-y6bg5`\n**packet_id**: `EPK-mnfv43uz-c2rwh`\n\n## Goal\n운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n\n## Locked MVP Summary\n핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그\n\n## Includes\n- 핵심 일정 등록/수정\n- 권한 기반 접근제어\n- 충돌 방지 룰\n- 알림/승인 로그\n\n## Excludes\n- 결제/정산\n- 고급 BI 분석\n- 복수 외부 플랫폼 동시 연동\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **uiux_design**: view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+          "run_id": "RUN-mnfv43uz-y6bg5",
+          "packet_id": "EPK-mnfv43uz-c2rwh"
+        }
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv43uz-y6bg5_smoke.md"
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "completed",
+    "outbound_dispatched_at": "2026-04-01T09:47:36.203Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv4tfk-67fkv",
+    "packet_id": "EPK-mnfv4tfk-az2qi",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:48:09.344Z",
+    "updated_at": "2026-04-01T09:48:09.345Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-4tfkrij",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-4tfkqp1",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-4tfkifl",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-4tfkyw9",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:48:09.345Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv4tgf-39jao",
+    "packet_id": "EPK-mnfv4tgf-q4bmn",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:48:09.375Z",
+    "updated_at": "2026-04-01T09:48:09.384Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-4tgfguw",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.384Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-4tgfgrj",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-4tgfzff",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-4tgf23z",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv4tgf-39jao",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:48:09.375Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv4tgf-39jao",
+    "packet_id": "EPK-mnfv4tgf-q4bmn",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:48:09.375Z",
+    "updated_at": "2026-04-01T09:48:09.390Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-4tgfguw",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.384Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-4tgfgrj",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-4tgfzff",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.390Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-4tgf23z",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv4tgf-39jao",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:48:09.375Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv4tgf-39jao",
+    "packet_id": "EPK-mnfv4tgf-q4bmn",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:48:09.375Z",
+    "updated_at": "2026-04-01T09:48:09.397Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-4tgfguw",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.384Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-4tgfgrj",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "github",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [],
+          "last_outbound_at": "2026-04-01T09:48:09.397Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-4tgfzff",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.390Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-4tgf23z",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_acceptance.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_regression.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.396Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv4tgf-39jao",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "supabase_schema_draft_path": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnfv4tgf-39jao`\n**packet_id**: `EPK-mnfv4tgf-q4bmn`\n\n## Goal\n운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n\n## Locked MVP Summary\n핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그\n\n## Includes\n- 핵심 일정 등록/수정\n- 권한 기반 접근제어\n- 충돌 방지 룰\n- 알림/승인 로그\n\n## Excludes\n- 결제/정산\n- 고급 BI 분석\n- 복수 외부 플랫폼 동시 연동\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **uiux_design**: view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+          "run_id": "RUN-mnfv4tgf-39jao",
+          "packet_id": "EPK-mnfv4tgf-q4bmn"
+        }
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_smoke.md"
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-01T09:48:09.375Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
+  },
+  {
+    "run_id": "RUN-mnfv4tgf-39jao",
+    "packet_id": "EPK-mnfv4tgf-q4bmn",
+    "session_id": "im:C_TEST_GOLD",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "im:C_TEST_GOLD",
+    "created_at": "2026-04-01T09:48:09.375Z",
+    "updated_at": "2026-04-01T09:48:09.406Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-4tgfguw",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [
+          "research_note_id",
+          "research_note_path"
+        ],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.384Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-4tgfgrj",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.406Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-4tgfzff",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [
+          "ui_spec_delta_path",
+          "wireframe_note_path",
+          "component_checklist_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md",
+            "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.390Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-4tgf23z",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_acceptance.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_regression.md",
+            "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-01T09:48:09.396Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-01T09:48:09.406Z",
+        "dispatch_mode": "auto_generated",
+        "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": "RN-RUN-mnfv4tgf-39jao",
+        "research_note_path": "docs/research-notes/research_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md"
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao.md",
+        "supabase_schema_draft_path": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnfv4tgf-39jao`\n**packet_id**: `EPK-mnfv4tgf-q4bmn`\n\n## Goal\n운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n\n## Locked MVP Summary\n핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그\n\n## Includes\n- 핵심 일정 등록/수정\n- 권한 기반 접근제어\n- 충돌 방지 룰\n- 알림/승인 로그\n\n## Excludes\n- 결제/정산\n- 고급 BI 분석\n- 복수 외부 플랫폼 동시 연동\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **uiux_design**: view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다",
+          "run_id": "RUN-mnfv4tgf-39jao",
+          "packet_id": "EPK-mnfv4tgf-q4bmn"
+        }
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_spec.md",
+        "wireframe_note_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_wireframe.md",
+        "component_checklist_path": "docs/design-specs/uiux_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_components.md"
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_운영-혼선을-줄이기-위해-일정-권한-승인-흐름을-일관되게-통합-관리한다_RUN-mnfv4tgf-39jao_smoke.md"
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "completed",
+    "outbound_dispatched_at": "2026-04-01T09:48:09.375Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null
   }
 ]

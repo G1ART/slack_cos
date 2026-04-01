@@ -26,6 +26,10 @@
 보강4: founder dialogue writer의 품질 슬롯(`pushback_point`,`tradeoff_summary`,`alternatives`,`scope_cut`)은 도메인 템플릿(`calendar`/`crm`/`general`)로 생성한다. 따라서 채널이 같아도 질문 도메인이 바뀌면 이전 도메인 문구(예: 캘린더 절삭)가 재사용되지 않는다.
 보강5: founder `discover/align`는 정적 계약 생성만 하지 않고 `runCosNaturalPartner(callText)`를 통해 스레드 transcript를 반영한 문장을 `reframed_problem`/`pushback_point`/`next_step`에 동적 주입한다. 계약 키는 유지하고 생성 문장만 적응형으로 바뀐다.
 보강6: same-thread active intake에서 새 kickoff가 들어오고 입력 도메인이 기존 `goalLine`과 다르면, 자동 스코프 리셋/전환을 하지 않는다. 먼저 “같은 프로덕트 연장 vs 별도 프로덕트” 확인 질문을 반환해 founder가 분기를 명시하도록 강제한다.
+보강7: `버전`/`version`/`runtime status`는 founder lock을 `app.js` + `registerHandlers` 양쪽에서 선처리한다. 따라서 멘션/DM/핸들러 경로 차이에 상관없이 항상 `runtime_meta_surface` 단일 출력으로 고정된다.
+보강8: founder route 판정은 `source_type` 단일 값에 의존하지 않는다. `slack_route_label`(`dm_ai_router`/`mention_ai_router`) 및 DM 채널 키(`D...`)까지 포함해 판정하며, `app.js`·`founderRequestPipeline`·`runInboundAiRouter` guard가 동일 규칙으로 동작한다.
+보강9: chat 인터페이스(`interface_mode=cos_chat`)에서는 explicit Council 접두(`협의모드:` 등)를 Council 라우트로 보내지 않는다. 기본 경로는 partner/founder kernel이며, Council은 `allow_council=true`를 명시한 별도 실험 모드에서만 활성화된다.
+보강10: founder kernel은 scope-lock-only로 동작한다. founder 입력에서 조회/구조화 의도는 command-router로 위임하지 않고 락인 대화 표면으로 환원한다. lock 확정 시 `createExecutionRun` 직후 `ensureExecutionRunDispatched`를 호출해 오케스트레이션을 즉시 시작하며, post-lock 응답은 `진행중/크리티컬 결정/완료` 상태 요약 중심으로 반환한다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`

@@ -88,6 +88,10 @@
 | 도메인 템플릿 분리: `cosDialogueWriter`의 `pushback/tradeoff/alternatives/scope_cut`를 `calendar/crm/general`로 분기해, 비-캘린더 질문에 캘린더 문구가 섞이지 않도록 고정 | 완료 |
 | founder kernel 적응형 생성: `founderRequestPipeline`의 `discover/align`에서 계약 패킷 기본값을 유지한 채 `runCosNaturalPartner(callText)` 결과로 `reframed/pushback/next_step`를 동적 보강 (모델 활용 복원) | 완료 |
 | 스레드 연속성 규칙 보강: 같은 스레드(active intake)에서 새 kickoff가 들어오고 도메인이 급변하면 자동 리셋하지 않고 `별도 프로덕트인지` 확인 질문을 먼저 반환 (같은 스레드 맥락 보존) | 완료 |
+| `버전` 유틸 하드락: `app.js`와 `registerHandlers`에서 파이프라인/AI 라우터 이전에 `classifyFounderRoutingLock(...)=version`을 선처리해 `runtime_meta_surface`로 즉시 종료 (간헐 Council/버전 분기 불안정 차단) | 완료 |
+| founder 판정 강화: `source_type` 외에 `slack_route_label(dm_ai_router/mention_ai_router)`·DM 채널ID(`D...`)까지 founder 조건에 포함해, 메타 누락 시에도 founder 입력이 AI/Council 경로로 이탈하지 않도록 고정 | 완료 |
+| chat 모드 Council 비활성: `runInboundAiRouter`에서 `interface_mode='cos_chat'`(기본 대화 모드)일 때 `협의모드:` 요청을 Council로 보내지 않고 partner surface 안내로 처리. `app.js`가 AI router 호출 시 `allow_council:false`를 강제해 COS 대화와 Council 실험 경로를 분리 | 완료 |
+| scope-lock-only 전면 모드: founder pipeline에서 query/structured를 null 위임하지 않고 스코프 락인 대화로 환원. scope lock 성공 직후 `ensureExecutionRunDispatched`를 즉시 호출해 하네스/외부툴 오케스트레이션 시작. 이후 실행 응답은 “진행중/크리티컬 결정 필요/완료” 중심으로 축약 | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 
