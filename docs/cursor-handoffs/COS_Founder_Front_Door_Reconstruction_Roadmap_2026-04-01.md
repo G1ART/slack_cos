@@ -124,4 +124,4 @@ git pull --rebase origin "$(git branch --show-current)"
 git push origin "$(git branch --show-current)"
 ```
 
-(커밋 시 `data/`·테스트 산출 `docs/cursor-handoffs/COS_Exec_Handoff_*` 등은 제외하는 것이 좋음.)
+(커밋 시 `data/`·`data/exec-handoffs/` 등 런타임 산출은 제외하는 것이 좋음.)

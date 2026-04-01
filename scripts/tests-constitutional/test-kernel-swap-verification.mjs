@@ -1,7 +1,8 @@
 /**
  * Kernel Swap Verification Test.
  * Verifies the v1.1 pipeline is ACTUALLY wired as the front door in app.js,
- * council returns object-only, and outbound uses sendFounderResponse.
+ * council.js stays object-only shape, AI router does not synthesize Council text,
+ * and outbound uses sendFounderResponse.
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -40,11 +41,12 @@ function assert(label, condition) {
   assert('council_no_raw_report_builder', !councilContent.includes("let report = ''"));
 }
 
-// --- 3. runInboundAiRouter uses renderDeliberation ---
+// --- 3. runInboundAiRouter — Council synthesis path removed (deliberation prefix → partner_surface only) ---
 {
   const aiRouterContent = await fs.readFile(path.join(srcRoot, 'features/runInboundAiRouter.js'), 'utf8');
-  assert('ai_router_imports_renderDeliberation', aiRouterContent.includes("import { renderDeliberation }"));
-  assert('ai_router_uses_renderDeliberation', aiRouterContent.includes('renderDeliberation(council.deliberation)'));
+  assert('ai_router_no_renderDeliberation_import', !aiRouterContent.includes('renderDeliberation'));
+  assert('ai_router_no_runCouncilMode', !aiRouterContent.includes('runCouncilMode'));
+  assert('ai_router_deliberation_prefix_removed', aiRouterContent.includes('deliberation_prefix_removed'));
   assert('ai_router_no_council_text', !aiRouterContent.includes('council.text'));
   assert('ai_router_no_legacy_lock_import', !aiRouterContent.includes("import { tryFinalizeInboundFounderRoutingLock }"));
 }

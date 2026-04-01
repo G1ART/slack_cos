@@ -117,7 +117,7 @@ try {
 
   assert.equal(result.mode, 'created', 'handoff created');
   assert.ok(result.handoff_path, 'handoff_path exists');
-  assert.ok(result.handoff_path.startsWith('docs/cursor-handoffs/'), 'path in correct dir');
+  assert.ok(result.handoff_path.startsWith('data/exec-handoffs/'), 'path in correct dir');
 
   const updatedRun = getExecutionRunById(run.run_id);
   assert.ok(updatedRun.artifacts.fullstack_swe.cursor_handoff_path, 'cursor_handoff_path attached');

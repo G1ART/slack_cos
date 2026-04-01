@@ -57,7 +57,7 @@ export function getOrCreateProjectSpaceForBootstrap(opts = {}) {
     repo_name: opts.repoName || null,
     github_ready_status: ghDiag.configured ? 'ready' : 'not_configured',
     cursor_workspace_root: opts.cursorRoot || process.cwd(),
-    cursor_handoff_root: opts.cursorHandoffRoot || 'docs/cursor-handoffs',
+    cursor_handoff_root: opts.cursorHandoffRoot || 'data/exec-handoffs',
     supabase_project_ref: opts.supabaseRef || null,
     supabase_url: opts.supabaseUrl || null,
     supabase_ready_status: opts.supabaseRef ? 'configured' : 'not_configured',

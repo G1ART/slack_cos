@@ -28,6 +28,7 @@ import {
   createPullRequestArtifact,
   getGithubAuthMode,
 } from '../adapters/githubAdapter.js';
+import { EXEC_HANDOFFS_DIR } from '../storage/paths.js';
 
 /* ------------------------------------------------------------------ */
 /*  Outbound event logger                                              */
@@ -315,11 +316,11 @@ export async function ensureCursorHandoffForRun(run) {
     const sweLane = (run.workstreams || []).find((w) => w.lane_type === 'fullstack_swe');
     const qaLane = (run.workstreams || []).find((w) => w.lane_type === 'qa_qc');
 
-    const slug = slugify(run.originating_task_kind || run.project_goal || 'exec');
-    const filename = `COS_Exec_Handoff_${slug}_${run.run_id.replace(/[^a-zA-Z0-9-]/g, '')}.md`;
-    const handoffDir = path.resolve(process.cwd(), 'docs', 'cursor-handoffs');
+    const safeRunId = run.run_id.replace(/[^a-zA-Z0-9-]/g, '_');
+    const filename = `run_${safeRunId}_handoff.md`;
+    const handoffDir = EXEC_HANDOFFS_DIR;
     const handoffPath = path.join(handoffDir, filename);
-    const relPath = `docs/cursor-handoffs/${filename}`;
+    const relPath = `data/exec-handoffs/${filename}`;
 
     const content = [
       `# COS Execution Handoff — ${run.run_id}`,

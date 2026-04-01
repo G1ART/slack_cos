@@ -1,12 +1,12 @@
 {
   "id": "13_council_explicit_prefix",
-  "description": "협의모드: — Council 진입 (로컬 회귀는 동기 분류만, LLM 미호출)",
+  "description": "협의모드: 접두 — Council 실행 없음, 분류·최종 응답은 partner_surface (deliberation_prefix_removed)",
   "source": "synthetic",
   "event": { "text": "협의모드: 배포 일정을 어떻게 가져갈지 짧게 의견만" },
   "expect": {
     "planner_lock_type": "none",
     "query_prefix": null,
-    "final_responder": "council",
+    "final_responder": "partner_surface",
     "skip_response_body": true
   }
 }

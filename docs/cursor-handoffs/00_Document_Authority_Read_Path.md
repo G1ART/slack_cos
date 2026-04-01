@@ -8,6 +8,16 @@
 
 ---
 
+## Founder-facing contract (Slack 대표 경로)
+
+**Slack에서 대표에게 보이는 응답·모드·금지·골드 테스트**를 구현하거나 검증할 때는  
+**`docs/COS_Founder_Facing_Gold_Spec_v1_2026-03-31.md`** 가 **비협상(non-negotiable) 정본**이다.
+
+- **이기는 범위:** §1–§13 (원칙, Mode A/B, 응답 계약, ownership, scope lock, handoff, 금지 목록, 런타임 아키텍처, hard fail), §12 exact prompts, 성공·실패 기준.  
+- **지지 않는 것:** 제품 전체 헌법·빌드 순서를 **폐기**하지는 않는다. Directive·Alignment와 **충돌**할 때는 **founder-facing 경로**에 한해 Gold Spec이 우선하고, 나머지 레포 목표는 Directive·Alignment를 따른다.
+
+---
+
 ## Default read set (minimal — start here)
 
 For almost every patch, **only**:
@@ -65,6 +75,7 @@ These **do not** override Directive, Alignment, or Inbound Routing. Use for hist
 | `COS_Agent_Bridge_Outbound_v0.md` | `COS_AGENT_BRIDGE_*` 페이로드·인바운드 `ci-proof` 요약 |
 | `Slack_COS_Reconstruction_File_by_File_Patch_Priority_2026-04-01.md` | **Founder front door 재건축 실행서** — 파일 우선순위·P0/P1·gold 머지 게이트·트레이스 필드. Directive/Alignment/Memo와 충돌 시 **헌법·빌드 순서가 이김**; 재건축 PR의 구현 순서·수용 기준은 본 문서를 따른다. |
 | `COS_Founder_Front_Door_Reconstruction_Roadmap_2026-04-01.md` | **재건축 Phase 1a 완료 로그 + 다음 배치(1b~2)** — 야간 패치 요약·관측 신호·Owner actions. |
+| `../COS_Founder_Facing_Gold_Spec_v1_2026-03-31.md` (repo `docs/`) | **Founder-facing Gold Spec v1** — 대표 Slack 경로 비협상 계약; 위 「Founder-facing contract」 절 참고 |
 
 ---
 

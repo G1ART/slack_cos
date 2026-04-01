@@ -11,3 +11,6 @@ node_modules/
 
 # Runtime / local data (adjust if you intentionally version fixtures)
 # data/*.json
+
+# 실행 런 자동 생성 핸드오프 (executionOutboundOrchestrator)
+data/exec-handoffs/

@@ -25,7 +25,7 @@ function assert(label, condition) {
   assert('version_not_null', r !== null);
   assert('version_has_text', typeof r?.text === 'string' && r.text.length > 0);
   assert('version_trace_surface', r?.trace?.surface_type === 'runtime_meta_surface');
-  assert('version_trace_pipeline', r?.trace?.responder_kind === 'pipeline');
+  assert('version_trace_founder_kernel', r?.trace?.responder_kind === 'founder_kernel');
   assert('version_trace_v11', r?.trace?.pipeline_version === 'v1.1');
   assert('version_no_markers', !r?.text?.includes('종합 추천안'));
 }

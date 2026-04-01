@@ -126,8 +126,11 @@ try {
   const cleanCheck = detectInternalLeakage(cleaned);
   assert.ok(!cleanCheck.leaked, 'no leak after sanitize');
 
-  const debugOut = sanitizeFounderOutput(leaked, { debugMode: true });
-  assert.ok(debugOut.includes('내부 처리 정보'), 'debug mode preserves all');
+  const debugOut = sanitizeFounderOutput(leaked, {
+    debugMode: true,
+    allowUnsafeDebugBypass: true,
+  });
+  assert.ok(debugOut.includes('내부 처리 정보'), 'debug + allowUnsafeDebugBypass preserves all');
 
   ok('founderSurfaceGuard strips internal metadata');
 } catch (e) { fail('founderSurfaceGuard strips internal metadata', e); }
@@ -1050,7 +1053,7 @@ try {
     repo_name: 'calendar-mvp',
     github_ready_status: 'ready',
     cursor_workspace_root: '/Users/test/calendar',
-    cursor_handoff_root: 'docs/cursor-handoffs',
+    cursor_handoff_root: 'data/exec-handoffs',
     supabase_ready_status: 'configured',
     supabase_project_ref: 'cal-mvp-123',
     vercel_ready_status: 'not_configured',
@@ -1194,7 +1197,7 @@ try {
     repo_name: 'gallery-calendar',
     github_ready_status: 'ready',
     cursor_workspace_root: '/workspace/gallery-calendar',
-    cursor_handoff_root: 'docs/cursor-handoffs',
+    cursor_handoff_root: 'data/exec-handoffs',
     supabase_ready_status: 'configured',
     supabase_project_ref: 'gallery-cal-ref',
     vercel_ready_status: 'not_configured',
@@ -1231,7 +1234,7 @@ try {
   // GitHub: branch seeded
   run.git_trace.branch = 'feat/calendar-mvp';
   // Cursor handoff created
-  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gallery-calendar.md';
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'data/exec-handoffs/gallery-calendar.md';
 
   // === STEP 6: Workstreams progress ===
   const wsCount = run.workstreams.length;

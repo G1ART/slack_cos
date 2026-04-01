@@ -130,16 +130,16 @@ const {
 }
 
 /* ============================== */
-/* TEST 5: explicit council still works */
+/* TEST 5: legacy deliberation prefix → partner_surface (no council responder) */
 /* ============================== */
 {
   const input = '협의모드: 이 안의 리스크와 반대 논리를 검토해줘';
-  assert.ok(isCouncilCommand(input), 'explicit council command');
+  assert.ok(isCouncilCommand(input), 'legacy deliberation prefix detected');
 
   const snap = { trimmed: input, planner_lock: { type: 'none' }, query_line_resolved: '' };
   const preview = await classifyInboundResponderPreview(snap);
-  assert.equal(preview.responder, 'council', 'explicit council → council');
-  console.log('TEST 5 PASS: explicit council → council');
+  assert.equal(preview.responder, 'partner_surface', 'explicit prefix → partner_surface');
+  console.log('TEST 5 PASS: legacy prefix → partner_surface');
 }
 
 /* ============================== */

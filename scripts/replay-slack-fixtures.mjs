@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Slack payload fixture 회귀 — inbound 추출 → 동기 스냅샷 → query/planner/council 1차 분류.
- * Council LLM 은 호출하지 않음.
+ * Slack payload fixture 회귀 — inbound 추출 → 동기 스냅샷 → query/planner/partner 1차 분류.
+ * 구 deliberation 접두는 partner_surface 안내만(LLM Council 미호출).
  *
  * Run: node scripts/replay-slack-fixtures.mjs
  */
@@ -31,11 +31,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIX_DIR = path.join(__dirname, 'fixtures', 'slack');
 
 const MANUAL_SLACK_TESTS = [
-  '채널에서 @봇 멘션 후 `계획상세 <실존 PLN-ID>` — 구조화 응답·Council 장문 비발생 확인',
+  '채널에서 @봇 멘션 후 `계획상세 <실존 PLN-ID>` — 구조화 응답·구형 Council 장문 비발생 확인',
   '채널에서 `/g1cos 계획상세 <PLN-ID>` — Slash Command 등록 후 in_channel 조회 응답 확인',
   '`계획등록: <짧은 본문>` — planner 계약 응답·저장·(필요 시) 승인 버튼까지',
-  '`협의모드: <짧은 질문>` — Council 전용 장문(페르소나·추천안 등)만 여기서 나오는지 확인',
-  '평문 한 줄(접두 없음) — 자연어 COS 대화(dialog)·Council 비진입 확인',
+  '`협의모드: <짧은 질문>` — 짧은 안내(`deliberation_prefix_removed`)만 나오고 페르소나·추천안 장문은 나오지 않는지 확인',
+  '평문 한 줄(접두 없음) — 자연어 COS(partner/research)·구 deliberation 전용 경로 비진입 확인',
   '`COS …` / `비서 …` — 내비게이터(JSON)·평문 대화와 응답 톤 구분 확인',
 ];
 

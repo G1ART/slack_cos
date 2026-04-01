@@ -53,7 +53,7 @@ execution_run (state/object)
 
 ### Cursor (`fullstack_swe` lane)
 
-- 자동으로 `docs/cursor-handoffs/COS_Exec_Handoff_<slug>_<run_id>.md` 생성
+- 자동으로 `data/exec-handoffs/run_<run_id>_handoff.md` 생성 (레포 `docs/` 오염 방지; `.gitignore` 대상)
 - Locked scope, workstream objective, dependencies, done criteria 포함
 - `cursor_trace[]`에 기록
 - `git_trace.generated_cursor_handoff_path` 갱신
@@ -76,7 +76,7 @@ execution_run (state/object)
   "pr_id": null,
   "commit_shas": ["sha1", "sha2"],
   "handoff_doc_path": null,
-  "generated_cursor_handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_...",
+  "generated_cursor_handoff_path": "data/exec-handoffs/run_<run_id>_handoff.md",
   "supabase_migration_ids": []
 }
 ```
@@ -86,7 +86,7 @@ execution_run (state/object)
 [{
   "created_at": "2026-03-29T...",
   "dispatch_mode": "auto_generated",
-  "handoff_path": "docs/cursor-handoffs/COS_Exec_Handoff_...",
+  "handoff_path": "data/exec-handoffs/run_<run_id>_handoff.md",
   "status": "created"
 }]
 ```

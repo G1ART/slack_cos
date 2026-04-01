@@ -30,7 +30,7 @@
 보강8: founder route 판정은 `source_type` 단일 값에 의존하지 않는다. `slack_route_label`(`dm_ai_router`/`mention_ai_router`) 및 DM 채널 키(`D...`)까지 포함해 판정하며, `app.js`·`founderRequestPipeline`·`runInboundAiRouter` guard가 동일 규칙으로 동작한다.
 보강9: chat 인터페이스(`interface_mode=cos_chat`)에서는 explicit Council 접두(`협의모드:` 등)를 Council 라우트로 보내지 않는다. 기본 경로는 partner/founder kernel이며, Council은 `allow_council=true`를 명시한 별도 실험 모드에서만 활성화된다.
 보강10: founder kernel은 scope-lock-only로 동작한다. founder 입력에서 조회/구조화 의도는 command-router로 위임하지 않고 락인 대화 표면으로 환원한다. lock 확정 시 `createExecutionRun` 직후 `ensureExecutionRunDispatched`를 호출해 오케스트레이션을 즉시 시작하며, post-lock 응답은 `진행중/크리티컬 결정/완료` 상태 요약 중심으로 반환한다.
-보강11: AI router 자체도 Council을 더 이상 실행하지 않는다. explicit council 접두는 `council_disabled_globally` 안내로 종료되며, `runCouncilMode` 경로는 비활성 상태다. 추가로 AI router 진입 시 `classifyFounderRoutingLock`으로 `버전` 락을 선처리해 `runtime_meta_surface`를 즉시 반환한다.
+보강11: AI router는 **`runCouncilMode` 호출 경로를 코드에서 제거**했다. `협의모드:` 등 구 접두는 **`responder: partner_surface`**, **`response_type: deliberation_prefix_removed`** 안내로만 종료한다(본문에 “Council” 단어 없음). `classifyInboundResponderPreview` 도 동일 접두에 대해 `council` 이 아니라 `partner_surface` 를 반환한다. AI router 진입 시 `버전` 락은 `classifyFounderRoutingLock` 으로 선처리해 `runtime_meta_surface` 를 즉시 반환한다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
@@ -64,7 +64,7 @@
 9. **Surface intent** (`tryExecutiveSurfaceResponse`) — 예: `결정비교:` → 얇은 결정 패킷 Slack 텍스트 + (메타 있을 때) 감사 `decision-packets.jsonl` append·스레드 tail 저장; **`전략 검토:`·`리스크 검토:`** 등 v0 가이드 응답; **`ask_status`** 는 **`executiveStatusRollup.js`** 로 AWQ·PLN·WRK·**실행 큐(`spec_intake`)** 로컬 스토어 집계를 상태 패킷 본문에 합성(v1); **`start_project`** (`프로젝트시작`/`툴시작`/`툴제작` 등, `classifySurfaceIntent` / **`tryClassifyStartProject`**: 접두 + **빌드 시그널** `tryClassifyStartProjectByBuildSignals`) — **첫 응답 계약**은 **`buildStartProjectAlignmentSummary`**: (1) 내가 이해한 요청 (2) 기본 MVP 가정안 (3) 포함/제외 (4) 핵심 질문 2~3 (5) 무응답 기본값 (6) 다음 산출물 · APR 없음 명시; 대표 표면 **조용 푸터**: 실행 정렬 큐 한 줄 + (`COS_FAST_SPEC_PROMOTE=1` 시) PLN·WRK 승격 블록; **`COS_START_PROJECT_VERBOSE_QUEUE=1`** 시 예전 CWS·`실행큐계획화` 코칭 패턴 노출. **`product_feedback`** (`피드백:`/…)는 (메타 있을 때) **`customerFeedbackAwqBridge`** — CFB + **`feedback_follow_up` AWQ 초안** · `approvalMatrixStub` `customer_feedback_intake` 티어 · `linked_awq_id`; 구조화 **`고객피드백:`**·자연어 피드백 인테이크도 동일 브리지; **`hold_pause`·`request_deploy_readiness`** 등은 각각 `response_type`·finalize `command_name`·trace `surface_intent` 에 동일 라벨(패킷만 `decision_packet`). 다각은 `협의모드:`.  
 10. `runInboundAiRouter` — `classifyInboundResponderPreview`: 도움말 다음 **`start_project_confirmed`** → **`start_project_refine`** → **Front Door** → …; AI 꼬리·내비 본문도 동일 순서.  
 10a. **Dynamic Playbook Interpretation** (`dynamicPlaybook.js`) — `interpretTask(trimmed)` → task hypothesis; research 패턴 매칭 시 **`research_surface`**(`representativeResearchSurface.js`), 그 외 **`partner_surface`**(`cosNaturalPartner.js`). **ordinary input → council 경로 제거됨** (2026-03-29). Playbook은 thread 기준 `PBK-...` 생성, 3회 반복 시 promoted.  
-10b. **명시 Council** — `isCouncilCommand(trimmed)` true일 때만 `responder: council`. `upsertApprovalRecord` 생략 / dialog  
+10b. **구 deliberation 접두** — `isCouncilCommand(trimmed)` 이면 **`responder: partner_surface`**·`deliberation_prefix_removed` 로 즉시 종료. `runCouncilMode` 미호출.  
 
 ---
 
@@ -73,7 +73,7 @@
 - **평문**(조회·플래너 락·내비 트리거·Council 접두가 아님) → **`runCosNaturalPartner`** (`responder: dialog`, `cos_natural_dialog`; 스레드에 직전 PLN 이 있으면 `cos_natural_dialog_thread_plan_hint`).
 - **Slack 이벤트 dedup (replay)**: `registerHandlers` → `shouldSkipEvent` (`src/slack/eventDedup.js`). 기본은 프로세스 메모리·10분 TTL. **여러 인스턴스**면 `SLACK_EVENT_DEDUP_FILE`(공유 JSON; tmp+rename으로 쓰기) 옵트인; `SLACK_EVENT_DEDUP_DISABLE=1` 로 끄기. 부팅 `formatEnvCheck` 에 **`slack_event_dedup:`** 한 줄(`getSlackEventDedupSummary`). 상세: `src/runtime/env.js` 주석.
 - **Slack 버퍼**: `registerHandlers` 가 매 턴 user/assistant 를 `slackConversationBuffer` 에 기록 → `app.js` 플래너·조회 직반환도 동일 스레드 후속 `dialog` 가 맥락을 본다. **`/g1cos`**: `registerSlashCommands` 가 `recordSlashCommandExchange` 로 user 표시 문자열·응답 텍스트를 남김(DM은 `im:` 키로 일반 DM 과 공유). **옵트인 영속(1단계)**: `CONVERSATION_BUFFER_PERSIST=1` 이면 `data/slack-conversation-buffer.json`(또는 `CONVERSATION_BUFFER_FILE`)에 디바운스 저장, 기동 시 로드·graceful shutdown 시 flush (`app.js`·`startup.js`). 슬래시 기록 끄기: `CONVERSATION_BUFFER_RECORD_SLASH=0`. **프로젝트 인테이크 세션**도 동일 패턴 옵트인: `PROJECT_INTAKE_SESSION_PERSIST=1`·`PROJECT_INTAKE_SESSIONS_FILE`(선택)·`loadProjectIntakeSessionsFromDisk` / `flushProjectIntakeSessionsToDisk` (`app.js`).
-- **Council** → **`협의모드:` / `매트릭스셀:` / `관점추가 `** 등 **`isCouncilCommand`** 가 참일 때만 (`runCouncilMode`).
+- **구 deliberation 접두** → **`협의모드:` / `매트릭스셀:` / `관점추가 `** 등 **`isCouncilCommand`** 가 참이면 AI 라우터에서 **`partner_surface`** 안내만 반환 (`runCouncilMode` 없음).
 - **플래너 하드 락**(`hit`/`miss`) → AI 꼬리 진입 후에도 **재확인** → `runPlannerHardLockedBranch`.
 - **DM/스레드 맥락**: `slackConversationBuffer` + `metadata.thread_ts` 로 최근 턴을 dialog·내비·Council에 합성.
 

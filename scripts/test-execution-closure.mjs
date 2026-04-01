@@ -197,7 +197,7 @@ try {
     changed_files: ['src/calendar.js', 'src/routes/calendar.js'],
     tests_passed: true,
     status: 'completed',
-    handoff_path: run.artifacts?.fullstack_swe?.cursor_handoff_path || 'docs/cursor-handoffs/test.md',
+    handoff_path: run.artifacts?.fullstack_swe?.cursor_handoff_path || 'data/exec-handoffs/test.md',
   });
   assert.ok(result.ok, 'ingest succeeded');
   assert.equal(result.status, 'completed');

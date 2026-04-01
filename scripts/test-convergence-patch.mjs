@@ -217,7 +217,7 @@ try {
 } catch (e) { fail('old active-only session bug', e); }
 
 /* ============================== */
-/* TEST 6: explicit council still works */
+/* TEST 6: legacy deliberation prefix classifies as partner_surface */
 /* ============================== */
 try {
   const input = '협의모드: 이 안의 리스크와 반대 논리를 검토해줘';
@@ -225,9 +225,9 @@ try {
 
   const snap = { trimmed: input, planner_lock: { type: 'none' }, query_line_resolved: '' };
   const preview = await classifyInboundResponderPreview(snap);
-  assert.equal(preview.responder, 'council');
-  ok('explicit council still works');
-} catch (e) { fail('explicit council still works', e); }
+  assert.equal(preview.responder, 'partner_surface');
+  ok('legacy deliberation prefix → partner_surface');
+} catch (e) { fail('legacy deliberation prefix preview', e); }
 
 /* ============================== */
 /* BONUS: artifact attachment + git trace API works */

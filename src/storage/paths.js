@@ -9,7 +9,10 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
 export const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 
-/** Cursor handoff/spec 마크다운 (Phase 2a thin slice) */
+/** 실행 런 자동 생성 Cursor 핸드오프 (레포 문서 디렉터리 오염 방지 — gitignore 권장) */
+export const EXEC_HANDOFFS_DIR = path.join(DATA_DIR, 'exec-handoffs');
+
+/** Cursor handoff/spec 마크다운 (AWQ·업무 디스패치 등 — 사람이 읽는 핸드오프 문서) */
 export const CURSOR_HANDOFFS_DIR = path.join(PROJECT_ROOT, 'docs', 'cursor-handoffs');
 
 export const DECISIONS_FILE = path.join(DATA_DIR, 'decision-log.json');

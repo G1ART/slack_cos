@@ -1,7 +1,7 @@
 /**
- * Big Pivot (COS Slack) — 내비게이터 / Council / 자연어 dialog AI 꼬리.
+ * Big Pivot (COS Slack) — 내비게이터 / 자연어 dialog AI 꼬리.
+ * (구) Council 실행 경로는 제거됨 — `협의모드:` 등 접두는 `partner_surface` 안내로만 처리.
  * `runInboundCommandRouter` 가 구조화 명령까지 처리한 뒤, 미스 시에만 호출된다.
- * `classifyInboundResponderPreview` 는 회귀용으로 도움말·조회·플래너 락·**surface**·(이하 AI 꼬리 순)을 LLM 없이 축약한다.
  */
 
 import { normalizeSlackUserPayload } from '../slack/slackTextNormalize.js';
@@ -22,14 +22,7 @@ import {
 } from './plannerRoute.js';
 import { finalizeSlackResponse, logRouterEvent } from './topLevelRouter.js';
 import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
-import {
-  runCouncilMode,
-  parseCouncilCommand,
-  routeTask,
-  deriveDecisionState,
-} from '../agents/index.js';
-import { upsertApprovalRecord } from './approvals.js';
-import { inferWorkCandidate } from './workItems.js';
+import { parseCouncilCommand, routeTask } from '../agents/index.js';
 import { appendJsonRecord } from '../storage/jsonStore.js';
 import { INTERACTIONS_FILE } from '../storage/paths.js';
 import { buildSlackThreadKey, getConversationTranscript } from './slackConversationBuffer.js';
@@ -61,7 +54,6 @@ import {
 } from './projectIntakeSession.js';
 import { tryFinalizeProjectSpecBuildThread } from './projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from './executionSpineRouter.js';
-import { renderDeliberation } from '../core/founderRenderer.js';
 import {
   interpretTask,
   isResearchSurfaceCandidate,
@@ -85,7 +77,6 @@ import { deriveAnchorCluster, detectTopicDrift, buildAnchorReminder, logDriftEve
 import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBulk, isSlotResolved, tryAutoResolveSlots } from './founderSlotLedger.js';
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
 // Legacy routing lock removed — pipeline handles version/meta/kickoff (v1.1 kernel swap)
-import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
 import { classifyFounderRoutingLock, formatRuntimeMetaSurfaceText } from './inboundFounderRoutingLock.js';
 
 /**
@@ -97,7 +88,7 @@ import { classifyFounderRoutingLock, formatRuntimeMetaSurfaceText } from './inbo
  * `runInboundCommandRouter` 와 맞춘다. 구조화 명령(`runInboundStructuredCommands`)은 시뮬하지 않는다.
  * @param {RouterSyncLike} snap `buildRouterSyncSnapshot` 결과와 동일 필드
  * @param {Record<string, unknown>} [previewMetadata] 스레드 푸시백 픽스처용 슬랙 메타(채널·thread_ts 등)
- * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'execution_spine'|'navigator'|'council'|'research_surface'|'partner_surface'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
+ * @returns {Promise<{ responder: 'help'|'query'|'planner'|'executive_surface'|'execution_spine'|'navigator'|'research_surface'|'partner_surface'|'lineage_transport', queryRaw?: string, surfaceRaw?: string, surfacePacketId?: string | null, surfaceStatusPacketId?: string | null, surfaceResponseType?: string, lineageText?: string, lineageResponseType?: string }>}
  */
 export async function classifyInboundResponderPreview(snap, previewMetadata = {}) {
   const trimmed = snap.trimmed;
@@ -245,7 +236,7 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
       const qCouncil = await handleQueryOnlyCommands(qLine);
       if (qCouncil != null) return { responder: 'query', queryRaw: qCouncil };
     }
-    return { responder: 'council' };
+    return { responder: 'partner_surface' };
   }
 
   if (isResearchSurfaceCandidate(trimmed)) {
@@ -571,7 +562,7 @@ export async function runInboundAiRouter(ctx) {
         `- 사유: ${err.message || String(err)}`,
         '',
         '그래도 진행하려면:',
-        '- `협의모드: <질문>` — 여러 관점으로 깊게 논의',
+        '- 일반 문장으로 요청을 다시 보내 주세요.',
         '- `계획등록: <목표>` — 실행 단위 계획을 문서화',
       ].join('\n');
       logRouterEvent('navigator_route_returned', { response_type: 'navigator_error' });
@@ -591,8 +582,6 @@ export async function runInboundAiRouter(ctx) {
       });
     }
   }
-
-  const councilParsed = parseCouncilCommand(trimmed);
 
   const probeCouncil = normalizePlannerInputForRoute(trimmed);
   const latePlanner = analyzePlannerResponderLock(probeCouncil);
@@ -734,154 +723,23 @@ export async function runInboundAiRouter(ctx) {
   const route = await routeTask(routedInput, channelContext);
 
   if (councilRequested) {
+    logRouterEvent('legacy_deliberation_prefix_blocked', {
+      response_type: 'deliberation_prefix_removed',
+      council_blocked: true,
+    });
     return finalizeSlackResponse({
       responder: 'partner_surface',
-      text: '[COS] Council 경로는 비활성화되었습니다. COS 대화는 스코프 락인에만 집중하고, 락인 이후 오케스트레이션으로 바로 전환합니다.',
+      text: [
+        '[COS] 예전에 쓰던 다각 논의 전용 접두(협의모드·매트릭스 등)는 더 이상 지원하지 않습니다.',
+        '같은 내용은 그냥 문장으로 보내 주시면 COS 대화로 처리합니다.',
+        '실행 단위가 필요하면 `계획등록: <목표>` 를 써 주세요.',
+      ].join('\n'),
       raw_text: routerCtx.raw_text,
       normalized_text: routerCtx.normalized_text,
-      command_name: 'council_disabled_globally',
+      command_name: 'deliberation_prefix_removed',
       council_blocked: true,
-      response_type: 'council_disabled_globally',
+      response_type: 'deliberation_prefix_removed',
     });
-  }
-
-  if (false) {
-    if (isActiveProjectIntake(metadata)) {
-      logRouterEvent('router_responder_selected', {
-        responder: 'executive_surface',
-        command_name: 'project_intake_council_deferred',
-        via: 'ai_head_intake_blocks_council',
-      });
-      logRouterEvent('router_responder_locked', { responder: 'executive_surface', via: 'ai_head_intake_blocks_council' });
-      return finalizeSlackResponse({
-        responder: 'executive_surface',
-        text: buildProjectIntakeCouncilDeferSurface(),
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'project_intake_council_deferred',
-        council_blocked: true,
-        response_type: 'project_intake_council_deferred',
-      });
-    }
-    if (councilParsed?.question && isStructuredQueryOnlyLine(councilParsed.question)) {
-      const qLine =
-        extractQueryCommandLine(normalizeSlackUserPayload(String(councilParsed.question).trim())) ??
-        normalizeSlackUserPayload(String(councilParsed.question).trim());
-      const queryViaCouncil = await tryFinalizeSlackQueryRoute(qLine, routerCtx);
-      if (queryViaCouncil != null) {
-        logRouterEvent('council_route_deferred', { reason: 'question_is_structured_query_only' });
-        return queryViaCouncil;
-      }
-    }
-    logRouterEvent('router_responder_selected', {
-      responder: 'council',
-      command_name: 'council_explicit',
-    });
-    logRouterEvent('router_responder_locked', { responder: 'council' });
-
-    logRouterEvent('council_route_entered', {
-      raw_text: String(routerCtx.raw_text).slice(0, 400),
-      normalized_text: trimmed.slice(0, 400),
-      responder: 'council',
-    });
-
-    const councilFin = (text, response_type, footer_blocked = false) =>
-      finalizeSlackResponse({
-        responder: 'council',
-        text,
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        command_name: 'council_explicit',
-        council_blocked: false,
-        response_type,
-        footer_blocked,
-        source_formatter: 'runCouncilMode:synthesizeCouncil',
-        slack_route_label: metadata.slack_route_label ?? null,
-      });
-
-    const priorCouncil = getConversationTranscript(threadKey);
-
-    try {
-      const council = await runCouncilMode({
-        userText: routedInput,
-        route,
-        channelContext,
-        command: trimmed,
-        conversationContext: priorCouncil || '',
-      });
-
-      const decisionState = deriveDecisionState(route, council.primaryLike, council.riskLike);
-      const kickSuppressApproval =
-        isStartProjectKickoffInput(trimmed) ||
-        isStartProjectKickoffInput(routedInput) ||
-        isStartProjectLockConfirmedContext(trimmed, metadata) ||
-        isStartProjectRefineFlowContext(trimmed, metadata) ||
-        Boolean(resolveCleanStartProjectKickoff(trimmed, metadata)) ||
-        Boolean(councilParsed?.question && isStartProjectKickoffInput(councilParsed.question)) ||
-        Boolean(
-          councilParsed?.question && isStartProjectRefineFlowContext(String(councilParsed.question).trim(), metadata),
-        );
-
-      let approvalItem = null;
-      if (decisionState.decisionNeeded && !kickSuppressApproval) {
-        approvalItem = await upsertApprovalRecord({
-          userText: council.meta?.question || trimmed,
-          metadata,
-          channelContext,
-          route,
-          primary: council.primaryLike,
-          risk: council.riskLike,
-        });
-      }
-
-      const rendered = renderDeliberation(council.deliberation);
-      const finalText = approvalItem
-        ? `${rendered.text}${formatFounderApprovalAppendix(approvalItem.id)}`
-        : rendered.text;
-
-      await appendJsonRecord(INTERACTIONS_FILE, {
-        id: makeId('INT'),
-        created_at: new Date().toISOString(),
-        user_text: council.meta?.question || trimmed,
-        source: metadata,
-        channel_context: channelContext,
-        route,
-        primary: council.primaryLike,
-        risk: council.riskLike,
-        approval_id: approvalItem?.id || null,
-        decision_needed: decisionState.decisionNeeded,
-        orchestration_mode: council.meta?.matrix?.used ? 'matrix_cell' : 'council',
-        selected_personas: council.meta?.selectedPersonas || [],
-        matrix_reasons: council.meta?.matrix?.reasons || [],
-        institutional_memory_hints: council.meta?.institutional_memory_hints || [],
-      });
-
-      let out;
-      /** @type {string} */
-      let councilResponseType = 'council';
-      if (inferWorkCandidate(trimmed)) {
-        logRouterEvent('work_candidate_detected_internal', { responder: 'council' });
-        councilResponseType = 'council_work_candidate_internal';
-      }
-      out = councilFin(finalText, councilResponseType, true);
-      logCosToolRegistryBind({
-        tool_id: 'council',
-        pipeline: 'ai_council',
-        response_type: councilResponseType,
-      });
-      return out;
-    } catch (error) {
-      console.error('COUNCIL_MODE_ERROR:', error);
-      return finalizeSlackResponse({
-        responder: 'error',
-        text: '[COS] council 실행 중 오류가 발생했습니다. 구조화 명령 또는 대표 표면으로 다시 시도해 주세요.',
-        raw_text: routerCtx.raw_text,
-        normalized_text: routerCtx.normalized_text,
-        council_blocked: true,
-        response_type: 'council_mode_error',
-        slack_route_label: metadata.slack_route_label ?? null,
-      });
-    }
   }
 
   // ── Dynamic Playbook Interpretation + Research / Partner Surface ──

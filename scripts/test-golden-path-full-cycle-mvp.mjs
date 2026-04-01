@@ -72,7 +72,7 @@ try {
     repo_name: 'gallery-calendar',
     github_ready_status: 'ready',
     cursor_workspace_root: '/workspace/gallery-calendar',
-    cursor_handoff_root: 'docs/cursor-handoffs',
+    cursor_handoff_root: 'data/exec-handoffs',
     supabase_ready_status: 'configured',
     supabase_project_ref: 'gallery-cal-ref',
     vercel_ready_status: 'not_configured',
@@ -112,7 +112,7 @@ try {
   run.artifacts.fullstack_swe.pr_url = 'https://github.com/g1-platform/gallery-calendar/pull/7';
 
   // STEP 6: Cursor handoff + Supabase draft
-  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gallery-calendar.md';
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'data/exec-handoffs/gallery-calendar.md';
   run.supabase_trace.push({ status: 'draft_created', draft_path: 'data/supabase-drafts/gallery-cal.json' });
 
   // STEP 7: All workstreams complete
@@ -540,7 +540,7 @@ try {
   run.git_trace.repo = 'g1/gallery-mgr';
   run.git_trace.issue_id = 1;
   run.git_trace.branch = 'feat/gallery-mvp';
-  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gallery-mgr.md';
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'data/exec-handoffs/gallery-mgr.md';
   run.supabase_trace.push({ status: 'draft_created' });
 
   for (const ws of run.workstreams) {
@@ -734,7 +734,7 @@ try {
   run.git_trace.repo = 'g1/gal-cal';
   run.git_trace.issue_id = 1;
   run.git_trace.branch = 'feat/gal-mvp';
-  run.artifacts.fullstack_swe.cursor_handoff_path = 'docs/cursor-handoffs/gal-cal.md';
+  run.artifacts.fullstack_swe.cursor_handoff_path = 'data/exec-handoffs/gal-cal.md';
   run.supabase_trace.push({ status: 'draft_created' });
 
   for (const ws of run.workstreams) { ws.outbound = ws.outbound || {}; ws.outbound.outbound_status = 'completed'; ws.outbound.outbound_provider = 'github'; }
