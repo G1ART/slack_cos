@@ -70,6 +70,12 @@ const PIPELINE_HANDLED_PHASES = new Set([
   WorkPhase.EXCEPTION,
 ]);
 
+/** `COS_FOUNDER_DIRECT_CHAT=0` 이면 3b 직답 경로 비활성(레거시 패킷·대화 계약 경로로 복귀) */
+function isFounderDirectNaturalChatEnabled() {
+  const v = String(process.env.COS_FOUNDER_DIRECT_CHAT ?? '1').trim().toLowerCase();
+  return v !== '0' && v !== 'false' && v !== 'no' && v !== 'off';
+}
+
 // ---------------------------------------------------------------------------
 // Executor — delegates to existing code by phase
 // ---------------------------------------------------------------------------
@@ -329,6 +335,54 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
       }),
       route_label,
     });
+  }
+
+  // 3b. Founder 면 — 결정적 패킷이 아니면 **대화 계약/페이즈 실행기 없이** GPT 한 번에 직답
+  // (짧은 유틸·버전 등은 위 utility 분기, 구조화 명령은 위에서 차단)
+  const activeExecutionRun =
+    Boolean(workContext.run) &&
+    !['completed', 'cancelled'].includes(String(workContext.run?.status || '').toLowerCase());
+
+  if (
+    founderRoute &&
+    typeof callText === 'function' &&
+    isFounderDirectNaturalChatEnabled() &&
+    !['scope_lock_request', 'approval', 'deploy', 'status'].includes(gold.kind) &&
+    !hasOpenExecutionOwnership(metadata) &&
+    !activeExecutionRun
+  ) {
+    const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
+    const policyChat = evaluatePolicy({
+      actor: Actor.FOUNDER,
+      work_object_type: workContext.primary_type,
+      work_phase: phaseProbe.phase,
+      intent_signal: intentResult.intent,
+      metadata,
+    });
+    try {
+      const threadKey = buildSlackThreadKey(metadata);
+      const priorTranscript = getConversationTranscript(threadKey);
+      const generated = await runCosNaturalPartner({
+        callText,
+        userText: normalized,
+        channelContext: null,
+        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+        priorTranscript,
+      });
+      const plain = String(generated || '').trim();
+      if (plain) {
+        const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, { text: plain });
+        return buildResult(rendered, {
+          workContext,
+          phaseResult: { ...phaseProbe, phase_source: 'founder_direct_natural_chat' },
+          intentResult,
+          policy: policyChat,
+          route_label,
+        }, { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true });
+      }
+    } catch (e) {
+      console.error('[FOUNDER_DIRECT_NATURAL_CHAT]', e?.message || e);
+    }
   }
 
   // 4. Work Phase Resolver
@@ -686,9 +740,12 @@ function handleUtilityIntent(intentResult, normalized, metadata, workContext, ro
 
 function buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label }, traceExtras = {}) {
   const intakeSession = workContext.intake_session_id || null;
+  const { surface_type: surfaceOverride, ...restTraceExtras } = traceExtras;
+  const surface_type = surfaceOverride ?? policy.required_surface_type;
   return {
     text: rendered.text,
     blocks: rendered.blocks,
+    surface_type,
     trace: {
       work_object: {
         type: workContext.primary_type,
@@ -698,7 +755,7 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
       phase_source: phaseResult.phase_source,
       intent_signal: intentResult.intent,
       intent_confidence: intentResult.confidence,
-      surface_type: policy.required_surface_type,
+      surface_type,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
       pipeline_version: 'v1.1',
@@ -709,7 +766,7 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
       passed_pipeline: true,
       passed_renderer: true,
       legacy_router_used: false,
-      ...traceExtras,
+      ...restTraceExtras,
     },
   };
 }

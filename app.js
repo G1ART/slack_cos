@@ -808,7 +808,7 @@ async function handleUserText(userText, metadata = {}) {
           return {
             text: founderOnly.text,
             blocks: founderOnly.blocks,
-            surface_type: founderOnly.trace?.surface_type || 'dialogue_surface',
+            surface_type: founderOnly.surface_type || founderOnly.trace?.surface_type || 'dialogue_surface',
             trace: {
               ...(founderOnly.trace || {}),
               passed_outbound_validation: true,
@@ -880,7 +880,7 @@ async function handleUserText(userText, metadata = {}) {
         return {
           text: pipelineResult.text,
           blocks: pipelineResult.blocks,
-          surface_type: pipelineResult.trace?.surface_type,
+          surface_type: pipelineResult.surface_type || pipelineResult.trace?.surface_type,
           trace: {
             ...pipelineResult.trace,
             passed_outbound_validation: true,

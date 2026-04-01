@@ -63,6 +63,8 @@ export const FounderSurfaceType = Object.freeze({
   HELP: 'help_surface',
   SAFE_FALLBACK: 'safe_fallback_surface',
   DISCOVERY: 'discovery_surface',
+  /** 창업자 면: 패킷/대화 계약 없이 LLM 자연답만 (Council·형식화 템플릿 우회) */
+  PARTNER_NATURAL: 'partner_natural_surface',
   DIALOGUE: 'dialogue_surface',
   SCOPE_LOCK_PACKET: 'scope_lock_packet_surface',
   STATUS_REPORT: 'status_report_surface',
@@ -128,6 +130,7 @@ export const SURFACE_FREEDOM_MAP = Object.freeze({
 
   [FounderSurfaceType.META_DEBUG]: SurfaceFreedomLevel.L2_NARRATIVE,
   [FounderSurfaceType.DISCOVERY]: SurfaceFreedomLevel.L2_NARRATIVE,
+  [FounderSurfaceType.PARTNER_NATURAL]: SurfaceFreedomLevel.L2_NARRATIVE,
   [FounderSurfaceType.DIALOGUE]: SurfaceFreedomLevel.L2_NARRATIVE,
 });
 

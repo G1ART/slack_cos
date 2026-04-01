@@ -58,6 +58,7 @@ const CANONICAL_SURFACES = new Set([
   'existing_project_unresolved',
   'runtime_meta_surface',
   'meta_debug_surface',
+  'partner_natural_surface',
 ]);
 
 /** Substrings that must not reach founders (detection / trace) */

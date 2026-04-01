@@ -123,7 +123,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         thread_ts: event.ts,
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
-        surface_type: payload.surface_type || 'safe_fallback_surface',
+        surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
         trace: { route_label: 'mention_ai_router', ...(payload.trace || {}) },
       });
     } catch (error) {
@@ -214,7 +214,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         channel: event.channel,
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
-        surface_type: payload.surface_type || 'safe_fallback_surface',
+        surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
         trace: { route_label: 'dm_ai_router', ...(payload.trace || {}) },
       });
     } catch (error) {

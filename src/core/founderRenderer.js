@@ -170,6 +170,7 @@ const SURFACE_RENDERERS = {
   [FounderSurfaceType.HELP]: (p) => ({ text: p.text || SAFE_FALLBACK_TEXT }),
   [FounderSurfaceType.SAFE_FALLBACK]: () => ({ text: SAFE_FALLBACK_TEXT }),
   [FounderSurfaceType.DISCOVERY]: (p) => ({ text: p.text || DISCOVERY_PROMPT_TEXT }),
+  [FounderSurfaceType.PARTNER_NATURAL]: (p) => ({ text: p.text || SAFE_FALLBACK_TEXT }),
   [FounderSurfaceType.DIALOGUE]: renderDialogueSurface,
   [FounderSurfaceType.SCOPE_LOCK_PACKET]: renderScopeLockPacket,
   [FounderSurfaceType.STATUS_REPORT]: renderStatusReportPacket,
