@@ -92,6 +92,7 @@
 | founder 판정 강화: `source_type` 외에 `slack_route_label(dm_ai_router/mention_ai_router)`·DM 채널ID(`D...`)까지 founder 조건에 포함해, 메타 누락 시에도 founder 입력이 AI/Council 경로로 이탈하지 않도록 고정 | 완료 |
 | chat 모드 Council 비활성: `runInboundAiRouter`에서 `interface_mode='cos_chat'`(기본 대화 모드)일 때 `협의모드:` 요청을 Council로 보내지 않고 partner surface 안내로 처리. `app.js`가 AI router 호출 시 `allow_council:false`를 강제해 COS 대화와 Council 실험 경로를 분리 | 완료 |
 | scope-lock-only 전면 모드: founder pipeline에서 query/structured를 null 위임하지 않고 스코프 락인 대화로 환원. scope lock 성공 직후 `ensureExecutionRunDispatched`를 즉시 호출해 하네스/외부툴 오케스트레이션 시작. 이후 실행 응답은 “진행중/크리티컬 결정 필요/완료” 중심으로 축약 | 완료 |
+| Council 완전 비활성(대화층): `runInboundAiRouter`에서 explicit council 요청도 즉시 `council_disabled_globally`로 종료하고 `runCouncilMode` 분기를 비활성화. 동시에 AI router 입구에 `version` hard lock을 추가해 founder 판정 누락 시에도 `runtime_meta_surface`를 우선 반환 | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

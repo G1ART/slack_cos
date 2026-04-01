@@ -86,6 +86,7 @@ import { getOrCreateLedger, getResolvedSlots, getUnresolvedSlots, resolveSlotsBu
 import { getMergedDocumentText, hasDocumentContext } from './slackDocumentContext.js';
 // Legacy routing lock removed — pipeline handles version/meta/kickoff (v1.1 kernel swap)
 import { formatFounderApprovalAppendix } from './founderSurfaceGuard.js';
+import { classifyFounderRoutingLock, formatRuntimeMetaSurfaceText } from './inboundFounderRoutingLock.js';
 
 /**
  * @typedef {{ trimmed: string, planner_lock: { type: string }, query_line_resolved: string }} RouterSyncLike
@@ -323,6 +324,18 @@ export async function runInboundAiRouter(ctx) {
   }
 
   const threadKey = buildSlackThreadKey(metadata);
+  const routeLock = classifyFounderRoutingLock(trimmed);
+  if (routeLock?.kind === 'version') {
+    return finalizeSlackResponse({
+      responder: 'executive_surface',
+      text: formatRuntimeMetaSurfaceText(),
+      raw_text: routerCtx?.raw_text ?? trimmed,
+      normalized_text: routerCtx?.normalized_text ?? trimmed,
+      command_name: 'runtime_meta_lock',
+      council_blocked: true,
+      response_type: 'runtime_meta_surface',
+    });
+  }
 
   // Legacy routing lock callsite removed — pipeline handles (v1.1)
 
@@ -381,11 +394,8 @@ export async function runInboundAiRouter(ctx) {
   }
 
   const councilRequested = isCouncilCommand(trimmed);
-  const councilEnabled =
-    metadata?.allow_council === true || String(metadata?.interface_mode || '') !== 'cos_chat';
-  const explicitCouncil = councilEnabled && councilRequested;
 
-  if (!explicitCouncil) {
+  if (!councilRequested) {
     const intakeEarly = await tryProjectIntakeExecutiveContinue(trimmed, metadata);
     if (intakeEarly != null) {
       logRouterEvent('router_responder_selected', {
@@ -720,22 +730,22 @@ export async function runInboundAiRouter(ctx) {
     }
   }
 
-  const routedInput = councilParsed?.question || trimmed;
+  const routedInput = trimmed;
   const route = await routeTask(routedInput, channelContext);
 
-  if (councilRequested && !councilEnabled) {
+  if (councilRequested) {
     return finalizeSlackResponse({
       responder: 'partner_surface',
-      text: '[COS] 현재 대화 모드에서는 협의모드를 직접 열지 않습니다. 먼저 COS와 범위를 잠그면, 이후 실행 단계에서 필요한 내부 오케스트레이션을 진행하겠습니다.',
+      text: '[COS] Council 경로는 비활성화되었습니다. COS 대화는 스코프 락인에만 집중하고, 락인 이후 오케스트레이션으로 바로 전환합니다.',
       raw_text: routerCtx.raw_text,
       normalized_text: routerCtx.normalized_text,
-      command_name: 'council_disabled_in_chat_mode',
+      command_name: 'council_disabled_globally',
       council_blocked: true,
-      response_type: 'council_disabled_in_chat_mode',
+      response_type: 'council_disabled_globally',
     });
   }
 
-  if (explicitCouncil) {
+  if (false) {
     if (isActiveProjectIntake(metadata)) {
       logRouterEvent('router_responder_selected', {
         responder: 'executive_surface',

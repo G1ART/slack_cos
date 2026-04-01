@@ -22,6 +22,7 @@ const META_DEBUG_RE =
 export function normalizeFounderMetaCommandLine(raw) {
   let s = String(raw ?? '').replace(/[\u200B-\u200D\uFEFF]/g, '');
   s = s.normalize('NFKC').trim();
+  s = s.replace(/^<@[A-Z0-9]+>\s*/i, '');
   // Slack 별표 bold — 유틸 한 줄(`*G1COS* 버전`)에서 접두 매칭이 깨지지 않게 제거
   s = s.replace(/\*+/g, '');
   s = s.replace(/^G1\s*COS(?=[\s\u00A0\u3000]*툴)/iu, '');

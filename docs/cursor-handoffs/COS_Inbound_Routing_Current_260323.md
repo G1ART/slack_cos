@@ -30,6 +30,7 @@
 보강8: founder route 판정은 `source_type` 단일 값에 의존하지 않는다. `slack_route_label`(`dm_ai_router`/`mention_ai_router`) 및 DM 채널 키(`D...`)까지 포함해 판정하며, `app.js`·`founderRequestPipeline`·`runInboundAiRouter` guard가 동일 규칙으로 동작한다.
 보강9: chat 인터페이스(`interface_mode=cos_chat`)에서는 explicit Council 접두(`협의모드:` 등)를 Council 라우트로 보내지 않는다. 기본 경로는 partner/founder kernel이며, Council은 `allow_council=true`를 명시한 별도 실험 모드에서만 활성화된다.
 보강10: founder kernel은 scope-lock-only로 동작한다. founder 입력에서 조회/구조화 의도는 command-router로 위임하지 않고 락인 대화 표면으로 환원한다. lock 확정 시 `createExecutionRun` 직후 `ensureExecutionRunDispatched`를 호출해 오케스트레이션을 즉시 시작하며, post-lock 응답은 `진행중/크리티컬 결정/완료` 상태 요약 중심으로 반환한다.
+보강11: AI router 자체도 Council을 더 이상 실행하지 않는다. explicit council 접두는 `council_disabled_globally` 안내로 종료되며, `runCouncilMode` 경로는 비활성 상태다. 추가로 AI router 진입 시 `classifyFounderRoutingLock`으로 `버전` 락을 선처리해 `runtime_meta_surface`를 즉시 반환한다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
