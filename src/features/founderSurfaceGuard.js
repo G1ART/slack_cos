@@ -213,7 +213,7 @@ export function founderHardBlockRemaining(text) {
 }
 
 export const FOUNDER_HARD_BLOCK_FALLBACK =
-  '[COS] 표시 형식을 대표용 안전 모드로 정리했습니다. 같은 질문을 한 번 더 보내 주시면 이어서 답합니다.';
+  '[COS] founder 출력 계약 위반이 감지되어 응답을 차단했습니다. 요청을 운영 문제 재정의 포맷으로 다시 정렬한 뒤 진행하겠습니다.';
 
 /**
  * Sanitize outbound text — strip internal metadata blocks.

@@ -74,6 +74,8 @@
 | startup provenance canary를 JSON 단일 로그로 고정(`git_sha`,`hostname`,`pid`,`instance_id`,`founder_route_mode`,`canary_render_class`,`started_at`) | 완료 |
 | founder 응답 trace 전달 강화: pipeline trace -> Slack outbound trace 병합, `passed_outbound_validation`/`hard_fail_reason` 기록 | 완료 |
 | one-shot acceptance gate: exact gold + 동일 프롬프트 10회 + mixed sequence 테스트를 `test-founder-gold-spec-v1.mjs`에 잠금 | 완료 |
+| `app.js` founder 경로 최종 fail-closed: pipeline/command-router 결과에 Council marker가 남으면 즉시 hard kill (`pipeline_leak_hard_kill` / `command_router_leak_hard_kill`) | 완료 |
+| `founderSurfaceGuard` hard fallback 문구에서 “한 번 더 보내달라” 유도 제거(Non-Negotiable A 준수) | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

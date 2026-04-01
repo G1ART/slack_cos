@@ -243,6 +243,14 @@ try {
 }
 
 try {
+  const fallback = sanitizeFounderOutput('종합 추천안\n- x');
+  assert.ok(!/한\s*번\s*더\s*보내/u.test(fallback), 'retry prompt wording must not exist');
+  ok('hard fallback copy does not request retry');
+} catch (e) {
+  fail('hard fallback retry wording ban', e);
+}
+
+try {
   /** @type {Array<Record<string, unknown>>} */
   const sent = [];
   await sendFounderResponse({

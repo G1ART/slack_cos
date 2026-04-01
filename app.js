@@ -189,6 +189,11 @@ import {
 } from './src/features/projectIntakeSession.js';
 import { formatCosNorthStarHelpPreamble } from './src/features/cosWorkflowPhases.js';
 import { formatExecutiveHelpText } from './src/features/executiveSurfaceHelp.js';
+import {
+  containsOldCouncilMarkers,
+  containsPersonaLiterals,
+  containsApprovalQueueRaw,
+} from './src/features/founderSurfaceGuard.js';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -335,6 +340,15 @@ function mergeInboundAudit(partial) {
   const s = getInboundTurnTraceStore();
   if (!s) return;
   s.inbound_audit = { ...(s.inbound_audit || {}), ...partial };
+}
+
+function founderLeakDetected(text) {
+  const t = String(text || '');
+  return (
+    containsOldCouncilMarkers(t) ||
+    containsPersonaLiterals(t) ||
+    containsApprovalQueueRaw(t)
+  );
 }
 
 async function callJSON({ instructions, input, schemaName, schema }) {
@@ -887,6 +901,26 @@ async function handleUserText(userText, metadata = {}) {
         route_label: metadata.slack_route_label,
       });
       if (pipelineResult != null) {
+        if (founderRoute && founderLeakDetected(pipelineResult.text)) {
+          mergeInboundAudit({
+            routing_exit: 'pipeline_leak_hard_kill',
+            founder_route: true,
+            legacy_command_router_used: false,
+            legacy_ai_router_used: false,
+            hard_fail_reason: 'invariant_breach',
+          });
+          return {
+            text: '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. founder kernel을 통해 대화 계약으로 다시 정렬해 진행합니다.',
+            surface_type: 'safe_fallback_surface',
+            trace: {
+              hard_fail_reason: 'invariant_breach',
+              passed_pipeline: true,
+              passed_renderer: true,
+              passed_outbound_validation: false,
+              legacy_router_used: false,
+            },
+          };
+        }
         mergeInboundAudit({
           routing_exit: 'pipeline',
           passed_pipeline: true,
@@ -986,6 +1020,27 @@ async function handleUserText(userText, metadata = {}) {
         })
       : { done: false, aiCtx: { userText, metadata, channelContext: null } };
     if (routed.done) {
+      const routedText = typeof routed.response === 'string' ? routed.response : routed.response?.text;
+      if (founderRoute && founderLeakDetected(routedText)) {
+        mergeInboundAudit({
+          routing_exit: 'command_router_leak_hard_kill',
+          founder_route: true,
+          legacy_command_router_used: shouldRunCommandRouter,
+          legacy_ai_router_used: false,
+          hard_fail_reason: 'invariant_breach',
+        });
+        return {
+          text: '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. 구조화 조회/명령 또는 founder kernel 경로만 허용됩니다.',
+          surface_type: 'safe_fallback_surface',
+          trace: {
+            hard_fail_reason: 'invariant_breach',
+            passed_pipeline: false,
+            passed_renderer: true,
+            passed_outbound_validation: false,
+            legacy_router_used: shouldRunCommandRouter,
+          },
+        };
+      }
       const commandRouterExit = shouldRunCommandRouter ? 'command_router' : 'pipeline_miss_non_command';
       mergeInboundAudit({
         routing_exit: commandRouterExit,
