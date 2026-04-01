@@ -23,6 +23,15 @@ const COUNCIL_SYNTHESIS_MARKERS = [
   '한 줄 요약',
 ];
 
+/** 단독으로도 다각 메모 누수로 본다 (hits>=2보다 먼저 검사) */
+const COUNCIL_SYNTHESIS_STRONG_LINE = [
+  '내부 처리 정보',
+  '참여 페르소나:',
+  '협의 모드: council',
+  'matrix trigger:',
+  'institutional memory',
+];
+
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';
 const GENERIC_CLARIFICATION_RE =
   /(조금\s*더\s*구체적으로|최적의\s*경로로\s*안내|원하시면\s*도와드리겠습니다)/u;
@@ -54,6 +63,9 @@ export function looksLikeCouncilSynthesisBody(text) {
   const head = t.trimStart();
   if (QUERY_CONTRACT_HEADER_RE.test(head)) return false;
   if (t.includes(WORK_CANDIDATE_FOOTER)) return true;
+  for (const s of COUNCIL_SYNTHESIS_STRONG_LINE) {
+    if (t.includes(s)) return true;
+  }
   let hits = 0;
   for (const m of COUNCIL_SYNTHESIS_MARKERS) {
     if (t.includes(m)) hits += 1;

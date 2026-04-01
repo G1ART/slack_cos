@@ -1,16 +1,18 @@
 [
   {
-    "threadKey": "ch:FULLCYCLE:01",
+    "threadKey": "ch:FULLCLOSURE:01",
     "docs": [
       {
-        "file_id": "FDOC1",
-        "filename": "product-spec.pdf",
-        "text": "Calendar app for NYC art galleries. Core features: event listing, RSVP, artist profiles.",
-        "mimetype": "application/pdf",
-        "ingested_at": "2026-04-01T18:07:20.494Z",
-        "char_count": 80,
+        "file_id": "F99",
+        "filename": "req.docx",
+        "text": "Gallery calendar requirements",
+        "mimetype": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "ingested_at": "2026-04-01T23:57:45.845Z",
+        "char_count": 30,
         "truncated": false
       }
     ]
+  }
+]]
   }
 ]

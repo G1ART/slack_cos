@@ -43,9 +43,6 @@ import { createExecutionPacket, createExecutionRun } from '../features/execution
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
-import { looksLikeCouncilSynthesisBody } from '../features/topLevelRouter.js';
-import { founderHardBlockRemaining } from '../features/founderSurfaceGuard.js';
-
 /**
  * Utility intents the pipeline handles regardless of work object state.
  */
@@ -77,9 +74,6 @@ function isFounderDirectNaturalChatEnabled() {
   const v = String(process.env.COS_FOUNDER_DIRECT_CHAT ?? '1').trim().toLowerCase();
   return v !== '0' && v !== 'false' && v !== 'no' && v !== 'off';
 }
-
-const PARTNER_COUNCIL_RETRY_HINT =
-  '\n\n[시스템 — COS 창업자 면]\n반드시 **평문 대화**만(2~8문장 또는 짧은 목록). "한 줄 요약/종합 추천안/페르소나별/대표 결정/내부 처리 정보/협의 모드" 같은 제목·페르소나 라벨·내부 메타는 금지.';
 
 // ---------------------------------------------------------------------------
 // Executor — delegates to existing code by phase
@@ -232,7 +226,6 @@ async function runFounderNaturalPartnerTurn(normalized, metadata, route_label, c
   });
   try {
     const priorTranscript = getConversationTranscript(threadKey);
-    let plain = '';
     const generated = await runCosNaturalPartner({
       callText,
       userText: normalized,
@@ -240,20 +233,7 @@ async function runFounderNaturalPartnerTurn(normalized, metadata, route_label, c
       route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
       priorTranscript,
     });
-    plain = String(generated || '').trim();
-    if (
-      plain &&
-      (looksLikeCouncilSynthesisBody(plain) || founderHardBlockRemaining(plain))
-    ) {
-      const retryGen = await runCosNaturalPartner({
-        callText,
-        userText: `${normalized}${PARTNER_COUNCIL_RETRY_HINT}`,
-        channelContext: null,
-        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
-        priorTranscript,
-      });
-      plain = String(retryGen || '').trim();
-    }
+    const plain = String(generated || '').trim();
     if (plain) {
       const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, { text: plain });
       return buildResult(

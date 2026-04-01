@@ -1,6 +1,6 @@
 /**
- * COS Constitutional Reset — Single outbound gate for all founder-facing Slack posts.
- * This is the ONLY function that may post founder-facing text to Slack.
+ * COS — 창업자 면 Slack 전송 단일 출구.
+ * 텍스트는 **검열·Council 형태 감지·내부 마커 치환 없이** 그대로 전달한다(등록된 surface_type·텍스트 전용만 유지).
  * @see docs/architecture/COS_CONSTITUTION_v1.md §7
  */
 
@@ -8,32 +8,6 @@
 // FOUNDERRAWOUTBOUND_FORBIDDEN — grep marker for migration enforcement
 
 import { FOUNDER_SURFACE_VALUES, SAFE_FALLBACK_TEXT } from './founderContracts.js';
-import { sanitizeFounderOutput, founderHardBlockRemaining, FOUNDER_HARD_BLOCK_FALLBACK } from '../features/founderSurfaceGuard.js';
-import { looksLikeCouncilSynthesisBody } from '../features/topLevelRouter.js';
-
-/** Council 메모 형태만 감지된 경우(내부 마커 잔존과 구분) — 완곡 안내 */
-const COUNCIL_SHAPE_SOFT_FALLBACK =
-  '[COS] 답변이 예전 다각 검토 메모 형식으로 생성되어 보내지 않았습니다. 같은 내용을 **짧은 평문**으로만 다시 보내 주세요.';
-
-const INTERNAL_MARKER_SUBSTRINGS = [
-  '종합 추천안',
-  '페르소나별 핵심 관점',
-  '가장 강한 반대 논리',
-  '대표 결정 필요 여부',
-  '내부 처리 정보',
-  'strategy_finance:',
-  'risk_review:',
-  '참여 페르소나:',
-  '협의 모드:',
-  'institutional memory',
-];
-const GENERIC_CLARIFICATION_RE =
-  /(조금\s*더\s*구체적으로|최적의\s*경로로\s*안내|원하시면\s*도와드리겠습니다)/u;
-
-function containsInternalMarkers(text) {
-  const t = String(text || '');
-  return INTERNAL_MARKER_SUBSTRINGS.some((m) => t.includes(m));
-}
 
 function emitTrace(fields) {
   try {
@@ -78,7 +52,6 @@ export async function sendFounderResponse(opts) {
   let text = String(rendered_text || '');
   let hardFailReason = null;
 
-  // 1. Contract validation: surface_type must be registered
   if (!FOUNDER_SURFACE_VALUES.has(surface_type)) {
     emitTrace({
       intent,
@@ -91,53 +64,6 @@ export async function sendFounderResponse(opts) {
     hardFailReason = 'invariant_breach';
   }
 
-  // 2a. Sanitize: strip legacy Council sections/markers (same guard as finalizeSlackResponse)
-  text = sanitizeFounderOutput(text, { responder: responder_kind });
-
-  // 2a2. LLM이 헤더만 지우고 본문에 다각 메모 형태를 남긴 경우 (finalize와 동일 휴리스틱)
-  if (looksLikeCouncilSynthesisBody(text)) {
-    emitTrace({
-      intent,
-      surface_type,
-      responder_kind,
-      error: 'council_shape_heuristic_after_sanitize',
-      preview: text.slice(0, 200),
-      ...trace,
-    });
-    text = COUNCIL_SHAPE_SOFT_FALLBACK;
-    hardFailReason = hardFailReason || 'council_shape_blocked';
-  }
-
-  // 2b. Hard block: if markers survived sanitization, replace entirely
-  if (containsInternalMarkers(text) || founderHardBlockRemaining(text)) {
-    emitTrace({
-      intent,
-      surface_type,
-      responder_kind,
-      error: 'internal_markers_detected_after_sanitize',
-      preview: text.slice(0, 200),
-      ...trace,
-    });
-    text = FOUNDER_HARD_BLOCK_FALLBACK;
-    hardFailReason = hardFailReason || 'invariant_breach';
-  }
-  const kickoffLikeSurface = new Set(['executive_kickoff_surface', 'discovery_surface', 'dialogue_surface']);
-  if (kickoffLikeSurface.has(surface_type) && GENERIC_CLARIFICATION_RE.test(text)) {
-    emitTrace({
-      intent,
-      surface_type,
-      responder_kind,
-      error: 'generic_clarification_blocked',
-      preview: text.slice(0, 200),
-      ...trace,
-    });
-    text = '[COS] founder 계약 위반(제네릭 완충 문구)으로 차단했습니다. 같은 요청을 다시 보내 주세요.';
-    hardFailReason = hardFailReason || 'invariant_breach';
-  }
-
-  // 3. Founder emergency safety lock:
-  // Block Kit payload can carry unsanitized literals in nested fields.
-  // Until a block-level sanitizer is fully verified, founder-facing posts are text-only.
   const hadBlocks = Array.isArray(rendered_blocks) && rendered_blocks.length > 0;
   if (hadBlocks) {
     emitTrace({
@@ -150,7 +76,6 @@ export async function sendFounderResponse(opts) {
     });
   }
 
-  // 4. Send via Slack
   try {
     if (say && thread_ts) {
       await say({ text, thread_ts });
@@ -167,7 +92,6 @@ export async function sendFounderResponse(opts) {
     throw err;
   }
 
-  // 5. Trace log
   emitTrace({
     intent,
     surface_type,
@@ -179,6 +103,7 @@ export async function sendFounderResponse(opts) {
     hard_fail_reason: hardFailReason,
     contains_internal_markers: false,
     rendered_preview: text.slice(0, 200),
+    founder_outbound_mode: 'pass_through',
     ...trace,
   });
 
@@ -186,11 +111,8 @@ export async function sendFounderResponse(opts) {
 }
 
 /**
- * Validate text without sending — for migration compatibility.
+ * Slash 등 — 창업자 노출 문자열을 그대로 통과(마커 기반 차단 없음).
  */
 export function validateFounderText(text) {
-  if (containsInternalMarkers(text)) {
-    return { valid: false, text: SAFE_FALLBACK_TEXT };
-  }
-  return { valid: true, text };
+  return { valid: true, text: String(text ?? '') };
 }

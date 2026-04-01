@@ -30,7 +30,11 @@ function assert(label, condition) {
     const commandIdx = appContent.indexOf('runInboundCommandRouter({');
     return pipelineIdx > 0 && commandIdx > 0 && pipelineIdx < commandIdx;
   })());
-  assert('app_returns_surface_type', appContent.includes('surface_type: pipelineResult.trace?.surface_type'));
+  assert(
+    'app_returns_surface_type',
+    appContent.includes('surface_type: pipelineResult.surface_type || pipelineResult.trace?.surface_type') ||
+      appContent.includes('surface_type: pipelineResult.trace?.surface_type'),
+  );
 }
 
 // --- 2. council.js object-only ---
