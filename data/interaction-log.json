@@ -16048,5 +16048,273 @@
     ],
     "matrix_reasons": [],
     "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775036348415-zgzyv6",
+    "created_at": "2026-04-01T09:39:08.415Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1775036339.811089",
+      "event_id": "Ev0AR1Q1CMU0"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "단일 단어로 맥락이 부족해 구체 분류가 어렵습니다. 현재로선 일반 문의로 분류하는 것이 적절합니다."
+    },
+    "primary": {
+      "one_line_summary": "의도가 불명확해 투자·우선순위 판단이 불가능합니다.",
+      "recommendation": "어떤 버전을 의미하는지(제품 버전, 문서 버전, 가격안 버전 등)와 비교 대상, 결정 목적을 1문장으로 명확히 적어 주세요.",
+      "strongest_objection": "맥락 없이 '버전'만으로는 기대값, 비용, 우선순위를 평가할 수 없어 잘못된 의사결정 가능성이 큽니다.",
+      "key_risks": [
+        "잘못된 대상에 시간을 쓰는 커뮤니케이션 비용",
+        "우선순위 오판으로 인한 기회비용",
+        "측정 기준 부재로 실행 지연",
+        "검토 대상 불명확으로 우선순위 판단 오류",
+        "변경 범위 미확정으로 숨은 비용·일정 리스크 누락",
+        "대외 노출 여부 미상으로 평판·규제 리스크 과소평가"
+      ],
+      "next_actions": [
+        "대상: 무엇의 버전인지 명시",
+        "목적: 비교/선택/명명/출시 중 무엇인지 명시",
+        "기준: 비용·일정·매출 영향 중 무엇으로 판단할지 명시",
+        "버전 번호와 검토 대상 문서 또는 변경 요약을 공유하라.",
+        "예산, 일정, 담당자, 의사결정 마감 시점을 명시하라.",
+        "외부 고객·파트너·규제 영향 유무를 표시하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "맥락 없이 '버전'만으로는 기대값, 비용, 우선순위를 평가할 수 없어 잘못된 의사결정 가능성이 큽니다.",
+      "hidden_risks": [
+        "잘못된 대상에 시간을 쓰는 커뮤니케이션 비용",
+        "우선순위 오판으로 인한 기회비용",
+        "측정 기준 부재로 실행 지연",
+        "검토 대상 불명확으로 우선순위 판단 오류",
+        "변경 범위 미확정으로 숨은 비용·일정 리스크 누락",
+        "대외 노출 여부 미상으로 평판·규제 리스크 과소평가"
+      ],
+      "reconsider_triggers": [],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775036364600-lyoxnc",
+    "created_at": "2026-04-01T09:39:24.600Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1775036354.895679",
+      "event_id": "Ev0AQ43XEDKP"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "요청이 단어 하나('버전')로만 제시되어 의도가 불명확합니다. 현재로서는 특정 도메인(전략/운영/제품/엔지니어링/요약)으로 판단하기 어려워 일반 분류가 적절합니다."
+    },
+    "primary": {
+      "one_line_summary": "입력값이 부족해 전략/재무 관점의 판단을 할 수 없습니다.",
+      "recommendation": "검토할 버전의 목표, 변경점, 예상 비용, 기대 효과, 측정 지표를 먼저 공유하세요.",
+      "strongest_objection": "버전 정보 없이 의사결정하면 ROI와 우선순위를 평가할 수 없어 잘못된 자원 배분 가능성이 큽니다.",
+      "key_risks": [
+        "낮은 기대값 기능에 시간 투입",
+        "핵심 로드맵 집중도 저하",
+        "성과 측정 불가로 후속 판단 왜곡",
+        "대상 불명확으로 핵심 리스크 누락 가능",
+        "불충분한 정보 기반의 성급한 의사결정",
+        "재검토 기준 부재로 승인 후 통제 실패"
+      ],
+      "next_actions": [
+        "버전명과 범위를 정의하세요.",
+        "핵심 변경점 3개 이내로 정리하세요.",
+        "개발/운영 비용과 예상 효과를 수치로 적으세요.",
+        "성공 지표와 판단 시점을 명시하세요.",
+        "버전 식별자와 목적을 명시하라.",
+        "주요 변경사항과 영향 범위를 요약하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "버전 정보 없이 의사결정하면 ROI와 우선순위를 평가할 수 없어 잘못된 자원 배분 가능성이 큽니다.",
+      "hidden_risks": [
+        "낮은 기대값 기능에 시간 투입",
+        "핵심 로드맵 집중도 저하",
+        "성과 측정 불가로 후속 판단 왜곡",
+        "대상 불명확으로 핵심 리스크 누락 가능",
+        "불충분한 정보 기반의 성급한 의사결정",
+        "재검토 기준 부재로 승인 후 통제 실패"
+      ],
+      "reconsider_triggers": [
+        "속도 우선 vs 검증 우선"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775036372389-0w6pis",
+    "created_at": "2026-04-01T09:39:32.389Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1775036363.642789",
+      "event_id": "Ev0AQ5E52XLN"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "요청이 단어 하나('버전')로만 되어 있어 의도가 불명확합니다. 특정 전략/운영/제품/기술/요약 작업으로 분류하기 어렵기 때문에 일반 판단으로 분류합니다."
+    },
+    "primary": {
+      "one_line_summary": "요청이 불완전해 현재는 전략·재무 관점의 판단을 내리기 어렵습니다.",
+      "recommendation": "비교하려는 버전의 범위와 목적, 예상 비용, 기대 효과를 먼저 정리해 공유하세요.",
+      "strongest_objection": "'버전'만으로는 우선순위와 ROI를 판단할 정보가 없어 의사결정 자체가 불가능합니다.",
+      "key_risks": [
+        "잘못된 전제에서 리소스를 투입할 위험",
+        "우선순위가 흔들려 로드맵이 분산될 위험",
+        "성과 측정 기준 없이 실행할 위험",
+        "버전 식별자와 변경 범위 부재",
+        "성공 기준과 실패 기준 미정의",
+        "예산·일정·우선순위 제약 불명확",
+        "대외 영향과 되돌리기 비용 평가 불가"
+      ],
+      "next_actions": [
+        "비교 대상 버전명을 명시하세요.",
+        "각 버전의 변경점 3개 이내로 요약하세요.",
+        "버전별 예상 개발비용과 기대 지표를 적으세요.",
+        "의사결정 마감 시점을 알려주세요.",
+        "버전명과 릴리스 목적을 공유하라.",
+        "핵심 변경사항 3~5개와 예상 효과를 정리하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "'버전'만으로는 우선순위와 ROI를 판단할 정보가 없어 의사결정 자체가 불가능합니다.",
+      "hidden_risks": [
+        "잘못된 전제에서 리소스를 투입할 위험",
+        "우선순위가 흔들려 로드맵이 분산될 위험",
+        "성과 측정 기준 없이 실행할 위험",
+        "버전 식별자와 변경 범위 부재",
+        "성공 기준과 실패 기준 미정의",
+        "예산·일정·우선순위 제약 불명확",
+        "대외 영향과 되돌리기 비용 평가 불가"
+      ],
+      "reconsider_triggers": [
+        "속도를 우선할지 검증 정확도를 우선할지 미정"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775036380831-mk3qf1",
+    "created_at": "2026-04-01T09:39:40.831Z",
+    "user_text": "버전",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMELPEFRC",
+      "user": "U0AN9S75CRW",
+      "ts": "1775036371.593339",
+      "event_id": "Ev0APS2RTU3H"
+    },
+    "channel_context": "strategy_finance",
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "요청이 단어 하나('버전')로만 되어 있어 의도와 맥락이 불명확합니다. 특정 전략·운영·제품·기술·요약 업무로 분류하기 어려워 일반 판단으로 분류합니다."
+    },
+    "primary": {
+      "one_line_summary": "질문이 불완전해 판단할 버전 대상이 없습니다.",
+      "recommendation": "비교할 버전 후보와 판단 기준(매출, 전환율, 개발비, 출시일)을 먼저 1페이지로 정리해 공유하세요.",
+      "strongest_objection": "버전 정보 없이 의사결정을 시작하면 우선순위와 자원 배분이 임의적이 되어 ROI를 계산할 수 없습니다.",
+      "key_risks": [
+        "잘못된 버전에 인력과 예산을 투입할 위험",
+        "출시 일정만 지연되고 학습은 남지 않을 위험",
+        "측정 기준 부재로 사후 평가가 불가능한 위험",
+        "검토 범위 부재로 핵심 리스크 누락 가능",
+        "버전별 비용·효익 비교 불가",
+        "출시 결정이 근거 없는 낙관에 좌우될 위험",
+        "사후 재작업 비용이 커질 수 있음"
+      ],
+      "next_actions": [
+        "비교 대상 버전명을 나열하세요.",
+        "각 버전의 목표 KPI 1~2개를 적으세요.",
+        "버전별 예상 비용과 출시 시점을 적으세요.",
+        "제가 그 정보로 우선순위를 바로 정리하겠습니다.",
+        "버전명과 한 줄 설명을 제출하라.",
+        "주요 변경사항 3~5개와 비가역 결정 여부를 정리하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "버전 정보 없이 의사결정을 시작하면 우선순위와 자원 배분이 임의적이 되어 ROI를 계산할 수 없습니다.",
+      "hidden_risks": [
+        "잘못된 버전에 인력과 예산을 투입할 위험",
+        "출시 일정만 지연되고 학습은 남지 않을 위험",
+        "측정 기준 부재로 사후 평가가 불가능한 위험",
+        "검토 범위 부재로 핵심 리스크 누락 가능",
+        "버전별 비용·효익 비교 불가",
+        "출시 결정이 근거 없는 낙관에 좌우될 위험",
+        "사후 재작업 비용이 커질 수 있음"
+      ],
+      "reconsider_triggers": [],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
   }
 ]

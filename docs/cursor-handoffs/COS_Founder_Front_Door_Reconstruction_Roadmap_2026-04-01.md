@@ -87,6 +87,7 @@
 | 대화 연속성 보강: `cosDialogueWriter`가 follow-up 입력의 명시 합의((1)(2)(3) 답변)를 슬롯에 반영하고, key 질문/next step을 갱신하도록 수정 | 완료 |
 | 도메인 템플릿 분리: `cosDialogueWriter`의 `pushback/tradeoff/alternatives/scope_cut`를 `calendar/crm/general`로 분기해, 비-캘린더 질문에 캘린더 문구가 섞이지 않도록 고정 | 완료 |
 | founder kernel 적응형 생성: `founderRequestPipeline`의 `discover/align`에서 계약 패킷 기본값을 유지한 채 `runCosNaturalPartner(callText)` 결과로 `reframed/pushback/next_step`를 동적 보강 (모델 활용 복원) | 완료 |
+| 스레드 연속성 규칙 보강: 같은 스레드(active intake)에서 새 kickoff가 들어오고 도메인이 급변하면 자동 리셋하지 않고 `별도 프로덕트인지` 확인 질문을 먼저 반환 (같은 스레드 맥락 보존) | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

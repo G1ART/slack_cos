@@ -32,6 +32,7 @@ import {
   buildStatusPacket,
   buildHandoffPacket,
 } from './founderGoldContract.js';
+import { extractHiddenContract } from './hiddenContractExtractor.js';
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
@@ -246,6 +247,36 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     workContext = resolveWorkObject(normalized, metadata);
   }
 
+  if (founderRoute && shouldAskSeparateProductConfirmation(gold, workContext, normalized)) {
+    const clarifyPacket = buildSeparateProductClarificationPacket(workContext, normalized);
+    const quality = validateDialogueContract(clarifyPacket);
+    if (!quality.ok) {
+      return founderKernelHardFail(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        FounderHardFailReason.INVARIANT_BREACH,
+        'separate_product_clarification_quality_fail',
+      );
+    }
+    const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, clarifyPacket);
+    return buildResult(rendered, {
+      workContext,
+      phaseResult: { phase: WorkPhase.ALIGN, phase_source: 'separate_product_clarification', confidence: 1 },
+      intentResult,
+      policy: evaluatePolicy({
+        actor: Actor.FOUNDER,
+        work_object_type: workContext.primary_type,
+        work_phase: WorkPhase.ALIGN,
+        intent_signal: intentResult.intent,
+        metadata,
+      }),
+      route_label,
+    });
+  }
+
   // 4. Work Phase Resolver
   const phaseResult = resolveWorkPhase(workContext, normalized, metadata);
   let phase = phaseResult.phase;
@@ -408,6 +439,35 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const rendered = renderFounderSurface(surfaceType, packet);
 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
+}
+
+function shouldAskSeparateProductConfirmation(gold, workContext, normalized) {
+  if (gold?.kind !== 'kickoff') return false;
+  const intakeGoal = String(workContext?.intake_session?.goalLine || '').trim();
+  if (!intakeGoal) return false;
+  const prevDomain = extractHiddenContract(intakeGoal).domain;
+  const nowDomain = extractHiddenContract(normalized).domain;
+  if (prevDomain === 'generic' || nowDomain === 'generic') return false;
+  return prevDomain !== nowDomain;
+}
+
+function buildSeparateProductClarificationPacket(workContext, normalized) {
+  const base = buildDialoguePacket(normalized, 'followup');
+  const priorGoal = String(workContext?.intake_session?.goalLine || '').trim();
+  return {
+    ...base,
+    reframed_problem:
+      '현재 스레드에는 이미 진행 중인 제품 맥락이 있습니다. 새 요청이 별도 프로덕트인지 먼저 확인한 뒤 분기하겠습니다.',
+    pushback_point:
+      '같은 스레드에서 서로 다른 제품을 병행하면 의사결정 로그와 스코프가 섞여 품질이 떨어집니다.',
+    key_questions: [
+      '지금 요청은 기존 스레드의 같은 프로덕트 연장인가요, 아니면 별도 프로덕트인가요?',
+      `기존 맥락 유지 시 기준 목표: "${priorGoal.slice(0, 120)}${priorGoal.length > 120 ? '…' : ''}"`,
+      ...base.key_questions,
+    ].slice(0, 5),
+    next_step:
+      '“같은 프로덕트” 또는 “별도 프로덕트”로만 답해주시면, 같은 스레드 유지/새 스레드 분리 중 하나로 즉시 정렬하겠습니다.',
+  };
 }
 
 async function buildAdaptiveDialoguePacket(normalized, metadata, mode, callText) {

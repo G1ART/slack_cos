@@ -25,6 +25,7 @@
 보강3: founder leak 판정은 이제 "구형 Council 섹션 헤더 정확 일치 + 내부 메타 라인" 기준으로 수행한다. 정상 Dialogue의 `핵심 리스크/검증 포인트` 같은 문구는 오탐 차단 대상이 아니다.
 보강4: founder dialogue writer의 품질 슬롯(`pushback_point`,`tradeoff_summary`,`alternatives`,`scope_cut`)은 도메인 템플릿(`calendar`/`crm`/`general`)로 생성한다. 따라서 채널이 같아도 질문 도메인이 바뀌면 이전 도메인 문구(예: 캘린더 절삭)가 재사용되지 않는다.
 보강5: founder `discover/align`는 정적 계약 생성만 하지 않고 `runCosNaturalPartner(callText)`를 통해 스레드 transcript를 반영한 문장을 `reframed_problem`/`pushback_point`/`next_step`에 동적 주입한다. 계약 키는 유지하고 생성 문장만 적응형으로 바뀐다.
+보강6: same-thread active intake에서 새 kickoff가 들어오고 입력 도메인이 기존 `goalLine`과 다르면, 자동 스코프 리셋/전환을 하지 않는다. 먼저 “같은 프로덕트 연장 vs 별도 프로덕트” 확인 질문을 반환해 founder가 분기를 명시하도록 강제한다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
