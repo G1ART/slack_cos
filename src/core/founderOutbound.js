@@ -112,43 +112,36 @@ export async function sendFounderResponse(opts) {
     text = '[COS] 요청을 운영 문제로 재정의했습니다. 벤치마크 축, MVP 범위/제외, 리스크, 합의 질문으로 바로 좁혀가겠습니다.';
   }
 
-  // 3. Build Slack payload
-  const blocks = Array.isArray(rendered_blocks) && rendered_blocks.length
-    ? rendered_blocks
-    : undefined;
-  const payload = blocks ? { text, blocks } : text;
+  // 3. Founder emergency safety lock:
+  // Block Kit payload can carry unsanitized literals in nested fields.
+  // Until a block-level sanitizer is fully verified, founder-facing posts are text-only.
+  const hadBlocks = Array.isArray(rendered_blocks) && rendered_blocks.length > 0;
+  if (hadBlocks) {
+    emitTrace({
+      intent,
+      surface_type,
+      responder_kind,
+      error: 'founder_blocks_path_disabled_text_only',
+      blocks_count: rendered_blocks.length,
+      ...trace,
+    });
+  }
 
   // 4. Send via Slack
   try {
     if (say && thread_ts) {
-      await say({ text, ...(blocks ? { blocks } : {}), thread_ts });
+      await say({ text, thread_ts });
     } else if (say) {
-      await say(payload);
+      await say(text);
     } else if (client && channel) {
       await client.chat.postMessage({
         channel,
         text,
-        ...(blocks ? { blocks } : {}),
         ...(thread_ts ? { thread_ts } : {}),
       });
     }
   } catch (err) {
-    if (blocks && /invalid_blocks|block_kit|action_id.*already exists/i.test(err?.message || '')) {
-      // Blocks validation error — retry text-only
-      if (say && thread_ts) {
-        await say({ text, thread_ts });
-      } else if (say) {
-        await say(text);
-      } else if (client && channel) {
-        await client.chat.postMessage({
-          channel,
-          text,
-          ...(thread_ts ? { thread_ts } : {}),
-        });
-      }
-    } else {
-      throw err;
-    }
+    throw err;
   }
 
   // 5. Trace log

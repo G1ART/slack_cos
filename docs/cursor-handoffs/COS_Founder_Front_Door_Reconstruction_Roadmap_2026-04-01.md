@@ -54,11 +54,19 @@
 | `src/core/cosDialogueWriter.js` 신설 — hidden contract 기반 dialogue contract 작성기 도입 | 완료 |
 | `founderGoldContract.buildDialoguePacket`가 writer 위임으로 전환 (pipeline dialogue 계약 생성 책임 분리 시작) | 완료 |
 
-## 다음 배치(Phase 3b~) — 우선순위
+## Phase 3b — founder outbound 블록 경로 제거 (완료)
+
+| 항목 | 상태 |
+|------|------|
+| `sendFounderResponse`에서 founder-facing `rendered_blocks` 전송 경로를 제거하고 **text-only** 강제 | 완료 |
+| block payload 존재 시 trace에 `founder_blocks_path_disabled_text_only` 기록 | 완료 |
+| `scripts/test-vnext10-leak-path-council-hard-block.mjs`에 “blocks 미전송” 회귀 검증 추가 | 완료 |
+
+## 다음 배치(Phase 3c~) — 우선순위
 
 1. `founderRequestPipeline`에서 `buildDialoguePacket` 직접 의존을 점진 축소하고 writer/contract 경로를 1차 소스로 통일.
 2. `tryExecutiveSurfaceResponse` founder-facing start_project 작성 책임을 dialogue writer 계열로 이동(운영 큐/실행 문구 완전 분리).
-3. **머지 게이트:** Gold A~E + founder route council 0회 + trace 필드 스키마 고정 자동 검증 스크립트 확정.
+3. **머지 게이트:** Gold A~E + founder route council 0회 + trace 필드 스키마 고정 + outbound text-only 잠금 자동 검증 스크립트 확정.
 
 ## 프로젝트를 접기 전에 볼 신호
 

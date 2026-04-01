@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 
 const { sanitizeFounderOutput, formatFounderApprovalAppendix } = await import('../src/features/founderSurfaceGuard.js');
+const { sendFounderResponse } = await import('../src/core/founderOutbound.js');
 
 const { finalizeSlackResponse, buildFounderOutputTraceRecord } = await import('../src/features/topLevelRouter.js');
 const { tryFinalizeInboundFounderRoutingLock } = await import('../src/features/founderRoutingLockFinalize.js');
@@ -216,6 +217,29 @@ try {
   ok('formatFounderApproval appendix founder-safe');
 } catch (e) {
   fail('approval appendix', e);
+}
+
+try {
+  /** @type {Array<Record<string, unknown>>} */
+  const sent = [];
+  await sendFounderResponse({
+    say: async (payload) => {
+      if (typeof payload === 'string') sent.push({ text: payload });
+      else sent.push(payload);
+    },
+    thread_ts: '1700000000.123',
+    rendered_text: '안전 텍스트',
+    rendered_blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '*종합 추천안* leak candidate' } }],
+    surface_type: 'executive_kickoff_surface',
+    responder_kind: 'executive_surface',
+    intent: 'PROJECT_KICKOFF',
+  });
+  assert.equal(sent.length, 1);
+  assert.equal(Array.isArray(sent[0].blocks), false, 'founder outbound must be text-only');
+  assert.equal(String(sent[0].text).includes('종합 추천안'), false);
+  ok('sendFounderResponse disables founder block payload path');
+} catch (e) {
+  fail('sendFounderResponse text-only lock', e);
 }
 
 try {
