@@ -31,6 +31,13 @@
 | `app.js` founder 경로에서 pipeline miss 시에도 command router를 무조건 태우지 않고, **`QUERY_LOOKUP`/`STRUCTURED_COMMAND` 의도일 때만** command router 허용 | 완료 |
 | founder 경로는 비-쿼리 miss에서 deterministic fallback으로 고정, AI router 미진입 원칙 유지 | 완료 |
 
+## Phase 2a — topLevel hard contract 강화 (완료)
+
+| 항목 | 상태 |
+|------|------|
+| `topLevelRouter` founder 경로에서 **generic clarification / council shape leak** 감지 시 sanitize로 살리지 않고 즉시 차단 | 완료 |
+| `founder_output_trace`에 `passed_outbound_validation`, `validation_error_code` 필드 추가 (hard fail 원인 추적) | 완료 |
+
 ## 다음 배치(Phase 2~) — 우선순위
 
 1. ~~파이프라인 커널 확장~~ → **1b 완료**; 잔여: 트레이스 필드 보강·`topLevelRouter` 등 아래 항목.

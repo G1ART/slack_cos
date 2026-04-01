@@ -19,7 +19,7 @@
 
 ---
 
-**코드 기준일**: 2026-04-01 — **`founderRequestPipeline.js` 3b**는 `runInboundCommandRouter`의 **1b·1c-exec·1c·4·9** 축을 DM/멘션 파이프라인에서도 선행(인테이크 취소·execution spine·spec 빌드 스레드·clean start door·`tryExecutiveSurfaceResponse`). **골드 킥오프·scope lock** 문장은 `tryClassifyStartProject`와 겹칠 때 executive `start_project`에 **선점되지 않도록** 생략. · 2026-03-28 **`ProjectSpecSession`** — 활성 인테이크 스레드는 `projectSpecSession.js`의 `tryFinalizeProjectSpecBuildThread`가 조회/M4/플래너 락에 **양보**하지 않으면 **spec mutation·충분성(`computeSufficiency`)**으로 대표 표면을 고정; 성공 시 `project_spec_execution_ready`·실패 시 `project_spec_refine`. transcript 기반 `start_project_confirmed`/`start_project_refine`은 **인테이크가 비활성**이거나 spec 핸들러가 **null**일 때 기존 경로. · 원본 2026-03-23  
+**코드 기준일**: 2026-04-01 — **`founderRequestPipeline.js` 3b**는 `runInboundCommandRouter`의 **1b·1c-exec·1c·4·9** 축을 DM/멘션 파이프라인에서도 선행(인테이크 취소·execution spine·spec 빌드 스레드·clean start door·`tryExecutiveSurfaceResponse`). **골드 킥오프·scope lock** 문장은 `tryClassifyStartProject`와 겹칠 때 executive `start_project`에 **선점되지 않도록** 생략. **`topLevelRouter`(Phase 2a)**는 founder 경로에서 generic clarification/council shape leak를 sanitize로 보정하지 않고 하드 차단하며, trace에 `passed_outbound_validation`·`validation_error_code`를 남긴다. · 2026-03-28 **`ProjectSpecSession`** — 활성 인테이크 스레드는 `projectSpecSession.js`의 `tryFinalizeProjectSpecBuildThread`가 조회/M4/플래너 락에 **양보**하지 않으면 **spec mutation·충분성(`computeSufficiency`)**으로 대표 표면을 고정; 성공 시 `project_spec_execution_ready`·실패 시 `project_spec_refine`. transcript 기반 `start_project_confirmed`/`start_project_refine`은 **인테이크가 비활성**이거나 spec 핸들러가 **null**일 때 기존 경로. · 원본 2026-03-23
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`

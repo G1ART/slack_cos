@@ -74,6 +74,8 @@ export function buildFounderOutputTraceRecord({
   raw_for_detection,
   passed_finalize,
   passed_sanitize,
+  passed_outbound_validation,
+  validation_error_code,
 }) {
   const route_label = slack_route_label ?? null;
   return {
@@ -86,6 +88,8 @@ export function buildFounderOutputTraceRecord({
     route_label,
     passed_finalize: passed_finalize !== false,
     passed_sanitize: passed_sanitize !== false,
+    passed_outbound_validation: passed_outbound_validation !== false,
+    validation_error_code: validation_error_code ?? null,
     raw_preview: String(raw_before_sanitize ?? '').slice(0, 160),
     sanitized_preview: String(sanitized ?? '').slice(0, 160),
     contains_old_council_markers: containsOldCouncilMarkers(raw_for_detection ?? ''),
@@ -144,6 +148,9 @@ export function finalizeSlackResponse(p) {
   let out = String(text ?? '');
   const rawForTraceDetection = out;
   let skipSanitize = false;
+  let passedOutboundValidation = true;
+  /** @type {string | null} */
+  let validationErrorCode = null;
 
   if (founder_route && responder === 'council') {
     logRouterEvent('founder_route_council_hard_kill', {
@@ -155,6 +162,8 @@ export function finalizeSlackResponse(p) {
     console.error('[FOUNDER_ROUTE_HARD_KILL] responder=council blocked');
     out = '[COS] founder 경로에서는 council이 비활성화되어 있습니다. 요청을 실행 가능한 명령으로 다시 말씀해 주세요.';
     skipSanitize = true;
+    passedOutboundValidation = false;
+    validationErrorCode = 'founder_route_council_blocked';
   }
   if (
     founder_route &&
@@ -167,8 +176,10 @@ export function finalizeSlackResponse(p) {
       preview: out.slice(0, 240),
     });
     console.error('[FOUNDER_ROUTE_HARD_KILL] generic clarification blocked');
-    out = '[COS] 요청을 운영 문제로 재정의해 바로 범위를 좁히겠습니다. 핵심 결정 3가지를 먼저 맞추겠습니다.';
+    out = '[COS] 응답 계약 위반(제네릭 완충 문구)으로 차단했습니다. 같은 목표를 한 줄로 다시 보내주시면 바로 운영 문제 framing으로 처리하겠습니다.';
     skipSanitize = true;
+    passedOutboundValidation = false;
+    validationErrorCode = 'founder_route_generic_clarification_blocked';
   }
   const blocked =
     council_blocked ??
@@ -207,10 +218,17 @@ export function finalizeSlackResponse(p) {
       target_id,
       preview: out.slice(0, 240),
     });
-    out =
-      responder === 'planner'
-        ? '[계획등록] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.'
-        : '[COS] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.';
+    if (founder_route) {
+      out = '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. 같은 요청을 한 줄로 다시 보내 주세요.';
+      skipSanitize = true;
+      passedOutboundValidation = false;
+      validationErrorCode = 'founder_route_council_shape_leak_blocked';
+    } else {
+      out =
+        responder === 'planner'
+          ? '[계획등록] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.'
+          : '[COS] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.';
+    }
   }
 
   logRouterEvent('final_response_return', {
@@ -294,6 +312,8 @@ export function finalizeSlackResponse(p) {
       raw_for_detection: rawForTraceDetection,
       passed_finalize: true,
       passed_sanitize: true,
+      passed_outbound_validation: passedOutboundValidation,
+      validation_error_code: validationErrorCode,
     });
     console.info(JSON.stringify(tracePayload));
   } catch {
