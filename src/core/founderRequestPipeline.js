@@ -39,7 +39,8 @@ import {
   hasOpenExecutionOwnership,
 } from '../features/projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
-import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
+import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
+import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 
 /**
  * Utility intents the pipeline handles regardless of work object state.
@@ -71,13 +72,13 @@ const PIPELINE_HANDLED_PHASES = new Set([
 // Executor — delegates to existing code by phase
 // ---------------------------------------------------------------------------
 
-async function routeToExecutor(phase, policy, normalized, metadata, workContext) {
+async function routeToExecutor(phase, policy, normalized, metadata, workContext, callText) {
   switch (phase) {
     case WorkPhase.DISCOVER:
-      return await executeDiscovery(normalized, metadata, workContext);
+      return await executeDiscovery(normalized, metadata, workContext, callText);
 
     case WorkPhase.ALIGN:
-      return await executeAlign(normalized, metadata, workContext);
+      return await executeAlign(normalized, metadata, workContext, callText);
 
     case WorkPhase.LOCK:
       return await executeLock(normalized, metadata, workContext);
@@ -104,12 +105,12 @@ async function routeToExecutor(phase, policy, normalized, metadata, workContext)
   }
 }
 
-async function executeDiscovery(normalized, metadata, workContext) {
-  return { packet: buildDialoguePacket(normalized, 'kickoff') };
+async function executeDiscovery(normalized, metadata, workContext, callText) {
+  return { packet: await buildAdaptiveDialoguePacket(normalized, metadata, 'kickoff', callText) };
 }
 
-async function executeAlign(normalized, metadata, workContext) {
-  return { packet: buildDialoguePacket(normalized, 'followup') };
+async function executeAlign(normalized, metadata, workContext, callText) {
+  return { packet: await buildAdaptiveDialoguePacket(normalized, metadata, 'followup', callText) };
 }
 
 async function executeLock(normalized, metadata, workContext) {
@@ -173,6 +174,7 @@ async function executeDeploy(normalized, metadata, workContext) {
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = normalizeFounderMetaCommandLine(String(text || '').trim());
   const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
+  const callText = typeof metadata.callText === 'function' ? metadata.callText : null;
   const threadKey = buildSlackThreadKey(metadata);
   const gold = classifyGoldContract(normalized, metadata);
 
@@ -365,7 +367,7 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   }
 
   // 7. Route to executor
-  const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext);
+  const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext, callText);
   if (executorResult === null) {
     if (founderRoute) {
       return founderKernelHardFail(
@@ -406,6 +408,48 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const rendered = renderFounderSurface(surfaceType, packet);
 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
+}
+
+async function buildAdaptiveDialoguePacket(normalized, metadata, mode, callText) {
+  const basePacket = buildDialoguePacket(normalized, mode);
+  if (typeof callText !== 'function') return basePacket;
+
+  try {
+    const threadKey = buildSlackThreadKey(metadata);
+    const priorTranscript = getConversationTranscript(threadKey);
+    const generated = await runCosNaturalPartner({
+      callText,
+      userText: normalized,
+      channelContext: null,
+      route: { primary_agent: 'founder_kernel', include_risk: true, urgency: 'normal' },
+      priorTranscript,
+    });
+    const text = String(generated || '').trim();
+    if (!text) return basePacket;
+
+    const lines = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    const firstLine = lines[0] || '';
+    const riskLine =
+      lines.find((line) => /리스크|우선|주의|트레이드오프|가정/.test(line)) ||
+      lines[1] ||
+      '';
+    const questionLine = lines.find((line) => line.includes('?')) || '';
+
+    return {
+      ...basePacket,
+      reframed_problem: firstLine || basePacket.reframed_problem,
+      pushback_point: riskLine || basePacket.pushback_point,
+      next_step: questionLine
+        ? `${questionLine} 이 1개만 확정되면 scope lock 후보안을 제시하겠습니다.`
+        : basePacket.next_step,
+    };
+  } catch {
+    return basePacket;
+  }
 }
 
 // ---------------------------------------------------------------------------

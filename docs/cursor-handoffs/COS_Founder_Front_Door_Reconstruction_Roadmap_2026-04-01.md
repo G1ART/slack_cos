@@ -85,6 +85,8 @@
 | rollback: 끝단 강제 재생성/복구 로직 제거, founder는 앞단 단일 생성(kernel)로만 처리하도록 복귀 | 완료 |
 | 방어 강화: `runInboundAiRouter`에 founder source_type 하드 가드 추가 (호출 체인이 흔들려도 founder는 kernel로 우회) | 완료 |
 | 대화 연속성 보강: `cosDialogueWriter`가 follow-up 입력의 명시 합의((1)(2)(3) 답변)를 슬롯에 반영하고, key 질문/next step을 갱신하도록 수정 | 완료 |
+| 도메인 템플릿 분리: `cosDialogueWriter`의 `pushback/tradeoff/alternatives/scope_cut`를 `calendar/crm/general`로 분기해, 비-캘린더 질문에 캘린더 문구가 섞이지 않도록 고정 | 완료 |
+| founder kernel 적응형 생성: `founderRequestPipeline`의 `discover/align`에서 계약 패킷 기본값을 유지한 채 `runCosNaturalPartner(callText)` 결과로 `reframed/pushback/next_step`를 동적 보강 (모델 활용 복원) | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

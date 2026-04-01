@@ -38,7 +38,7 @@ function recordInboundSlackExchange(metadata, userInboundText, answer) {
   if (plain) recordConversationTurn(key, 'assistant', plain);
 }
 
-export function registerHandlers(slackApp, { handleUserText, formatError }) {
+export function registerHandlers(slackApp, { handleUserText, formatError, callText }) {
   slackApp.event('app_mention', async ({ body, event, say, client }) => {
     try {
       if (shouldSkipEvent(body, event)) {
@@ -94,6 +94,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
           ...meta,
           has_active_intake: isActiveProjectIntake(meta),
           intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+          callText,
         },
         route_label: meta.slack_route_label,
       });
@@ -172,6 +173,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
           ...meta,
           has_active_intake: isActiveProjectIntake(meta),
           intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+          callText,
         },
         route_label: meta.slack_route_label,
       });

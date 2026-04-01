@@ -757,6 +757,7 @@ async function handleUserText(userText, metadata = {}) {
             ...metadata,
             has_active_intake: _intakeActive,
             intake_session: _intakeSess,
+            callText,
           },
           route_label: metadata.slack_route_label,
         });
@@ -813,6 +814,7 @@ async function handleUserText(userText, metadata = {}) {
           ...metadata,
           has_active_intake: _intakeActive,
           intake_session: _intakeSess,
+          callText,
         },
         route_label: metadata.slack_route_label,
       });
@@ -953,7 +955,7 @@ async function handleUserText(userText, metadata = {}) {
   });
 }
 
-registerHandlers(slackApp, { handleUserText, formatError });
+registerHandlers(slackApp, { handleUserText, formatError, callText });
 registerG1CosSlashCommand(slackApp);
 
 (async () => {
