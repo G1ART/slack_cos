@@ -19,7 +19,7 @@
 
 ---
 
-**코드 기준일**: 2026-03-28 (**`ProjectSpecSession`** — 활성 인테이크 스레드는 `projectSpecSession.js`의 `tryFinalizeProjectSpecBuildThread`가 조회/M4/플래너 락에 **양보**하지 않으면 **spec mutation·충분성(`computeSufficiency`)**으로 대표 표면을 고정; 성공 시 `project_spec_execution_ready`·실패 시 `project_spec_refine`. transcript 기반 `start_project_confirmed`/`start_project_refine`은 **인테이크가 비활성**이거나 spec 핸들러가 **null**일 때 기존 경로.) · 원본 2026-03-23  
+**코드 기준일**: 2026-04-01 — **`founderRequestPipeline.js` 3b**는 `runInboundCommandRouter`의 **1b·1c-exec·1c·4·9** 축을 DM/멘션 파이프라인에서도 선행(인테이크 취소·execution spine·spec 빌드 스레드·clean start door·`tryExecutiveSurfaceResponse`). **골드 킥오프·scope lock** 문장은 `tryClassifyStartProject`와 겹칠 때 executive `start_project`에 **선점되지 않도록** 생략. · 2026-03-28 **`ProjectSpecSession`** — 활성 인테이크 스레드는 `projectSpecSession.js`의 `tryFinalizeProjectSpecBuildThread`가 조회/M4/플래너 락에 **양보**하지 않으면 **spec mutation·충분성(`computeSufficiency`)**으로 대표 표면을 고정; 성공 시 `project_spec_execution_ready`·실패 시 `project_spec_refine`. transcript 기반 `start_project_confirmed`/`start_project_refine`은 **인테이크가 비활성**이거나 spec 핸들러가 **null**일 때 기존 경로. · 원본 2026-03-23  
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
@@ -37,7 +37,7 @@
 
 ## 0. 라우팅 순서 (계약)
 
-0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일. **Constitution v1.1:** `app.js`는 레거시 라우터보다 먼저 **`founderRequestPipeline`**을 태우며, 유틸은 gold가 `UNKNOWN`을 `PROJECT_CLARIFICATION`으로 덮은 뒤에도 **`classifyFounderRoutingLock`**(`inboundFounderRoutingLock.js`)이 **`RUNTIME_META` / `META_DEBUG`**로 다시 고정한다(공백·문장부호·인테이크 중 포함). **2026-04-01:** 파이프라인은 **`QUERY_LOOKUP`·`STRUCTURED_COMMAND` 인텐트를 처리하지 않고 `null` 반환** → `runInboundCommandRouter`가 조회·구조화 명령 전담. 대표 경로(DM/멘션)에서 **`runInboundAiRouter`는 함수 입구에서 즉시 차단**. 실행기 미스 시 대표 경로는 **dialogue 계약 폴백**. `app.js`는 **`G1COS_FOUNDER_DOOR` JSON 로그** 및 **`inbound_audit`**(inbound-turn-trace JSONL) 기록.
+0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일. **Constitution v1.1:** `app.js`는 레거시 라우터보다 먼저 **`founderRequestPipeline`**을 태우며, 유틸은 gold가 `UNKNOWN`을 `PROJECT_CLARIFICATION`으로 덮은 뒤에도 **`classifyFounderRoutingLock`**(`inboundFounderRoutingLock.js`)이 **`RUNTIME_META` / `META_DEBUG`**로 다시 고정한다(공백·문장부호·인테이크 중 포함). **2026-04-01:** 파이프라인은 **`QUERY_LOOKUP`·`STRUCTURED_COMMAND` 인텐트를 처리하지 않고 `null` 반환** → `runInboundCommandRouter`가 조회·구조화 명령 전담. **같은 날 1b:** 파이프라인 본문 **3b**에서 인테이크 취소·execution spine·spec 스레드·clean start·대표 표면을 **커맨드 라우터와 같은 순서**로 처리할 수 있으며, 응답은 trace에 `pipeline_response_type` 등을 남긴다. 대표 경로(DM/멘션)에서 **`runInboundAiRouter`는 함수 입구에서 즉시 차단**. 실행기 미스 시 대표 경로는 **dialogue 계약 폴백**. `app.js`는 **`G1COS_FOUNDER_DOOR` JSON 로그** 및 **`inbound_audit`**(inbound-turn-trace JSONL) 기록.
 1. `도움말` / `운영도움말`  
 1b. **`tryFinalizeProjectIntakeCancel`** (`projectIntakeSession.js`) — 첫 줄만 `인테이크 취소`/`cancel intake` 등; 세션 있으면 제거·안내, 없으면 noop 표면.  
 1c-exec. **★ Execution Spine** (`executionSpineRouter.js`) — `hasOpenExecutionOwnership(metadata)` → post-lock 스레드. `tryFinalizeExecutionSpineTurn` 가 progress·escalation·completion·기본(running status)를 처리. **Council/matrix가 final speaker 되지 못함.** AI 라우터에도 동일 guard 존재. (2026-03-29 신규)  
@@ -72,7 +72,8 @@
 
 | 경로 | 역할 |
 |------|------|
-| `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행 → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
+| `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행(3b pre-AI 스파인 포함) → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
+| `src/core/founderRequestPipeline.js` | Constitution 파이프라인: 유틸 → **3b** pre-AI spine → 조회/구조화 `null` → phase·실행기·골드 분기. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
 | `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·**`tryFinalizeProjectSpecBuildThread`**(활성 인테이크)·**`tryFinalizeDecisionShortReply`**·…·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
 | `src/features/projectSpecSession.js` | 인테이크 빌드 스레드: spec mutation·`computeSufficiency`·`project_spec_execution_ready` / `project_spec_refine` |

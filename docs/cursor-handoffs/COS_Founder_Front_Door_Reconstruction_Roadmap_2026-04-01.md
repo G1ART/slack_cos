@@ -15,9 +15,18 @@
 | Founder **deterministic fallback** 안내 문구 정리 | 완료 |
 | Golden path: `계획상세:` → pipeline `null` 회귀 | 완료 |
 
-## 다음 배치(Phase 1b ~ 2) — 우선순위
+## Phase 1b — 파이프라인 pre-AI 스파인 (완료)
 
-1. **파이프라인 커널 확장:** 킥오프·정제·스펙 빌드를 `tryExecutiveSurfaceResponse`/`commandRouter`에서 끌어와 **단일 파일**에서 끝나게 (재작성 지시문 P0).
+| 항목 | 상태 |
+|------|------|
+| `founderRequestPipeline` **3b**: `runInboundCommandRouter`와 동일 축 — 인테이크 취소 → execution spine(소유 스레드) → 활성 인테이크 시 `tryFinalizeProjectSpecBuildThread` → clean `start_project` door → `tryExecutiveSurfaceResponse` | 완료 |
+| 위 결과를 **`buildPipelineExecutivePassthrough`** + `executive_kickoff_surface`로 래핑, trace에 `pipeline_response_type`·`packet_id` 등 병합 | 완료 |
+| **골드 계약 우선:** `start_project` 표면 분류가 **킥오프·scope lock** 골드 문장과 겹치면 executive 선점 생략 (`classifySurfaceIntent` + `classifyGoldContract`) | 완료 |
+| 헌법 골드 스펙 테스트: 턴마다 **인테이크만** 리셋·**실행 run**은 테스트 4→7 연속 시나리오 유지 | 완료 |
+
+## 다음 배치(Phase 2~) — 우선순위
+
+1. ~~파이프라인 커널 확장~~ → **1b 완료**; 잔여: 트레이스 필드 보강·`topLevelRouter` 등 아래 항목.
 2. **`cosDialogueWriter.js` / `hiddenContractExtractor.js`** 도입 (지시문 §4).
 3. **`topLevelRouter`:** sanitizer 축소·hard fail 강화 (지시문 P0).
 4. **트레이스:** 지시문 §8 필드 전부 채우기 (`passed_renderer`, `passed_outbound_validation` 등).
@@ -42,7 +51,7 @@ cd /Users/hyunminkim/g1-cos-slack
 git status
 git pull --rebase origin "$(git branch --show-current)"
 git add -A
-git commit -m "Phase 1a: founder pipeline query delegate, executor fallback, AI router founder block, inbound audit"
+git commit -m "Phase 1b: founder pipeline pre-AI spine, executive passthrough trace, gold vs start_project defer"
 git pull --rebase origin "$(git branch --show-current)"
 git push origin "$(git branch --show-current)"
 ```

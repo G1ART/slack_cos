@@ -7,7 +7,7 @@
 
 // GREP_COS_CONSTITUTION_PIPELINE
 
-import { WorkPhase, FounderIntent, SAFE_FALLBACK_TEXT, Actor } from './founderContracts.js';
+import { WorkPhase, FounderIntent, FounderSurfaceType, SAFE_FALLBACK_TEXT, Actor } from './founderContracts.js';
 import { resolveWorkObject } from './workObjectResolver.js';
 import { resolveWorkPhase } from './workPhaseResolver.js';
 import { classifyFounderIntent } from './founderIntentClassifier.js';
@@ -29,12 +29,19 @@ import {
   buildStatusPacket,
   buildHandoffPacket,
 } from './founderGoldContract.js';
+import { classifySurfaceIntent } from '../features/surfaceIntentClassifier.js';
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
   transitionProjectIntakeStage,
   hasOpenExecutionOwnership,
+  tryFinalizeProjectIntakeCancel,
+  buildProjectIntakeCouncilDeferSurface,
 } from '../features/projectIntakeSession.js';
+import { tryFinalizeProjectSpecBuildThread } from '../features/projectSpecSession.js';
+import { tryFinalizeExecutionSpineTurn } from '../features/executionSpineRouter.js';
+import { resolveCleanStartProjectKickoff } from '../features/startProjectKickoffDoor.js';
+import { tryExecutiveSurfaceResponse } from '../features/tryExecutiveSurfaceResponse.js';
 import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
 import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
 
@@ -129,9 +136,14 @@ async function executeLock(normalized, metadata, workContext) {
 
 async function executeSpine(normalized, metadata, workContext) {
   try {
-    const { tryFinalizeExecutionSpineTurn } = await import('../features/executionSpineRouter.js');
     const result = tryFinalizeExecutionSpineTurn({ trimmed: normalized, metadata });
-    if (result && result !== 'council_defer' && result.text) {
+    if (result === 'council_defer') {
+      return {
+        text: buildProjectIntakeCouncilDeferSurface(metadata),
+        response_type: 'execution_spine_council_defer',
+      };
+    }
+    if (result && result.text) {
       return result;
     }
   } catch { /* fallthrough */ }
@@ -163,8 +175,10 @@ async function executeDeploy(normalized, metadata, workContext) {
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = String(text || '').trim();
+  const rawText = text;
   const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
   const threadKey = buildSlackThreadKey(metadata);
+  const routerCtx = { raw_text: rawText ?? normalized, normalized_text: normalized };
   const gold = classifyGoldContract(normalized, metadata);
 
   // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
@@ -186,6 +200,91 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   // 3. Handle utility intents regardless of work object (version, meta, help)
   if (UTILITY_INTENTS.has(intentResult.intent)) {
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
+  }
+
+  // 3b. Reconstruction Phase 1b — same pre-AI spine as command router (pipeline-first)
+  const surfacePreempt = classifySurfaceIntent(normalized);
+  // `MVP` 등이 start_project 신호와 겹치면 골드 계약(킥오프 대화·scope lock 패킷)이 executive 표면에 밀릴 수 있음
+  const deferExecutiveStartProjectForGold =
+    surfacePreempt?.intent === 'start_project' &&
+    (gold.kind === 'kickoff' || gold.kind === 'scope_lock_request');
+
+  const intakeCancel = tryFinalizeProjectIntakeCancel(normalized, metadata);
+  if (intakeCancel != null) {
+    workContext = resolveWorkObject(normalized, metadata);
+    return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_intake_cancel', {
+      text: intakeCancel.text,
+      blocks: undefined,
+      response_type: intakeCancel.response_type,
+    });
+  }
+
+  if (hasOpenExecutionOwnership(metadata)) {
+    const execEarly = tryFinalizeExecutionSpineTurn({ trimmed: normalized, metadata });
+    if (execEarly && execEarly !== 'council_defer' && execEarly.text) {
+      workContext = resolveWorkObject(normalized, metadata);
+      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_execution_spine', {
+        text: execEarly.text,
+        blocks: execEarly.blocks,
+        response_type: execEarly.response_type,
+      });
+    }
+    if (execEarly === 'council_defer') {
+      workContext = resolveWorkObject(normalized, metadata);
+      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_execution_spine_council_defer', {
+        text: buildProjectIntakeCouncilDeferSurface(metadata),
+        response_type: 'execution_spine_council_defer',
+      });
+    }
+  }
+
+  if (isActiveProjectIntake(metadata)) {
+    const specFin = await tryFinalizeProjectSpecBuildThread({ trimmed: normalized, metadata, routerCtx });
+    if (specFin?.kind === 'council_deferred') {
+      workContext = resolveWorkObject(normalized, metadata);
+      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_spec_council_defer', {
+        text: buildProjectIntakeCouncilDeferSurface(metadata),
+        response_type: 'project_intake_council_deferred',
+      });
+    }
+    if (specFin?.text) {
+      workContext = resolveWorkObject(normalized, metadata);
+      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_project_spec_build', {
+        text: specFin.text,
+        response_type: specFin.response_type || 'project_spec_session',
+      });
+    }
+  }
+
+  if (!deferExecutiveStartProjectForGold) {
+    const kickDoor = resolveCleanStartProjectKickoff(normalized, metadata);
+    if (kickDoor) {
+      const surfaceKick = await tryExecutiveSurfaceResponse(kickDoor.line, metadata, {
+        startProjectToneAck: kickDoor.toneAck,
+      });
+      if (surfaceKick != null && surfaceKick.response_type === 'start_project') {
+        workContext = resolveWorkObject(normalized, metadata);
+        return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_clean_start_project_door', {
+          text: surfaceKick.text,
+          blocks: surfaceKick.blocks,
+          response_type: surfaceKick.response_type,
+          packet_id: surfaceKick.packet_id ?? null,
+          status_packet_id: surfaceKick.status_packet_id ?? null,
+        });
+      }
+    }
+
+    const surfaceHit = await tryExecutiveSurfaceResponse(normalized, metadata);
+    if (surfaceHit != null) {
+      workContext = resolveWorkObject(normalized, metadata);
+      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_executive_surface', {
+        text: surfaceHit.text,
+        blocks: surfaceHit.blocks,
+        response_type: surfaceHit.response_type,
+        packet_id: surfaceHit.packet_id ?? null,
+        status_packet_id: surfaceHit.status_packet_id ?? null,
+      });
+    }
   }
 
   // 구조화 조회·명령은 `runInboundCommandRouter` 전용 (파이프라인이 대화로 삼키지 않음)
@@ -330,6 +429,46 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
 }
 
 // ---------------------------------------------------------------------------
+// Phase 1b — executive/spec/spine outcomes as pipeline results (no command-router dependency)
+// ---------------------------------------------------------------------------
+
+function buildPipelineExecutivePassthrough(
+  metadata,
+  workContext,
+  intentResult,
+  route_label,
+  phaseSource,
+  { text, blocks, response_type, packet_id, status_packet_id },
+) {
+  const policy = {
+    ...evaluatePolicy({
+      actor: Actor.FOUNDER,
+      work_object_type: workContext.primary_type,
+      work_phase: WorkPhase.ALIGN,
+      intent_signal: intentResult.intent,
+      metadata,
+    }),
+    required_surface_type: FounderSurfaceType.EXECUTIVE_KICKOFF,
+  };
+  const rendered = renderFounderSurface(FounderSurfaceType.EXECUTIVE_KICKOFF, { text, blocks });
+  /** @type {Record<string, unknown>} */
+  const extras = { pipeline_response_type: response_type };
+  if (packet_id != null) extras.packet_id = packet_id;
+  if (status_packet_id != null) extras.status_packet_id = status_packet_id;
+  return buildResult(
+    rendered,
+    {
+      workContext,
+      phaseResult: { phase: WorkPhase.ALIGN, phase_source: phaseSource, confidence: 1 },
+      intentResult,
+      policy,
+      route_label,
+    },
+    extras,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Founder kernel fallback — reconstruction P0: never return null for natural-language founder turns
 // ---------------------------------------------------------------------------
 
@@ -404,7 +543,7 @@ function handleUtilityIntent(intentResult, normalized, metadata, workContext, ro
 // Result builder
 // ---------------------------------------------------------------------------
 
-function buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label }) {
+function buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label }, traceExtras = {}) {
   return {
     text: rendered.text,
     blocks: rendered.blocks,
@@ -425,6 +564,7 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
         phaseResult.phase_source === 'founder_executor_miss_fallback' ||
         phaseResult.phase_source === 'founder_unhandled_phase_fallback' ||
         false,
+      ...traceExtras,
     },
   };
 }

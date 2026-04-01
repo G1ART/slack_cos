@@ -38,6 +38,7 @@ clearExecutionRunsForTest();
 
 // Test 1 — New project kickoff
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.',
     metadata: meta,
@@ -50,6 +51,7 @@ clearExecutionRunsForTest();
 
 // Test 2 — Follow-up narrowing
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '갤러리와 미술학원을 겸하는 공간의 내부 멤버, 나아가 링크를 받은 외부 손님들까지 공동으로 관리할 수 있는 캘린더야. 벤치마킹을 통해 필수 기능, 부가 기능, 구현 아키텍처를 마련해줘.',
     metadata: meta,
@@ -62,6 +64,7 @@ clearExecutionRunsForTest();
 
 // Test 3 — Pushback / realism
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '외부 손님도 수정 권한까지 주고 싶고, 동시에 운영 리스크는 거의 없어야 해.',
     metadata: meta,
@@ -74,6 +77,7 @@ clearExecutionRunsForTest();
 
 // Test 4 — Scope lock request
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '좋아. 그럼 이 방향으로 MVP 범위를 잠그자.',
     metadata: meta,
@@ -90,6 +94,7 @@ clearExecutionRunsForTest();
 
 // Test 5 — Meta debug
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: 'responder surface sanitize 한 줄로만 말해.',
     metadata: meta,
@@ -102,6 +107,7 @@ clearExecutionRunsForTest();
 
 // Test 6 — Status
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '지금 어디까지 됐어?',
     metadata: meta,
@@ -114,6 +120,7 @@ clearExecutionRunsForTest();
 
 // Test 7 — Approval
 {
+  clearProjectIntakeSessionsForTest();
   const r = await founderRequestPipeline({
     text: '이 방향으로 실행 넘겨.',
     metadata: meta,

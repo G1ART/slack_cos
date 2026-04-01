@@ -6,6 +6,8 @@
 
 **격리 (2026-03-28)**: fixture마다 `clearConversationBuffer`와 함께 **`clearProjectIntakeSessionsForTest`**를 호출한다. (`slack_metadata`가 비어 있으면 스레드 키가 `ch:no_channel:t:root`로 겹쳐, 이전 예제의 활성 인테이크가 다음 예제를 오염시키는 것을 방지.)
 
+**헌법 골드 스펙 (2026-04-01)**: `scripts/tests-constitutional/test-founder-gold-spec-v1.mjs`는 **턴마다 `clearProjectIntakeSessionsForTest`만** 호출해 파이프라인 3b의 spec 스레드 선점을 막고, **테스트 4 scope lock → 테스트 7 승인**까지 이어지는 **`clearExecutionRunsForTest`는 파일 최상단 한 번만** 유지한다.
+
 ---
 
 ## 1. 추가된 fixture 목록
