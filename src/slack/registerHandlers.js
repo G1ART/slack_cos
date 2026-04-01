@@ -16,9 +16,7 @@ import { appendWorkspaceQueueItem, formatWorkspaceQueueSaved } from '../features
 import { getChannelContext } from '../storage/channelContext.js';
 import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
-import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
-import { classifyFounderRoutingLock, formatRuntimeMetaSurfaceText } from '../features/inboundFounderRoutingLock.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
 
@@ -78,18 +76,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         return;
       }
 
-      const routingLock = classifyFounderRoutingLock(combinedText);
-      if (routingLock?.kind === 'version') {
-        await sendFounderResponse({
-          say,
-          thread_ts: event.ts,
-          rendered_text: formatRuntimeMetaSurfaceText(),
-          surface_type: 'runtime_meta_surface',
-          trace: { route_label: 'mention_ai_router', responder: 'founder_kernel' },
-        });
-        return;
-      }
-
       const meta = {
         source_type: 'channel_mention',
         slack_route_label: 'mention_ai_router',
@@ -101,20 +87,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_files: files.length > 0,
         file_count: files.length,
       };
-      const founderPipelineResult = await founderRequestPipeline({
-        text: combinedText,
-        metadata: {
-          ...meta,
-          has_active_intake: isActiveProjectIntake(meta),
-          intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
-          callText,
-        },
-        route_label: meta.slack_route_label,
+      const answer = await handleUserText(combinedText, {
+        ...meta,
+        callText,
+        has_active_intake: isActiveProjectIntake(meta),
+        intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      const answer = founderPipelineResult ?? {
-        text: '[COS] 현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 정렬부터 이어가겠습니다.',
-        surface_type: 'safe_fallback_surface',
-      };
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);
@@ -169,18 +147,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const combinedText = (dmText + fileContext).trim();
       if (!combinedText) return;
 
-      const routingLock = classifyFounderRoutingLock(combinedText);
-      if (routingLock?.kind === 'version') {
-        await sendFounderResponse({
-          client,
-          channel: event.channel,
-          rendered_text: formatRuntimeMetaSurfaceText(),
-          surface_type: 'runtime_meta_surface',
-          trace: { route_label: 'dm_ai_router', responder: 'founder_kernel' },
-        });
-        return;
-      }
-
       const meta = {
         source_type: 'direct_message',
         slack_route_label: 'dm_ai_router',
@@ -192,20 +158,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_files: files.length > 0,
         file_count: files.length,
       };
-      const founderPipelineResult = await founderRequestPipeline({
-        text: combinedText,
-        metadata: {
-          ...meta,
-          has_active_intake: isActiveProjectIntake(meta),
-          intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
-          callText,
-        },
-        route_label: meta.slack_route_label,
+      const answer = await handleUserText(combinedText, {
+        ...meta,
+        callText,
+        has_active_intake: isActiveProjectIntake(meta),
+        intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      const answer = founderPipelineResult ?? {
-        text: '[COS] 현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 정렬부터 이어가겠습니다.',
-        surface_type: 'safe_fallback_surface',
-      };
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);

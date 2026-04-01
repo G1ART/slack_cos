@@ -9,6 +9,11 @@
 
 import { FOUNDER_SURFACE_VALUES, SAFE_FALLBACK_TEXT } from './founderContracts.js';
 import { sanitizeFounderOutput, founderHardBlockRemaining, FOUNDER_HARD_BLOCK_FALLBACK } from '../features/founderSurfaceGuard.js';
+import { looksLikeCouncilSynthesisBody } from '../features/topLevelRouter.js';
+
+/** Council 메모 형태만 감지된 경우(내부 마커 잔존과 구분) — 완곡 안내 */
+const COUNCIL_SHAPE_SOFT_FALLBACK =
+  '[COS] 답변이 예전 다각 검토 메모 형식으로 생성되어 보내지 않았습니다. 같은 내용을 **짧은 평문**으로만 다시 보내 주세요.';
 
 const INTERNAL_MARKER_SUBSTRINGS = [
   '종합 추천안',
@@ -88,6 +93,20 @@ export async function sendFounderResponse(opts) {
 
   // 2a. Sanitize: strip legacy Council sections/markers (same guard as finalizeSlackResponse)
   text = sanitizeFounderOutput(text, { responder: responder_kind });
+
+  // 2a2. LLM이 헤더만 지우고 본문에 다각 메모 형태를 남긴 경우 (finalize와 동일 휴리스틱)
+  if (looksLikeCouncilSynthesisBody(text)) {
+    emitTrace({
+      intent,
+      surface_type,
+      responder_kind,
+      error: 'council_shape_heuristic_after_sanitize',
+      preview: text.slice(0, 200),
+      ...trace,
+    });
+    text = COUNCIL_SHAPE_SOFT_FALLBACK;
+    hardFailReason = hardFailReason || 'council_shape_blocked';
+  }
 
   // 2b. Hard block: if markers survived sanitization, replace entirely
   if (containsInternalMarkers(text) || founderHardBlockRemaining(text)) {

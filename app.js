@@ -756,8 +756,9 @@ async function handleUserText(userText, metadata = {}) {
   console.info(`[G1COS ROUTE BEGIN] sha=${_bi.release_sha_short} thread_key=${_threadKey} source=${metadata.source_type || 'unknown'} channel=${metadata.channel || ''} user=${metadata.user || ''} active_intake=${_intakeActive} text="${inputNorm.slice(0, 120)}"`);
 
   return runInboundTurnTraceScope(metadata, inputNorm, async () => {
+    const ct = typeof metadata.callText === 'function' ? metadata.callText : callText;
     const founderLock = classifyFounderRoutingLock(inputNorm);
-    if (founderLock?.kind === 'version') {
+    if (founderLock?.kind === 'version' && !founderRoute) {
       mergeInboundAudit({
         routing_exit: 'runtime_meta_lock',
         founder_route: isFounderFacingRoute(metadata),
@@ -793,7 +794,7 @@ async function handleUserText(userText, metadata = {}) {
             ...metadata,
             has_active_intake: _intakeActive,
             intake_session: _intakeSess,
-            callText,
+            callText: ct,
           },
           route_label: metadata.slack_route_label,
         });
@@ -850,7 +851,7 @@ async function handleUserText(userText, metadata = {}) {
           ...metadata,
           has_active_intake: _intakeActive,
           intake_session: _intakeSess,
-          callText,
+          callText: ct,
         },
         route_label: metadata.slack_route_label,
       });

@@ -791,10 +791,14 @@ try {
 try {
   const { sanitizeFounderOutput } = await import('../src/features/founderSurfaceGuard.js');
 
-  // Even if somehow old-format council text appears, sanitizer catches it
+  // Even if somehow old-format council text appears, sanitizer catches it.
+  // Valid founder copy must sit *before* a blocked header: `stripBlockedSection` eats
+  // non-header lines following `한 줄 요약` as legacy Council body (by design).
   const legacyText = [
-    '한 줄 요약',
     '캘린더 앱 구축',
+    '',
+    '한 줄 요약',
+    '(구형 Council 본문으로 간주되어 제거되는 줄)',
     '',
     '내부 처리 정보',
     '- 협의 모드: matrix_cell',

@@ -32,6 +32,8 @@
 보강10: founder kernel은 scope-lock-only로 동작한다. founder 입력에서 조회/구조화 의도는 command-router로 위임하지 않고 락인 대화 표면으로 환원한다. lock 확정 시 `createExecutionRun` 직후 `ensureExecutionRunDispatched`를 호출해 오케스트레이션을 즉시 시작하며, post-lock 응답은 `진행중/크리티컬 결정/완료` 상태 요약 중심으로 반환한다.
 보강11: AI router는 **`runCouncilMode` 호출 경로를 코드에서 제거**했다. `협의모드:` 등 구 접두는 **`responder: partner_surface`**, **`response_type: deliberation_prefix_removed`** 안내로만 종료한다(본문에 “Council” 단어 없음). `classifyInboundResponderPreview` 도 동일 접두에 대해 `council` 이 아니라 `partner_surface` 를 반환한다. AI router 진입 시 `버전` 락은 `classifyFounderRoutingLock` 으로 선처리해 `runtime_meta_surface` 를 즉시 반환한다.
 보강12: **Founder 면**(DM·멘션)에서 골드 분기가 `scope_lock_request`·`approval`·`deploy`·`status`가 아니고, **활성 실행 런·인테이크 소유(`hasOpenExecutionOwnership`)가 없을 때** 파이프라인이 **대화 계약 패킷·phase 실행기를 건너뛰고** `runCosNaturalPartner(callText)` 한 번으로 **`partner_natural_surface`** 직답한다. 끄기: `COS_FOUNDER_DIRECT_CHAT=0`. `registerHandlers`·`app.js` 반환은 **`surface_type`을 trace와 동일하게** 슬랙 게이트에 넘긴다.
+보강13: LLM이 구형 Council 메모(「한 줄 요약」~「내부 처리 정보」)를 생성하면 `founderSurfaceGuard`가 **`한 줄 요약` 섹션까지 스트립**하고, `partner_natural` 경로는 **1회 재생성(평문만 지시)** 후에도 `looksLikeCouncilSynthesisBody`·`founderHardBlockRemaining`이면 `sendFounderResponse`가 **완곡 폴백 문구**로 대체한다(`council_shape_heuristic_after_sanitize`).
+보강14 (2026-04-01): 창업자 DM/멘션에서 `metadata.callText`가 있고 `COS_FOUNDER_DIRECT_CHAT` 기본(on)이면 `founderRequestPipeline` 입구에서 **골드·의도 분류·유틸 단축·조회/구조화 접두 분기 없이** `runCosNaturalPartner` 한 번(`partner_natural_surface`, `runFounderNaturalPartnerTurn`)만 수행한다. `app.js`의 `버전` 라우팅 락 선처리는 **창업자 경로가 아닐 때만** 적용한다. `registerHandlers` DM/멘션은 **`handleUserText`**로 통일해 트레이스·버퍼·파이프라인 순서를 `app.js`와 맞춘다. `COS_FOUNDER_DIRECT_CHAT=0` 또는 테스트처럼 `callText` 없음일 때만 기존 헌법 파이프라인(유틸·골드·페이즈)이 founder에 적용된다. `runInboundAiRouter` founder 가드는 `founderRequestPipeline`에 `callText`를 넘긴다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
@@ -85,7 +87,7 @@
 | 경로 | 역할 |
 |------|------|
 | `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행(3b pre-AI 스파인 포함) → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
-| `src/core/founderRequestPipeline.js` | Constitution 파이프라인: 유틸 → 조회/구조화 founder 락인 → (보강12) **partner_natural** 직답 또는 phase·실행기·골드 분기. |
+| `src/core/founderRequestPipeline.js` | 창업자+`callText`+직답 on → **자연어 단일 경로**(`runFounderNaturalPartnerTurn`). 그 외(비창업자·테스트·`COS_FOUNDER_DIRECT_CHAT=0`)는 Constitution: 유틸 → 조회/구조화 `null` → phase·실행기·골드. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
 | `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·**`tryFinalizeProjectSpecBuildThread`**(활성 인테이크)·**`tryFinalizeDecisionShortReply`**·…·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
 | `src/features/projectSpecSession.js` | 인테이크 빌드 스레드: spec mutation·`computeSufficiency`·`project_spec_execution_ready` / `project_spec_refine` |

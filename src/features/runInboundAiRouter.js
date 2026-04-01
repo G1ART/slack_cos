@@ -289,7 +289,7 @@ export async function runInboundAiRouter(ctx) {
   if (founderRoute) {
     const kernel = await founderRequestPipeline({
       text: trimmed,
-      metadata,
+      metadata: { ...metadata, callText },
       route_label: metadata?.slack_route_label,
     });
     if (kernel?.text) {

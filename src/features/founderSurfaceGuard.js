@@ -34,6 +34,8 @@ export const OLD_STYLE_COUNCIL_SECTION_HEADERS = [
   '종합 추천안',
   '핵심 리스크',
   '승인 대기열',
+  /** LLM이 자주 쓰는 구형 Council 첫 헤더 — 본문까지 함께 제거 */
+  '한 줄 요약',
 ];
 
 const BLOCKED_SECTION_HEADERS = [

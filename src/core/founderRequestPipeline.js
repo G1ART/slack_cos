@@ -43,6 +43,8 @@ import { createExecutionPacket, createExecutionRun } from '../features/execution
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { looksLikeCouncilSynthesisBody } from '../features/topLevelRouter.js';
+import { founderHardBlockRemaining } from '../features/founderSurfaceGuard.js';
 
 /**
  * Utility intents the pipeline handles regardless of work object state.
@@ -75,6 +77,9 @@ function isFounderDirectNaturalChatEnabled() {
   const v = String(process.env.COS_FOUNDER_DIRECT_CHAT ?? '1').trim().toLowerCase();
   return v !== '0' && v !== 'false' && v !== 'no' && v !== 'off';
 }
+
+const PARTNER_COUNCIL_RETRY_HINT =
+  '\n\n[시스템 — COS 창업자 면]\n반드시 **평문 대화**만(2~8문장 또는 짧은 목록). "한 줄 요약/종합 추천안/페르소나별/대표 결정/내부 처리 정보/협의 모드" 같은 제목·페르소나 라벨·내부 메타는 금지.';
 
 // ---------------------------------------------------------------------------
 // Executor — delegates to existing code by phase
@@ -206,6 +211,82 @@ async function executeDeploy(normalized, metadata, workContext) {
   };
 }
 
+/**
+ * 창업자 면(DM/멘션) + LLM 호출 가능 시 **유일한** 표면: 키워드·골드·접두·의도 분류 없이 자연어 1패스.
+ * (테스트·가드 경로는 `callText` 없음 또는 `COS_FOUNDER_DIRECT_CHAT=0` 일 때만 아래 헌법 파이프라인으로 내려감)
+ */
+async function runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey) {
+  const workContext = resolveWorkObject(normalized, metadata);
+  const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
+  const intentResult = {
+    intent: FounderIntent.UNKNOWN_EXPLORATORY,
+    confidence: 0,
+    signals: ['founder_natural_only'],
+  };
+  const policyChat = evaluatePolicy({
+    actor: Actor.FOUNDER,
+    work_object_type: workContext.primary_type,
+    work_phase: phaseProbe.phase,
+    intent_signal: intentResult.intent,
+    metadata,
+  });
+  try {
+    const priorTranscript = getConversationTranscript(threadKey);
+    let plain = '';
+    const generated = await runCosNaturalPartner({
+      callText,
+      userText: normalized,
+      channelContext: null,
+      route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+      priorTranscript,
+    });
+    plain = String(generated || '').trim();
+    if (
+      plain &&
+      (looksLikeCouncilSynthesisBody(plain) || founderHardBlockRemaining(plain))
+    ) {
+      const retryGen = await runCosNaturalPartner({
+        callText,
+        userText: `${normalized}${PARTNER_COUNCIL_RETRY_HINT}`,
+        channelContext: null,
+        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+        priorTranscript,
+      });
+      plain = String(retryGen || '').trim();
+    }
+    if (plain) {
+      const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, { text: plain });
+      return buildResult(
+        rendered,
+        {
+          workContext,
+          phaseResult: { ...phaseProbe, phase_source: 'founder_natural_only_surface' },
+          intentResult,
+          policy: policyChat,
+          route_label,
+        },
+        { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true },
+      );
+    }
+  } catch (e) {
+    console.error('[FOUNDER_NATURAL_ONLY]', e?.message || e);
+  }
+  const fallback = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, {
+    text: '[COS] 지금은 응답을 생성하지 못했습니다. 잠시 후 다시 보내 주세요.',
+  });
+  return buildResult(
+    fallback,
+    {
+      workContext,
+      phaseResult: { ...phaseProbe, phase_source: 'founder_natural_only_error' },
+      intentResult,
+      policy: policyChat,
+      route_label,
+    },
+    { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Pipeline entry point
 // ---------------------------------------------------------------------------
@@ -227,7 +308,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     channel.startsWith('D');
   const callText = typeof metadata.callText === 'function' ? metadata.callText : null;
   const threadKey = buildSlackThreadKey(metadata);
-  const gold = classifyGoldContract(normalized, metadata);
 
   if (metadata.founder_hard_recover === true) {
     const recoveredPacket = buildDialoguePacket(normalized, isActiveProjectIntake(metadata) ? 'followup' : 'kickoff');
@@ -263,12 +343,24 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     };
   }
 
+  if (
+    founderRoute &&
+    isFounderDirectNaturalChatEnabled() &&
+    typeof callText === 'function'
+  ) {
+    return await runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey);
+  }
+
   // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
+  let gold = classifyGoldContract(normalized, metadata);
   let workContext = resolveWorkObject(normalized, metadata);
 
-  // 2. Intent classifier — supplementary signal
+  // 2. Intent classifier — supplementary signal (창업자 면은 위에서 자연어 단일 경로로 이미 처리됨)
   const intentResult = classifyFounderIntent(normalized, metadata);
-  if (gold.intent && (intentResult.intent === FounderIntent.UNKNOWN || intentResult.intent === FounderIntent.UNKNOWN_EXPLORATORY)) {
+  if (
+    gold.intent != null &&
+    (intentResult.intent === FounderIntent.UNKNOWN || intentResult.intent === FounderIntent.UNKNOWN_EXPLORATORY)
+  ) {
     intentResult.intent = gold.intent;
   }
 
@@ -284,7 +376,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
   }
 
-  // 구조화 조회·명령은 `runInboundCommandRouter` 전용 (파이프라인이 대화로 삼키지 않음)
   if (
     intentResult.intent === FounderIntent.QUERY_LOOKUP ||
     intentResult.intent === FounderIntent.STRUCTURED_COMMAND
@@ -296,7 +387,7 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
         workContext,
         intentResult,
         route_label,
-        '현재 COS 대화 레이어는 스코프 락인 전용입니다. 범위/제약/성공기준 잠금에만 집중합니다.',
+        '이 창에서는 특정 문법으로 맞출 필요 없습니다. 평문으로 이어가 주시면 COS가 맞춰 응답합니다.',
       );
     }
     return null;
@@ -335,54 +426,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
       }),
       route_label,
     });
-  }
-
-  // 3b. Founder 면 — 결정적 패킷이 아니면 **대화 계약/페이즈 실행기 없이** GPT 한 번에 직답
-  // (짧은 유틸·버전 등은 위 utility 분기, 구조화 명령은 위에서 차단)
-  const activeExecutionRun =
-    Boolean(workContext.run) &&
-    !['completed', 'cancelled'].includes(String(workContext.run?.status || '').toLowerCase());
-
-  if (
-    founderRoute &&
-    typeof callText === 'function' &&
-    isFounderDirectNaturalChatEnabled() &&
-    !['scope_lock_request', 'approval', 'deploy', 'status'].includes(gold.kind) &&
-    !hasOpenExecutionOwnership(metadata) &&
-    !activeExecutionRun
-  ) {
-    const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
-    const policyChat = evaluatePolicy({
-      actor: Actor.FOUNDER,
-      work_object_type: workContext.primary_type,
-      work_phase: phaseProbe.phase,
-      intent_signal: intentResult.intent,
-      metadata,
-    });
-    try {
-      const threadKey = buildSlackThreadKey(metadata);
-      const priorTranscript = getConversationTranscript(threadKey);
-      const generated = await runCosNaturalPartner({
-        callText,
-        userText: normalized,
-        channelContext: null,
-        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
-        priorTranscript,
-      });
-      const plain = String(generated || '').trim();
-      if (plain) {
-        const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, { text: plain });
-        return buildResult(rendered, {
-          workContext,
-          phaseResult: { ...phaseProbe, phase_source: 'founder_direct_natural_chat' },
-          intentResult,
-          policy: policyChat,
-          route_label,
-        }, { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true });
-      }
-    } catch (e) {
-      console.error('[FOUNDER_DIRECT_NATURAL_CHAT]', e?.message || e);
-    }
   }
 
   // 4. Work Phase Resolver
