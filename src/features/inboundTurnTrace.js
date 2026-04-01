@@ -82,7 +82,7 @@ function buildRecord(store, { status, error, duration_ms }) {
       ? fin.command_name || 'executive_surface'
       : null;
 
-  return {
+  const base = {
     turn_id: store.turn_id,
     thread_key: store.thread_key,
     channel_id: store.channel_id,
@@ -104,6 +104,10 @@ function buildRecord(store, { status, error, duration_ms }) {
     duration_ms,
     error: error ?? null,
   };
+  if (store.inbound_audit && typeof store.inbound_audit === 'object') {
+    base.inbound_audit = store.inbound_audit;
+  }
+  return base;
 }
 
 export async function appendInboundTurnTraceRecord(record) {

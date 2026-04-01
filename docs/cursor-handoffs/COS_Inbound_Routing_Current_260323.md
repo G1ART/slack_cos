@@ -37,7 +37,7 @@
 
 ## 0. 라우팅 순서 (계약)
 
-0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일.
+0. **`버전` / `version` / `runtime status`** → SHA·부팅 시각·런타임 모드·인테이크 퍼시스트 상태. `/g1cos version` 도 동일. **Constitution v1.1:** `app.js`는 레거시 라우터보다 먼저 **`founderRequestPipeline`**을 태우며, 유틸은 gold가 `UNKNOWN`을 `PROJECT_CLARIFICATION`으로 덮은 뒤에도 **`classifyFounderRoutingLock`**(`inboundFounderRoutingLock.js`)이 **`RUNTIME_META` / `META_DEBUG`**로 다시 고정한다(공백·문장부호·인테이크 중 포함). **2026-04-01:** 파이프라인은 **`QUERY_LOOKUP`·`STRUCTURED_COMMAND` 인텐트를 처리하지 않고 `null` 반환** → `runInboundCommandRouter`가 조회·구조화 명령 전담. 대표 경로(DM/멘션)에서 **`runInboundAiRouter`는 함수 입구에서 즉시 차단**. 실행기 미스 시 대표 경로는 **dialogue 계약 폴백**. `app.js`는 **`G1COS_FOUNDER_DOOR` JSON 로그** 및 **`inbound_audit`**(inbound-turn-trace JSONL) 기록.
 1. `도움말` / `운영도움말`  
 1b. **`tryFinalizeProjectIntakeCancel`** (`projectIntakeSession.js`) — 첫 줄만 `인테이크 취소`/`cancel intake` 등; 세션 있으면 제거·안내, 없으면 noop 표면.  
 1c-exec. **★ Execution Spine** (`executionSpineRouter.js`) — `hasOpenExecutionOwnership(metadata)` → post-lock 스레드. `tryFinalizeExecutionSpineTurn` 가 progress·escalation·completion·기본(running status)를 처리. **Council/matrix가 final speaker 되지 못함.** AI 라우터에도 동일 guard 존재. (2026-03-29 신규)  
@@ -72,7 +72,7 @@
 
 | 경로 | 역할 |
 |------|------|
-| `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope`(JSONL lineage, 행에 **`response_type`**) 안에서 **`runInboundCommandRouter`** → 미스 시 **`runInboundAiRouter`**. |
+| `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행 → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
 | `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·**`tryFinalizeProjectSpecBuildThread`**(활성 인테이크)·**`tryFinalizeDecisionShortReply`**·…·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
 | `src/features/projectSpecSession.js` | 인테이크 빌드 스레드: spec mutation·`computeSufficiency`·`project_spec_execution_ready` / `project_spec_refine` |

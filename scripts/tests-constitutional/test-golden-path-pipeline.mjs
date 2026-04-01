@@ -98,5 +98,31 @@ function assert(label, condition) {
   assert('op_help_trace_surface', r?.trace?.surface_type === 'help_surface');
 }
 
+// Test 10: 버전 토큰 주변 공백·문장부호 + 인테이크 중에도 runtime meta (gold 덮어쓰기 방지)
+{
+  const r = await founderRequestPipeline({
+    text: ' 버전。',
+    metadata: { has_active_intake: true, intake_session: { stage: 'align' } },
+  });
+  assert('version_trim_punct_not_null', r !== null);
+  assert('version_trim_punct_surface', r?.trace?.surface_type === 'runtime_meta_surface');
+}
+
+// Test 11: 질문 힌트 없이 responder만 있어도 meta_debug (인테이크 중)
+{
+  const r = await founderRequestPipeline({
+    text: 'COS responder',
+    metadata: { has_active_intake: true, intake_session: { stage: 'align' } },
+  });
+  assert('responder_keyword_meta_not_null', r !== null);
+  assert('responder_keyword_meta_surface', r?.trace?.surface_type === 'meta_debug_surface');
+}
+
+// Test 12: 구조화 조회 접두는 파이프라인이 삼키지 않고 null → command router
+{
+  const r = await founderRequestPipeline({ text: '계획상세: PLN-UNIT-TEST', metadata: {} });
+  assert('query_prefix_delegates_null', r === null);
+}
+
 console.log(`\ntest-golden-path-pipeline: passed: ${passed} failed: ${failed}`);
 if (failed > 0) process.exit(1);

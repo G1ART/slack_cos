@@ -63,6 +63,8 @@ These **do not** override Directive, Alignment, or Inbound Routing. Use for hist
 | `COS_MVP_Definition_Owner_2026-03-27.md` | **Owner MVP loop (KO, 4 items)** — product outcome definition cited from Directive §1b; does **not** override Alignment build-order |
 | `COS_Execution_Worker_Layer_CloudFirst_v1.md` | **Cloud-first worker** — COS vs L2 릴레이 vs Cursor Cloud/GitHub worker · 대표/엔지니어링 액션 (does **not** override Inbound Routing) |
 | `COS_Agent_Bridge_Outbound_v0.md` | `COS_AGENT_BRIDGE_*` 페이로드·인바운드 `ci-proof` 요약 |
+| `Slack_COS_Reconstruction_File_by_File_Patch_Priority_2026-04-01.md` | **Founder front door 재건축 실행서** — 파일 우선순위·P0/P1·gold 머지 게이트·트레이스 필드. Directive/Alignment/Memo와 충돌 시 **헌법·빌드 순서가 이김**; 재건축 PR의 구현 순서·수용 기준은 본 문서를 따른다. |
+| `COS_Founder_Front_Door_Reconstruction_Roadmap_2026-04-01.md` | **재건축 Phase 1a 완료 로그 + 다음 배치(1b~2)** — 야간 패치 요약·관측 신호·Owner actions. |
 
 ---
 

@@ -31,28 +31,28 @@ function assert(label, condition) {
   assert('founder_allowed', p.allow === true);
 }
 
-// Test 3: Discover phase → discovery_surface
+// Test 3: Discover phase → dialogue_surface (policyEngine PHASE_SURFACE_MAP)
 {
   const p = evaluatePolicy({ work_phase: WorkPhase.DISCOVER });
-  assert('discover_surface', p.required_surface_type === 'discovery_surface');
+  assert('discover_surface', p.required_surface_type === 'dialogue_surface');
 }
 
-// Test 4: Align phase → executive_kickoff_surface
+// Test 4: Align phase → dialogue_surface
 {
   const p = evaluatePolicy({ work_phase: WorkPhase.ALIGN });
-  assert('align_surface', p.required_surface_type === 'executive_kickoff_surface');
+  assert('align_surface', p.required_surface_type === 'dialogue_surface');
 }
 
-// Test 5: Execute phase → run_state_surface
+// Test 5: Execute phase → status_report_surface
 {
   const p = evaluatePolicy({ work_phase: WorkPhase.EXECUTE });
-  assert('execute_surface', p.required_surface_type === 'run_state_surface');
+  assert('execute_surface', p.required_surface_type === 'status_report_surface');
 }
 
-// Test 6: Approve phase → approval_packet_surface
+// Test 6: Approve phase → orchestration_handoff_surface
 {
   const p = evaluatePolicy({ work_phase: WorkPhase.APPROVE });
-  assert('approve_surface', p.required_surface_type === 'approval_packet_surface');
+  assert('approve_surface', p.required_surface_type === 'orchestration_handoff_surface');
 }
 
 // Test 7: Deploy phase → deploy_packet_surface

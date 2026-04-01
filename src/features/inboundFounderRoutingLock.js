@@ -11,14 +11,9 @@ import { getBuildInfo } from '../runtime/buildInfo.js';
 
 export const KICKOFF_TEST_PHRASE = '오늘부터 테스트용 작은 프로젝트 하나 시작하자';
 
+/** 파이프라인 유틸 강제와 동일 계열 키워드(질문형 없이도 meta_debug 락) */
 const META_DEBUG_RE =
-  /(responder|surface|sanitize|finalizeSlackResponse|founderSurfaceGuard|topLevelRouter|씽크|싱크)/i;
-const META_QUESTION_HINT =
-  /(메타|어떻게|무엇|동작|라우팅|설명|why|how|which\s+path|뭐(야|예요|임|에요)|알려|질문)/i;
-const META_QUESTION_MARKERS = /[?？]|입니까|인가요|되나요|됩니까|일까요/;
-/** "한 줄로만 말해" 등 지시형 메타 요청 */
-const META_BRIEF_DIRECTIVE =
-  /한\s*줄|줄로\s*만|짧게|말해\s*줘|말해$|만\s*말해|요약\s*만|답\s*만/u;
+  /(responder|surface|sanitize|finalizeSlackResponse|founderSurfaceGuard|topLevelRouter|씽크|싱크|router|라우터|라우팅|pipeline|파이프라인)/i;
 
 /**
  * @param {string} trimmed normalizeSlackUserPayload 결과
@@ -28,14 +23,15 @@ export function classifyFounderRoutingLock(trimmed) {
   const t = String(trimmed || '').trim();
   if (!t) return null;
 
-  if (/^(?:버전|version|runtime\s*status)$/i.test(t)) {
+  if (
+    /^\s*버전\s*[。.!！…]*\s*$/u.test(t) ||
+    /^\s*version\s*[!.…]*\s*$/i.test(t) ||
+    /^\s*runtime\s*status\s*[!.…]*\s*$/i.test(t)
+  ) {
     return { kind: 'version' };
   }
 
-  if (
-    META_DEBUG_RE.test(t) &&
-    (META_QUESTION_HINT.test(t) || META_QUESTION_MARKERS.test(t) || META_BRIEF_DIRECTIVE.test(t))
-  ) {
+  if (META_DEBUG_RE.test(t)) {
     return { kind: 'meta_debug' };
   }
 

@@ -16,7 +16,11 @@ import { resolveSurfaceType } from './founderSurfaceRegistry.js';
 import { assemblePacket, makeUtilityPacket } from './packetAssembler.js';
 import { renderFounderSurface } from './founderRenderer.js';
 
-import { formatRuntimeMetaSurfaceText, formatMetaDebugSurfaceText } from '../features/inboundFounderRoutingLock.js';
+import {
+  classifyFounderRoutingLock,
+  formatRuntimeMetaSurfaceText,
+  formatMetaDebugSurfaceText,
+} from '../features/inboundFounderRoutingLock.js';
 import { formatExecutiveHelpText } from '../features/executiveSurfaceHelp.js';
 import {
   classifyGoldContract,
@@ -172,9 +176,24 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     intentResult.intent = gold.intent;
   }
 
+  const routeLock = classifyFounderRoutingLock(normalized);
+  if (routeLock?.kind === 'version') {
+    intentResult.intent = FounderIntent.RUNTIME_META;
+  } else if (routeLock?.kind === 'meta_debug') {
+    intentResult.intent = FounderIntent.META_DEBUG;
+  }
+
   // 3. Handle utility intents regardless of work object (version, meta, help)
   if (UTILITY_INTENTS.has(intentResult.intent)) {
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
+  }
+
+  // 구조화 조회·명령은 `runInboundCommandRouter` 전용 (파이프라인이 대화로 삼키지 않음)
+  if (
+    intentResult.intent === FounderIntent.QUERY_LOOKUP ||
+    intentResult.intent === FounderIntent.STRUCTURED_COMMAND
+  ) {
+    return null;
   }
 
   if (founderRoute && gold.kind === 'kickoff' && !isActiveProjectIntake(metadata)) {
@@ -190,8 +209,18 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   if (gold.kind === 'approval') phase = WorkPhase.APPROVE;
   if (gold.kind === 'deploy') phase = WorkPhase.DEPLOY;
 
-  // 5. For phases we don't handle yet → delegate to legacy routers
+  // 5. For phases we don't handle yet → founder는 대화 계약 폴백, 비대표만 레거시
   if (!PIPELINE_HANDLED_PHASES.has(phase)) {
+    if (founderRoute) {
+      return buildFounderDialogueFallbackResult(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        'founder_unhandled_phase_fallback',
+      );
+    }
     return null;
   }
 
@@ -275,7 +304,16 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   // 7. Route to executor
   const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext);
   if (executorResult === null) {
-    // Pipeline can't handle this → delegate to legacy
+    if (founderRoute) {
+      return buildFounderDialogueFallbackResult(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        'founder_executor_miss_fallback',
+      );
+    }
     return null;
   }
 
@@ -289,6 +327,38 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const rendered = renderFounderSurface(surfaceType, packet);
 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
+}
+
+// ---------------------------------------------------------------------------
+// Founder kernel fallback — reconstruction P0: never return null for natural-language founder turns
+// ---------------------------------------------------------------------------
+
+function buildFounderDialogueFallbackResult(
+  normalized,
+  metadata,
+  workContext,
+  intentResult,
+  route_label,
+  phaseSource,
+) {
+  const mode = isActiveProjectIntake(metadata) ? 'followup' : 'kickoff';
+  const phase = mode === 'followup' ? WorkPhase.ALIGN : WorkPhase.DISCOVER;
+  const policy = evaluatePolicy({
+    actor: Actor.FOUNDER,
+    work_object_type: workContext.primary_type,
+    work_phase: phase,
+    intent_signal: intentResult.intent,
+    metadata,
+  });
+  const packet = buildDialoguePacket(normalized, mode);
+  const rendered = renderFounderSurface('dialogue_surface', packet);
+  return buildResult(rendered, {
+    workContext,
+    phaseResult: { phase, phase_source: phaseSource, confidence: 0.55 },
+    intentResult,
+    policy,
+    route_label,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +421,10 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
       route_label: route_label || null,
       responder_kind: 'pipeline',
       pipeline_version: 'v1.1',
+      founder_kernel_fallback:
+        phaseResult.phase_source === 'founder_executor_miss_fallback' ||
+        phaseResult.phase_source === 'founder_unhandled_phase_fallback' ||
+        false,
     },
   };
 }

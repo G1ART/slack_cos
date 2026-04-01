@@ -289,6 +289,29 @@ export async function runInboundAiRouter(ctx) {
 
   const threadKey = buildSlackThreadKey(metadata);
 
+  // Reconstruction P0 — founder-facing path must never execute AI tail (defense in depth)
+  if (founder_route) {
+    logRouterEvent('founder_route_ai_router_entry_blocked', {
+      responder: 'error',
+      via: 'reconstruction_p0',
+      founder_route: true,
+    });
+    return finalizeSlackResponse({
+      responder: 'error',
+      text: [
+        '[COS] 대표 경로는 AI 라우터로 연결되지 않습니다.',
+        '입력은 `founderRequestPipeline` 또는 구조화 명령(`계획상세:` 등)으로 처리되어야 합니다.',
+        '`버전`으로 런타임 SHA를 확인하세요.',
+      ].join('\n'),
+      raw_text: routerCtx?.raw_text ?? trimmed,
+      normalized_text: routerCtx?.normalized_text ?? trimmed,
+      command_name: 'founder_ai_router_blocked',
+      council_blocked: true,
+      response_type: 'founder_ai_router_blocked',
+      founder_route: true,
+    });
+  }
+
   // Legacy routing lock callsite removed — pipeline handles (v1.1)
 
   const queryFirst = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);

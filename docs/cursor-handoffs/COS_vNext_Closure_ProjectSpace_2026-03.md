@@ -872,7 +872,7 @@ npm test: ALL PASS (전체 스위트)
 - `test-policy-engine.mjs` — 33 assertions
 - `test-packet-assembler.mjs` — 25 assertions
 - `test-founder-renderer-v11.mjs` — 26 assertions
-- `test-golden-path-pipeline.mjs` — 43 assertions
+- `test-golden-path-pipeline.mjs` — 48 assertions (유틸 락·인테이크 중 버전/meta·조회 접두 null 위임 회귀 포함)
 - `test-council-object-only.mjs` — 20 assertions
 
 ### Owner actions (v1.1)

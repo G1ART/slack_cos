@@ -147,7 +147,11 @@ import {
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
-import { runInboundTurnTraceScope, setInboundTurnSlackRouteLabel } from './src/features/inboundTurnTrace.js';
+import {
+  runInboundTurnTraceScope,
+  setInboundTurnSlackRouteLabel,
+  getInboundTurnTraceStore,
+} from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
 import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
 import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
@@ -320,6 +324,13 @@ function makeId(prefix) {
 
 function isFounderFacingRoute(metadata = {}) {
   return metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
+}
+
+/** Reconstruction audit — merged into inbound-turn-trace JSONL when enabled. */
+function mergeInboundAudit(partial) {
+  const s = getInboundTurnTraceStore();
+  if (!s) return;
+  s.inbound_audit = { ...(s.inbound_audit || {}), ...partial };
 }
 
 async function callJSON({ instructions, input, schemaName, schema }) {
@@ -872,6 +883,27 @@ async function handleUserText(userText, metadata = {}) {
         route_label: metadata.slack_route_label,
       });
       if (pipelineResult != null) {
+        mergeInboundAudit({
+          routing_exit: 'pipeline',
+          passed_pipeline: true,
+          founder_route: founderRoute,
+          legacy_command_router_used: false,
+          legacy_ai_router_used: false,
+          pipeline_surface: pipelineResult.trace?.surface_type ?? null,
+          founder_kernel_fallback: pipelineResult.trace?.founder_kernel_fallback === true,
+        });
+        console.info(
+          JSON.stringify({
+            event: 'G1COS_FOUNDER_DOOR',
+            routing_exit: 'pipeline',
+            founder_route: founderRoute,
+            passed_pipeline: true,
+            legacy_command_router_used: false,
+            legacy_ai_router_used: false,
+            surface: pipelineResult.trace?.surface_type,
+            kernel_fallback: pipelineResult.trace?.founder_kernel_fallback === true,
+          }),
+        );
         console.info(`[G1COS PIPELINE HIT] surface=${pipelineResult.trace?.surface_type} intent=${pipelineResult.trace?.intent_signal} text="${(pipelineResult.text || '').slice(0, 80)}"`);
         return {
           text: pipelineResult.text,
@@ -879,8 +911,19 @@ async function handleUserText(userText, metadata = {}) {
           surface_type: pipelineResult.trace?.surface_type,
         };
       }
+      mergeInboundAudit({
+        routing_exit: 'pipeline_miss',
+        passed_pipeline: false,
+        founder_route: founderRoute,
+      });
       console.info(`[G1COS PIPELINE MISS] text="${inputNorm.slice(0, 80)}" — delegating to legacy routers`);
     } catch (pipelineErr) {
+      mergeInboundAudit({
+        routing_exit: 'pipeline_error',
+        passed_pipeline: false,
+        founder_route: founderRoute,
+        pipeline_error: String(pipelineErr?.message || pipelineErr),
+      });
       console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
@@ -925,13 +968,56 @@ async function handleUserText(userText, metadata = {}) {
         parseBlockedRun,
       },
     });
-    if (routed.done) return routed.response;
+    if (routed.done) {
+      mergeInboundAudit({
+        routing_exit: 'command_router',
+        passed_pipeline: false,
+        founder_route: founderRoute,
+        legacy_command_router_used: true,
+        legacy_ai_router_used: false,
+      });
+      console.info(
+        JSON.stringify({
+          event: 'G1COS_FOUNDER_DOOR',
+          routing_exit: 'command_router',
+          founder_route: founderRoute,
+          passed_pipeline: false,
+          legacy_command_router_used: true,
+          legacy_ai_router_used: false,
+        }),
+      );
+      return routed.response;
+    }
 
     if (founderRoute) {
+      mergeInboundAudit({
+        routing_exit: 'founder_deterministic_fallback',
+        passed_pipeline: false,
+        founder_route: true,
+        legacy_command_router_used: false,
+        legacy_ai_router_used: false,
+      });
       console.error('[FOUNDER_ROUTE_HARD_KILL] runInboundAiRouter disabled for founder path');
+      console.info(
+        JSON.stringify({
+          event: 'G1COS_FOUNDER_DOOR',
+          routing_exit: 'founder_deterministic_fallback',
+          founder_route: true,
+          passed_pipeline: false,
+          legacy_command_router_used: false,
+          legacy_ai_router_used: false,
+        }),
+      );
       return finalizeSlackResponseFromTopLevel({
         responder: 'error',
-        text: '[COS] founder 경로는 deterministic 모드(council disabled)입니다. kickoff/help/status/approval/deploy 중심으로 다시 요청해 주세요.',
+        text: [
+          '[COS] 대표 경로는 **파이프라인·구조화 명령**으로만 처리됩니다. (Council·AI 라우터 미사용)',
+          '- 정렬/킥오프: 목표를 한 줄로 보내거나 `툴제작:` 접두를 사용하세요.',
+          '- 조회: `계획상세:`, `업무상세:` 등 접두를 사용하세요.',
+          '- 메타: `버전`, `도움말`, responder 관련 질문은 짧은 고정 응답으로 처리됩니다.',
+          '- 배포·승인·실행: 스레드에 열린 run/인테이크 상태에 맞는 지시를 사용하세요.',
+          '반복되면 `버전`으로 배포 SHA를 확인하세요.',
+        ].join('\n'),
         raw_text: userText,
         normalized_text: inputNorm,
         command_name: 'founder_deterministic_fallback',
@@ -941,6 +1027,11 @@ async function handleUserText(userText, metadata = {}) {
       });
     }
 
+    mergeInboundAudit({
+      routing_exit: 'ai_router',
+      founder_route: false,
+      legacy_ai_router_used: true,
+    });
     return runInboundAiRouter({
       ...routed.aiCtx,
       runPlannerHardLockedBranch,

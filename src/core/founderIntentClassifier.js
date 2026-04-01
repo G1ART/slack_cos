@@ -8,7 +8,10 @@
 
 import { FounderIntent } from './founderContracts.js';
 
-const VERSION_RE = /^버전$/;
+/** Slack/클라이언트에서 공백·문장부호가 붙어도 런타임 메타로 처리 */
+const VERSION_RE = /^\s*버전\s*[。.!！…]*\s*$/u;
+const VERSION_EN_RE = /^\s*version\s*[!.…]*\s*$/i;
+const RUNTIME_STATUS_RE = /^\s*runtime\s*status\s*[!.…]*\s*$/i;
 const HELP_RE = /^(도움말|운영도움말)$/;
 
 const META_DEBUG_RE =
@@ -65,8 +68,8 @@ export function classifyFounderIntent(normalized, metadata = {}) {
     return { intent: FounderIntent.UNKNOWN, confidence: 1, signals: ['empty_input'] };
   }
 
-  if (VERSION_RE.test(t)) {
-    signals.push('version_exact');
+  if (VERSION_RE.test(t) || VERSION_EN_RE.test(t) || RUNTIME_STATUS_RE.test(t)) {
+    signals.push('version_token');
     return { intent: FounderIntent.RUNTIME_META, confidence: 1, signals };
   }
 
@@ -76,11 +79,11 @@ export function classifyFounderIntent(normalized, metadata = {}) {
   }
 
   if (META_DEBUG_RE.test(t)) {
+    signals.push('meta_debug_keyword');
     if (META_QUESTION_HINT.test(t) || META_BRIEF_DIRECTIVE.test(t)) {
-      signals.push('meta_debug_keyword', 'meta_question_form');
-      return { intent: FounderIntent.META_DEBUG, confidence: 0.9, signals };
+      signals.push('meta_question_form');
     }
-    signals.push('meta_debug_keyword_only');
+    return { intent: FounderIntent.META_DEBUG, confidence: 0.9, signals };
   }
 
   if (KICKOFF_PREFIX_RE.test(t) || KICKOFF_PHRASES.some((re) => re.test(t))) {
