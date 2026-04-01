@@ -38,13 +38,19 @@
 | `topLevelRouter` founder 경로에서 **generic clarification / council shape leak** 감지 시 sanitize로 살리지 않고 즉시 차단 | 완료 |
 | `founder_output_trace`에 `passed_outbound_validation`, `validation_error_code` 필드 추가 (hard fail 원인 추적) | 완료 |
 
-## 다음 배치(Phase 2~) — 우선순위
+## Phase 2b — inbound-turn trace 필드 보강 (완료)
 
-1. ~~파이프라인 커널 확장~~ → **1b 완료**; 잔여: 트레이스 필드 보강·`topLevelRouter` 등 아래 항목.
-2. **`cosDialogueWriter.js` / `hiddenContractExtractor.js`** 도입 (지시문 §4).
-3. **`topLevelRouter`:** sanitizer 축소·hard fail 강화 (지시문 P0).
-4. **트레이스:** 지시문 §8 필드 전부 채우기 (`passed_renderer`, `passed_outbound_validation` 등).
-5. **머지 게이트:** Gold A~E + founder route council 0회 자동 검증 스크립트 고정.
+| 항목 | 상태 |
+|------|------|
+| `inboundTurnTrace` finalize payload에 `passed_finalize`·`passed_renderer`·`passed_sanitize`·`passed_outbound_validation`·`validation_error_code` 추가 | 완료 |
+| `topLevelRouter` finalize 결과를 inbound-turn JSONL로 전파 (차단 사유를 turn 레벨에서 질의 가능) | 완료 |
+| `scripts/test-inbound-turn-trace.mjs` / `scripts/test-vnext10-leak-path-council-hard-block.mjs`에 필드 회귀 검증 추가 | 완료 |
+
+## 다음 배치(Phase 3~) — 우선순위
+
+1. **`cosDialogueWriter.js` / `hiddenContractExtractor.js`** 도입 (지시문 §4).
+2. `founderRequestPipeline`의 dialogue contract 생성 책임을 위 두 모듈로 분리하고 `tryExecutiveSurfaceResponse` founder 의존 축소.
+3. **머지 게이트:** Gold A~E + founder route council 0회 + trace 필드 스키마 고정 자동 검증 스크립트 확정.
 
 ## 프로젝트를 접기 전에 볼 신호
 
