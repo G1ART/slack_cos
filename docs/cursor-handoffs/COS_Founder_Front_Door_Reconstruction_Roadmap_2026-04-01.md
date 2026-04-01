@@ -24,6 +24,13 @@
 | **골드 계약 우선:** `start_project` 표면 분류가 **킥오프·scope lock** 골드 문장과 겹치면 executive 선점 생략 (`classifySurfaceIntent` + `classifyGoldContract`) | 완료 |
 | 헌법 골드 스펙 테스트: 턴마다 **인테이크만** 리셋·**실행 run**은 테스트 4→7 연속 시나리오 유지 | 완료 |
 
+## Phase 1c — founder 경로 command-router 축소 (완료)
+
+| 항목 | 상태 |
+|------|------|
+| `app.js` founder 경로에서 pipeline miss 시에도 command router를 무조건 태우지 않고, **`QUERY_LOOKUP`/`STRUCTURED_COMMAND` 의도일 때만** command router 허용 | 완료 |
+| founder 경로는 비-쿼리 miss에서 deterministic fallback으로 고정, AI router 미진입 원칙 유지 | 완료 |
+
 ## 다음 배치(Phase 2~) — 우선순위
 
 1. ~~파이프라인 커널 확장~~ → **1b 완료**; 잔여: 트레이스 필드 보강·`topLevelRouter` 등 아래 항목.

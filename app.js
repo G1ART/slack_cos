@@ -147,6 +147,8 @@ import {
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
+import { classifyFounderIntent } from './src/core/founderIntentClassifier.js';
+import { FounderIntent } from './src/core/founderContracts.js';
 import {
   runInboundTurnTraceScope,
   setInboundTurnSlackRouteLabel,
@@ -927,62 +929,72 @@ async function handleUserText(userText, metadata = {}) {
       console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
-    const routed = await runInboundCommandRouter({
-      userText,
-      metadata,
-      getExecutiveHelpText: () => formatExecutiveHelpText(),
-      getOperatorHelpText: () => operatorHelpText(),
-      runPlannerHardLockedBranch,
-      structuredDeps: {
-        MODEL,
-        RUNTIME_MODE,
-        makeId,
-        formatError,
-        AGENT_OPTIONS,
-        formatGithubIssuePublishSuccessLines,
-        formatGithubIssuePersistFailedLines,
-        parseDecisionRecord,
-        parseLessonRecord,
-        formatDecisionSaved,
-        formatLessonSaved,
-        formatRecentDecisions,
-        formatRecentLessons,
-        parseRecentCount,
-        parseDays,
-        parseWorkToken,
-        parseChannelSetting,
-        parseProjectSetting,
-        parseWorkAssign,
-        parseWorkBlock,
-        parsePlanReject,
-        parsePlanBlockCmd,
-        parseWorkRevisionRequest,
-        parseRepoSetting,
-        parseDbSetting,
-        parseGithubMergeReject,
-        parseRollbackReject,
-        parseResultRegister,
-        parseCursorResultRecord,
-        resolveCursorRunFromToken,
-        parseResultReject,
-        parseBlockedRun,
-      },
-    });
+    const founderIntent = founderRoute ? classifyFounderIntent(inputNorm, metadata) : null;
+    const founderCanUseCommandRouter =
+      founderRoute &&
+      (founderIntent?.intent === FounderIntent.QUERY_LOOKUP ||
+        founderIntent?.intent === FounderIntent.STRUCTURED_COMMAND);
+
+    const shouldRunCommandRouter = !founderRoute || founderCanUseCommandRouter;
+    const routed = shouldRunCommandRouter
+      ? await runInboundCommandRouter({
+          userText,
+          metadata,
+          getExecutiveHelpText: () => formatExecutiveHelpText(),
+          getOperatorHelpText: () => operatorHelpText(),
+          runPlannerHardLockedBranch,
+          structuredDeps: {
+            MODEL,
+            RUNTIME_MODE,
+            makeId,
+            formatError,
+            AGENT_OPTIONS,
+            formatGithubIssuePublishSuccessLines,
+            formatGithubIssuePersistFailedLines,
+            parseDecisionRecord,
+            parseLessonRecord,
+            formatDecisionSaved,
+            formatLessonSaved,
+            formatRecentDecisions,
+            formatRecentLessons,
+            parseRecentCount,
+            parseDays,
+            parseWorkToken,
+            parseChannelSetting,
+            parseProjectSetting,
+            parseWorkAssign,
+            parseWorkBlock,
+            parsePlanReject,
+            parsePlanBlockCmd,
+            parseWorkRevisionRequest,
+            parseRepoSetting,
+            parseDbSetting,
+            parseGithubMergeReject,
+            parseRollbackReject,
+            parseResultRegister,
+            parseCursorResultRecord,
+            resolveCursorRunFromToken,
+            parseResultReject,
+            parseBlockedRun,
+          },
+        })
+      : { done: false, aiCtx: { userText, metadata, channelContext: null } };
     if (routed.done) {
+      const commandRouterExit = shouldRunCommandRouter ? 'command_router' : 'pipeline_miss_non_command';
       mergeInboundAudit({
-        routing_exit: 'command_router',
+        routing_exit: commandRouterExit,
         passed_pipeline: false,
         founder_route: founderRoute,
-        legacy_command_router_used: true,
+        legacy_command_router_used: shouldRunCommandRouter,
         legacy_ai_router_used: false,
       });
       console.info(
         JSON.stringify({
           event: 'G1COS_FOUNDER_DOOR',
-          routing_exit: 'command_router',
+          routing_exit: commandRouterExit,
           founder_route: founderRoute,
           passed_pipeline: false,
-          legacy_command_router_used: true,
+          legacy_command_router_used: shouldRunCommandRouter,
           legacy_ai_router_used: false,
         }),
       );
