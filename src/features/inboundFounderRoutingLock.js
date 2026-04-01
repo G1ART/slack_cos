@@ -16,11 +16,38 @@ const META_DEBUG_RE =
   /(responder|surface|sanitize|finalizeSlackResponse|founderSurfaceGuard|topLevelRouter|씽크|싱크|router|라우터|라우팅|pipeline|파이프라인)/i;
 
 /**
+ * 멘션 제거 뒤에도 남는 `G1COS 버전` / `G1COS버전` 등 → `버전`으로 접어 유틸 의도가 깨지지 않게 한다.
+ * (surfaceIntentClassifier.stripSurfaceLineNoise 와 동계열, `G1COS` + 비공백 접두만 추가)
+ */
+export function normalizeFounderMetaCommandLine(raw) {
+  let s = String(raw ?? '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+  s = s.normalize('NFKC').trim();
+  // Slack 별표 bold — 유틸 한 줄(`*G1COS* 버전`)에서 접두 매칭이 깨지지 않게 제거
+  s = s.replace(/\*+/g, '');
+  s = s.replace(/^G1\s*COS(?=[\s\u00A0\u3000]*툴)/iu, '');
+  s = s.replace(/^G1\s*COS\s+/iu, '');
+  s = s.replace(/^G1\s*COS(?=\S)/iu, '');
+  s = s.replace(/^G1\s*[.\-_]\s*COS\s+/iu, '');
+  s = s.replace(/^(COS|비서)\s+/iu, '');
+  for (let g = 0; g < 12; g += 1) {
+    const prev = s;
+    s = s.replace(/^>\s*/, '');
+    s = s.replace(/^[-–—•∙·]\s*/, '');
+    s = s.replace(/^\d{1,3}\.\s+/, '');
+    s = s.replace(/^[*＊_＿]{1,4}(?=\S)/u, '');
+    s = s.replace(/^[*＊_＿]+\s+/u, '');
+    s = s.trim();
+    if (s === prev) break;
+  }
+  return s.trim();
+}
+
+/**
  * @param {string} trimmed normalizeSlackUserPayload 결과
  * @returns {{ kind: 'version'|'meta_debug'|'kickoff_test' } | null}
  */
 export function classifyFounderRoutingLock(trimmed) {
-  const t = String(trimmed || '').trim();
+  const t = normalizeFounderMetaCommandLine(String(trimmed || '').trim());
   if (!t) return null;
 
   if (

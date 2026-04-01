@@ -20,6 +20,7 @@ import {
   classifyFounderRoutingLock,
   formatRuntimeMetaSurfaceText,
   formatMetaDebugSurfaceText,
+  normalizeFounderMetaCommandLine,
 } from '../features/inboundFounderRoutingLock.js';
 import { formatExecutiveHelpText } from '../features/executiveSurfaceHelp.js';
 import {
@@ -174,7 +175,7 @@ async function executeDeploy(normalized, metadata, workContext) {
  * @returns {Promise<{ text: string, blocks?: object[], trace: Record<string, unknown> } | null>}
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
-  const normalized = String(text || '').trim();
+  const normalized = normalizeFounderMetaCommandLine(String(text || '').trim());
   const rawText = text;
   const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
   const threadKey = buildSlackThreadKey(metadata);

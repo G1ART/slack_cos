@@ -7,6 +7,7 @@
 // GREP_COS_CONSTITUTION_INTENT_CLASSIFIER
 
 import { FounderIntent } from './founderContracts.js';
+import { normalizeFounderMetaCommandLine } from '../features/inboundFounderRoutingLock.js';
 
 /** Slack/클라이언트에서 공백·문장부호가 붙어도 런타임 메타로 처리 */
 const VERSION_RE = /^\s*버전\s*[。.!！…]*\s*$/u;
@@ -61,7 +62,7 @@ const STATUS_RE =
  * @returns {{ intent: string, confidence: number, signals: string[] }}
  */
 export function classifyFounderIntent(normalized, metadata = {}) {
-  const t = String(normalized || '').trim();
+  const t = normalizeFounderMetaCommandLine(String(normalized || '').trim());
   const signals = [];
 
   if (!t) {

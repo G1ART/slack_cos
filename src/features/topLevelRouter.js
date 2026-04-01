@@ -20,6 +20,7 @@ const COUNCIL_SYNTHESIS_MARKERS = [
   '가장 강한 반대 논리',
   '종합 추천안',
   '대표 결정 필요 여부',
+  '한 줄 요약',
 ];
 
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';

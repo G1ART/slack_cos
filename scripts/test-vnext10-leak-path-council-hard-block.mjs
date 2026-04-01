@@ -118,6 +118,29 @@ try {
 }
 
 try {
+  assert.equal(classifyFounderRoutingLock('G1COS 버전')?.kind, 'version');
+  assert.equal(classifyFounderRoutingLock('G1COS버전')?.kind, 'version');
+  assert.equal(classifyFounderRoutingLock('*G1COS* 버전')?.kind, 'version');
+  ok('version routing lock folds G1COS / markdown prefix');
+} catch (e) {
+  fail('version routing lock G1COS prefix', e);
+}
+
+try {
+  const { founderRequestPipeline } = await import('../src/core/founderRequestPipeline.js');
+  const r = await founderRequestPipeline({
+    text: 'G1COS 버전',
+    metadata: { source_type: 'channel_mention', user: 'U1', channel: 'C1', ts: '1.0' },
+    route_label: 'mention_ai_router',
+  });
+  assert.ok(r?.text, 'pipeline returns text');
+  assert.ok(/G1\s*COS\s*Runtime|release_sha/i.test(r.text), r.text.slice(0, 160));
+  ok('founderRequestPipeline: G1COS 버전 → runtime meta');
+} catch (e) {
+  fail('founderRequestPipeline version prefix', e);
+}
+
+try {
   const meta = classifyFounderRoutingLock('COS responder는 어떻게 동작해?');
   assert.equal(meta?.kind, 'meta_debug');
   assert.ok(formatMetaDebugSurfaceText().includes('버전'));
