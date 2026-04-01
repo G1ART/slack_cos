@@ -176,6 +176,40 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const threadKey = buildSlackThreadKey(metadata);
   const gold = classifyGoldContract(normalized, metadata);
 
+  if (metadata.founder_hard_recover === true) {
+    const recoveredPacket = buildDialoguePacket(normalized, isActiveProjectIntake(metadata) ? 'followup' : 'kickoff');
+    const recoveredQuality = validateDialogueContract(recoveredPacket);
+    if (!recoveredQuality.ok) {
+      const fallback = buildFounderHardFail(FounderHardFailReason.INVARIANT_BREACH);
+      return {
+        text: fallback.text,
+        trace: {
+          surface_type: FounderSurfaceType.SAFE_FALLBACK,
+          responder_kind: 'founder_kernel',
+          passed_pipeline: true,
+          passed_renderer: true,
+          legacy_router_used: false,
+          hard_fail_reason: fallback.reason,
+          route_label: route_label || null,
+        },
+      };
+    }
+    const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, recoveredPacket);
+    return {
+      text: rendered.text,
+      blocks: rendered.blocks,
+      trace: {
+        surface_type: FounderSurfaceType.DIALOGUE,
+        responder_kind: 'founder_kernel',
+        passed_pipeline: true,
+        passed_renderer: true,
+        legacy_router_used: false,
+        hard_fail_reason: null,
+        route_label: route_label || null,
+      },
+    };
+  }
+
   // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
   let workContext = resolveWorkObject(normalized, metadata);
 

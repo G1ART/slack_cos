@@ -340,6 +340,19 @@ function founderLeakDetected(text) {
   );
 }
 
+async function recoverFounderDialogueFromLeak(inputNorm, metadata, routeLabel) {
+  const recovered = await founderRequestPipeline({
+    text: inputNorm,
+    metadata: {
+      ...metadata,
+      founder_hard_recover: true,
+    },
+    route_label: routeLabel,
+  });
+  if (!recovered || founderLeakDetected(recovered.text)) return null;
+  return recovered;
+}
+
 async function callJSON({ instructions, input, schemaName, schema }) {
   const response = await openai.responses.create({
     model: MODEL,
@@ -775,6 +788,33 @@ async function handleUserText(userText, metadata = {}) {
       });
       if (pipelineResult != null) {
         if (founderRoute && founderLeakDetected(pipelineResult.text)) {
+          const recovered = await recoverFounderDialogueFromLeak(
+            inputNorm,
+            {
+              ...metadata,
+              has_active_intake: _intakeActive,
+              intake_session: _intakeSess,
+            },
+            metadata.slack_route_label,
+          );
+          if (recovered) {
+            mergeInboundAudit({
+              routing_exit: 'pipeline_leak_auto_recovered',
+              founder_route: true,
+              legacy_command_router_used: false,
+              legacy_ai_router_used: false,
+            });
+            return {
+              text: recovered.text,
+              blocks: recovered.blocks,
+              surface_type: recovered.trace?.surface_type || 'dialogue_surface',
+              trace: {
+                ...(recovered.trace || {}),
+                leak_auto_recovered: true,
+                passed_outbound_validation: true,
+              },
+            };
+          }
           mergeInboundAudit({
             routing_exit: 'pipeline_leak_hard_kill',
             founder_route: true,
@@ -896,6 +936,33 @@ async function handleUserText(userText, metadata = {}) {
     if (routed.done) {
       const routedText = typeof routed.response === 'string' ? routed.response : routed.response?.text;
       if (founderRoute && founderLeakDetected(routedText)) {
+        const recovered = await recoverFounderDialogueFromLeak(
+          inputNorm,
+          {
+            ...metadata,
+            has_active_intake: _intakeActive,
+            intake_session: _intakeSess,
+          },
+          metadata.slack_route_label,
+        );
+        if (recovered) {
+          mergeInboundAudit({
+            routing_exit: 'command_router_leak_auto_recovered',
+            founder_route: true,
+            legacy_command_router_used: shouldRunCommandRouter,
+            legacy_ai_router_used: false,
+          });
+          return {
+            text: recovered.text,
+            blocks: recovered.blocks,
+            surface_type: recovered.trace?.surface_type || 'dialogue_surface',
+            trace: {
+              ...(recovered.trace || {}),
+              leak_auto_recovered: true,
+              passed_outbound_validation: true,
+            },
+          };
+        }
         mergeInboundAudit({
           routing_exit: 'command_router_leak_hard_kill',
           founder_route: true,

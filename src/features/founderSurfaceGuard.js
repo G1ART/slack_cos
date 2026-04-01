@@ -218,11 +218,11 @@ export const FOUNDER_HARD_BLOCK_FALLBACK =
 /**
  * Sanitize outbound text — strip internal metadata blocks.
  * @param {string} text
- * @param {{ debugMode?: boolean, responder?: string }} opts
+ * @param {{ debugMode?: boolean, responder?: string, allowUnsafeDebugBypass?: boolean }} opts
  * @returns {string}
  */
 export function sanitizeFounderOutput(text, opts = {}) {
-  if (opts.debugMode) return text;
+  if (opts.debugMode && opts.allowUnsafeDebugBypass === true) return text;
   if (!text) return text;
 
   // 조회(query) 응답은 저장 필드·QC 포맷에 구형 Council 헤더가 섞여도 **원문 신뢰** (Router_Lockdown 계약).
