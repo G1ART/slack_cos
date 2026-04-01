@@ -76,6 +76,9 @@
 | one-shot acceptance gate: exact gold + 동일 프롬프트 10회 + mixed sequence 테스트를 `test-founder-gold-spec-v1.mjs`에 잠금 | 완료 |
 | `app.js` founder 경로 최종 fail-closed: pipeline/command-router 결과에 Council marker가 남으면 즉시 hard kill (`pipeline_leak_hard_kill` / `command_router_leak_hard_kill`) | 완료 |
 | `founderSurfaceGuard` hard fallback 문구에서 “한 번 더 보내달라” 유도 제거(Non-Negotiable A 준수) | 완료 |
+| `runInboundCommandRouter`에 `structuredOnly` 모드 추가: founder에서는 lineage/query/structured 외 경로를 즉시 미스 처리 | 완료 |
+| `runInboundAiRouter`에서 founder 전용 분기/파라미터 제거 + 오류 시 legacy single fallback 제거(직접 error surface) | 완료 |
+| `app.js`에서 `runLegacySingleFlow` 제거 및 founder 경로에서 command-router 호출 시 `structuredOnly: true` 강제 | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 

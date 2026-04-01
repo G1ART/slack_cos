@@ -21,6 +21,7 @@
 
 **코드 기준일**: 2026-04-01 — Founder 경로는 `founderRequestPipeline.js` 단일 커널(one-voice/fail-closed)로 고정된다. founder 생성 체인에서 `tryExecutiveSurfaceResponse`·clean start door·spec finalize를 분리했고, 레거시 라우터는 founder 자연어 생성 경로에서 사용하지 않는다(조회/구조화 명령만 command router 허용). hard fallback은 `invariant_breach` / `unsupported_founder_intent` / `runtime_system_failure` 3종만 허용한다. startup은 provenance canary JSON(`git_sha`,`hostname`,`pid`,`instance_id`,`founder_route_mode`,`canary_render_class`,`started_at`)를 출력한다. founder trace는 pipeline→outbound 병합으로 `passed_pipeline`,`passed_renderer`,`passed_outbound_validation`,`legacy_router_used`,`hard_fail_reason`를 남긴다. · 원본 2026-03-23
 보강: founder 경로 결과(`pipelineResult`/`commandRouter`)에 Council marker가 잔존하면 `app.js`에서 전송 전 즉시 hard-kill(`pipeline_leak_hard_kill`/`command_router_leak_hard_kill`) 한다. 또한 hard fallback 문구는 재시도 유도 문구를 사용하지 않는다.
+보강2: founder가 command-router를 타는 경우 `structuredOnly: true`로 lineage/query/structured 명령만 허용하며, 그 외는 AI router로 내려가지 않는다. `runInboundAiRouter`는 founder 전용 파라미터/분기를 제거했다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`

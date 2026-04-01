@@ -65,6 +65,7 @@ function structuredCommandTraceLabel(trimmed) {
  *     envKey: string,
  *   }) => Promise<string>,
  *   structuredDeps: Record<string, unknown>,
+ *   structuredOnly?: boolean,
  * }} RunInboundCommandRouterInput
  */
 
@@ -94,6 +95,7 @@ export async function runInboundCommandRouter(ctx) {
     getHelpText,
     runPlannerHardLockedBranch,
     structuredDeps,
+    structuredOnly = false,
   } = ctx;
 
   const execHelp = getExecutiveHelpText ?? getHelpText;
@@ -132,6 +134,63 @@ export async function runInboundCommandRouter(ctx) {
       response_type: 'help_operator',
     });
     return { done: true, response };
+  }
+
+  if (structuredOnly) {
+    const lineageHit = await tryFinalizeG1CosLineageTransport(trimmed, routerCtx);
+    if (lineageHit != null) {
+      const response = finalizeSlackResponse({
+        responder: 'query',
+        text: lineageHit.text,
+        raw_text: routerCtx.raw_text,
+        normalized_text: routerCtx.normalized_text,
+        query_match: false,
+        council_blocked: true,
+        response_type: lineageHit.response_type,
+      });
+      return { done: true, response };
+    }
+
+    const queryFinalized = await tryFinalizeSlackQueryRoute(trimmed, routerCtx);
+    if (queryFinalized != null) {
+      return { done: true, response: queryFinalized };
+    }
+
+    const structuredOut = await runInboundStructuredCommands({
+      trimmed,
+      metadata,
+      channelContext: null,
+      projectContext: null,
+      envKey: getDefaultEnvKey(),
+      ...structuredDeps,
+    });
+    if (structuredOut !== undefined) {
+      if (typeof structuredOut === 'string') {
+        const scLabel = structuredCommandTraceLabel(trimmed);
+        const response = finalizeSlackResponse({
+          responder: 'structured',
+          text: structuredOut,
+          raw_text: routerCtx.raw_text,
+          normalized_text: routerCtx.normalized_text,
+          command_name: scLabel,
+          council_blocked: true,
+          response_type: 'structured_command',
+        });
+        return { done: true, response };
+      }
+      return { done: true, response: structuredOut };
+    }
+    return {
+      done: false,
+      aiCtx: {
+        trimmed,
+        routerCtx,
+        metadata,
+        channelContext: null,
+        projectContext: null,
+        envKey: getDefaultEnvKey(),
+      },
+    };
   }
 
   const intakeCancel = tryFinalizeProjectIntakeCancel(trimmed, metadata);

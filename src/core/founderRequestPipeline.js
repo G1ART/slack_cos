@@ -32,16 +32,12 @@ import {
   buildStatusPacket,
   buildHandoffPacket,
 } from './founderGoldContract.js';
-import { classifySurfaceIntent } from '../features/surfaceIntentClassifier.js';
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
   transitionProjectIntakeStage,
   hasOpenExecutionOwnership,
-  tryFinalizeProjectIntakeCancel,
-  buildProjectIntakeCouncilDeferSurface,
 } from '../features/projectIntakeSession.js';
-import { tryFinalizeExecutionSpineTurn } from '../features/executionSpineRouter.js';
 import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
 import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
 
@@ -135,19 +131,20 @@ async function executeLock(normalized, metadata, workContext) {
 }
 
 async function executeSpine(normalized, metadata, workContext) {
-  try {
-    const result = tryFinalizeExecutionSpineTurn({ trimmed: normalized, metadata });
-    if (result === 'council_defer') {
-      return {
-        text: buildProjectIntakeCouncilDeferSurface(metadata),
-        response_type: 'execution_spine_council_defer',
-      };
-    }
-    if (result && result.text) {
-      return result;
-    }
-  } catch { /* fallthrough */ }
-  return null;
+  const run = workContext.run || null;
+  return {
+    packet: buildStatusPacket({
+      current_stage: run?.current_stage || 'execute',
+      completed: run ? ['scope lock 완료', 'run 생성'] : ['scope lock 후보 합의'],
+      in_progress: ['workstream 실행 정렬'],
+      blocker: run?.outbound_last_error || '없음',
+      provider_truth: run
+        ? ['github: live_or_bridge', 'cursor: live_or_bridge', 'supabase: optional']
+        : ['github: 없음', 'cursor: 없음', 'supabase: 없음'],
+      next_actions: ['핵심 실행 항목 3개 확정', '우선순위 지정', '승인/배포 전환 준비'],
+      founder_action_required: '실행 우선순위 확인',
+    }),
+  };
 }
 
 async function executeApproval(normalized, metadata, workContext) {
@@ -198,51 +195,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   // 3. Handle utility intents regardless of work object (version, meta, help)
   if (UTILITY_INTENTS.has(intentResult.intent)) {
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
-  }
-
-  const intakeCancel = tryFinalizeProjectIntakeCancel(normalized, metadata);
-  if (intakeCancel != null) {
-    workContext = resolveWorkObject(normalized, metadata);
-    return founderKernelHardFail(
-      normalized,
-      metadata,
-      workContext,
-      intentResult,
-      route_label,
-      FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
-      'intake_cancel_not_supported_in_kernel',
-    );
-  }
-
-  if (hasOpenExecutionOwnership(metadata)) {
-    const execEarly = tryFinalizeExecutionSpineTurn({ trimmed: normalized, metadata });
-    if (execEarly && execEarly !== 'council_defer' && execEarly.text) {
-      workContext = resolveWorkObject(normalized, metadata);
-      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_execution_spine', {
-        text: execEarly.text,
-        blocks: execEarly.blocks,
-        response_type: execEarly.response_type,
-      });
-    }
-    if (execEarly === 'council_defer') {
-      workContext = resolveWorkObject(normalized, metadata);
-      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_execution_spine_council_defer', {
-        text: buildProjectIntakeCouncilDeferSurface(metadata),
-        response_type: 'execution_spine_council_defer',
-      });
-    }
-  }
-
-  if (isActiveProjectIntake(metadata) && classifySurfaceIntent(normalized)?.intent === 'start_project') {
-    return founderKernelHardFail(
-      normalized,
-      metadata,
-      workContext,
-      intentResult,
-      route_label,
-      FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
-      'legacy_start_project_surface_blocked',
-    );
   }
 
   // 구조화 조회·명령은 `runInboundCommandRouter` 전용 (파이프라인이 대화로 삼키지 않음)
@@ -420,46 +372,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const rendered = renderFounderSurface(surfaceType, packet);
 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
-}
-
-// ---------------------------------------------------------------------------
-// Phase 1b — executive/spec/spine outcomes as pipeline results (no command-router dependency)
-// ---------------------------------------------------------------------------
-
-function buildPipelineExecutivePassthrough(
-  metadata,
-  workContext,
-  intentResult,
-  route_label,
-  phaseSource,
-  { text, blocks, response_type, packet_id, status_packet_id },
-) {
-  const policy = {
-    ...evaluatePolicy({
-      actor: Actor.FOUNDER,
-      work_object_type: workContext.primary_type,
-      work_phase: WorkPhase.ALIGN,
-      intent_signal: intentResult.intent,
-      metadata,
-    }),
-    required_surface_type: FounderSurfaceType.EXECUTIVE_KICKOFF,
-  };
-  const rendered = renderFounderSurface(FounderSurfaceType.EXECUTIVE_KICKOFF, { text, blocks });
-  /** @type {Record<string, unknown>} */
-  const extras = { pipeline_response_type: response_type };
-  if (packet_id != null) extras.packet_id = packet_id;
-  if (status_packet_id != null) extras.status_packet_id = status_packet_id;
-  return buildResult(
-    rendered,
-    {
-      workContext,
-      phaseResult: { phase: WorkPhase.ALIGN, phase_source: phaseSource, confidence: 1 },
-      intentResult,
-      policy,
-      route_label,
-    },
-    extras,
-  );
 }
 
 // ---------------------------------------------------------------------------

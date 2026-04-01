@@ -129,10 +129,6 @@ import {
 } from './src/automation/index.js';
 import {
   initAgents,
-  routeTask,
-  runPrimaryAgent,
-  runRiskAgent,
-  composeFinalReport,
   deriveDecisionState,
   mergeRisks,
   bulletList,
@@ -156,13 +152,6 @@ import {
   getInboundTurnTraceStore,
 } from './src/features/inboundTurnTrace.js';
 import { normalizeSlackUserPayload } from './src/slack/slackTextNormalize.js';
-import { tryExecutiveSurfaceResponse } from './src/features/tryExecutiveSurfaceResponse.js';
-import { resolveCleanStartProjectKickoff } from './src/features/startProjectKickoffDoor.js';
-import {
-  tryStartProjectLockConfirmedResponse,
-  tryStartProjectRefineResponse,
-  tryProjectIntakeForcedRefineSurface,
-} from './src/features/startProjectLockConfirmed.js';
 import { finalizeSlackResponse as finalizeSlackResponseFromTopLevel } from './src/features/topLevelRouter.js';
 import { CosSocketModeReceiver } from './src/slack/cosSocketModeReceiver.js';
 import {
@@ -646,122 +635,6 @@ function operatorHelpText() {
   ].join('\n');
 }
 
-async function runLegacySingleFlow(trimmed, channelContext, metadata) {
-  try {
-    const lockSurf = await tryStartProjectLockConfirmedResponse(trimmed, metadata);
-    if (lockSurf) {
-      return finalizeSlackResponseFromTopLevel({
-        responder: 'executive_surface',
-        text: lockSurf.text,
-        raw_text: trimmed,
-        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
-        command_name: 'start_project_confirmed',
-        council_blocked: true,
-        response_type: lockSurf.response_type,
-      });
-    }
-  } catch {
-    /* fall through */
-  }
-
-  try {
-    const refineSurf = await tryStartProjectRefineResponse(trimmed, metadata);
-    if (refineSurf) {
-      return finalizeSlackResponseFromTopLevel({
-        responder: 'executive_surface',
-        text: refineSurf.text,
-        raw_text: trimmed,
-        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
-        command_name: 'start_project_refine',
-        council_blocked: true,
-        response_type: refineSurf.response_type,
-      });
-    }
-  } catch {
-    /* fall through */
-  }
-
-  try {
-    const intakeLegacy = await tryProjectIntakeForcedRefineSurface(trimmed, metadata);
-    if (intakeLegacy) {
-      return finalizeSlackResponseFromTopLevel({
-        responder: 'executive_surface',
-        text: intakeLegacy.text,
-        raw_text: trimmed,
-        normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
-        command_name: intakeLegacy.response_type,
-        council_blocked: true,
-        response_type: intakeLegacy.response_type,
-      });
-    }
-  } catch {
-    /* fall through */
-  }
-
-  try {
-    const kick = resolveCleanStartProjectKickoff(trimmed, metadata);
-    if (kick) {
-      const surf = await tryExecutiveSurfaceResponse(kick.line, metadata, {
-        startProjectToneAck: kick.toneAck,
-      });
-      if (surf?.response_type === 'start_project') {
-        return finalizeSlackResponseFromTopLevel({
-          responder: 'executive_surface',
-          text: surf.text,
-          raw_text: trimmed,
-          normalized_text: normalizeSlackUserPayload(String(trimmed ?? '').trim()),
-          command_name: 'start_project',
-          council_blocked: true,
-          response_type: 'start_project',
-        });
-      }
-    }
-  } catch {
-    /* fall through to primary+risk */
-  }
-
-  const route = await routeTask(trimmed, channelContext);
-  const primary = await runPrimaryAgent(route.primary_agent, trimmed, channelContext);
-  const risk = route.include_risk ? await runRiskAgent(trimmed, primary, channelContext) : null;
-  const decisionState = deriveDecisionState(route, primary, risk);
-
-  let approvalItem = null;
-  if (decisionState.decisionNeeded) {
-    approvalItem = await upsertApprovalRecord({
-      userText: trimmed,
-      metadata,
-      channelContext,
-      route,
-      primary,
-      risk,
-    });
-  }
-
-  const text = composeFinalReport({
-    route,
-    primary,
-    risk,
-    channelContext,
-    approvalItem,
-  });
-
-  await appendJsonRecord(INTERACTIONS_FILE, {
-    id: makeId('INT'),
-    created_at: new Date().toISOString(),
-    user_text: trimmed,
-    source: metadata,
-    channel_context: channelContext,
-    route,
-    primary,
-    risk,
-    approval_id: approvalItem?.id || null,
-    decision_needed: decisionState.decisionNeeded,
-    orchestration_mode: 'single_primary_fallback',
-  });
-
-  return text;
-}
-
 function parseChannelSetting(text) {
   const match = text.trim().match(/^채널설정:\s*([a-z_]+)\s*$/);
   if (!match) return null;
@@ -980,6 +853,7 @@ async function handleUserText(userText, metadata = {}) {
       ? await runInboundCommandRouter({
           userText,
           metadata,
+          structuredOnly: founderRoute,
           getExecutiveHelpText: () => formatExecutiveHelpText(),
           getOperatorHelpText: () => operatorHelpText(),
           runPlannerHardLockedBranch,
@@ -1108,11 +982,9 @@ async function handleUserText(userText, metadata = {}) {
     return runInboundAiRouter({
       ...routed.aiCtx,
       runPlannerHardLockedBranch,
-      runLegacySingleFlow,
       makeId,
       callText,
       callJSON,
-      founder_route: founderRoute,
     });
   });
 }

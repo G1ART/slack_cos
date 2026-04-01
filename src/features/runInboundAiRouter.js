@@ -261,7 +261,6 @@ export async function classifyInboundResponderPreview(snap, previewMetadata = {}
  *   projectContext: string | null,
  *   envKey: string,
  *   runPlannerHardLockedBranch: (args: object) => Promise<string>,
- *   runLegacySingleFlow: (trimmed: string, channelContext: string | null, metadata: object) => Promise<string>,
  *   makeId: (prefix: string) => string,
  *   callText: (args: { instructions: string, input: string }) => Promise<string>,
  *   callJSON: (args: object) => Promise<unknown>,
@@ -277,40 +276,12 @@ export async function runInboundAiRouter(ctx) {
     projectContext,
     envKey,
     runPlannerHardLockedBranch,
-    runLegacySingleFlow,
     makeId,
     callText,
     callJSON,
-    founder_route = false,
   } = ctx;
 
-  const founderCouncilDisabled =
-    founder_route && process.env.COS_DISABLE_COUNCIL_ON_FOUNDER !== '0';
-
   const threadKey = buildSlackThreadKey(metadata);
-
-  // Reconstruction P0 — founder-facing path must never execute AI tail (defense in depth)
-  if (founder_route) {
-    logRouterEvent('founder_route_ai_router_entry_blocked', {
-      responder: 'error',
-      via: 'reconstruction_p0',
-      founder_route: true,
-    });
-    return finalizeSlackResponse({
-      responder: 'error',
-      text: [
-        '[COS] 대표 경로는 AI 라우터로 연결되지 않습니다.',
-        '입력은 `founderRequestPipeline` 또는 구조화 명령(`계획상세:` 등)으로 처리되어야 합니다.',
-        '`버전`으로 런타임 SHA를 확인하세요.',
-      ].join('\n'),
-      raw_text: routerCtx?.raw_text ?? trimmed,
-      normalized_text: routerCtx?.normalized_text ?? trimmed,
-      command_name: 'founder_ai_router_blocked',
-      council_blocked: true,
-      response_type: 'founder_ai_router_blocked',
-      founder_route: true,
-    });
-  }
 
   // Legacy routing lock callsite removed — pipeline handles (v1.1)
 
@@ -567,25 +538,6 @@ export async function runInboundAiRouter(ctx) {
 
   const councilParsed = parseCouncilCommand(trimmed);
   const explicitCouncil = isCouncilCommand(trimmed);
-
-  if (founderCouncilDisabled && explicitCouncil) {
-    logRouterEvent('founder_route_council_branch_disabled', {
-      responder: 'council',
-      command_name: 'council_explicit',
-      founder_route: true,
-    });
-    console.error('[FOUNDER_ROUTE_HARD_KILL] explicit council command blocked');
-    return finalizeSlackResponse({
-      responder: 'error',
-      text: '[COS] founder 경로에서는 council이 비활성화되어 있습니다. kickoff/help/status/approval/deploy 명령으로 진행해 주세요.',
-      raw_text: routerCtx.raw_text,
-      normalized_text: routerCtx.normalized_text,
-      command_name: 'council_disabled_founder_route',
-      council_blocked: true,
-      response_type: 'founder_council_disabled',
-      founder_route: true,
-    });
-  }
 
   const probeCouncil = normalizePlannerInputForRoute(trimmed);
   const latePlanner = analyzePlannerResponderLock(probeCouncil);
@@ -852,16 +804,14 @@ export async function runInboundAiRouter(ctx) {
       });
       return out;
     } catch (error) {
-      console.error('COUNCIL_MODE_ERROR -> fallback single flow:', error);
-      const legacyText = await runLegacySingleFlow(trimmed, channelContext, metadata);
+      console.error('COUNCIL_MODE_ERROR:', error);
       return finalizeSlackResponse({
-        responder: 'single',
-        text: legacyText,
+        responder: 'error',
+        text: '[COS] council 실행 중 오류가 발생했습니다. 구조화 명령 또는 대표 표면으로 다시 시도해 주세요.',
         raw_text: routerCtx.raw_text,
         normalized_text: routerCtx.normalized_text,
         council_blocked: true,
-        response_type: 'legacy_single_after_council_error',
-        source_formatter: 'runLegacySingleFlow:after_council_error',
+        response_type: 'council_mode_error',
         slack_route_label: metadata.slack_route_label ?? null,
       });
     }
@@ -1241,16 +1191,14 @@ export async function runInboundAiRouter(ctx) {
     }
     return out;
   } catch (error) {
-    console.error('COS_PARTNER_SURFACE_ERROR -> fallback single flow:', error);
-    const legacyText = await runLegacySingleFlow(trimmed, channelContext, metadata);
+    console.error('COS_PARTNER_SURFACE_ERROR:', error);
     return finalizeSlackResponse({
-      responder: 'single',
-      text: legacyText,
+      responder: 'error',
+      text: '[COS] partner surface 처리 중 오류가 발생했습니다. 같은 목표를 짧게 다시 보내 주세요.',
       raw_text: routerCtx.raw_text,
       normalized_text: routerCtx.normalized_text,
       council_blocked: true,
-      response_type: 'legacy_single_after_partner_error',
-      source_formatter: 'runLegacySingleFlow:after_partner_error',
+      response_type: 'partner_surface_error',
       slack_route_label: metadata.slack_route_label ?? null,
     });
   }
