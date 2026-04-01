@@ -45,6 +45,11 @@ if (row.packet_id != null) throw new Error('packet_id');
 if (row.work_queue_id != null) throw new Error('work_queue_id');
 if (row.input_text_normalized !== '계획상세 PLN-TEST-01') throw new Error('normalized');
 if (row.response_type !== 'not_found') throw new Error(`response_type: ${row.response_type}`);
+if (row.passed_finalize !== true) throw new Error(`passed_finalize: ${row.passed_finalize}`);
+if (row.passed_renderer !== true) throw new Error(`passed_renderer: ${row.passed_renderer}`);
+if (row.passed_sanitize !== true) throw new Error(`passed_sanitize: ${row.passed_sanitize}`);
+if (row.passed_outbound_validation !== true) throw new Error(`passed_outbound_validation: ${row.passed_outbound_validation}`);
+if (row.validation_error_code != null) throw new Error(`validation_error_code: ${row.validation_error_code}`);
 
 const tmpWq = path.join(os.tmpdir(), `cos-trace-wq-${process.pid}-${Date.now()}.jsonl`);
 process.env.INBOUND_TURN_TRACE_FILE = tmpWq;

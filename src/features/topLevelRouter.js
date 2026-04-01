@@ -29,6 +29,24 @@ const GENERIC_CLARIFICATION_RE =
 /** 조회 계약 헤더 — 저장된 plan/work 본문에 Council 키워드가 섞여도 오탐하지 않음 */
 const QUERY_CONTRACT_HEADER_RE =
   /^\[계획상세\]|\[계획진행\]|\[계획발행목록\]|\[업무상세\]|\[업무검토\]/;
+const SYSTEM_RESPONDERS = new Set([
+  'council',
+  'query',
+  'planner',
+  'help',
+  'error',
+  'single',
+  'legacy_single',
+  'navigator',
+  'structured',
+  'executive_surface',
+  'execution_spine',
+  'execution_running_surface',
+  'execution_reporting_surface',
+  'escalation_surface',
+  'runtime_meta_surface',
+  'meta_debug_surface',
+]);
 
 export function looksLikeCouncilSynthesisBody(text) {
   const t = String(text || '');
@@ -183,26 +201,10 @@ export function finalizeSlackResponse(p) {
   }
   const blocked =
     council_blocked ??
-    [
-      'planner',
-      'query',
-      'help',
-      'error',
-      'single',
-      'legacy_single',
-      'navigator',
-      'dialog',
-      'partner_surface',
-      'research_surface',
-      'execution_spine',
-      'execution_running_surface',
-      'execution_reporting_surface',
-      'escalation_surface',
-      'executive_surface',
-      'structured',
-      'runtime_meta_surface',
-      'meta_debug_surface',
-    ].includes(responder);
+    (SYSTEM_RESPONDERS.has(responder) ||
+      responder === 'dialog' ||
+      responder === 'partner_surface' ||
+      responder === 'research_surface');
 
   // 조회(query)만 예외 — council 포함 전 responder 동일 차단 (vNext.10b).
   const councilShapeLeak =
@@ -266,26 +268,13 @@ export function finalizeSlackResponse(p) {
     packet_id: packet_id ?? null,
     status_packet_id: status_packet_id ?? null,
     work_queue_id: work_queue_id ?? null,
+    passed_finalize: true,
+    passed_renderer: isCanonicalSurface(responder) || SYSTEM_RESPONDERS.has(responder),
+    passed_sanitize: !skipSanitize,
+    passed_outbound_validation: passedOutboundValidation,
+    validation_error_code: validationErrorCode,
   });
 
-  const SYSTEM_RESPONDERS = new Set([
-    'council',
-    'query',
-    'planner',
-    'help',
-    'error',
-    'single',
-    'legacy_single',
-    'navigator',
-    'structured',
-    'executive_surface',
-    'execution_spine',
-    'execution_running_surface',
-    'execution_reporting_surface',
-    'escalation_surface',
-    'runtime_meta_surface',
-    'meta_debug_surface',
-  ]);
   if (!isCanonicalSurface(responder) && !SYSTEM_RESPONDERS.has(responder)) {
     logRouterEvent('non_canonical_surface_blocked', {
       original_responder: responder,

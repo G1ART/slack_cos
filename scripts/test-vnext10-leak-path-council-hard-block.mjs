@@ -168,6 +168,8 @@ try {
   assert.equal(rec.route_label, 'dm_ai_router');
   assert.equal(rec.passed_finalize, true);
   assert.equal(rec.passed_sanitize, true);
+  assert.equal(rec.passed_outbound_validation, true);
+  assert.equal(rec.validation_error_code, null);
   assert.ok(rec.contains_old_council_markers);
   assert.equal(rec.stage, 'founder_output_trace');
   ok('buildFounderOutputTraceRecord has source_formatter + route + flags');

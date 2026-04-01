@@ -41,6 +41,11 @@ function inferLinkageFromTargetId(target_id) {
  *   packet_id?: string | null,
  *   status_packet_id?: string | null,
  *   work_queue_id?: string | null,
+ *   passed_finalize?: boolean,
+ *   passed_renderer?: boolean,
+ *   passed_sanitize?: boolean,
+ *   passed_outbound_validation?: boolean,
+ *   validation_error_code?: string | null,
  * }} fields
  */
 /**
@@ -71,6 +76,11 @@ export function markInboundTurnFinalize(fields) {
     packet_id: fields.packet_id ?? null,
     status_packet_id: fields.status_packet_id ?? null,
     work_queue_id: fields.work_queue_id ?? null,
+    passed_finalize: fields.passed_finalize !== false,
+    passed_renderer: fields.passed_renderer !== false,
+    passed_sanitize: fields.passed_sanitize !== false,
+    passed_outbound_validation: fields.passed_outbound_validation !== false,
+    validation_error_code: fields.validation_error_code ?? null,
   };
 }
 
@@ -96,6 +106,11 @@ function buildRecord(store, { status, error, duration_ms }) {
     packet_id: fin.packet_id ?? null,
     status_packet_id: fin.status_packet_id ?? null,
     work_queue_id: fin.work_queue_id ?? null,
+    passed_finalize: fin.passed_finalize !== false,
+    passed_renderer: fin.passed_renderer !== false,
+    passed_sanitize: fin.passed_sanitize !== false,
+    passed_outbound_validation: fin.passed_outbound_validation !== false,
+    validation_error_code: fin.validation_error_code ?? null,
     plan_id: link.plan_id,
     work_id: link.work_id,
     run_id: link.run_id,
