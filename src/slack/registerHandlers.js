@@ -16,6 +16,8 @@ import { appendWorkspaceQueueItem, formatWorkspaceQueueSaved } from '../features
 import { getChannelContext } from '../storage/channelContext.js';
 import { decodeDialogQueuePayload } from './dialogQueueConfirmBlocks.js';
 import { logRouterEvent } from '../features/topLevelRouter.js';
+import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
+import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
 
@@ -86,7 +88,19 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         has_files: files.length > 0,
         file_count: files.length,
       };
-      const answer = await handleUserText(combinedText, meta);
+      const founderPipelineResult = await founderRequestPipeline({
+        text: combinedText,
+        metadata: {
+          ...meta,
+          has_active_intake: isActiveProjectIntake(meta),
+          intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+        },
+        route_label: meta.slack_route_label,
+      });
+      const answer = founderPipelineResult ?? {
+        text: '[COS] founder front door는 전략 대화/상태/승인/배포/메타 경로만 처리합니다. 조회/구조화 명령은 접두어로 입력해 주세요.',
+        surface_type: 'safe_fallback_surface',
+      };
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);
@@ -152,7 +166,19 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         has_files: files.length > 0,
         file_count: files.length,
       };
-      const answer = await handleUserText(combinedText, meta);
+      const founderPipelineResult = await founderRequestPipeline({
+        text: combinedText,
+        metadata: {
+          ...meta,
+          has_active_intake: isActiveProjectIntake(meta),
+          intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+        },
+        route_label: meta.slack_route_label,
+      });
+      const answer = founderPipelineResult ?? {
+        text: '[COS] founder front door는 전략 대화/상태/승인/배포/메타 경로만 처리합니다. 조회/구조화 명령은 접두어로 입력해 주세요.',
+        surface_type: 'safe_fallback_surface',
+      };
       recordInboundSlackExchange(meta, combinedText, answer);
 
       const payload = resolvePostPayload(answer);

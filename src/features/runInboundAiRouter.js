@@ -21,6 +21,7 @@ import {
   logPlannerFc,
 } from './plannerRoute.js';
 import { finalizeSlackResponse, logRouterEvent } from './topLevelRouter.js';
+import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
 import {
   runCouncilMode,
   parseCouncilCommand,
@@ -280,6 +281,40 @@ export async function runInboundAiRouter(ctx) {
     callText,
     callJSON,
   } = ctx;
+
+  const founderRoute =
+    metadata?.source_type === 'direct_message' ||
+    metadata?.source_type === 'channel_mention';
+
+  // Absolute founder guard: even if caller misroutes,
+  // founder-facing turns are forced through founder kernel only.
+  if (founderRoute) {
+    const kernel = await founderRequestPipeline({
+      text: trimmed,
+      metadata,
+      route_label: metadata?.slack_route_label,
+    });
+    if (kernel?.text) {
+      return finalizeSlackResponse({
+        responder: 'executive_surface',
+        text: kernel.text,
+        raw_text: routerCtx?.raw_text ?? trimmed,
+        normalized_text: routerCtx?.normalized_text ?? trimmed,
+        command_name: 'founder_kernel_hard_guard',
+        council_blocked: true,
+        response_type: 'founder_kernel_hard_guard',
+      });
+    }
+    return finalizeSlackResponse({
+      responder: 'error',
+      text: '[COS] founder 단일 경로 보호 가드가 활성화되었습니다. 입력을 다시 보내 주세요.',
+      raw_text: routerCtx?.raw_text ?? trimmed,
+      normalized_text: routerCtx?.normalized_text ?? trimmed,
+      command_name: 'founder_kernel_hard_guard_fallback',
+      council_blocked: true,
+      response_type: 'founder_kernel_hard_guard_fallback',
+    });
+  }
 
   const threadKey = buildSlackThreadKey(metadata);
 
