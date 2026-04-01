@@ -998,3 +998,26 @@ Slack smoke 테스트에서 `@G1COS 버전`이 **old Council 포맷**(종합 추
 - Railway 로그에서 아래 부트 라인이 실제 출력되는지 확인:
   - `founder_route_mode=council_disabled`
   - `git_sha=... instance_id=... pid=... started_at=...`
+
+---
+
+## 21. Founder-Facing Gold Spec v1 Reconstruction (2026-03-31)
+
+### 적용 요약
+
+- Founder path를 `Gold Contract` 분류(`kickoff/followup/pushback/scope_lock/status/approval/deploy`)로 재구성.
+- kickoff 즉시 intake ownership을 생성하고, 동일 스레드는 continuation으로 유지.
+- scope lock 요청 시 `Scope Lock Packet`을 생성하고 execution packet/run을 생성해 `execution_ready`로 전이.
+- status/approval는 각각 `Status Report Packet` / `Execution Handoff Packet`으로 고정 출력.
+- meta debug를 one-line deterministic 응답으로 고정.
+
+### 하드페일 강화
+
+- founder route에서 `responder=council` 즉시 hard fail.
+- internal metadata / old council marker 감지 시 hard fallback.
+- kickoff 계열에서 generic clarification 문구 탐지 시 hard fail.
+
+### 테스트
+
+- 신규: `scripts/tests-constitutional/test-founder-gold-spec-v1.mjs` (exact prompts 7개).
+- `package.json` test 체인에 gold test 추가.

@@ -14,13 +14,16 @@ const INTERNAL_MARKER_SUBSTRINGS = [
   '종합 추천안',
   '페르소나별 핵심 관점',
   '가장 강한 반대 논리',
-  '핵심 리스크',
   '대표 결정 필요 여부',
   '내부 처리 정보',
   'strategy_finance:',
   'risk_review:',
   '참여 페르소나:',
+  '협의 모드:',
+  'institutional memory',
 ];
+const GENERIC_CLARIFICATION_RE =
+  /(조금\s*더\s*구체적으로|최적의\s*경로로\s*안내|원하시면\s*도와드리겠습니다)/u;
 
 function containsInternalMarkers(text) {
   const t = String(text || '');
@@ -95,6 +98,18 @@ export async function sendFounderResponse(opts) {
       ...trace,
     });
     text = FOUNDER_HARD_BLOCK_FALLBACK;
+  }
+  const kickoffLikeSurface = new Set(['executive_kickoff_surface', 'discovery_surface', 'dialogue_surface']);
+  if (kickoffLikeSurface.has(surface_type) && GENERIC_CLARIFICATION_RE.test(text)) {
+    emitTrace({
+      intent,
+      surface_type,
+      responder_kind,
+      error: 'generic_clarification_blocked',
+      preview: text.slice(0, 200),
+      ...trace,
+    });
+    text = '[COS] 요청을 운영 문제로 재정의했습니다. 벤치마크 축, MVP 범위/제외, 리스크, 합의 질문으로 바로 좁혀가겠습니다.';
   }
 
   // 3. Build Slack payload

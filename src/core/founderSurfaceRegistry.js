@@ -12,13 +12,13 @@ import { WorkPhase, FounderSurfaceType, FOUNDER_SURFACE_VALUES } from './founder
  * Default phase → surface mapping. Policy engine may override.
  */
 const PHASE_SURFACE_MAP = {
-  [WorkPhase.DISCOVER]: FounderSurfaceType.DISCOVERY,
-  [WorkPhase.ALIGN]: FounderSurfaceType.EXECUTIVE_KICKOFF,
-  [WorkPhase.LOCK]: FounderSurfaceType.EXECUTION_PACKET,
+  [WorkPhase.DISCOVER]: FounderSurfaceType.DIALOGUE,
+  [WorkPhase.ALIGN]: FounderSurfaceType.DIALOGUE,
+  [WorkPhase.LOCK]: FounderSurfaceType.SCOPE_LOCK_PACKET,
   [WorkPhase.SEED]: FounderSurfaceType.EXECUTION_PACKET,
-  [WorkPhase.EXECUTE]: FounderSurfaceType.RUN_STATE,
+  [WorkPhase.EXECUTE]: FounderSurfaceType.STATUS_REPORT,
   [WorkPhase.REVIEW]: FounderSurfaceType.RUN_STATE,
-  [WorkPhase.APPROVE]: FounderSurfaceType.APPROVAL_PACKET,
+  [WorkPhase.APPROVE]: FounderSurfaceType.ORCHESTRATION_HANDOFF,
   [WorkPhase.DEPLOY]: FounderSurfaceType.DEPLOY_PACKET,
   [WorkPhase.MONITOR]: FounderSurfaceType.MONITORING,
   [WorkPhase.EXCEPTION]: FounderSurfaceType.EXCEPTION,

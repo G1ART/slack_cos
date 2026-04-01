@@ -70,9 +70,5 @@ export function formatRuntimeMetaSurfaceText() {
 }
 
 export function formatMetaDebugSurfaceText() {
-  return [
-    '*[COS 운영 메타]*',
-    'founder-facing 답변에서는 라우터·샌itizer 내부 경로를 펼치지 않습니다.',
-    '런타임 SHA는 `버전` 또는 `/g1cos 버전`으로 확인해 주세요.',
-  ].join('\n');
+  return '[COS 운영 메타] founder-facing에서는 내부 라우팅 경로를 노출하지 않으며 런타임 확인은 버전 명령으로만 제공합니다.';
 }

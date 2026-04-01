@@ -23,6 +23,8 @@ const COUNCIL_SYNTHESIS_MARKERS = [
 ];
 
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';
+const GENERIC_CLARIFICATION_RE =
+  /(조금\s*더\s*구체적으로|최적의\s*경로로\s*안내|원하시면\s*도와드리겠습니다)/u;
 
 /** 조회 계약 헤더 — 저장된 plan/work 본문에 Council 키워드가 섞여도 오탐하지 않음 */
 const QUERY_CONTRACT_HEADER_RE =
@@ -152,6 +154,20 @@ export function finalizeSlackResponse(p) {
     });
     console.error('[FOUNDER_ROUTE_HARD_KILL] responder=council blocked');
     out = '[COS] founder 경로에서는 council이 비활성화되어 있습니다. 요청을 실행 가능한 명령으로 다시 말씀해 주세요.';
+    skipSanitize = true;
+  }
+  if (
+    founder_route &&
+    (String(response_type || '').includes('kickoff') || responder === 'executive_surface' || responder === 'dialogue_surface') &&
+    GENERIC_CLARIFICATION_RE.test(out)
+  ) {
+    logRouterEvent('founder_route_generic_clarification_hard_kill', {
+      responder,
+      response_type,
+      preview: out.slice(0, 240),
+    });
+    console.error('[FOUNDER_ROUTE_HARD_KILL] generic clarification blocked');
+    out = '[COS] 요청을 운영 문제로 재정의해 바로 범위를 좁히겠습니다. 핵심 결정 3가지를 먼저 맞추겠습니다.';
     skipSanitize = true;
   }
   const blocked =

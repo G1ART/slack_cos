@@ -10,8 +10,9 @@ import { FounderSurfaceType, SAFE_FALLBACK_TEXT, DISCOVERY_PROMPT_TEXT } from '.
 
 const INTERNAL_MARKER_SUBSTRINGS = [
   '종합 추천안', '페르소나별 핵심 관점', '가장 강한 반대 논리',
-  '핵심 리스크', '대표 결정 필요 여부', '내부 처리 정보',
+  '대표 결정 필요 여부', '내부 처리 정보',
   'strategy_finance:', 'risk_review:', '참여 페르소나:',
+  '협의 모드:', 'institutional memory',
 ];
 
 function containsInternalMarkers(text) {
@@ -104,6 +105,58 @@ function renderProjectSpace(payload) {
   return { text: lines.join('\n') || payload.text || SAFE_FALLBACK_TEXT };
 }
 
+function renderDialogueSurface(payload) {
+  const lines = ['[COS 전략 대화]'];
+  if (payload.reframed_problem) lines.push(payload.reframed_problem);
+  if (payload.benchmark_axes?.length) lines.push(`*벤치마크 축*\n- ${payload.benchmark_axes.join('\n- ')}`);
+  if (payload.mvp_scope_in?.length) lines.push(`*MVP 범위*\n- ${payload.mvp_scope_in.join('\n- ')}`);
+  if (payload.mvp_scope_out?.length) lines.push(`*제외 범위*\n- ${payload.mvp_scope_out.join('\n- ')}`);
+  if (payload.risk_points?.length) lines.push(`*핵심 리스크/검증 포인트*\n- ${payload.risk_points.join('\n- ')}`);
+  if (payload.key_questions?.length) lines.push(`*지금 합의할 질문*\n- ${payload.key_questions.join('\n- ')}`);
+  if (payload.next_step) lines.push(`*다음 단계*\n${payload.next_step}`);
+  return { text: lines.join('\n\n') };
+}
+
+function renderScopeLockPacket(payload) {
+  const lines = ['*[Scope Lock Packet]*'];
+  lines.push(`*프로젝트명:* ${payload.project_name || '-'}`);
+  lines.push(`*문제 정의:* ${payload.problem_definition || '-'}`);
+  lines.push(`*타겟 사용자:*\n- ${(payload.target_users || []).join('\n- ') || '-'}`);
+  lines.push(`*MVP 범위:*\n- ${(payload.mvp_scope || []).join('\n- ') || '-'}`);
+  lines.push(`*제외 범위:*\n- ${(payload.excluded_scope || []).join('\n- ') || '-'}`);
+  lines.push(`*핵심 가설:* ${payload.core_hypothesis || '-'}`);
+  lines.push(`*성공 지표:*\n- ${(payload.success_metrics || []).join('\n- ') || '-'}`);
+  lines.push(`*리스크:*\n- ${(payload.key_risks || []).join('\n- ') || '-'}`);
+  lines.push(`*초기 아키텍처 방향:* ${payload.initial_architecture || '-'}`);
+  lines.push(`*추천 실행 순서:*\n- ${(payload.recommended_sequence || []).join('\n- ') || '-'}`);
+  lines.push(`*Founder 승인 필요:* ${payload.founder_approval_required ? '예' : '아니오'}`);
+  if (payload.packet_id) lines.push(`\`packet_id: ${payload.packet_id}\``);
+  if (payload.run_id) lines.push(`\`run_id: ${payload.run_id}\``);
+  return { text: lines.join('\n\n') };
+}
+
+function renderStatusReportPacket(payload) {
+  const lines = ['*[진행 보고]*'];
+  lines.push(`*현재 단계:* ${payload.current_stage || '-'}`);
+  lines.push(`*완료된 것:*\n- ${(payload.completed || []).join('\n- ') || '-'}`);
+  lines.push(`*진행 중:*\n- ${(payload.in_progress || []).join('\n- ') || '-'}`);
+  lines.push(`*blocker:* ${payload.blocker || '없음'}`);
+  lines.push(`*외부 툴 truth:*\n- ${(payload.provider_truth || []).join('\n- ') || '-'}`);
+  lines.push(`*다음 예정 작업:*\n- ${(payload.next_actions || []).join('\n- ') || '-'}`);
+  lines.push(`*Founder action 필요:* ${payload.founder_action_required || '없음'}`);
+  return { text: lines.join('\n\n') };
+}
+
+function renderHandoffPacket(payload) {
+  const lines = ['*[Execution Handoff]*'];
+  lines.push(`*프로젝트:* ${payload.project_ref || '-'}`);
+  lines.push(`*run:* ${payload.run_ref || '-'}`);
+  lines.push(`*dispatched workstreams:*\n- ${(payload.dispatched_workstreams || []).join('\n- ') || '-'}`);
+  lines.push(`*provider truth:*\n- ${(payload.provider_truth || []).join('\n- ') || '-'}`);
+  lines.push(`*다음 founder action:* ${payload.founder_next_action || '없음'}`);
+  return { text: lines.join('\n\n') };
+}
+
 // --- Renderer dispatch ---
 
 const SURFACE_RENDERERS = {
@@ -113,6 +166,11 @@ const SURFACE_RENDERERS = {
   [FounderSurfaceType.HELP]: (p) => ({ text: p.text || SAFE_FALLBACK_TEXT }),
   [FounderSurfaceType.SAFE_FALLBACK]: () => ({ text: SAFE_FALLBACK_TEXT }),
   [FounderSurfaceType.DISCOVERY]: (p) => ({ text: p.text || DISCOVERY_PROMPT_TEXT }),
+  [FounderSurfaceType.DIALOGUE]: renderDialogueSurface,
+  [FounderSurfaceType.SCOPE_LOCK_PACKET]: renderScopeLockPacket,
+  [FounderSurfaceType.STATUS_REPORT]: renderStatusReportPacket,
+  [FounderSurfaceType.ORCHESTRATION_HANDOFF]: renderHandoffPacket,
+  [FounderSurfaceType.ESCALATION]: (p) => ({ text: p.text || SAFE_FALLBACK_TEXT }),
 
   // OS Surfaces
   [FounderSurfaceType.PROJECT_SPACE]: renderProjectSpace,

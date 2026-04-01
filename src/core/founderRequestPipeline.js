@@ -7,7 +7,7 @@
 
 // GREP_COS_CONSTITUTION_PIPELINE
 
-import { WorkPhase, FounderIntent, SAFE_FALLBACK_TEXT, DISCOVERY_PROMPT_TEXT, Actor } from './founderContracts.js';
+import { WorkPhase, FounderIntent, SAFE_FALLBACK_TEXT, Actor } from './founderContracts.js';
 import { resolveWorkObject } from './workObjectResolver.js';
 import { resolveWorkPhase } from './workPhaseResolver.js';
 import { classifyFounderIntent } from './founderIntentClassifier.js';
@@ -18,6 +18,21 @@ import { renderFounderSurface } from './founderRenderer.js';
 
 import { formatRuntimeMetaSurfaceText, formatMetaDebugSurfaceText } from '../features/inboundFounderRoutingLock.js';
 import { formatExecutiveHelpText } from '../features/executiveSurfaceHelp.js';
+import {
+  classifyGoldContract,
+  buildDialoguePacket,
+  buildScopeLockPacket,
+  buildStatusPacket,
+  buildHandoffPacket,
+} from './founderGoldContract.js';
+import {
+  openProjectIntakeSession,
+  isActiveProjectIntake,
+  transitionProjectIntakeStage,
+  hasOpenExecutionOwnership,
+} from '../features/projectIntakeSession.js';
+import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
+import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
 
 /**
  * Utility intents the pipeline handles regardless of work object state.
@@ -83,42 +98,11 @@ async function routeToExecutor(phase, policy, normalized, metadata, workContext)
 }
 
 async function executeDiscovery(normalized, metadata, workContext) {
-  // If there's a project space but no intake, offer status or start
-  if (workContext.project_space && !workContext.intake_session) {
-    try {
-      const { renderProjectSpaceStatusForSlack } = await import('../features/projectSpaceRegistry.js');
-      return { text: renderProjectSpaceStatusForSlack(workContext.project_space) };
-    } catch {
-      return { text: DISCOVERY_PROMPT_TEXT };
-    }
-  }
-  return { text: DISCOVERY_PROMPT_TEXT };
+  return { packet: buildDialoguePacket(normalized, 'kickoff') };
 }
 
 async function executeAlign(normalized, metadata, workContext) {
-  // Delegate to existing intake continuation / refine / kickoff logic
-  try {
-    const { tryProjectIntakeExecutiveContinue } = await import('../features/startProjectLockConfirmed.js');
-    const result = await tryProjectIntakeExecutiveContinue(normalized, metadata);
-    if (result) return result;
-  } catch { /* fallthrough */ }
-
-  // Try kickoff if align but no intake response
-  try {
-    const { tryExecutiveSurfaceResponse } = await import('../features/tryExecutiveSurfaceResponse.js');
-    const kickoffInput = `툴제작: ${normalized}`;
-    const result = await tryExecutiveSurfaceResponse(kickoffInput, metadata, {});
-    if (result?.response_type === 'start_project') {
-      return {
-        text: result.text,
-        blocks: result.blocks,
-        packet_id: result.packet_id,
-        status_packet_id: result.status_packet_id,
-      };
-    }
-  } catch { /* fallthrough */ }
-
-  return null;
+  return { packet: buildDialoguePacket(normalized, 'followup') };
 }
 
 async function executeLock(normalized, metadata, workContext) {
@@ -151,25 +135,18 @@ async function executeSpine(normalized, metadata, workContext) {
 }
 
 async function executeApproval(normalized, metadata, workContext) {
-  // Approval decisions come through Slack buttons, not text.
-  // Text in approval phase → show current approval state
-  if (workContext.run) {
-    return {
-      text: `현재 승인 대기 중입니다. 버튼으로 승인/보류/반려를 결정해 주세요.`,
-      founder_action_required: '승인/보류/반려를 결정해 주세요.',
-    };
-  }
-  return null;
+  return { packet: buildHandoffPacket() };
 }
 
 async function executeDeploy(normalized, metadata, workContext) {
-  // Deploy-phase text → show deploy status
-  try {
-    const { tryFinalizeExecutionSpineTurn } = await import('../features/executionSpineRouter.js');
-    const result = tryFinalizeExecutionSpineTurn({ trimmed: normalized, metadata });
-    if (result && result !== 'council_defer' && result.text) return result;
-  } catch { /* fallthrough */ }
-  return null;
+  return {
+    packet: buildStatusPacket({
+      current_stage: 'deploy',
+      in_progress: ['배포 준비/검증'],
+      next_actions: ['승인 패킷 확인', '배포 연결', '완료 보고'],
+      founder_action_required: '배포 승인 여부 확인',
+    }),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -182,21 +159,36 @@ async function executeDeploy(normalized, metadata, workContext) {
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = String(text || '').trim();
+  const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
+  const threadKey = buildSlackThreadKey(metadata);
+  const gold = classifyGoldContract(normalized, metadata);
 
   // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
-  const workContext = resolveWorkObject(normalized, metadata);
+  let workContext = resolveWorkObject(normalized, metadata);
 
   // 2. Intent classifier — supplementary signal
   const intentResult = classifyFounderIntent(normalized, metadata);
+  if (gold.intent && (intentResult.intent === FounderIntent.UNKNOWN || intentResult.intent === FounderIntent.UNKNOWN_EXPLORATORY)) {
+    intentResult.intent = gold.intent;
+  }
 
   // 3. Handle utility intents regardless of work object (version, meta, help)
   if (UTILITY_INTENTS.has(intentResult.intent)) {
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
   }
 
+  if (founderRoute && gold.kind === 'kickoff' && !isActiveProjectIntake(metadata)) {
+    openProjectIntakeSession(metadata, { goalLine: normalized });
+    workContext = resolveWorkObject(normalized, metadata);
+  }
+
   // 4. Work Phase Resolver
   const phaseResult = resolveWorkPhase(workContext, normalized, metadata);
-  const phase = phaseResult.phase;
+  let phase = phaseResult.phase;
+  if (gold.kind === 'scope_lock_request') phase = WorkPhase.LOCK;
+  if (gold.kind === 'status') phase = hasOpenExecutionOwnership(metadata) ? WorkPhase.EXECUTE : WorkPhase.ALIGN;
+  if (gold.kind === 'approval') phase = WorkPhase.APPROVE;
+  if (gold.kind === 'deploy') phase = WorkPhase.DEPLOY;
 
   // 5. For phases we don't handle yet → delegate to legacy routers
   if (!PIPELINE_HANDLED_PHASES.has(phase)) {
@@ -219,6 +211,67 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     );
   }
 
+  if (gold.kind === 'status') {
+    const run = workContext.run;
+    const rendered = renderFounderSurface('status_report_surface', buildStatusPacket({
+      current_stage: run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),
+      completed: run ? ['scope lock 완료', 'run 생성'] : ['문제 재정의'],
+      in_progress: run ? ['workstream 실행'] : ['scope lock 논의'],
+      blocker: run?.outbound_last_error || '없음',
+      provider_truth: run
+        ? [
+            `github: ${run.git_trace?.repo ? 'live' : 'manual_bridge'}`,
+            `cursor: ${run.cursor_trace?.length ? 'live' : 'manual_bridge'}`,
+            `supabase: ${run.supabase_trace?.length ? 'live' : 'manual_bridge'}`,
+          ]
+        : ['github: 없음', 'cursor: 없음', 'supabase: 없음'],
+      next_actions: run ? ['blocker 해소', '승인 패킷 업데이트', '배포 준비'] : ['핵심 결정 3개 확정', 'scope lock packet 생성'],
+      founder_action_required: run ? '상태 확인 또는 우선순위 조정' : 'scope lock 확정',
+    }));
+    return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase }, intentResult, policy, route_label });
+  }
+
+  if (gold.kind === 'approval' && !workContext.run) {
+    const rendered = renderFounderSurface('dialogue_surface', {
+      ...buildDialoguePacket(normalized, 'approval_prelock'),
+      next_step: '아직 scope lock 전입니다. 먼저 범위를 잠그면 즉시 run/orchestration으로 넘기겠습니다.',
+    });
+    return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase: WorkPhase.ALIGN }, intentResult, policy, route_label });
+  }
+
+  if (gold.kind === 'scope_lock_request') {
+    const scope = buildScopeLockPacket(normalized, metadata);
+    const execPacket = createExecutionPacket({
+      thread_key: threadKey,
+      goal_line: scope.problem_definition,
+      locked_scope_summary: scope.mvp_scope.join(', '),
+      includes: scope.mvp_scope,
+      excludes: scope.excluded_scope,
+      deferred_items: [],
+      approval_rules: ['founder_approval_required'],
+      session_id: threadKey,
+      requested_by: String(metadata.user || ''),
+      project_label: scope.project_name,
+      project_id: workContext.project_id || null,
+    });
+    const run = createExecutionRun({ packet: execPacket, metadata });
+    transitionProjectIntakeStage(metadata, 'execution_ready', {
+      packet_id: execPacket.packet_id,
+      run_id: run.run_id,
+    });
+    const rendered = renderFounderSurface('scope_lock_packet_surface', {
+      ...scope,
+      packet_id: execPacket.packet_id,
+      run_id: run.run_id,
+      handoff: buildHandoffPacket({
+        project_ref: scope.project_name,
+        run_ref: run.run_id,
+        provider_truth: ['github: manual_bridge', 'cursor: manual_bridge', 'supabase: manual_bridge'],
+      }),
+    });
+    return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase }, intentResult, policy, route_label });
+  }
+
   // 7. Route to executor
   const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext);
   if (executorResult === null) {
@@ -227,7 +280,7 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   }
 
   // 8. Packet Assembler
-  const packet = assemblePacket(executorResult, workContext, phaseResult);
+  const packet = assemblePacket(executorResult, workContext, { ...phaseResult, phase });
 
   // 9. Surface type from policy
   const surfaceType = resolveSurfaceType(policy, phase);

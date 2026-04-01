@@ -33,6 +33,15 @@ export function assemblePacket(executorResult, workContext, phaseResult) {
     return makeUtilityPacket({ text: null }, workContext);
   }
 
+  if (executorResult.packet && typeof executorResult.packet === 'object') {
+    return {
+      ...executorResult.packet,
+      work_ref: workRef(workContext),
+      text: executorResult.text,
+      blocks: executorResult.blocks,
+    };
+  }
+
   const phase = phaseResult?.phase || WorkPhase.DISCOVER;
 
   switch (phase) {
@@ -48,6 +57,9 @@ export function assemblePacket(executorResult, workContext, phaseResult) {
 
     case WorkPhase.EXECUTE:
     case WorkPhase.REVIEW:
+      if (executorResult.packet_type === 'status_report_packet') {
+        return makeStatusReportPacket(executorResult, workContext);
+      }
       return makeRunStatePacket(executorResult, workContext);
 
     case WorkPhase.APPROVE:
@@ -131,6 +143,22 @@ function makeRunStatePacket(result, ctx) {
     current_stage: run?.current_stage,
     status: run?.status,
     project_label: run?.project_label || ctx.project_space?.human_label,
+  };
+}
+
+function makeStatusReportPacket(result, ctx) {
+  return {
+    packet_type: 'status_report_packet',
+    work_ref: workRef(ctx),
+    current_stage: result.current_stage || ctx.run?.current_stage || 'align',
+    completed: result.completed || [],
+    in_progress: result.in_progress || [],
+    blocker: result.blocker || '없음',
+    provider_truth: result.provider_truth || [],
+    next_actions: result.next_actions || [],
+    founder_action_required: result.founder_action_required || null,
+    text: result.text,
+    blocks: result.blocks,
   };
 }
 

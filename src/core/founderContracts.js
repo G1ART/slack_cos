@@ -45,6 +45,7 @@ export const FounderIntent = Object.freeze({
   COUNCIL_DELIBERATION: 'council_deliberation',
   PARTNER_DIALOG: 'partner_dialog',
   APPROVAL_ACTION: 'approval_action',
+  SCOPE_LOCK_REQUEST: 'scope_lock_request',
   UNKNOWN_EXPLORATORY: 'unknown_exploratory',
   UNKNOWN_INVALID: 'unknown_invalid',
 });
@@ -62,6 +63,11 @@ export const FounderSurfaceType = Object.freeze({
   HELP: 'help_surface',
   SAFE_FALLBACK: 'safe_fallback_surface',
   DISCOVERY: 'discovery_surface',
+  DIALOGUE: 'dialogue_surface',
+  SCOPE_LOCK_PACKET: 'scope_lock_packet_surface',
+  STATUS_REPORT: 'status_report_surface',
+  ORCHESTRATION_HANDOFF: 'orchestration_handoff_surface',
+  ESCALATION: 'escalation_surface',
 
   // OS Surfaces
   PROJECT_SPACE: 'project_space_surface',
@@ -115,9 +121,14 @@ export const SURFACE_FREEDOM_MAP = Object.freeze({
   [FounderSurfaceType.EXECUTIVE_STATUS]: SurfaceFreedomLevel.L1_SEMI,
   [FounderSurfaceType.STRUCTURED_COMMAND]: SurfaceFreedomLevel.L1_SEMI,
   [FounderSurfaceType.QUERY]: SurfaceFreedomLevel.L1_SEMI,
+  [FounderSurfaceType.SCOPE_LOCK_PACKET]: SurfaceFreedomLevel.L1_SEMI,
+  [FounderSurfaceType.STATUS_REPORT]: SurfaceFreedomLevel.L1_SEMI,
+  [FounderSurfaceType.ORCHESTRATION_HANDOFF]: SurfaceFreedomLevel.L1_SEMI,
+  [FounderSurfaceType.ESCALATION]: SurfaceFreedomLevel.L1_SEMI,
 
   [FounderSurfaceType.META_DEBUG]: SurfaceFreedomLevel.L2_NARRATIVE,
   [FounderSurfaceType.DISCOVERY]: SurfaceFreedomLevel.L2_NARRATIVE,
+  [FounderSurfaceType.DIALOGUE]: SurfaceFreedomLevel.L2_NARRATIVE,
 });
 
 // ---------------------------------------------------------------------------
@@ -156,4 +167,4 @@ export const SAFE_FALLBACK_TEXT =
   '[COS] 요청을 처리하는 중 내부 오류가 발생했습니다. 같은 질문을 한 번 더 보내 주세요.';
 
 export const DISCOVERY_PROMPT_TEXT =
-  '[COS] 요청을 이해했습니다. 조금 더 구체적으로 말씀해 주시면 최적의 경로로 안내드리겠습니다.';
+  '[COS] 요청을 운영 문제로 재정의해 벤치마크·MVP·리스크를 함께 잠그겠습니다.';
