@@ -1,4 +1,5 @@
 import { FounderIntent } from './founderContracts.js';
+import { writeFounderDialogueContract } from './cosDialogueWriter.js';
 
 const GENERIC_CLARIFICATION_PATTERNS = [
   /조금\s*더\s*구체적으로/u,
@@ -32,44 +33,8 @@ export function classifyGoldContract(text, metadata = {}) {
   return { kind: 'followup', intent: FounderIntent.PROJECT_CLARIFICATION, confidence: 0.7 };
 }
 
-function domainHint(t) {
-  if (/캘린더|스케줄|일정|예약/.test(t)) return '공간 리소스 예약 + 멤버 권한 + 외부 링크 공유';
-  if (/crm|리드|세일즈/.test(t)) return '리드 수집 + 파이프라인 운영 + 후속 액션 관리';
-  return '운영 워크플로우 + 권한 + 실행 추적';
-}
-
-function benchmarkList(t) {
-  if (/캘린더|스케줄|일정|예약/.test(t)) return ['Google Calendar', 'Teamup', 'Calendly', 'Acuity', 'Notion Calendar'];
-  if (/crm|리드|세일즈/.test(t)) return ['HubSpot', 'Pipedrive', 'Salesforce Essentials', 'Close', 'Notion CRM'];
-  return ['Notion', 'Airtable', 'Slack Workflow', 'Zapier', 'Retool'];
-}
-
 export function buildDialoguePacket(text, mode = 'kickoff') {
-  const t = String(text || '').trim();
-  const benchmarks = benchmarkList(t);
-  const reframed = `이건 단순 기능 요청이 아니라 ${domainHint(t)}가 섞인 운영 문제입니다.`;
-  const mvpIn = /캘린더|스케줄|일정|예약/.test(t)
-    ? ['권한 기반 일정 등록/수정', '공간/수업/행사 리소스 충돌 방지', '외부 손님용 제한 링크', '알림/승인 변경 로그']
-    : ['핵심 워크플로우 1개 자동화', '역할/권한 정책', '운영 로그/추적', '핵심 알림'];
-  const mvpOut = ['결제/정산 자동화', '고급 분석 대시보드', '다중 외부 연동 동시 구현'];
-  const risks = ['운영 책임자 부재로 규칙 붕괴', '권한 모델 과복잡으로 도입 지연', '모바일 입력 UX 미흡으로 사용률 저하'];
-  const questions = [
-    '외부 사용자는 조회만 허용할지, 예약 요청까지 허용할지',
-    '운영 UI를 단일로 통합할지, 유형별로 분리할지',
-    '1차 연동 대상으로 Google Calendar를 즉시 포함할지',
-  ];
-  return {
-    packet_type: 'dialogue_contract',
-    mode,
-    reframed_problem: reframed,
-    benchmark_axes: benchmarks,
-    mvp_scope_in: mvpIn,
-    mvp_scope_out: mvpOut,
-    risk_points: risks,
-    key_questions: questions,
-    next_step:
-      '위 3가지만 맞추면 제가 바로 벤치마크 매트릭스와 MVP 설계안으로 좁히고, scope lock 후보안을 올리겠습니다.',
-  };
+  return writeFounderDialogueContract(text, mode);
 }
 
 export function isGenericClarification(text) {

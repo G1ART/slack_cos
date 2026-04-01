@@ -46,10 +46,18 @@
 | `topLevelRouter` finalize 결과를 inbound-turn JSONL로 전파 (차단 사유를 turn 레벨에서 질의 가능) | 완료 |
 | `scripts/test-inbound-turn-trace.mjs` / `scripts/test-vnext10-leak-path-council-hard-block.mjs`에 필드 회귀 검증 추가 | 완료 |
 
-## 다음 배치(Phase 3~) — 우선순위
+## Phase 3a — dialogue writer / hidden extractor 도입 (완료)
 
-1. **`cosDialogueWriter.js` / `hiddenContractExtractor.js`** 도입 (지시문 §4).
-2. `founderRequestPipeline`의 dialogue contract 생성 책임을 위 두 모듈로 분리하고 `tryExecutiveSurfaceResponse` founder 의존 축소.
+| 항목 | 상태 |
+|------|------|
+| `src/core/hiddenContractExtractor.js` 신설 — founder 입력에서 도메인/벤치마크/MVP/리스크/핵심질문 힌트 추출 | 완료 |
+| `src/core/cosDialogueWriter.js` 신설 — hidden contract 기반 dialogue contract 작성기 도입 | 완료 |
+| `founderGoldContract.buildDialoguePacket`가 writer 위임으로 전환 (pipeline dialogue 계약 생성 책임 분리 시작) | 완료 |
+
+## 다음 배치(Phase 3b~) — 우선순위
+
+1. `founderRequestPipeline`에서 `buildDialoguePacket` 직접 의존을 점진 축소하고 writer/contract 경로를 1차 소스로 통일.
+2. `tryExecutiveSurfaceResponse` founder-facing start_project 작성 책임을 dialogue writer 계열로 이동(운영 큐/실행 문구 완전 분리).
 3. **머지 게이트:** Gold A~E + founder route council 0회 + trace 필드 스키마 고정 자동 검증 스크립트 확정.
 
 ## 프로젝트를 접기 전에 볼 신호
