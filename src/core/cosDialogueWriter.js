@@ -20,17 +20,37 @@ import { extractHiddenContract } from './hiddenContractExtractor.js';
  * }}
  */
 export function writeFounderDialogueContract(text, mode = 'kickoff') {
+  const input = String(text || '').trim();
   const profile = extractHiddenContract(text);
-  const reframed = `이건 단순 기능 요청이 아니라 ${profile.domain_hint}가 섞인 운영 문제입니다.`;
+  const decisions = extractFounderDecisions(input);
+  const reframedBase = `이건 단순 기능 요청이 아니라 ${profile.domain_hint}가 섞인 운영 문제입니다.`;
+  const reframed =
+    mode === 'followup' && decisions.summary.length
+      ? `${reframedBase} 방금 합의된 조건(${decisions.summary.join(' / ')})을 반영해 다음 설계를 좁힙니다.`
+      : reframedBase;
+
+  const mvpIn = [...profile.mvp_scope_in];
+  const mvpOut = [...profile.mvp_scope_out];
+  if (decisions.allowExternalRequest) {
+    mvpIn.unshift('외부 사용자 예약 요청 허용');
+  }
+  if (decisions.singleUiWithLockedBlocks) {
+    mvpIn.unshift('단일 운영 UI + 권한 없는 상세 잠금 블록');
+  }
+  if (decisions.excludeIntegration) {
+    mvpOut.unshift('1차 외부 캘린더 연동 제외');
+  }
+
+  const keyQuestions = buildNextQuestions(profile.key_questions, decisions);
   return {
     packet_type: 'dialogue_contract',
     mode,
     reframed_problem: reframed,
     benchmark_axes: profile.benchmark_axes,
-    mvp_scope_in: profile.mvp_scope_in,
-    mvp_scope_out: profile.mvp_scope_out,
+    mvp_scope_in: mvpIn,
+    mvp_scope_out: mvpOut,
     risk_points: profile.risk_points,
-    key_questions: profile.key_questions,
+    key_questions: keyQuestions,
     pushback_point:
       '요구사항을 동시에 모두 만족시키면 운영 복잡도와 품질 리스크가 급증합니다. 우선순위 1개를 먼저 고정해야 합니다.',
     tradeoff_summary:
@@ -42,6 +62,53 @@ export function writeFounderDialogueContract(text, mode = 'kickoff') {
     scope_cut:
       '이번 턴에서는 결제/정산·고급 BI·다중 외부 연동을 제외하고 캘린더 핵심 흐름(등록/권한/충돌방지)만 잠급니다.',
     next_step:
-      '위 핵심 질문만 정렬되면 제가 벤치마크 매트릭스와 MVP 설계안을 바로 좁히고, scope lock 후보안을 제시하겠습니다.',
+      mode === 'followup'
+        ? '지금 반영된 합의를 기준으로 scope lock 후보안을 제시하겠습니다. 남은 쟁점 2~3개만 확정하면 run 생성으로 바로 넘깁니다.'
+        : '위 핵심 질문만 정렬되면 제가 벤치마크 매트릭스와 MVP 설계안을 바로 좁히고, scope lock 후보안을 제시하겠습니다.',
   };
+}
+
+function extractFounderDecisions(text) {
+  const t = String(text || '');
+  const allowExternalRequest =
+    /(외부\s*사용자|외부)\s*(예약\s*요청|요청)\s*(까지\s*)?(허용|가능)/u.test(t);
+  const singleUiWithLockedBlocks =
+    /(단일|단일화).*(잠금|블럭|블록).*(열람\s*금지|비공개|권한\s*외)/u.test(t) ||
+    /(권한\s*외).*(상세).*(열람\s*금지|비공개)/u.test(t);
+  const excludeIntegration =
+    /(연동).*(제외|미포함|하지\s*않|빼)/u.test(t);
+
+  const summary = [];
+  if (allowExternalRequest) summary.push('외부 예약 요청 허용');
+  if (singleUiWithLockedBlocks) summary.push('단일 UI + 상세 잠금');
+  if (excludeIntegration) summary.push('연동 기능 제외');
+
+  return {
+    allowExternalRequest,
+    singleUiWithLockedBlocks,
+    excludeIntegration,
+    summary,
+  };
+}
+
+function buildNextQuestions(defaultQuestions, decisions) {
+  const questions = [];
+  if (!decisions.allowExternalRequest) {
+    questions.push('외부 사용자는 조회만 허용할지, 예약 요청까지 허용할지');
+  }
+  if (!decisions.singleUiWithLockedBlocks) {
+    questions.push('운영 UI를 단일로 통합할지, 유형별로 분리할지');
+  }
+  if (!decisions.excludeIntegration) {
+    questions.push('1차 연동 대상으로 Google Calendar를 즉시 포함할지');
+  }
+  questions.push('승인/거절 SLA를 몇 시간 기준으로 둘지');
+  questions.push('권한 없는 사용자에게 노출할 최소 필드를 무엇으로 제한할지');
+
+  const dedup = [];
+  for (const q of [...questions, ...defaultQuestions]) {
+    if (!dedup.includes(q)) dedup.push(q);
+    if (dedup.length >= 5) break;
+  }
+  return dedup;
 }

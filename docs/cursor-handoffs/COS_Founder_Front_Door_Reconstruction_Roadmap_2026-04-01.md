@@ -84,6 +84,7 @@
 | marker 오탐 제거: `founderSurfaceGuard`의 broad marker에서 `핵심 리스크` 제거해 정상 Dialogue가 fallback으로 떨어지지 않게 조정 | 완료 |
 | rollback: 끝단 강제 재생성/복구 로직 제거, founder는 앞단 단일 생성(kernel)로만 처리하도록 복귀 | 완료 |
 | 방어 강화: `runInboundAiRouter`에 founder source_type 하드 가드 추가 (호출 체인이 흔들려도 founder는 kernel로 우회) | 완료 |
+| 대화 연속성 보강: `cosDialogueWriter`가 follow-up 입력의 명시 합의((1)(2)(3) 답변)를 슬롯에 반영하고, key 질문/next step을 갱신하도록 수정 | 완료 |
 
 ## 다음 배치(Phase 5~) — 우선순위
 
