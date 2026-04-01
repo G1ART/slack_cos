@@ -65,12 +65,13 @@ export async function sendFounderResponse(opts) {
     rendered_text,
     rendered_blocks,
     surface_type,
-    responder_kind = 'pipeline',
+    responder_kind = 'founder_kernel',
     intent,
     trace = {},
   } = opts;
 
   let text = String(rendered_text || '');
+  let hardFailReason = null;
 
   // 1. Contract validation: surface_type must be registered
   if (!FOUNDER_SURFACE_VALUES.has(surface_type)) {
@@ -82,6 +83,7 @@ export async function sendFounderResponse(opts) {
       ...trace,
     });
     text = SAFE_FALLBACK_TEXT;
+    hardFailReason = 'invariant_breach';
   }
 
   // 2a. Sanitize: strip legacy Council sections/markers (same guard as finalizeSlackResponse)
@@ -98,6 +100,7 @@ export async function sendFounderResponse(opts) {
       ...trace,
     });
     text = FOUNDER_HARD_BLOCK_FALLBACK;
+    hardFailReason = hardFailReason || 'invariant_breach';
   }
   const kickoffLikeSurface = new Set(['executive_kickoff_surface', 'discovery_surface', 'dialogue_surface']);
   if (kickoffLikeSurface.has(surface_type) && GENERIC_CLARIFICATION_RE.test(text)) {
@@ -109,7 +112,8 @@ export async function sendFounderResponse(opts) {
       preview: text.slice(0, 200),
       ...trace,
     });
-    text = '[COS] 요청을 운영 문제로 재정의했습니다. 벤치마크 축, MVP 범위/제외, 리스크, 합의 질문으로 바로 좁혀가겠습니다.';
+    text = '[COS] founder 계약 위반(제네릭 완충 문구)으로 차단했습니다. 같은 요청을 다시 보내 주세요.';
+    hardFailReason = hardFailReason || 'invariant_breach';
   }
 
   // 3. Founder emergency safety lock:
@@ -151,6 +155,9 @@ export async function sendFounderResponse(opts) {
     responder_kind,
     passed_pipeline: true,
     passed_outbound_gate: true,
+    passed_renderer: true,
+    passed_outbound_validation: hardFailReason == null,
+    hard_fail_reason: hardFailReason,
     contains_internal_markers: false,
     rendered_preview: text.slice(0, 200),
     ...trace,

@@ -20,12 +20,12 @@ import { logRouterEvent } from '../features/topLevelRouter.js';
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
 
 /**
- * @param {string|{ text: string, blocks?: object[], surface_type?: string }} answer
- * @returns {{ text: string, blocks?: object[], surface_type?: string }}
+ * @param {string|{ text: string, blocks?: object[], surface_type?: string, trace?: Record<string, unknown> }} answer
+ * @returns {{ text: string, blocks?: object[], surface_type?: string, trace?: Record<string, unknown> }}
  */
 function resolvePostPayload(answer) {
   if (typeof answer === 'string') return { text: answer };
-  return { text: answer?.text || '', blocks: answer?.blocks, surface_type: answer?.surface_type };
+  return { text: answer?.text || '', blocks: answer?.blocks, surface_type: answer?.surface_type, trace: answer?.trace };
 }
 
 function recordInboundSlackExchange(metadata, userInboundText, answer) {
@@ -96,7 +96,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
         surface_type: payload.surface_type || 'safe_fallback_surface',
-        trace: { route_label: 'mention_ai_router' },
+        trace: { route_label: 'mention_ai_router', ...(payload.trace || {}) },
       });
     } catch (error) {
       console.error('APP_MENTION_ERROR:', error);
@@ -162,7 +162,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError }) {
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
         surface_type: payload.surface_type || 'safe_fallback_surface',
-        trace: { route_label: 'dm_ai_router' },
+        trace: { route_label: 'dm_ai_router', ...(payload.trace || {}) },
       });
     } catch (error) {
       console.error('DM_ERROR:', error);

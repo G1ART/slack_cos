@@ -62,11 +62,24 @@
 | block payload 존재 시 trace에 `founder_blocks_path_disabled_text_only` 기록 | 완료 |
 | `scripts/test-vnext10-leak-path-council-hard-block.mjs`에 “blocks 미전송” 회귀 검증 추가 | 완료 |
 
-## 다음 배치(Phase 3c~) — 우선순위
+## Phase 4 — Founder Gold SSOT one-shot harden (완료)
 
-1. `founderRequestPipeline`에서 `buildDialoguePacket` 직접 의존을 점진 축소하고 writer/contract 경로를 1차 소스로 통일.
-2. `tryExecutiveSurfaceResponse` founder-facing start_project 작성 책임을 dialogue writer 계열로 이동(운영 큐/실행 문구 완전 분리).
-3. **머지 게이트:** Gold A~E + founder route council 0회 + trace 필드 스키마 고정 + outbound text-only 잠금 자동 검증 스크립트 확정.
+| 항목 | 상태 |
+|------|------|
+| `src/core/founderConversationContracts.js` 신설: 슬롯/금지/모드전환/ownership 계약 검증(대화 품질 의무 필드 포함) | 완료 |
+| `src/core/founderHardFailRules.js` 신설: hard fallback 허용 사유를 `invariant_breach` / `unsupported_founder_intent` / `runtime_system_failure` 3종으로 제한 | 완료 |
+| `founderRequestPipeline`에서 `tryExecutiveSurfaceResponse`/clean start door/spec finalize 의존 제거(Founder 생성 경로 레거시 단절) | 완료 |
+| founder pipeline miss/unhandled/policy deny 시 permissive fallback 대신 hard-fail closed 응답으로 고정 | 완료 |
+| `cosDialogueWriter` + `founderRenderer`에 반박/트레이드오프/대안/범위절삭 의무 슬롯 추가 | 완료 |
+| startup provenance canary를 JSON 단일 로그로 고정(`git_sha`,`hostname`,`pid`,`instance_id`,`founder_route_mode`,`canary_render_class`,`started_at`) | 완료 |
+| founder 응답 trace 전달 강화: pipeline trace -> Slack outbound trace 병합, `passed_outbound_validation`/`hard_fail_reason` 기록 | 완료 |
+| one-shot acceptance gate: exact gold + 동일 프롬프트 10회 + mixed sequence 테스트를 `test-founder-gold-spec-v1.mjs`에 잠금 | 완료 |
+
+## 다음 배치(Phase 5~) — 우선순위
+
+1. `executionSpine` 경유 표면도 founder kernel 계약(trace 필드·하드 실패 사유) 100% 동일 포맷으로 맞춤.
+2. fixture replay 세트에 mixed-sequence(버전→kickoff→버전→followup→meta→status→kickoff) 고정 추가.
+3. **머지 게이트:** founder route council 0회 + generic clarification 0회 + gold/repeat/mixed acceptance + startup canary 필수.
 
 ## 프로젝트를 접기 전에 볼 신호
 

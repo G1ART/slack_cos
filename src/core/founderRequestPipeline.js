@@ -15,6 +15,8 @@ import { evaluatePolicy } from './policyEngine.js';
 import { resolveSurfaceType } from './founderSurfaceRegistry.js';
 import { assemblePacket, makeUtilityPacket } from './packetAssembler.js';
 import { renderFounderSurface } from './founderRenderer.js';
+import { validateDialogueContract, isForbiddenFounderFallbackIntent } from './founderConversationContracts.js';
+import { FounderHardFailReason, buildFounderHardFail } from './founderHardFailRules.js';
 
 import {
   classifyFounderRoutingLock,
@@ -39,10 +41,7 @@ import {
   tryFinalizeProjectIntakeCancel,
   buildProjectIntakeCouncilDeferSurface,
 } from '../features/projectIntakeSession.js';
-import { tryFinalizeProjectSpecBuildThread } from '../features/projectSpecSession.js';
 import { tryFinalizeExecutionSpineTurn } from '../features/executionSpineRouter.js';
-import { resolveCleanStartProjectKickoff } from '../features/startProjectKickoffDoor.js';
-import { tryExecutiveSurfaceResponse } from '../features/tryExecutiveSurfaceResponse.js';
 import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
 import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
 
@@ -176,10 +175,8 @@ async function executeDeploy(normalized, metadata, workContext) {
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = normalizeFounderMetaCommandLine(String(text || '').trim());
-  const rawText = text;
   const founderRoute = metadata.source_type === 'direct_message' || metadata.source_type === 'channel_mention';
   const threadKey = buildSlackThreadKey(metadata);
-  const routerCtx = { raw_text: rawText ?? normalized, normalized_text: normalized };
   const gold = classifyGoldContract(normalized, metadata);
 
   // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
@@ -203,21 +200,18 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     return handleUtilityIntent(intentResult, normalized, metadata, workContext, route_label);
   }
 
-  // 3b. Reconstruction Phase 1b — same pre-AI spine as command router (pipeline-first)
-  const surfacePreempt = classifySurfaceIntent(normalized);
-  // `MVP` 등이 start_project 신호와 겹치면 골드 계약(킥오프 대화·scope lock 패킷)이 executive 표면에 밀릴 수 있음
-  const deferExecutiveStartProjectForGold =
-    surfacePreempt?.intent === 'start_project' &&
-    (gold.kind === 'kickoff' || gold.kind === 'scope_lock_request');
-
   const intakeCancel = tryFinalizeProjectIntakeCancel(normalized, metadata);
   if (intakeCancel != null) {
     workContext = resolveWorkObject(normalized, metadata);
-    return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_intake_cancel', {
-      text: intakeCancel.text,
-      blocks: undefined,
-      response_type: intakeCancel.response_type,
-    });
+    return founderKernelHardFail(
+      normalized,
+      metadata,
+      workContext,
+      intentResult,
+      route_label,
+      FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
+      'intake_cancel_not_supported_in_kernel',
+    );
   }
 
   if (hasOpenExecutionOwnership(metadata)) {
@@ -239,53 +233,16 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     }
   }
 
-  if (isActiveProjectIntake(metadata)) {
-    const specFin = await tryFinalizeProjectSpecBuildThread({ trimmed: normalized, metadata, routerCtx });
-    if (specFin?.kind === 'council_deferred') {
-      workContext = resolveWorkObject(normalized, metadata);
-      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_spec_council_defer', {
-        text: buildProjectIntakeCouncilDeferSurface(metadata),
-        response_type: 'project_intake_council_deferred',
-      });
-    }
-    if (specFin?.text) {
-      workContext = resolveWorkObject(normalized, metadata);
-      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_project_spec_build', {
-        text: specFin.text,
-        response_type: specFin.response_type || 'project_spec_session',
-      });
-    }
-  }
-
-  if (!deferExecutiveStartProjectForGold) {
-    const kickDoor = resolveCleanStartProjectKickoff(normalized, metadata);
-    if (kickDoor) {
-      const surfaceKick = await tryExecutiveSurfaceResponse(kickDoor.line, metadata, {
-        startProjectToneAck: kickDoor.toneAck,
-      });
-      if (surfaceKick != null && surfaceKick.response_type === 'start_project') {
-        workContext = resolveWorkObject(normalized, metadata);
-        return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_clean_start_project_door', {
-          text: surfaceKick.text,
-          blocks: surfaceKick.blocks,
-          response_type: surfaceKick.response_type,
-          packet_id: surfaceKick.packet_id ?? null,
-          status_packet_id: surfaceKick.status_packet_id ?? null,
-        });
-      }
-    }
-
-    const surfaceHit = await tryExecutiveSurfaceResponse(normalized, metadata);
-    if (surfaceHit != null) {
-      workContext = resolveWorkObject(normalized, metadata);
-      return buildPipelineExecutivePassthrough(metadata, workContext, intentResult, route_label, 'pipeline_executive_surface', {
-        text: surfaceHit.text,
-        blocks: surfaceHit.blocks,
-        response_type: surfaceHit.response_type,
-        packet_id: surfaceHit.packet_id ?? null,
-        status_packet_id: surfaceHit.status_packet_id ?? null,
-      });
-    }
+  if (isActiveProjectIntake(metadata) && classifySurfaceIntent(normalized)?.intent === 'start_project') {
+    return founderKernelHardFail(
+      normalized,
+      metadata,
+      workContext,
+      intentResult,
+      route_label,
+      FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
+      'legacy_start_project_surface_blocked',
+    );
   }
 
   // 구조화 조회·명령은 `runInboundCommandRouter` 전용 (파이프라인이 대화로 삼키지 않음)
@@ -312,13 +269,14 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   // 5. For phases we don't handle yet → founder는 대화 계약 폴백, 비대표만 레거시
   if (!PIPELINE_HANDLED_PHASES.has(phase)) {
     if (founderRoute) {
-      return buildFounderDialogueFallbackResult(
+      return founderKernelHardFail(
         normalized,
         metadata,
         workContext,
         intentResult,
         route_label,
-        'founder_unhandled_phase_fallback',
+        FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
+        'founder_unhandled_phase',
       );
     }
     return null;
@@ -334,9 +292,15 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   });
 
   if (!policy.allow) {
-    return buildResult(
-      renderFounderSurface(policy.required_surface_type, { text: SAFE_FALLBACK_TEXT }),
-      { workContext, phaseResult, intentResult, policy, route_label }
+    return founderKernelHardFail(
+      normalized,
+      metadata,
+      workContext,
+      intentResult,
+      route_label,
+      FounderHardFailReason.INVARIANT_BREACH,
+      'policy_denied',
+      { phaseResult }
     );
   }
 
@@ -361,10 +325,23 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   }
 
   if (gold.kind === 'approval' && !workContext.run) {
-    const rendered = renderFounderSurface('dialogue_surface', {
+    const prelockPacket = {
       ...buildDialoguePacket(normalized, 'approval_prelock'),
       next_step: '아직 scope lock 전입니다. 먼저 범위를 잠그면 즉시 run/orchestration으로 넘기겠습니다.',
-    });
+    };
+    const quality = validateDialogueContract(prelockPacket);
+    if (!quality.ok) {
+      return founderKernelHardFail(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        FounderHardFailReason.INVARIANT_BREACH,
+        'approval_prelock_dialogue_quality_fail',
+      );
+    }
+    const rendered = renderFounderSurface('dialogue_surface', prelockPacket);
     return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase: WorkPhase.ALIGN }, intentResult, policy, route_label });
   }
 
@@ -405,13 +382,14 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext);
   if (executorResult === null) {
     if (founderRoute) {
-      return buildFounderDialogueFallbackResult(
+      return founderKernelHardFail(
         normalized,
         metadata,
         workContext,
         intentResult,
         route_label,
-        'founder_executor_miss_fallback',
+        FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
+        'founder_executor_miss',
       );
     }
     return null;
@@ -422,6 +400,21 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
 
   // 9. Surface type from policy
   const surfaceType = resolveSurfaceType(policy, phase);
+
+  if (surfaceType === FounderSurfaceType.DIALOGUE) {
+    const quality = validateDialogueContract(packet);
+    if (!quality.ok) {
+      return founderKernelHardFail(
+        normalized,
+        metadata,
+        workContext,
+        intentResult,
+        route_label,
+        FounderHardFailReason.INVARIANT_BREACH,
+        'dialogue_quality_fail',
+      );
+    }
+  }
 
   // 10. Render
   const rendered = renderFounderSurface(surfaceType, packet);
@@ -473,32 +466,40 @@ function buildPipelineExecutivePassthrough(
 // Founder kernel fallback — reconstruction P0: never return null for natural-language founder turns
 // ---------------------------------------------------------------------------
 
-function buildFounderDialogueFallbackResult(
+function founderKernelHardFail(
   normalized,
   metadata,
   workContext,
   intentResult,
   route_label,
+  reason,
   phaseSource,
+  extras = {},
 ) {
-  const mode = isActiveProjectIntake(metadata) ? 'followup' : 'kickoff';
-  const phase = mode === 'followup' ? WorkPhase.ALIGN : WorkPhase.DISCOVER;
+  const fallbackBlocked = isForbiddenFounderFallbackIntent(intentResult.intent);
+  const fail = buildFounderHardFail(
+    fallbackBlocked ? FounderHardFailReason.INVARIANT_BREACH : reason,
+    { blocked_fallback: fallbackBlocked },
+  );
   const policy = evaluatePolicy({
     actor: Actor.FOUNDER,
     work_object_type: workContext.primary_type,
-    work_phase: phase,
+    work_phase: extras.phaseResult?.phase || WorkPhase.EXCEPTION,
     intent_signal: intentResult.intent,
     metadata,
   });
-  const packet = buildDialoguePacket(normalized, mode);
-  const rendered = renderFounderSurface('dialogue_surface', packet);
-  return buildResult(rendered, {
-    workContext,
-    phaseResult: { phase, phase_source: phaseSource, confidence: 0.55 },
-    intentResult,
-    policy,
-    route_label,
-  });
+  const rendered = renderFounderSurface('safe_fallback_surface', { text: fail.text });
+  return buildResult(
+    rendered,
+    {
+      workContext,
+      phaseResult: extras.phaseResult || { phase: WorkPhase.EXCEPTION, phase_source: phaseSource, confidence: 1 },
+      intentResult,
+      policy,
+      route_label,
+    },
+    { hard_fail_reason: fail.reason, blocked_fallback: fallbackBlocked },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -545,6 +546,7 @@ function handleUtilityIntent(intentResult, normalized, metadata, workContext, ro
 // ---------------------------------------------------------------------------
 
 function buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label }, traceExtras = {}) {
+  const intakeSession = workContext.intake_session_id || null;
   return {
     text: rendered.text,
     blocks: rendered.blocks,
@@ -559,12 +561,15 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
       intent_confidence: intentResult.confidence,
       surface_type: policy.required_surface_type,
       route_label: route_label || null,
-      responder_kind: 'pipeline',
+      responder_kind: 'founder_kernel',
       pipeline_version: 'v1.1',
-      founder_kernel_fallback:
-        phaseResult.phase_source === 'founder_executor_miss_fallback' ||
-        phaseResult.phase_source === 'founder_unhandled_phase_fallback' ||
-        false,
+      input_text: rendered.text,
+      intent: intentResult.intent,
+      intake_session_id: intakeSession,
+      responder: 'founder_kernel',
+      passed_pipeline: true,
+      passed_renderer: true,
+      legacy_router_used: false,
       ...traceExtras,
     },
   };

@@ -131,4 +131,54 @@ clearExecutionRunsForTest();
   mustIncludeAll(r.text, ['[Execution Handoff]', '프로젝트', 'run', 'dispatched workstreams', 'provider truth', '다음 founder action'], 'approval');
 }
 
+// Test 8 — same prompt x10 stability (surface + contract slots)
+{
+  clearProjectIntakeSessionsForTest();
+  const prompt = '갤러리 운영 캘린더 MVP를 시작하자.';
+  /** @type {Array<{ text: string, surface: string }>} */
+  const runs = [];
+  for (let i = 0; i < 10; i += 1) {
+    clearProjectIntakeSessionsForTest();
+    clearExecutionRunsForTest();
+    const r = await founderRequestPipeline({
+      text: prompt,
+      metadata: meta,
+      route_label: 'dm_founder',
+    });
+    assert.ok(r?.text);
+    noCouncil(r.text);
+    runs.push({ text: r.text, surface: r?.trace?.surface_type || '' });
+  }
+  const base = runs[0];
+  for (const run of runs) {
+    assert.equal(run.surface, base.surface, 'surface must stay stable for same prompt');
+    mustIncludeAll(run.text, ['벤치마크 축', 'MVP 범위', '제외 범위', '반박 포인트', '트레이드오프', '대안', '범위 절삭'], 'repeat_stability');
+  }
+}
+
+// Test 9 — mixed-sequence leak lock
+{
+  clearProjectIntakeSessionsForTest();
+  clearExecutionRunsForTest();
+  const seq = [
+    '버전',
+    '갤러리 운영 캘린더 프로젝트를 시작하자.',
+    '버전',
+    '외부 게스트 권한을 포함하려면 리스크가 뭐야?',
+    'responder surface sanitize 한 줄로만 말해.',
+    '지금 어디까지 됐어?',
+    '좋아. 그럼 이 방향으로 MVP 범위를 잠그자.',
+  ];
+  for (const line of seq) {
+    const r = await founderRequestPipeline({
+      text: line,
+      metadata: meta,
+      route_label: 'dm_founder',
+    });
+    assert.ok(r?.text);
+    noCouncil(r.text);
+    assert.equal(r?.trace?.legacy_router_used, false, 'legacy router usage must stay zero');
+  }
+}
+
 console.log('test-founder-gold-spec-v1: ok');

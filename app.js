@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import bolt from '@slack/bolt';
 import OpenAI from 'openai';
+import os from 'os';
 
 const { App } = bolt;
 
@@ -217,6 +218,7 @@ const RUNTIME_MODE = getRuntimeMode();
 const APP_STARTED_AT = new Date().toISOString();
 const INSTANCE_ID = process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || `pid-${process.pid}`;
 const FOUNDER_ROUTE_MODE = 'council_disabled';
+const CANARY_RENDER_CLASS = 'founder_renderer_one_voice_v1';
 
 const AGENT_OPTIONS = [
   'general_cos',
@@ -911,6 +913,10 @@ async function handleUserText(userText, metadata = {}) {
           text: pipelineResult.text,
           blocks: pipelineResult.blocks,
           surface_type: pipelineResult.trace?.surface_type,
+          trace: {
+            ...pipelineResult.trace,
+            passed_outbound_validation: true,
+          },
         };
       }
       mergeInboundAudit({
@@ -1143,7 +1149,16 @@ registerG1CosSlashCommand(slackApp);
   console.log(formatBuildBanner());
   const _bootBuild = getBuildInfo();
   console.log(
-    `[G1COS BOOT] git_sha=${_bootBuild.release_sha} instance_id=${INSTANCE_ID} pid=${process.pid} started_at=${APP_STARTED_AT} founder_route_mode=${FOUNDER_ROUTE_MODE}`
+    JSON.stringify({
+      stage: 'startup_provenance_canary',
+      git_sha: _bootBuild.release_sha,
+      hostname: os.hostname(),
+      pid: process.pid,
+      instance_id: INSTANCE_ID,
+      founder_route_mode: FOUNDER_ROUTE_MODE,
+      canary_render_class: CANARY_RENDER_CLASS,
+      started_at: APP_STARTED_AT,
+    })
   );
   console.log(`[G1COS BOOT] model=${MODEL} intake_persist=${process.env.PROJECT_INTAKE_SESSION_PERSIST || '0'} fast_spec_promote=${process.env.COS_FAST_SPEC_PROMOTE || '0'}`);
   console.log(`[G1COS BOOT] pipeline_loaded=${typeof founderRequestPipeline === 'function'} constitution=v1.1`);

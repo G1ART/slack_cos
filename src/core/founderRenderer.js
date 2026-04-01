@@ -112,6 +112,10 @@ function renderDialogueSurface(payload) {
   if (payload.mvp_scope_in?.length) lines.push(`*MVP 범위*\n- ${payload.mvp_scope_in.join('\n- ')}`);
   if (payload.mvp_scope_out?.length) lines.push(`*제외 범위*\n- ${payload.mvp_scope_out.join('\n- ')}`);
   if (payload.risk_points?.length) lines.push(`*핵심 리스크/검증 포인트*\n- ${payload.risk_points.join('\n- ')}`);
+  if (payload.pushback_point) lines.push(`*반박 포인트*\n${payload.pushback_point}`);
+  if (payload.tradeoff_summary) lines.push(`*트레이드오프*\n${payload.tradeoff_summary}`);
+  if (payload.alternatives?.length) lines.push(`*대안*\n- ${payload.alternatives.join('\n- ')}`);
+  if (payload.scope_cut) lines.push(`*범위 절삭*\n${payload.scope_cut}`);
   if (payload.key_questions?.length) lines.push(`*지금 합의할 질문*\n- ${payload.key_questions.join('\n- ')}`);
   if (payload.next_step) lines.push(`*다음 단계*\n${payload.next_step}`);
   return { text: lines.join('\n\n') };
