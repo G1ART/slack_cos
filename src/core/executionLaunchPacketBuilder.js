@@ -20,6 +20,7 @@ export const LAUNCH_DEFAULT_ASSUMPTIONS = [
  *   providerTruth: ReturnType<import('./providerTruthSnapshot.js').buildProviderTruthSnapshot>,
  *   readiness: ReturnType<import('./launchReadinessEvaluator.js').evaluateLaunchReadiness>,
  *   manualBridgeActions: string[],
+ *   projectSpaceResolution?: object | null,
  * }} args
  */
 export function buildExecutionLaunchRenderPayload({
@@ -28,6 +29,7 @@ export function buildExecutionLaunchRenderPayload({
   providerTruth,
   readiness,
   manualBridgeActions,
+  projectSpaceResolution = null,
 }) {
   const providerLines = (providerTruth.providers || []).map(
     (p) => `${p.provider}: ${p.status}${p.note ? ` — ${p.note}` : ''}`,
@@ -47,6 +49,17 @@ export function buildExecutionLaunchRenderPayload({
     manualBridgeActions.length > 0
       ? '수동 브리지 항목을 한 번 확인한 뒤, 크리티컬 결정만 스레드에 남겨 주세요.'
       : '워크스트림 로그를 확인하고, 필요 시 우선순위만 조정해 주세요.';
+
+  const mode = projectSpaceResolution?.project_space_resolution_mode;
+  let founder_facing_space_note = null;
+  if (
+    mode === 'new_bootstrap' &&
+    Array.isArray(projectSpaceResolution?.possible_related_spaces) &&
+    projectSpaceResolution.possible_related_spaces.length > 0
+  ) {
+    founder_facing_space_note =
+      '유사한 이름의 기존 프로젝트가 있어 오탐·작업 섞임을 막기 위해 **이 스레드 전용 새 project space**로 개시했습니다.';
+  }
 
   return {
     goal_line: run.project_goal,
@@ -68,6 +81,8 @@ export function buildExecutionLaunchRenderPayload({
     founder_next_action,
     blocker: null,
     next_actions: immediate_actions,
+    project_space_resolution_mode: mode || null,
+    founder_facing_space_note,
   };
 }
 

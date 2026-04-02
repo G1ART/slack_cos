@@ -22,7 +22,54 @@ import {
 import { createExecutionPacket, createExecutionRun, getExecutionRunByThread } from '../features/executionRun.js';
 import { ensureExecutionRunDispatched } from '../features/executionDispatchLifecycle.js';
 import { bootstrapProjectSpace } from '../features/projectSpaceBootstrap.js';
-import { getProjectSpaceByThread, linkRunToProjectSpace } from '../features/projectSpaceRegistry.js';
+import {
+  getProjectSpaceByThread,
+  linkRunToProjectSpace,
+  computeGoalFingerprint,
+  countDistinctThreadsForSpace,
+  getRelatedSpaceCandidatesForTrace,
+} from '../features/projectSpaceRegistry.js';
+
+function flattenSpaceResolutionForTrace(r) {
+  if (!r) return {};
+  return {
+    project_space_resolution_mode: r.project_space_resolution_mode,
+    reused_space_project_id: r.reused_space_project_id ?? null,
+    reused_space_reason: r.reused_space_reason ?? null,
+    related_space_candidates: r.related_space_candidates ?? [],
+    goal_fingerprint: r.goal_fingerprint ?? null,
+    resolution_confidence: r.resolution_confidence ?? null,
+    active_thread_count: r.active_thread_count ?? null,
+    possible_related_spaces: r.possible_related_spaces ?? undefined,
+    label_match_kind: r.label_match_kind ?? undefined,
+  };
+}
+
+function inferResolutionFromExistingSpace(space, threadKey, goalLineProbe) {
+  const byThread = getProjectSpaceByThread(threadKey);
+  const fp = computeGoalFingerprint(goalLineProbe);
+  const related = getRelatedSpaceCandidatesForTrace(goalLineProbe, 5);
+  if (byThread && byThread.project_id === space.project_id) {
+    return {
+      project_space_resolution_mode: 'thread_linked',
+      reused_space_project_id: space.project_id,
+      reused_space_reason: 'thread_index_hit',
+      related_space_candidates: related,
+      goal_fingerprint: fp,
+      resolution_confidence: 1,
+      active_thread_count: countDistinctThreadsForSpace(space),
+    };
+  }
+  return {
+    project_space_resolution_mode: 'pre_existing_context',
+    reused_space_project_id: space.project_id,
+    reused_space_reason: 'work_object_or_registry_without_thread_index',
+    related_space_candidates: related,
+    goal_fingerprint: fp,
+    resolution_confidence: 0.75,
+    active_thread_count: countDistinctThreadsForSpace(space),
+  };
+}
 
 function buildLaunchPipelineResult(rendered, workContext, phaseResult, intentResult, route_label, traceExtras) {
   const surface_type = traceExtras.surface_type;
@@ -65,6 +112,9 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
   const workContext = resolveWorkObject(normalized, metadata);
   let space = workContext.project_space || getProjectSpaceByThread(threadKey);
   const runPre = getExecutionRunByThread(threadKey);
+
+  const goalLineProbe = String(getProjectIntakeSession(metadata)?.goalLine || normalized).slice(0, 500);
+  let spaceResolution = space ? inferResolutionFromExistingSpace(space, threadKey, goalLineProbe) : null;
 
   const providerTruth = buildProviderTruthSnapshot({ space, run: runPre });
   const readiness = evaluateLaunchReadiness({
@@ -118,6 +168,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
         launch_packet_id: null,
         launch_gate_taken: true,
         launch_blocked: true,
+        ...flattenSpaceResolutionForTrace(spaceResolution),
       },
     );
   }
@@ -125,12 +176,13 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
   if (!space) {
     const intake = getProjectIntakeSession(metadata);
     const goalSeed = String(intake?.goalLine || normalized).slice(0, 500).trim() || 'COS Launch';
-    const { space: sp } = bootstrapProjectSpace({
+    const { space: sp, resolution } = bootstrapProjectSpace({
       label: goalSeed,
       threadKey,
       metadata,
     });
     space = sp;
+    spaceResolution = resolution;
     if (!getProjectIntakeSession(metadata)) {
       openProjectIntakeSession(metadata, { goalLine: goalSeed });
     }
@@ -186,6 +238,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     providerTruth: truthAfter,
     readiness,
     manualBridgeActions: truthAfter.manual_bridge_actions,
+    projectSpaceResolution: spaceResolution,
   });
 
   const rendered = renderFounderSurface(FounderSurfaceType.EXECUTION_PACKET, payload);
@@ -212,6 +265,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       launch_packet_id: launchPacketId,
       launch_gate_taken: true,
       partner_natural: false,
+      ...flattenSpaceResolutionForTrace(spaceResolution),
     },
   );
 }

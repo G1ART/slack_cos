@@ -51,6 +51,12 @@ function renderExecutionPacket(payload) {
   if (payload.readiness_state) {
     lines.push(`*준비도 판정:* ${payload.readiness_state}`);
   }
+  if (payload.project_space_resolution_mode) {
+    lines.push(`*프로젝트 space 결선:* \`${payload.project_space_resolution_mode}\``);
+  }
+  if (payload.founder_facing_space_note) {
+    lines.push(`_${payload.founder_facing_space_note}_`);
+  }
   if (payload.goal_line) lines.push(`*목표:* ${payload.goal_line}`);
   if (payload.locked_scope_summary) lines.push(`*범위:* ${payload.locked_scope_summary}`);
 
