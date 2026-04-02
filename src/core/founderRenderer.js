@@ -47,38 +47,54 @@ function renderApprovalPacket(payload) {
 }
 
 function renderExecutionPacket(payload) {
-  const lines = ['*[실행 패킷 · Launch]*'];
-  if (payload.locked_scope_summary) lines.push(`*1. 잠긴 범위*\n${payload.locked_scope_summary}`);
-  if (payload.goal_line) lines.push(`*목표 한 줄*\n${payload.goal_line}`);
-  if (payload.project_space?.id || payload.project_space?.label) {
+  const lines = ['*[실행 패킷]*'];
+  if (payload.readiness_state) {
+    lines.push(`*준비도 판정:* ${payload.readiness_state}`);
+  }
+  if (payload.goal_line) lines.push(`*목표:* ${payload.goal_line}`);
+  if (payload.locked_scope_summary) lines.push(`*범위:* ${payload.locked_scope_summary}`);
+
+  const ps = payload.project_space;
+  if (ps?.id || ps?.label) {
     lines.push(
-      `*2. 프로젝트 스페이스*\n- id: \`${payload.project_space.id || '-'}\`\n- label: ${payload.project_space.label || '-'}`,
+      `*프로젝트 스페이스:*\n- id: \`${ps.id || '-'}\`\n- label: ${ps.label || '-'}`,
     );
   }
-  if (payload.run_id || payload.run_summary) {
-    const rs = payload.run_summary || {};
+
+  const rs = payload.run_summary || {};
+  const rid = payload.run_id || rs.run_id;
+  if (rid || rs.stage || rs.status) {
     lines.push(
-      `*3. Run*\n- \`${payload.run_id || rs.run_id || '-'}\` · stage: ${rs.stage || '-'} · status: ${rs.status || '-'}`,
+      `*Run:* \`${rid || '-'}\` · stage: ${rs.stage || '-'} · status: ${rs.status || '-'}`,
     );
   }
-  if (payload.packet_id) lines.push(`\`packet_id: ${payload.packet_id}\``);
-  if (payload.workstreams?.length) {
-    lines.push(`*워크스트림*\n${payload.workstreams.map((w) => `- ${w}`).join('\n')}`);
-  }
-  if (payload.provider_truth?.length) {
-    lines.push(`*4. Provider truth*\n${payload.provider_truth.map((t) => `- ${t}`).join('\n')}`);
-  }
-  if (payload.immediate_actions?.length) {
-    lines.push(`*5. 지금 바로 시작*\n${payload.immediate_actions.map((a) => `- ${a}`).join('\n')}`);
-  }
-  if (payload.manual_bridge_actions?.length) {
-    lines.push(`*6. 수동 브리지*\n${payload.manual_bridge_actions.map((a) => `- ${a}`).join('\n')}`);
-  }
-  if (payload.defaults_applied?.length) {
-    lines.push(`*적용된 기본값*\n${payload.defaults_applied.map((d) => `- ${d}`).join('\n')}`);
-  }
+  if (payload.packet_id) lines.push(`*packet_id:* \`${payload.packet_id}\``);
+
+  lines.push(
+    `*워크스트림:*\n${payload.workstreams?.length ? payload.workstreams.map((w) => `- ${w}`).join('\n') : '- (시드 대기)'}`,
+  );
+
+  lines.push(
+    `*provider truth:*\n${payload.provider_truth?.length ? payload.provider_truth.map((t) => `- ${t}`).join('\n') : '- (스냅샷 없음)'}`,
+  );
+
+  lines.push(
+    `*즉시 시작되는 작업:*\n${payload.immediate_actions?.length ? payload.immediate_actions.map((a) => `- ${a}`).join('\n') : '- (오케스트레이션 큐에 맡김)'}`,
+  );
+
+  const bridges = payload.manual_bridge_actions?.length
+    ? payload.manual_bridge_actions.map((b) => `- ${b}`).join('\n')
+    : '- (별도 수동 브리지 없음 — truth의 manual_bridge/draft 경로만 확인)';
+  lines.push(`*수동 브리지 필요 항목:*\n${bridges}`);
+
+  lines.push(
+    `*적용된 기본값:*\n${payload.defaults_applied?.length ? payload.defaults_applied.map((d) => `- ${d}`).join('\n') : '- (없음)'}`,
+  );
+
   if (payload.blocker) lines.push(`*blocker:* ${payload.blocker}`);
-  if (payload.founder_next_action) lines.push(`*7. 대표 next action*\n${payload.founder_next_action}`);
+  if (payload.founder_next_action) {
+    lines.push(`*대표 next action:* ${payload.founder_next_action}`);
+  }
   if (payload.next_actions?.length && !payload.immediate_actions?.length) {
     lines.push(`*다음 행동:*\n${payload.next_actions.map((a) => `- ${a}`).join('\n')}`);
   }

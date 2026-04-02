@@ -42,6 +42,16 @@ import { createExecutionPacket, createExecutionRun } from '../features/execution
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+/**
+ * Founder direct natural 경로 직전 launch gate (LLM 이전, 결정론).
+ * 구현 본문: `founderLaunchGate.js` → `detectFounderLaunchIntent` · `buildProviderTruthSnapshot` ·
+ * `evaluateLaunchReadiness` · `buildExecutionLaunchRenderPayload` / `buildLaunchBlockedPayload` ·
+ * `bootstrapProjectSpace` / `getProjectSpaceByThread` · `createExecutionPacket` · `createExecutionRun` ·
+ * `ensureExecutionRunDispatched`(단일 디스패치 진입점; `dispatchOutboundActionsForRun` 직접 호출 없음) ·
+ * `renderFounderSurface(EXECUTION_PACKET|LAUNCH_BLOCKED)`.
+ * trace: `launch_gate_taken`, `launch_intent_detected`, `launch_intent_signal`, `launch_readiness`,
+ * `provider_truth_snapshot`, `manual_bridge_actions`, `defaults_applied`, `launch_packet_id`.
+ */
 import { maybeHandleFounderLaunchGate } from './founderLaunchGate.js';
 /**
  * Utility intents the pipeline handles regardless of work object state.

@@ -168,12 +168,17 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       packet_id: execPacket.packet_id,
       run_id: run.run_id,
     });
-  } else if (run.outbound_dispatch_state === 'not_started') {
-    ensureExecutionRunDispatched(run, metadata);
-    launchPacketId = run.packet_id;
+  } else {
+    if (run.outbound_dispatch_state === 'not_started') {
+      ensureExecutionRunDispatched(run, metadata);
+    }
+    launchPacketId = run.packet_id || launchPacketId;
   }
 
   const workContextFresh = resolveWorkObject(normalized, metadata);
+  run = getExecutionRunByThread(threadKey) || run;
+  space = getProjectSpaceByThread(threadKey) || space || workContextFresh.project_space;
+
   const truthAfter = buildProviderTruthSnapshot({ space, run });
   const payload = buildExecutionLaunchRenderPayload({
     run,

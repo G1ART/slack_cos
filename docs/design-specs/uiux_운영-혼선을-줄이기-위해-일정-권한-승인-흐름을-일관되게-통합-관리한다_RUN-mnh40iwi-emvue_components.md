@@ -1,0 +1,16 @@
+# Component Checklist — RUN-mnh40iwi-emvue
+
+**Generated**: 2026-04-02T06:44:31.830Z
+
+## Component Targets
+
+| Component | States | Dependencies |
+|-----------|--------|--------------|
+| (component) | default, loading, error | (deps) |
+
+## Notes
+
+- (notes)
+
+---
+_Auto-generated for `RUN-mnh40iwi-emvue`_

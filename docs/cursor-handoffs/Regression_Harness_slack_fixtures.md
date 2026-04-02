@@ -99,7 +99,7 @@
 | `src/testing/councilLeakRules.js` | Council 누수 **단일 문자열** 규칙 (회귀 전용) |
 | `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — `parseCouncilCommand` 정합 + 킥오프 제외 |
 | `scripts/test-henry-turn2-scope-lock.mjs` | Henry 2턴 잠금이 Council 합성이 아님 (`npm test` 포함) |
-| `scripts/test-founder-launch-gate.mjs` | 창업자 **launch 게이트**: intent 결정론·readiness 차단·파이프라인→`EXECUTION_PACKET`·provider truth shape (`npm test` 포함) |
+| `scripts/test-founder-launch-gate.mjs` | 창업자 **launch 게이트**: intent 결정론·readiness 차단·파이프라인→`EXECUTION_PACKET`·trace 필드·비-launch는 `PARTNER_NATURAL`·동일 스레드 재진입 idempotent (`npm test` 포함) |
 | `src/core/founderLaunchGate.js` | `maybeHandleFounderLaunchGate` — direct chat launch → spine (LLM 파트너 우회) |
 | `src/core/founderLaunchIntent.js` | launch 문구 감지 |
 | `src/core/providerTruthSnapshot.js` | 프로바이더/스레드 truth 스냅샷 |

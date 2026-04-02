@@ -1,0 +1,16 @@
+# Component Checklist — RUN-mnh40egf-uba1p
+
+**Generated**: 2026-04-02T06:44:26.047Z
+
+## Component Targets
+
+| Component | States | Dependencies |
+|-----------|--------|--------------|
+| (component) | default, loading, error | (deps) |
+
+## Notes
+
+- (notes)
+
+---
+_Auto-generated for `RUN-mnh40egf-uba1p`_

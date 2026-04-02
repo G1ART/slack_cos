@@ -58,11 +58,13 @@ export function buildExecutionLaunchRenderPayload({
       : { id: run.project_id, label: run.project_label },
     run_summary: { run_id: run.run_id, stage: run.current_stage, status: run.status },
     workstreams: workstreamLines,
+    /** 한 줄씩 `provider: status — note` (renderer *provider truth* 섹션과 동일 순서) */
     provider_truth: providerLines,
     provider_truth_structured: providerTruth,
     immediate_actions,
     manual_bridge_actions: manualBridgeActions,
     defaults_applied: readiness.defaults_applied?.length ? readiness.defaults_applied : LAUNCH_DEFAULT_ASSUMPTIONS,
+    readiness_state: readiness.readiness,
     founder_next_action,
     blocker: null,
     next_actions: immediate_actions,
