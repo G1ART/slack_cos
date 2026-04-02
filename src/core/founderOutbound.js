@@ -7,7 +7,7 @@
 // GREP_COS_CONSTITUTION_OUTBOUND
 // FOUNDERRAWOUTBOUND_FORBIDDEN — grep marker for migration enforcement
 
-import { FOUNDER_SURFACE_VALUES, SAFE_FALLBACK_TEXT } from './founderContracts.js';
+import { FOUNDER_SURFACE_VALUES, FounderSurfaceType, SAFE_FALLBACK_TEXT } from './founderContracts.js';
 
 function emitTrace(fields) {
   try {
@@ -58,6 +58,22 @@ export async function sendFounderResponse(opts) {
       surface_type,
       responder_kind,
       error: 'unregistered_surface_type',
+      ...trace,
+    });
+    text = SAFE_FALLBACK_TEXT;
+    hardFailReason = 'invariant_breach';
+  }
+
+  if (
+    trace?.launch_gate_taken &&
+    surface_type === FounderSurfaceType.EXECUTION_PACKET &&
+    (!trace.launch_packet_id || !trace.provider_truth_snapshot)
+  ) {
+    emitTrace({
+      intent,
+      surface_type,
+      responder_kind,
+      error: 'launch_packet_invariant',
       ...trace,
     });
     text = SAFE_FALLBACK_TEXT;

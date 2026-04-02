@@ -33,8 +33,6 @@ const COUNCIL_SYNTHESIS_STRONG_LINE = [
 ];
 
 const WORK_CANDIDATE_FOOTER = '실행 작업 후보로 보입니다';
-const GENERIC_CLARIFICATION_RE =
-  /(조금\s*더\s*구체적으로|최적의\s*경로로\s*안내|원하시면\s*도와드리겠습니다)/u;
 
 /** 조회 계약 헤더 — 저장된 plan/work 본문에 Council 키워드가 섞여도 오탐하지 않음 */
 const QUERY_CONTRACT_HEADER_RE =
@@ -107,8 +105,11 @@ export function buildFounderOutputTraceRecord({
   passed_sanitize,
   passed_outbound_validation,
   validation_error_code,
+  /** false 이면 Council/페르소나 휴리스틱 스캔 생략(창업자 면 pass-through 정책) */
+  leak_scan = true,
 }) {
   const route_label = slack_route_label ?? null;
+  const rawDet = raw_for_detection ?? '';
   return {
     stage: 'founder_output_trace',
     inbound_turn_id: inbound_turn_id ?? null,
@@ -123,9 +124,9 @@ export function buildFounderOutputTraceRecord({
     validation_error_code: validation_error_code ?? null,
     raw_preview: String(raw_before_sanitize ?? '').slice(0, 160),
     sanitized_preview: String(sanitized ?? '').slice(0, 160),
-    contains_old_council_markers: containsOldCouncilMarkers(raw_for_detection ?? ''),
-    contains_persona_literals: containsPersonaLiterals(raw_for_detection ?? ''),
-    contains_approval_queue: containsApprovalQueueRaw(raw_for_detection ?? ''),
+    contains_old_council_markers: leak_scan ? containsOldCouncilMarkers(rawDet) : false,
+    contains_persona_literals: leak_scan ? containsPersonaLiterals(rawDet) : false,
+    contains_approval_queue: leak_scan ? containsApprovalQueueRaw(rawDet) : false,
   };
 }
 
@@ -175,6 +176,8 @@ export function finalizeSlackResponse(p) {
   const sourceFormatter = p.source_formatter ?? 'unspecified';
   const traceStore = getInboundTurnTraceStore();
   const slackRouteLabel = p.slack_route_label ?? traceStore?.slack_route_label ?? null;
+  const founderSlackSurface =
+    slackRouteLabel === 'dm_ai_router' || slackRouteLabel === 'mention_ai_router';
 
   let out = String(text ?? '');
   const rawForTraceDetection = out;
@@ -183,35 +186,16 @@ export function finalizeSlackResponse(p) {
   /** @type {string | null} */
   let validationErrorCode = null;
 
-  if (founder_route && responder === 'council') {
-    logRouterEvent('founder_route_council_hard_kill', {
-      responder,
-      command_name,
-      target_id,
-      preview: out.slice(0, 240),
-    });
-    console.error('[FOUNDER_ROUTE_HARD_KILL] responder=council blocked');
-    out = '[COS] founder 경로에서는 council이 비활성화되어 있습니다. 요청을 실행 가능한 명령으로 다시 말씀해 주세요.';
-    skipSanitize = true;
+  /** 창업자 면(DM/멘션): 본문 Council 휴리스틱·sanitize·형식 하드킬 없음(pass-through). */
+  const founderPassThrough = founder_route === true || founderSlackSurface;
+
+  if (founder_route === true && responder === 'council') {
+    out =
+      '창업자 founder 경로에서는 council이 비활성화되어 있습니다. 평문으로 다시 보내 주세요.';
+    validationErrorCode = 'founder_council_hard_block';
     passedOutboundValidation = false;
-    validationErrorCode = 'founder_route_council_blocked';
   }
-  if (
-    founder_route &&
-    (String(response_type || '').includes('kickoff') || responder === 'executive_surface' || responder === 'dialogue_surface') &&
-    GENERIC_CLARIFICATION_RE.test(out)
-  ) {
-    logRouterEvent('founder_route_generic_clarification_hard_kill', {
-      responder,
-      response_type,
-      preview: out.slice(0, 240),
-    });
-    console.error('[FOUNDER_ROUTE_HARD_KILL] generic clarification blocked');
-    out = '[COS] 응답 계약 위반(제네릭 완충 문구)으로 차단했습니다. 같은 목표를 한 줄로 다시 보내주시면 바로 운영 문제 framing으로 처리하겠습니다.';
-    skipSanitize = true;
-    passedOutboundValidation = false;
-    validationErrorCode = 'founder_route_generic_clarification_blocked';
-  }
+
   const blocked =
     council_blocked ??
     (SYSTEM_RESPONDERS.has(responder) ||
@@ -219,8 +203,9 @@ export function finalizeSlackResponse(p) {
       responder === 'partner_surface' ||
       responder === 'research_surface');
 
-  // 조회(query)만 예외 — council 포함 전 responder 동일 차단 (vNext.10b).
+  // 조회(query)만 예외 — council 포함 전 responder 동일 차단 (vNext.10b). 창업자 면은 스캔 안 함.
   const councilShapeLeak =
+    !founderPassThrough &&
     responder !== 'query' &&
     (looksLikeCouncilSynthesisBody(out) ||
       containsOldCouncilMarkers(out) ||
@@ -233,17 +218,10 @@ export function finalizeSlackResponse(p) {
       target_id,
       preview: out.slice(0, 240),
     });
-    if (founder_route) {
-      out = '[COS] founder 응답 계약 위반(Council 혼입)으로 차단했습니다. 같은 요청을 한 줄로 다시 보내 주세요.';
-      skipSanitize = true;
-      passedOutboundValidation = false;
-      validationErrorCode = 'founder_route_council_shape_leak_blocked';
-    } else {
-      out =
-        responder === 'planner'
-          ? '[계획등록] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.'
-          : '[COS] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.';
-    }
+    out =
+      responder === 'planner'
+        ? '[계획등록] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.'
+        : '[COS] 응답 검증 오류 — Council 혼입이 감지되어 차단했습니다. 관리자에게 알려주세요.';
   }
 
   logRouterEvent('final_response_return', {
@@ -298,7 +276,7 @@ export function finalizeSlackResponse(p) {
 
   const rawBeforeSanitize = out;
   const debugMode = process.env.COS_DEBUG_MODE === '1';
-  if (!skipSanitize) {
+  if (!skipSanitize && !founderPassThrough) {
     out = sanitizeFounderOutput(out, { debugMode, responder });
   }
 
@@ -316,6 +294,7 @@ export function finalizeSlackResponse(p) {
       passed_sanitize: true,
       passed_outbound_validation: passedOutboundValidation,
       validation_error_code: validationErrorCode,
+      leak_scan: !founderPassThrough,
     });
     console.info(JSON.stringify(tracePayload));
   } catch {

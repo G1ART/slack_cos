@@ -7,28 +7,14 @@
 // GREP_COS_CONSTITUTION_RENDERER
 
 import { FounderSurfaceType, SAFE_FALLBACK_TEXT, DISCOVERY_PROMPT_TEXT } from './founderContracts.js';
-
-const INTERNAL_MARKER_SUBSTRINGS = [
-  '종합 추천안', '페르소나별 핵심 관점', '가장 강한 반대 논리',
-  '대표 결정 필요 여부', '내부 처리 정보',
-  'strategy_finance:', 'risk_review:', '참여 페르소나:',
-  '협의 모드:', 'institutional memory',
-];
-
-function containsInternalMarkers(text) {
-  const t = String(text || '');
-  return INTERNAL_MARKER_SUBSTRINGS.some((m) => t.includes(m));
-}
-
-function guardOutput(result) {
-  const text = String(result.text || '');
-  if (containsInternalMarkers(text)) {
-    return { text: SAFE_FALLBACK_TEXT };
-  }
-  return { text, blocks: result.blocks };
-}
+import { firstCouncilLeakRuleHit } from '../testing/councilLeakRules.js';
 
 // --- L0 Strict Packet renderers ---
+
+/** Viewpoints that look like legacy persona lines (`strategy_finance: …`) must not render as deliberation output. */
+function viewpointLooksLikePersonaSlug(line) {
+  return /^\s*[a-z][a-z0-9_]*:\s/.test(String(line || ''));
+}
 
 function renderDecisionPacket(payload) {
   const d = payload.deliberation ?? payload;
@@ -44,7 +30,10 @@ function renderDecisionPacket(payload) {
   lines.push(`*다음 행동*\n${d.next_actions?.length ? d.next_actions.map((a) => `- ${a}`).join('\n') : '- 없음'}`);
   if (d.decision_needed) lines.push(`*대표 결정 필요*\n${d.decision_question || '결정이 필요합니다.'}`);
 
-  return { text: lines.join('\n\n') };
+  const text = lines.join('\n\n');
+  if (firstCouncilLeakRuleHit(text)) return { text: SAFE_FALLBACK_TEXT };
+  if (d.viewpoints?.some((v) => viewpointLooksLikePersonaSlug(v))) return { text: SAFE_FALLBACK_TEXT };
+  return { text };
 }
 
 function renderApprovalPacket(payload) {
@@ -58,13 +47,51 @@ function renderApprovalPacket(payload) {
 }
 
 function renderExecutionPacket(payload) {
-  const lines = ['*[실행 패킷]*'];
-  if (payload.goal_line) lines.push(`*목표:* ${payload.goal_line}`);
-  if (payload.locked_scope_summary) lines.push(`*범위:* ${payload.locked_scope_summary}`);
-  if (payload.next_actions?.length) lines.push(`*다음 행동:*\n${payload.next_actions.map((a) => `- ${a}`).join('\n')}`);
+  const lines = ['*[실행 패킷 · Launch]*'];
+  if (payload.locked_scope_summary) lines.push(`*1. 잠긴 범위*\n${payload.locked_scope_summary}`);
+  if (payload.goal_line) lines.push(`*목표 한 줄*\n${payload.goal_line}`);
+  if (payload.project_space?.id || payload.project_space?.label) {
+    lines.push(
+      `*2. 프로젝트 스페이스*\n- id: \`${payload.project_space.id || '-'}\`\n- label: ${payload.project_space.label || '-'}`,
+    );
+  }
+  if (payload.run_id || payload.run_summary) {
+    const rs = payload.run_summary || {};
+    lines.push(
+      `*3. Run*\n- \`${payload.run_id || rs.run_id || '-'}\` · stage: ${rs.stage || '-'} · status: ${rs.status || '-'}`,
+    );
+  }
   if (payload.packet_id) lines.push(`\`packet_id: ${payload.packet_id}\``);
-  if (payload.run_id) lines.push(`\`run_id: ${payload.run_id}\``);
-  return { text: lines.join('\n'), blocks: payload.blocks };
+  if (payload.workstreams?.length) {
+    lines.push(`*워크스트림*\n${payload.workstreams.map((w) => `- ${w}`).join('\n')}`);
+  }
+  if (payload.provider_truth?.length) {
+    lines.push(`*4. Provider truth*\n${payload.provider_truth.map((t) => `- ${t}`).join('\n')}`);
+  }
+  if (payload.immediate_actions?.length) {
+    lines.push(`*5. 지금 바로 시작*\n${payload.immediate_actions.map((a) => `- ${a}`).join('\n')}`);
+  }
+  if (payload.manual_bridge_actions?.length) {
+    lines.push(`*6. 수동 브리지*\n${payload.manual_bridge_actions.map((a) => `- ${a}`).join('\n')}`);
+  }
+  if (payload.defaults_applied?.length) {
+    lines.push(`*적용된 기본값*\n${payload.defaults_applied.map((d) => `- ${d}`).join('\n')}`);
+  }
+  if (payload.blocker) lines.push(`*blocker:* ${payload.blocker}`);
+  if (payload.founder_next_action) lines.push(`*7. 대표 next action*\n${payload.founder_next_action}`);
+  if (payload.next_actions?.length && !payload.immediate_actions?.length) {
+    lines.push(`*다음 행동:*\n${payload.next_actions.map((a) => `- ${a}`).join('\n')}`);
+  }
+  return { text: lines.join('\n\n'), blocks: payload.blocks };
+}
+
+function renderLaunchBlockedPacket(payload) {
+  const lines = ['*[Launch 보류]*', `*판정:* ${payload.readiness || '-'}`];
+  if (payload.blockers?.length) {
+    lines.push(`*블로커*\n${payload.blockers.map((b) => `- ${b}`).join('\n')}`);
+  }
+  lines.push(`*대표 next action*\n${payload.founder_next_action || '목표를 한 줄로 보내 주세요.'}`);
+  return { text: lines.join('\n\n') };
 }
 
 function renderDeployPacket(payload) {
@@ -181,6 +208,7 @@ const SURFACE_RENDERERS = {
   [FounderSurfaceType.PROJECT_SPACE]: renderProjectSpace,
   [FounderSurfaceType.RUN_STATE]: renderRunState,
   [FounderSurfaceType.EXECUTION_PACKET]: renderExecutionPacket,
+  [FounderSurfaceType.LAUNCH_BLOCKED]: renderLaunchBlockedPacket,
   [FounderSurfaceType.APPROVAL_PACKET]: renderApprovalPacket,
   [FounderSurfaceType.DEPLOY_PACKET]: renderDeployPacket,
   [FounderSurfaceType.MANUAL_BRIDGE]: (p) => ({ text: p.text || SAFE_FALLBACK_TEXT }),
@@ -211,7 +239,8 @@ const SURFACE_RENDERERS = {
 export function renderFounderSurface(surfaceType, payload = {}) {
   const renderer = SURFACE_RENDERERS[surfaceType];
   if (!renderer) return { text: SAFE_FALLBACK_TEXT };
-  return guardOutput(renderer(payload));
+  const out = renderer(payload);
+  return { text: String(out.text ?? ''), ...(out.blocks != null ? { blocks: out.blocks } : {}) };
 }
 
 export function renderDeliberation(deliberation) {

@@ -36,6 +36,10 @@
 보강14 (2026-04-01): 창업자 DM/멘션에서 `metadata.callText`가 있고 `COS_FOUNDER_DIRECT_CHAT` 기본(on)이면 `founderRequestPipeline` 입구에서 **골드·의도 분류·유틸 단축·조회/구조화 접두 분기 없이** `runCosNaturalPartner` 한 번(`partner_natural_surface`, `runFounderNaturalPartnerTurn`)만 수행한다. `app.js`의 `버전` 라우팅 락 선처리는 **창업자 경로가 아닐 때만** 적용한다. `registerHandlers` DM/멘션은 **`handleUserText`**로 통일해 트레이스·버퍼·파이프라인 순서를 `app.js`와 맞춘다. `COS_FOUNDER_DIRECT_CHAT=0` 또는 테스트처럼 `callText` 없음일 때만 기존 헌법 파이프라인(유틸·골드·페이즈)이 founder에 적용된다. `runInboundAiRouter` founder 가드는 `founderRequestPipeline`에 `callText`를 넘긴다.
 보강15 (역사): 과거 `runFounderNaturalPartnerTurn` 재검증·`COUNCIL_SHAPE_SOFT_FALLBACK` 서술 — **폐기**, 현행은 보강16.
 보강16 (2026-04-01): 창업자 면 `sendFounderResponse`는 Council 휴리스틱·내부 마커·`sanitizeFounderOutput` 없이 **pass-through**(등록 `surface_type` 검증 + 텍스트 전용 전송, trace `founder_outbound_mode: pass_through`). `runFounderNaturalPartnerTurn`은 `runCosNaturalPartner` **1회**만 호출한다. 비창업자 `finalizeSlackResponse`·`founderSurfaceGuard` 기반 게이트는 별도 경로로 유지될 수 있다.
+보강17 (2026-04-01): `runCosNaturalPartner` 시스템 지시문에 **출력 형태** 금지를 둔다(사용자 입력 검열 아님). 벤치마킹·장단점 요청도 Council 메모 목차·페르소나 콜론 불릿·「내부 처리 정보」「협의 모드」류·`실행 작업 후보` 푸터를 **본문에 쓰지 않도록** 유도한다. 여전히 모델이 위반하면 코드 치환 없이 재프롬프트/모델 설정으로 대응한다.
+보강18 (2026-04-01): **창업자 Slack 면**(`founder_route` 또는 trace `slack_route_label`이 `dm_ai_router`/`mention_ai_router`)에서는 `finalizeSlackResponse`의 Council 형태 휴리스틱·`sanitizeFounderOutput`·trace의 누수 플래그 스캔(`leak_scan`)을 **적용하지 않는다**. `founderRenderer.renderFounderSurface`도 내부 마커 substring 가드를 **제거**해 렌더 출력을 치환하지 않는다. `founderOutboundGate`는 finalize 존재 검사(엄격 모드)만 하고 본문은 통과. 비창업자 채널·라벨 없음 경로는 기존 `finalizeSlackResponse` 게이트 유지.
+보강19 (2026-04-01): 창업자 **`COS_FOUNDER_DIRECT_CHAT` on** + `callText` 경로에서 `runFounderNaturalPartnerTurn` **직전**에 **`maybeHandleFounderLaunchGate`**(`founderLaunchGate.js`)가 실행된다. **launch 문구**(`founderLaunchIntent.js`)가 있으면 파트너 LLM을 호출하지 않고, 스레드 기준 **`buildProviderTruthSnapshot`**(`providerTruthSnapshot.js`)·**`evaluateLaunchReadiness`**(`launchReadinessEvaluator.js`)로 준비도를 판정한다. **차단**이면 `surface_type: LAUNCH_BLOCKED`·`buildLaunchBlockedPayload`; **통과**이면 필요 시 프로젝트 스페이스 부트스트랩 후 **`buildExecutionLaunchRenderPayload`** → `EXECUTION_PACKET`·`createExecutionRun`·**`ensureExecutionRunDispatched`**·인테이크 **`execution_running`** 전이로 execution spine에 붙인다. trace/outbound에는 `launch_gate_taken`·`launch_readiness`·`provider_truth_snapshot`·`launch_packet_id` 등이 실린다. 회귀: `scripts/test-founder-launch-gate.mjs`(`npm test` 포함).
+보강20 (2026-04-01): **`finalizeSlackResponse`**(`topLevelRouter.js`)에서 **`founder_route === true`** 이고 **`responder === 'council'`** 이면 본문과 무관하게 **founder 경로 Council 비활성** 안내 문구로 치환한다(`validation_error_code: founder_council_hard_block`). `app.js` 파이프라인 누수 하드킬과 별도로, finalize 입구에서도 불변식을 고정한다.
 **앱**: `g1-cos-slack` (**Big Pivot** = 본 Slack COS 런타임/봇의 별칭. 저장소 폴더명과 동일하지 않을 수 있음.)
 
 **권위 맵:** `00_Document_Authority_Read_Path.md`
@@ -89,7 +93,12 @@
 | 경로 | 역할 |
 |------|------|
 | `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행(3b pre-AI 스파인 포함) → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
-| `src/core/founderRequestPipeline.js` | 창업자+`callText`+직답 on → **자연어 단일 경로**(`runFounderNaturalPartnerTurn`). 그 외(비창업자·테스트·`COS_FOUNDER_DIRECT_CHAT=0`)는 Constitution: 유틸 → 조회/구조화 `null` → phase·실행기·골드. |
+| `src/core/founderRequestPipeline.js` | 창업자+`callText`+직답 on → **launch 게이트**(`maybeHandleFounderLaunchGate`) 다음 **자연어 단일 경로**(`runFounderNaturalPartnerTurn`). 그 외(비창업자·테스트·`COS_FOUNDER_DIRECT_CHAT=0`)는 Constitution: 유틸 → 조회/구조화 `null` → phase·실행기·골드. |
+| `src/core/founderLaunchGate.js` | **`maybeHandleFounderLaunchGate`** — launch intent·truth·readiness·(차단) `LAUNCH_BLOCKED` / (통과) 실행 패킷·런 생성·dispatch·인테이크 전이. |
+| `src/core/founderLaunchIntent.js` | launch 문구 결정론 감지. |
+| `src/core/providerTruthSnapshot.js` | 스레드/프로바이더 truth 스냅샷(실행 패킷·관측). |
+| `src/core/launchReadinessEvaluator.js` | `launch_ready`·`launch_blocked_*` 등 준비도 코드. |
+| `src/core/executionLaunchPacketBuilder.js` | 실행 launch 렌더 페이로드·차단 페이로드 빌드. |
 | `src/features/runPlannerHardLockedBranch.js` | 플래너 `hit`/`miss` 고정 분기 — `finalizeSlackResponse`·dedup·승인 생성 (`app.js` 에서 import) |
 | `src/features/runInboundCommandRouter.js` | `도움말`/`운영도움말`·**`tryFinalizeProjectIntakeCancel`**·**`tryFinalizeProjectSpecBuildThread`**(활성 인테이크)·**`tryFinalizeDecisionShortReply`**·…·**`tryFinalizeG1CosLineageTransport`(M4)**·조회·…·**`tryExecutiveSurfaceResponse`** |
 | `src/features/projectSpecSession.js` | 인테이크 빌드 스레드: spec mutation·`computeSufficiency`·`project_spec_execution_ready` / `project_spec_refine` |
@@ -115,7 +124,7 @@
 | `src/slack/registerSlashCommands.js` | **`/g1cos`** — **lineage(M4)** → 조회 `tryFinalizeSlackQueryRoute`; 성공 시 `in_channel`. 인자 없음/`help`/`도움말`/`사용법`/`?` → ephemeral |
 | `src/features/cosNaturalPartner.js` | 평문 COS 대화 (`callText`), `priorTranscript` |
 | `src/agents/council.js` | `conversationContext` → 페르소나 LLM 입력 |
-| `src/features/topLevelRouter.js` | `finalizeSlackResponse` — 끝에서 **`markInboundTurnFinalize`** (M2a `AsyncLocalStorage` 턴 메타). **`responder: query` 는 Council 누수 휴리스틱 전면 스킵**. |
+| `src/features/topLevelRouter.js` | `finalizeSlackResponse` — 끝에서 **`markInboundTurnFinalize`** (M2a `AsyncLocalStorage` 턴 메타). **`responder: query` 는 Council 누수 휴리스틱 전면 스킵**. **`founder_route` + `council` 응답은 안내 문구로 하드 치환**. |
 | `src/features/inboundTurnTrace.js` | M2a append-only **`data/inbound-turn-trace.jsonl`** (`INBOUND_TURN_TRACE_FILE`·`INBOUND_TURN_TRACE_DISABLE`). 필드: `turn_id`, `thread_key`, `channel_id`, `user_id`, 정규화 입력, `final_responder`, nullable 링크·`packet_id`·**`work_queue_id`(M3)**, `duration_ms`, `status`. |
 | `src/features/agentWorkQueue.js` | M3: 결정 `pick` enqueue·**`patchAgentWorkQueueItem`**(상태·블로커·WRK/RUN·`proof_refs_append`)·패킷 `linked_*` 배열·`data/agent-work-queue.json` |
 | `src/features/queryOnlyRoute.js` | `tryFinalizeSlackQueryRoute` — `stripSlackMarkupArtifacts` + 조회 줄 추출·`prepped` 폴백; 성공 시 **`queryResponseBlocks`** 로 `{ text, blocks }` (기본 on) |

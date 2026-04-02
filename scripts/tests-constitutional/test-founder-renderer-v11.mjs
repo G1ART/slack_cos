@@ -1,6 +1,6 @@
 /**
  * Constitutional test: Founder Renderer v1.1.
- * Verifies OS surface rendering and internal marker blocking.
+ * Verifies OS surface rendering (내부 마커 문자열 가드는 제거됨 — pass-through).
  */
 import { renderFounderSurface, renderDeliberation } from '../../src/core/founderRenderer.js';
 import { FounderSurfaceType, SAFE_FALLBACK_TEXT } from '../../src/core/founderContracts.js';
@@ -36,16 +36,16 @@ function assert(label, condition) {
   assert('discovery_not_fallback', r.text !== SAFE_FALLBACK_TEXT);
 }
 
-// Test 4: Internal markers are blocked
+// Test 4: Renderer does not substring-block (COS 본문은 그대로 전달)
 {
   const r = renderFounderSurface(FounderSurfaceType.RUNTIME_META, { text: '종합 추천안: 뭔가' });
-  assert('markers_blocked', r.text === SAFE_FALLBACK_TEXT);
+  assert('markers_pass_through', r.text === '종합 추천안: 뭔가');
 }
 
-// Test 5: Persona literals blocked
+// Test 5: Persona-like lines in run_state text pass through
 {
   const r = renderFounderSurface(FounderSurfaceType.RUN_STATE, { text: '- strategy_finance: 좋습니다' });
-  assert('persona_blocked', r.text === SAFE_FALLBACK_TEXT);
+  assert('persona_pass_through', r.text.includes('strategy_finance:'));
 }
 
 // Test 6: Decision packet renders deliberation

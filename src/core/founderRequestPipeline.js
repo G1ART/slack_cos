@@ -32,7 +32,6 @@ import {
   buildStatusPacket,
   buildHandoffPacket,
 } from './founderGoldContract.js';
-import { extractHiddenContract } from './hiddenContractExtractor.js';
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
@@ -43,6 +42,7 @@ import { createExecutionPacket, createExecutionRun } from '../features/execution
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { maybeHandleFounderLaunchGate } from './founderLaunchGate.js';
 /**
  * Utility intents the pipeline handles regardless of work object state.
  */
@@ -328,6 +328,8 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     isFounderDirectNaturalChatEnabled() &&
     typeof callText === 'function'
   ) {
+    const launchHandled = await maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey);
+    if (launchHandled) return launchHandled;
     return await runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey);
   }
 
@@ -573,12 +575,20 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
 }
 
+/** 스레드 제품 분기 확인용 최소 힌트(숨은 계약 추출기·Council 스캔과 무관) */
+function roughProductDomainHint(text) {
+  const t = String(text || '');
+  if (/(캘린더|스케줄|일정|예약)/u.test(t)) return 'calendar';
+  if (/(crm|리드|세일즈)/i.test(t)) return 'crm';
+  return 'generic';
+}
+
 function shouldAskSeparateProductConfirmation(gold, workContext, normalized) {
   if (gold?.kind !== 'kickoff') return false;
   const intakeGoal = String(workContext?.intake_session?.goalLine || '').trim();
   if (!intakeGoal) return false;
-  const prevDomain = extractHiddenContract(intakeGoal).domain;
-  const nowDomain = extractHiddenContract(normalized).domain;
+  const prevDomain = roughProductDomainHint(intakeGoal);
+  const nowDomain = roughProductDomainHint(normalized);
   if (prevDomain === 'generic' || nowDomain === 'generic') return false;
   return prevDomain !== nowDomain;
 }

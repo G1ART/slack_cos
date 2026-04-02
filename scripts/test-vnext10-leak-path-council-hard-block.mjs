@@ -74,9 +74,9 @@ try {
     source_formatter: 'test:council_poison',
     slack_route_label: 'mention_ai_router',
   });
-  assert.ok(!out.includes('종합 추천안'), 'council old heading removed or fallback');
-  assert.ok(!out.includes('페르소나별'));
-  ok('responder council + old-style body gets blocked/rewritten');
+  assert.ok(out.includes('종합 추천안'), '창업자 멘션 라벨이면 pass-through');
+  assert.ok(out.includes('페르소나별'));
+  ok('mention_ai_router + council body passes through (no shape rewrite)');
 } catch (e) {
   fail('council old-style hard block', e);
 }
@@ -92,11 +92,29 @@ try {
     source_formatter: 'test:persona_only',
     slack_route_label: 'mention_ai_router',
   });
-  assert.ok(!outP.includes('strategy_finance'), 'persona lines leak block');
-  assert.ok(!outP.includes('risk_review'));
-  ok('council responder persona-only leak blocked');
+  assert.ok(outP.includes('strategy_finance'));
+  assert.ok(outP.includes('risk_review'));
+  ok('mention_ai_router persona lines pass through');
 } catch (e) {
   fail('council persona-only leak', e);
+}
+
+try {
+  const poison2 = '종합 추천안\n포이즌\n\n페르소나별 핵심 관점\n- a';
+  const outCh = finalizeSlackResponse({
+    responder: 'council',
+    text: poison2,
+    raw_text: 't',
+    normalized_text: 't',
+    response_type: 'test_council_poison_channel',
+    source_formatter: 'test:non_founder_channel',
+    slack_route_label: null,
+    founder_route: false,
+  });
+  assert.ok(!outCh.includes('종합 추천안'), '비창업자/라벨 없음은 기존 차단');
+  ok('non-founder finalize still rewrites council-shaped body');
+} catch (e) {
+  fail('non-founder council rewrite', e);
 }
 
 /* 5–7 routing lock */
@@ -186,6 +204,7 @@ try {
     raw_before_sanitize: 'aa',
     sanitized: 'bb',
     raw_for_detection: '종합 추천안',
+    leak_scan: true,
   });
   assert.equal(rec.source_formatter, 'unit:trace');
   assert.equal(rec.slack_route_label, 'dm_ai_router');

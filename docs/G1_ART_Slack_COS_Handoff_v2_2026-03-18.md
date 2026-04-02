@@ -1824,6 +1824,8 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **다음**: `/g1cos` 서브커맨드 확장 → 툴 레지스트리 **v2**(function calling·실차단 게이트) → 버퍼 영속 운영 디테일. **완료**: 슬래시 조회 MVP + lineage + **슬래시↔대화 버퍼 기록** (`recordSlashCommandExchange`) + 조회 Block Kit + 조회 네비 버튼; **`runPlannerHardLockedBranch`** 모듈; **툴 레지스트리 v1** (`cosToolRegistry`·`cosToolTelemetry`·`cosToolRuntime`, `tool_registry_bind` 로그, `WRK-260325-03`).
 - **레이어 분리(해석)**: `docs/cursor-handoffs/COS_Executive_vs_Orchestration_Layers_2026-03-27.md` — 대표 레이어 vs 오케스트레이션·새는 지점·에스컬레이션 v0(느슨) 원칙.
 - **프로젝트 킥오프 sticky 세션**: `docs/cursor-handoffs/COS_Project_Intake_Sticky_Session_2026-03.md` — `projectIntakeSession.js`·후속 턴 `start_project_*` 고정·Henry 회귀.
+- **(2026-04-01) Founder launch gate**: `src/core/founderLaunchGate.js` 등 — direct chat에서 launch 문구 감지 시 파트너 LLM 대신 readiness·provider truth·`EXECUTION_PACKET` / `LAUNCH_BLOCKED`·execution spine 연결; `scripts/test-founder-launch-gate.mjs`(`npm test`).
+- **(2026-04-01) Founder + Council finalize 하드침**: `finalizeSlackResponse`에서 `founder_route`이면서 `responder === 'council'`인 응답은 안내 문구로 치환(`founder_council_hard_block`).
 - **(2026-04-01) Founder front door 재건축 실행서**: `docs/cursor-handoffs/Slack_COS_Reconstruction_File_by_File_Patch_Priority_2026-04-01.md` — 앞단 커널·P0 파일 우선순위·gold 머지 게이트·트레이스 필드. 제품 헌법과 충돌 시 `00_Document_Authority_Read_Path.md` 순서가 이김. **진행 로그:** `COS_Founder_Front_Door_Reconstruction_Roadmap_2026-04-01.md` (Phase 1a: 파이프라인 조회 위임·실행기 폴백·AI 라우터 founder 차단·inbound_audit).
 
 ---

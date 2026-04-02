@@ -75,6 +75,8 @@ export const FounderSurfaceType = Object.freeze({
   PROJECT_SPACE: 'project_space_surface',
   RUN_STATE: 'run_state_surface',
   EXECUTION_PACKET: 'execution_packet_surface',
+  /** launch gate가 실질 블로커만 막을 때 (드묾) */
+  LAUNCH_BLOCKED: 'launch_blocked_surface',
   APPROVAL_PACKET: 'approval_packet_surface',
   DEPLOY_PACKET: 'deploy_packet_surface',
   MANUAL_BRIDGE: 'manual_bridge_surface',
@@ -108,6 +110,7 @@ export const SURFACE_FREEDOM_MAP = Object.freeze({
   [FounderSurfaceType.RUNTIME_META]: SurfaceFreedomLevel.L0_STRICT,
   [FounderSurfaceType.SAFE_FALLBACK]: SurfaceFreedomLevel.L0_STRICT,
   [FounderSurfaceType.EXECUTION_PACKET]: SurfaceFreedomLevel.L0_STRICT,
+  [FounderSurfaceType.LAUNCH_BLOCKED]: SurfaceFreedomLevel.L0_STRICT,
   [FounderSurfaceType.APPROVAL_PACKET]: SurfaceFreedomLevel.L0_STRICT,
   [FounderSurfaceType.DEPLOY_PACKET]: SurfaceFreedomLevel.L0_STRICT,
   [FounderSurfaceType.EXCEPTION]: SurfaceFreedomLevel.L0_STRICT,
