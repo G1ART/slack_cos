@@ -8,6 +8,7 @@
 import { readJsonArray, writeJsonArray, ensureJsonFile } from '../storage/jsonStore.js';
 import { DATA_DIR } from '../storage/paths.js';
 import path from 'path';
+import { getExecutionRunById } from './executionRun.js';
 
 const PROJECT_SPACES_FILE = path.join(DATA_DIR, 'project-spaces.json');
 
@@ -60,6 +61,9 @@ export function createProjectSpace(opts = {}) {
     last_bootstrap_status: opts.last_bootstrap_status || 'not_bootstrapped',
     last_deploy_status: opts.last_deploy_status || 'none',
     last_deploy_at: opts.last_deploy_at || null,
+    last_thread_key: opts.last_thread_key ?? null,
+    last_goal_fingerprint: opts.last_goal_fingerprint ?? null,
+    last_launch_at: opts.last_launch_at ?? null,
     status: opts.status || 'active',
     created_at: ts,
     updated_at: ts,
@@ -180,6 +184,109 @@ const STOP_WORDS = new Set([
   '반영', '피드백', '기존', '지난번', '이전에', '프로젝트', '앱', '서비스',
   'the', 'a', 'an', 'that', 'this', 'project', 'app', 'existing', 'previous',
 ]);
+
+/**
+ * 라벨 exact 비교용 (소문자·공백·구두점 정규화).
+ * @param {string} text
+ */
+export function normalizeLabelForMatch(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/["""''「」\[\](){}!?.,;:~@#$%^&*+=<>/\\|`]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * goal line 보조 신호 — 토큰 집합 정렬 후 연결 (유사도 스코어만으로의 재사용 대체용).
+ * @param {string} goalLine
+ */
+export function computeGoalFingerprint(goalLine) {
+  const tokens = extractSearchTokens(String(goalLine || '').toLowerCase());
+  if (tokens.length === 0) return '';
+  return [...new Set(tokens)].sort().join('|');
+}
+
+/**
+ * 다른 thread에 **active** run이 붙어 있으면 true (현재 thread는 제외).
+ * @param {object} space
+ * @param {string} currentThreadKey
+ */
+export function spaceHasActiveRunOnOtherThread(space, currentThreadKey) {
+  if (!space?.active_run_ids?.length) return false;
+  for (const rid of space.active_run_ids) {
+    const run = getExecutionRunById(rid);
+    if (!run || run.status !== 'active') continue;
+    const ok = run.owner_thread_key && run.owner_thread_key !== currentThreadKey;
+    if (ok) return true;
+  }
+  return false;
+}
+
+/**
+ * exact 라벨 또는 exact alias 일치하는 스페이스 후보 (점수 정렬 아님).
+ * @param {string} goalLine
+ * @returns {Array<{ space: object, match_kind: 'label_exact' | 'alias_exact' }>}
+ */
+export function findExactLabelOrAliasMatches(goalLine) {
+  const norm = normalizeLabelForMatch(goalLine);
+  if (norm.length < 2) return [];
+  const out = [];
+  for (const space of spacesById.values()) {
+    let match_kind = null;
+    if (normalizeLabelForMatch(space.human_label) === norm) match_kind = 'label_exact';
+    else {
+      for (const a of space.aliases || []) {
+        if (normalizeLabelForMatch(a) === norm) {
+          match_kind = 'alias_exact';
+          break;
+        }
+      }
+    }
+    if (match_kind) out.push({ space, match_kind });
+  }
+  return out;
+}
+
+/**
+ * trace용: 재사용하지 않기로 했을 때만 상위 유사 후보 요약.
+ * @param {string} label
+ * @param {number} limit
+ */
+export function getRelatedSpaceCandidatesForTrace(label, limit = 5) {
+  return searchProjectSpacesWithScore(label)
+    .slice(0, limit)
+    .map((r) => ({
+      project_id: r.space.project_id,
+      human_label: r.space.human_label,
+      score: r.score,
+    }));
+}
+
+/**
+ * launch/bootstrap 후 스레드·goal 흔적 갱신 (오케스트레이션 가시성).
+ */
+export function touchProjectSpaceLaunchMeta(projectId, { threadKey, goalFingerprint } = {}) {
+  const space = spacesById.get(projectId);
+  if (!space) return null;
+  const patch = {
+    last_thread_key: threadKey != null ? threadKey : space.last_thread_key,
+    last_launch_at: now(),
+  };
+  if (goalFingerprint) patch.last_goal_fingerprint = goalFingerprint;
+  return updateProjectSpace(projectId, patch);
+}
+
+/** owner_thread + active run owner_thread_key 기준 고유 스레드 수 */
+export function countDistinctThreadsForSpace(space) {
+  if (!space) return 0;
+  const keys = new Set(space.owner_thread_ids || []);
+  for (const rid of space.active_run_ids || []) {
+    const run = getExecutionRunById(rid);
+    if (run?.status === 'active' && run.owner_thread_key) keys.add(run.owner_thread_key);
+  }
+  return keys.size;
+}
 
 function extractSearchTokens(text) {
   return text

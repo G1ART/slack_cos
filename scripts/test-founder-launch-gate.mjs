@@ -100,6 +100,7 @@ try {
   assert.equal(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
   assert.ok(out.trace.launch_packet_id, 'launch_packet_id');
   assert.ok(out.trace.provider_truth_snapshot?.providers?.length, 'provider_truth');
+  assert.ok(out.trace.project_space_resolution_mode, 'resolution mode in trace');
   assert.ok(out.text.includes('provider truth') || out.text.includes('Provider truth') || out.text.includes('provider'), 'render has truth');
   assert.ok(out.text.includes('대표 next action') || out.text.includes('next action'), 'next action');
   assert.ok(out.text.includes('수동 브리지'), 'manual bridge section');

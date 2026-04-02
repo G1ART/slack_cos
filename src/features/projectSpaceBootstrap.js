@@ -1,5 +1,6 @@
 /**
  * Project Space Bootstrap — 새 프로젝트 요청 시 bootstrap plan 생성 + draft-first adapters 연결.
+ * Thread-linked space가 최우선; 라벨 재사용은 exact + 안전 조건에서만 (유사도 점수만으로는 재사용 안 함).
  */
 
 import {
@@ -7,7 +8,13 @@ import {
   getProjectSpaceByThread,
   linkThreadToProjectSpace,
   updateProjectSpace,
-  searchProjectSpacesWithScore,
+  getProjectSpaceById,
+  computeGoalFingerprint,
+  findExactLabelOrAliasMatches,
+  spaceHasActiveRunOnOtherThread,
+  getRelatedSpaceCandidatesForTrace,
+  touchProjectSpaceLaunchMeta,
+  countDistinctThreadsForSpace,
 } from './projectSpaceRegistry.js';
 import { diagnoseGithubConfig } from './executionDispatchLifecycle.js';
 import { diagnoseVercelReadiness, buildVercelBootstrapDraft } from '../adapters/vercelAdapter.js';
@@ -19,29 +26,136 @@ function logBootstrap(event, fields = {}) {
   } catch { /* */ }
 }
 
-const STRONG_LABEL_MATCH_THRESHOLD = 12;
+/** @typedef {'thread_linked'|'explicit_project_id'|'explicit_project_label_exact'|'label_match_reuse'|'new_bootstrap'} ProjectSpaceResolutionMode */
 
 /**
- * Idempotent bootstrap: reuse an existing space linked to the same thread
- * or one with a strong label match before creating a new one.
+ * @param {object} space
+ * @param {string} threadKey
+ * @param {string} goalFp
+ * @returns {{ ok: boolean, reason: string }}
+ */
+function canReuseSpaceForConservativeLabelMatch(space, threadKey, goalFp) {
+  if (spaceHasActiveRunOnOtherThread(space, threadKey)) {
+    return { ok: false, reason: 'active_run_on_other_thread' };
+  }
+  const owners = space.owner_thread_ids || [];
+  const otherThreads = owners.filter((t) => t !== threadKey);
+  if (otherThreads.length > 0) {
+    return { ok: false, reason: 'space_owned_by_other_thread' };
+  }
+  if (
+    goalFp &&
+    space.last_goal_fingerprint &&
+    space.last_goal_fingerprint !== goalFp
+  ) {
+    return { ok: false, reason: 'goal_fingerprint_mismatch' };
+  }
+  return { ok: true, reason: 'exact_label_or_alias_safe' };
+}
+
+/**
+ * @param {Array<{ space: object, match_kind: string }>} matches
+ * @param {string} threadKey
+ * @param {string} goalFp
+ */
+function pickLabelReuseSpace(matches, threadKey, goalFp) {
+  const scored = [];
+  for (const { space, match_kind } of matches) {
+    const gate = canReuseSpaceForConservativeLabelMatch(space, threadKey, goalFp);
+    if (!gate.ok) continue;
+    let conf = match_kind === 'label_exact' ? 0.9 : 0.85;
+    if (goalFp && space.last_goal_fingerprint === goalFp) conf += 0.08;
+    scored.push({
+      space,
+      match_kind,
+      gate,
+      resolution_confidence: Math.min(conf, 1),
+      updated_at: space.updated_at || '',
+    });
+  }
+  scored.sort((a, b) => {
+    if (b.resolution_confidence !== a.resolution_confidence) {
+      return b.resolution_confidence - a.resolution_confidence;
+    }
+    return String(b.updated_at).localeCompare(String(a.updated_at));
+  });
+  return scored[0] || null;
+}
+
+/**
+ * Idempotent bootstrap: thread-linked → explicit id → exact 라벨/alias(안전할 때만) → 신규 생성.
+ * @returns {{ space: object, reused: boolean, resolution: object }}
  */
 export function getOrCreateProjectSpaceForBootstrap(opts = {}) {
-  if (opts.threadKey) {
-    const existing = getProjectSpaceByThread(opts.threadKey);
-    if (existing) {
-      logBootstrap('bootstrap_reused_thread_linked', { project_id: existing.project_id });
-      return { space: existing, reused: true };
+  const threadKey = opts.threadKey || '';
+  const label = opts.label || '';
+  const goalFp = computeGoalFingerprint(label);
+  const relatedCandidates = label.trim() ? getRelatedSpaceCandidatesForTrace(label, 5) : [];
+  const hadExactCandidates = findExactLabelOrAliasMatches(label).length > 0;
+
+  const baseResolution = (extra) => ({
+    related_space_candidates: relatedCandidates,
+    goal_fingerprint: goalFp,
+    ...extra,
+  });
+
+  if (opts.projectId) {
+    const s = getProjectSpaceById(String(opts.projectId));
+    if (s) {
+      logBootstrap('bootstrap_reused_explicit_id', { project_id: s.project_id });
+      return {
+        space: s,
+        reused: true,
+        resolution: baseResolution({
+          project_space_resolution_mode: 'explicit_project_id',
+          reused_space_project_id: s.project_id,
+          reused_space_reason: 'opts.projectId',
+          resolution_confidence: 1,
+          active_thread_count: countDistinctThreadsForSpace(s),
+        }),
+      };
     }
   }
 
-  if (opts.label) {
-    const scored = searchProjectSpacesWithScore(opts.label);
-    if (scored.length && scored[0].score >= STRONG_LABEL_MATCH_THRESHOLD) {
-      logBootstrap('bootstrap_reused_label_match', {
-        project_id: scored[0].space.project_id,
-        score: scored[0].score,
+  if (threadKey) {
+    const existing = getProjectSpaceByThread(threadKey);
+    if (existing) {
+      logBootstrap('bootstrap_reused_thread_linked', { project_id: existing.project_id });
+      return {
+        space: existing,
+        reused: true,
+        resolution: baseResolution({
+          project_space_resolution_mode: 'thread_linked',
+          reused_space_project_id: existing.project_id,
+          reused_space_reason: 'thread_index_hit',
+          resolution_confidence: 1,
+          active_thread_count: countDistinctThreadsForSpace(existing),
+        }),
+      };
+    }
+  }
+
+  if (label.trim()) {
+    const matches = findExactLabelOrAliasMatches(label);
+    const picked = pickLabelReuseSpace(matches, threadKey, goalFp);
+    if (picked) {
+      logBootstrap('bootstrap_reused_label_exact', {
+        project_id: picked.space.project_id,
+        match_kind: picked.match_kind,
       });
-      return { space: scored[0].space, reused: true };
+      return {
+        space: picked.space,
+        reused: true,
+        resolution: baseResolution({
+          project_space_resolution_mode:
+            picked.match_kind === 'label_exact' ? 'explicit_project_label_exact' : 'label_match_reuse',
+          reused_space_project_id: picked.space.project_id,
+          reused_space_reason: picked.gate.reason,
+          resolution_confidence: picked.resolution_confidence,
+          label_match_kind: picked.match_kind,
+          active_thread_count: countDistinctThreadsForSpace(picked.space),
+        }),
+      };
     }
   }
 
@@ -50,7 +164,7 @@ export function getOrCreateProjectSpaceForBootstrap(opts = {}) {
   const railwayDiag = diagnoseRailwayReadiness();
 
   const space = createProjectSpace({
-    human_label: opts.label || 'New Project',
+    human_label: label || 'New Project',
     aliases: opts.aliases || [],
     canonical_summary: opts.summary || '',
     repo_owner: opts.repoOwner || process.env.GITHUB_DEFAULT_OWNER || null,
@@ -66,21 +180,42 @@ export function getOrCreateProjectSpaceForBootstrap(opts = {}) {
     railway_project_id: opts.railwayProjectId || null,
     railway_ready_status: railwayDiag.configured ? 'ready' : 'not_configured',
     bootstrap_source: opts.bootstrapSource || 'user_request',
+    last_goal_fingerprint: goalFp || null,
   });
 
-  return { space, reused: false };
+  let reason = 'no_prior_thread_or_exact_label';
+  if (hadExactCandidates) reason = 'exact_match_failed_safety_or_fingerprint';
+
+  return {
+    space,
+    reused: false,
+    resolution: baseResolution({
+      project_space_resolution_mode: 'new_bootstrap',
+      reused_space_project_id: null,
+      reused_space_reason: reason,
+      resolution_confidence: 0.55,
+      possible_related_spaces: relatedCandidates,
+      active_thread_count: 0,
+    }),
+  };
 }
 
 /**
  * Build a bootstrap plan for a new project space. Idempotent — reuses
- * an existing thread-linked or strong-label-matching space.
- * @param {{ label: string, aliases?: string[], threadKey?: string, repoOwner?: string, repoName?: string, metadata?: object }} opts
+ * thread-linked or **exact** label/alias match only when isolation rules pass.
+ * @param {{ label: string, aliases?: string[], threadKey?: string, repoOwner?: string, repoName?: string, metadata?: object, projectId?: string }} opts
  */
 export function bootstrapProjectSpace(opts = {}) {
-  const { space, reused } = getOrCreateProjectSpaceForBootstrap(opts);
+  const { space, reused, resolution } = getOrCreateProjectSpaceForBootstrap(opts);
 
   if (opts.threadKey) {
     linkThreadToProjectSpace(space.project_id, opts.threadKey);
+    touchProjectSpaceLaunchMeta(space.project_id, {
+      threadKey: opts.threadKey,
+      goalFingerprint: resolution.goal_fingerprint || undefined,
+    });
+  } else if (resolution.goal_fingerprint) {
+    updateProjectSpace(space.project_id, { last_goal_fingerprint: resolution.goal_fingerprint });
   }
 
   const ghDiag = diagnoseGithubConfig();
@@ -92,9 +227,10 @@ export function bootstrapProjectSpace(opts = {}) {
     project_id: space.project_id,
     label: space.human_label,
     reused,
+    project_space_resolution_mode: resolution.project_space_resolution_mode,
   });
 
-  return { space, plan, reused };
+  return { space, plan, reused, resolution };
 }
 
 function buildBootstrapPlan(space, diags) {
