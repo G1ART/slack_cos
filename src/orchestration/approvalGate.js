@@ -1,6 +1,6 @@
 /**
- * vNext.13 — 외부 상태 변경은 대표 승인(또는 명시적 authorized) 이후에만 디스패치 허용.
- * 기본값 `authorized`는 기존 런·회귀와의 호환(런 객체에 필드가 없으면 기존과 동일하게 진행).
+ * vNext.13.1 — default-deny: 명시적 `authorized`만 외부 mutation 허용.
+ * 필드 누락·null·pending_approval·draft_only → 거부.
  */
 
 import { getExecutionRunById, updateRunExternalExecutionAuthorization } from '../features/executionRun.js';
@@ -8,15 +8,25 @@ import { getExecutionRunById, updateRunExternalExecutionAuthorization } from '..
 /** @typedef {'authorized'|'pending_approval'|'draft_only'} ExternalExecutionAuthState */
 
 /**
+ * 오퍼레이터 전용 부트스트랩: 런 메타에만 쓰일 것 (창업자 출처와 혼용 금지).
+ * @param {object|null|undefined} run
+ * @returns {boolean}
+ */
+export function isOperatorExplicitAuthorizedBootstrapRun(run) {
+  return (
+    run?.operator_external_dispatch_bootstrap === true &&
+    run?.founder_origin_run !== true &&
+    run?.external_execution_authorization?.state === 'authorized'
+  );
+}
+
+/**
  * @param {object|null|undefined} run
  * @returns {boolean}
  */
 export function isExternalMutationAuthorized(run) {
-  const st = run?.external_execution_authorization?.state;
-  if (st === undefined || st === null) return true;
-  if (st === 'pending_approval') return false;
-  if (st === 'draft_only') return false;
-  return true;
+  if (!run) return false;
+  return run.external_execution_authorization?.state === 'authorized';
 }
 
 /**
@@ -52,5 +62,7 @@ export function setExternalExecutionPendingApproval(runId, extra = {}) {
  */
 export function getExternalExecutionAuthState(runId) {
   const run = getExecutionRunById(runId);
-  return run?.external_execution_authorization?.state ?? 'authorized';
+  const st = run?.external_execution_authorization?.state;
+  if (st === undefined || st === null) return 'pending_approval';
+  return st;
 }

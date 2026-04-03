@@ -1,7 +1,6 @@
 /**
- * vNext.13-CORRECTIVE
- * - 창업자 면: `founderDirectInboundFourStep` — 맥락 합성 → 이해 → 제안 패킷 → 승인 인지 응답 (classify/resolveWorkObject/phase 없음).
- * - 오퍼레이터/채널만: work_object → phase → policy (아래 구간; `founderRoute===false`).
+ * vNext.13.1 — 오퍼레이터/채널 constitutional spine 전용.
+ * 창업자 면은 `src/founder/founderDirectKernel.js` → `runFounderDirectKernel` 만 사용 (app.js / AI 라우터 가드).
  */
 
 // GREP_COS_CONSTITUTION_PIPELINE
@@ -23,7 +22,6 @@ import {
   formatMetaDebugSurfaceText,
   normalizeFounderMetaCommandLine,
 } from '../features/inboundFounderRoutingLock.js';
-import { tryResolveFounderDeterministicUtility } from '../founder/founderDeterministicUtilityResolver.js';
 import { formatExecutiveHelpText } from '../features/executiveSurfaceHelp.js';
 import {
   classifyGoldContract,
@@ -56,23 +54,6 @@ import { buildSlackThreadKey, getConversationTranscript } from '../features/slac
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
 import { evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
-import { synthesizeFounderContext } from '../founder/founderContextSynthesizer.js';
-import {
-  buildProposalFromFounderInput,
-  formatFullFounderProposalSurface,
-} from '../founder/founderProposalKernel.js';
-import { selectExecutionModeFromProposalPacket } from '../founder/executionModeFromProposalPacket.js';
-/**
- * Founder direct natural 경로 직전 launch gate (LLM 이전, 결정론).
- * 구현 본문: `founderLaunchGate.js` → `detectFounderLaunchIntent` · `buildProviderTruthSnapshot` ·
- * `evaluateLaunchReadiness` · `buildExecutionLaunchRenderPayload` / `buildLaunchBlockedPayload` ·
- * `bootstrapProjectSpace` / `getProjectSpaceByThread` · `createExecutionPacket` · `createExecutionRun` ·
- * 외부 디스패치는 대표 승인 후 `ensureExecutionRunDispatched`만(이 파일에서 직접 호출하지 않음) ·
- * `renderFounderSurface(EXECUTION_PACKET|LAUNCH_BLOCKED)`.
- * trace: `launch_gate_taken`, `launch_intent_detected`, `launch_intent_signal`, `launch_readiness`,
- * `provider_truth_snapshot`, `manual_bridge_actions`, `defaults_applied`, `launch_packet_id`.
- */
-import { maybeHandleFounderLaunchGate } from './founderLaunchGate.js';
 /**
  * Utility intents the pipeline handles regardless of work object state.
  */
@@ -100,16 +81,7 @@ const PIPELINE_HANDLED_PHASES = new Set([
 ]);
 
 /**
- * 창업자 면: structured command 접두는 실행 의미 없음 — 표시용 텍스트만 정리.
- */
-function stripFounderStructuredCommandPrefixes(t) {
-  return String(t || '')
-    .replace(/^(업무등록|계획등록|조회|결정)\s*[:：]\s*/i, '')
-    .trim();
-}
-
-/**
- * work object 파서 없이 스레드·인테이크에서만 맥락 로드 (vNext.12 founder brain).
+ * work object 파서 없이 스레드·인테이크에서만 맥락 로드 (오퍼레이터 spine).
  */
 function founderMinimalWorkContext(metadata, threadKey) {
   const run = getExecutionRunByThread(threadKey);
@@ -126,42 +98,6 @@ function founderMinimalWorkContext(metadata, threadKey) {
     run_id: run?.run_id ?? null,
     phase_hint: 'discover',
     confidence: 1,
-  };
-}
-
-/**
- * 창업자 DM/멘션 전용 4단계: (1) 맥락 로드 (2) 결정론 유틸 (3) launch gate (4) 자연어 파트너.
- */
-async function founderDirectInboundFourStep(brainText, metadata, route_label, threadKey, callText) {
-  const transcriptExcerpt = getConversationTranscript(threadKey);
-  const transcript_ready = Boolean(transcriptExcerpt && String(transcriptExcerpt).trim().length > 0);
-
-  const du = tryResolveFounderDeterministicUtility({ normalized: brainText, threadKey, metadata });
-  if (du.handled) {
-    const r = handleFounderDeterministicUtility(brainText, metadata, route_label, threadKey, du);
-    return {
-      ...r,
-      trace: { ...r.trace, founder_four_step: true, founder_step: 'deterministic_utility', transcript_ready },
-    };
-  }
-
-  const launchHandled = await maybeHandleFounderLaunchGate(brainText, metadata, route_label, threadKey);
-  if (launchHandled) {
-    return {
-      ...launchHandled,
-      trace: {
-        ...launchHandled.trace,
-        founder_four_step: true,
-        founder_step: 'launch_gate',
-        transcript_ready,
-      },
-    };
-  }
-
-  const r = await runFounderProposalKernelTurn(brainText, metadata, route_label, callText, threadKey);
-  return {
-    ...r,
-    trace: { ...r.trace, founder_four_step: true, founder_step: 'proposal_kernel', transcript_ready },
   };
 }
 
@@ -290,6 +226,28 @@ async function executeSpine(normalized, metadata, workContext) {
       }),
     };
   }
+
+  const authSt = freshRun?.external_execution_authorization?.state;
+  if (run?.run_id && authSt !== 'authorized') {
+    return {
+      packet: buildStatusPacket({
+        current_stage: 'awaiting_founder_approval',
+        completed: run ? ['범위·실행 패킷 준비(해당 시)'] : [],
+        in_progress: ['승인 대기 — 외부 mutation 보류', 'COS·내부 초안 단계만'],
+        blocker: '대표 승인 전: GitHub/Cursor/Supabase/배포로의 자동 디스패치 없음',
+        ...providerTruthPayload(),
+        next_actions: [
+          '승인 패킷에서 범위 확정',
+          freshRun?.outbound_dispatch_state === 'not_started'
+            ? '승인 후에만 오케스트레이션 디스패치가 시작됩니다'
+            : '승인·디스패치 상태를 확인해 주세요',
+        ],
+        founder_action_required:
+          '지금 단계: *승인 대기* — "곧 외부 실행"이 아니라, 승인·범위 확정 전까지 내부 준비만 진행됩니다.',
+      }),
+    };
+  }
+
   return {
     packet: buildStatusPacket({
       current_stage: run?.current_stage || 'execute',
@@ -298,7 +256,7 @@ async function executeSpine(normalized, metadata, workContext) {
       blocker: run?.outbound_last_error || '없음',
       ...providerTruthPayload(),
       next_actions: ['오케스트레이션 실행 중'],
-      founder_action_required: '현재 오케스트레이션 진행 중입니다. 크리티컬 결정/완료 시점에만 확인하면 됩니다.',
+      founder_action_required: '승인 완료 후 오케스트레이션 진행 중입니다. 크리티컬 결정/완료 시점에만 확인하면 됩니다.',
     }),
   };
 }
@@ -318,119 +276,8 @@ async function executeDeploy(normalized, metadata, workContext) {
   };
 }
 
-/** 창업자 4단계 중 (2) 결정론 유틸 — SHA·툴 브리지·진행 질문 등. */
-function handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du) {
-  const workContext = founderMinimalWorkContext(metadata, threadKey);
-  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_deterministic_utility', confidence: 1 };
-  const intentResult = {
-    intent: FounderIntent.RUNTIME_META,
-    confidence: 1,
-    signals: ['founder_deterministic_utility', du.kind],
-  };
-  const policy = evaluatePolicy({
-    actor: Actor.FOUNDER,
-    work_object_type: workContext.primary_type,
-    work_phase: phaseProbe.phase,
-    intent_signal: intentResult.intent,
-    metadata,
-  });
-  const rendered = renderFounderSurface(FounderSurfaceType.RUNTIME_META, { text: du.text });
-  return buildResult(
-    rendered,
-    {
-      workContext,
-      phaseResult: { ...phaseProbe, phase_source: 'founder_deterministic_utility', confidence: 1 },
-      intentResult,
-      policy,
-      route_label,
-    },
-    {
-      surface_type: FounderSurfaceType.RUNTIME_META,
-      founder_deterministic_utility: du.kind,
-      founder_classifier_used: false,
-      founder_keyword_route_used: false,
-    },
-  );
-}
-
-/**
- * vNext.13 — 제안 패킷이 창업자 표면의 기본; LLM은 동일 턴에서 선택적 보강만.
- */
-async function runFounderProposalKernelTurn(normalized, metadata, route_label, callText, threadKey) {
-  const workContext = founderMinimalWorkContext(metadata, threadKey);
-  const contextFrame = synthesizeFounderContext({ threadKey, metadata });
-  const proposal = buildProposalFromFounderInput({ rawText: normalized, contextFrame });
-  const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
-  let body = formatFullFounderProposalSurface(proposal);
-  let partner_output_sanitized = false;
-
-  if (typeof callText === 'function') {
-    try {
-      const priorTranscript = getConversationTranscript(threadKey);
-      const generated = await runCosNaturalPartner({
-        callText,
-        userText: normalized,
-        channelContext: null,
-        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
-        priorTranscript,
-      });
-      const rawPlain = String(generated || '').trim();
-      const { text: plain, stripped_to_empty: partnerCouncilShapeStripped } = rawPlain
-        ? sanitizePartnerNaturalLlmOutput(rawPlain)
-        : { text: '', stripped_to_empty: false };
-      partner_output_sanitized = plain !== rawPlain || partnerCouncilShapeStripped;
-      if (plain) {
-        body += `\n\n—\n*대화형 보강*\n${plain}`;
-      }
-    } catch (e) {
-      console.error('[FOUNDER_PROPOSAL_KERNEL_PARTNER]', e?.message || e);
-    }
-  }
-
-  evaluatePolicy({
-    actor: Actor.FOUNDER,
-    work_object_type: workContext.primary_type,
-    work_phase: WorkPhase.DISCOVER,
-    intent_signal: 'proposal_kernel',
-    metadata,
-  });
-
-  const rendered = renderFounderSurface(FounderSurfaceType.PROPOSAL_PACKET, { text: body });
-  return {
-    text: rendered.text,
-    blocks: rendered.blocks,
-    surface_type: FounderSurfaceType.PROPOSAL_PACKET,
-    trace: {
-      work_object: {
-        type: workContext.primary_type,
-        id: workContext.run_id || workContext.project_id || null,
-      },
-      work_phase: 'proposal_synthesis',
-      phase_source: 'founder_proposal_kernel',
-      surface_type: FounderSurfaceType.PROPOSAL_PACKET,
-      route_label: route_label || null,
-      responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13',
-      responder: 'founder_kernel',
-      passed_pipeline: true,
-      passed_renderer: true,
-      legacy_router_used: false,
-      legacy_command_router_used: false,
-      legacy_ai_router_used: false,
-      founder_classifier_used: false,
-      founder_keyword_route_used: false,
-      founder_proposal_kernel: true,
-      execution_mode_selected,
-      partner_natural: typeof callText === 'function',
-      partner_output_sanitized,
-      approval_required: proposal.approval_required === true,
-      intake_session_id: workContext.intake_session_id ?? null,
-    },
-  };
-}
-
 // ---------------------------------------------------------------------------
-// Pipeline entry point
+// Pipeline entry point (operator / channel only)
 // ---------------------------------------------------------------------------
 
 /**
@@ -439,53 +286,10 @@ async function runFounderProposalKernelTurn(normalized, metadata, route_label, c
  */
 export async function founderRequestPipeline({ text, metadata = {}, route_label } = {}) {
   const normalized = normalizeFounderMetaCommandLine(String(text || '').trim());
-  const sourceType = String(metadata.source_type || '').toLowerCase();
-  const routeLabelNorm = String(metadata.slack_route_label || route_label || '').toLowerCase();
-  const channel = String(metadata.channel || '');
-  const founderRoute =
-    sourceType === 'direct_message' ||
-    sourceType === 'channel_mention' ||
-    routeLabelNorm === 'dm_ai_router' ||
-    routeLabelNorm === 'mention_ai_router' ||
-    channel.startsWith('D');
   const callText = typeof metadata.callText === 'function' ? metadata.callText : null;
   const threadKey = buildSlackThreadKey(metadata);
 
-  if (metadata.founder_hard_recover === true) {
-    const ctx0 = synthesizeFounderContext({ threadKey, metadata });
-    const prop0 = buildProposalFromFounderInput({ rawText: normalized, contextFrame: ctx0 });
-    const body0 = formatFullFounderProposalSurface(prop0);
-    evaluatePolicy({
-      actor: Actor.FOUNDER,
-      work_object_type: founderMinimalWorkContext(metadata, threadKey).primary_type,
-      work_phase: WorkPhase.DISCOVER,
-      intent_signal: 'proposal_kernel',
-      metadata,
-    });
-    const rendered0 = renderFounderSurface(FounderSurfaceType.PROPOSAL_PACKET, { text: body0 });
-    return {
-      text: rendered0.text,
-      blocks: rendered0.blocks,
-      trace: {
-        surface_type: FounderSurfaceType.PROPOSAL_PACKET,
-        responder_kind: 'founder_kernel',
-        passed_pipeline: true,
-        passed_renderer: true,
-        legacy_router_used: false,
-        founder_hard_recover: true,
-        founder_classifier_used: false,
-        founder_keyword_route_used: false,
-        route_label: route_label || null,
-      },
-    };
-  }
-
-  if (founderRoute) {
-    const brainText = stripFounderStructuredCommandPrefixes(normalized);
-    return founderDirectInboundFourStep(brainText, metadata, route_label, threadKey, callText);
-  }
-
-  // 1. Work Object Resolver — operator/channel 경로만 (창업자 면은 위에서 종료)
+  // 1. Work Object Resolver — 오퍼레이터/채널 전용 (창업자는 runFounderDirectKernel)
   let gold = classifyGoldContract(normalized, metadata);
   let workContext = resolveWorkObject(normalized, metadata);
 
@@ -561,22 +365,35 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     const run = workContext.run;
     const freshRun = run?.run_id ? getExecutionRunById(run.run_id) : null;
     const r = freshRun || run;
+    const authSt = r?.external_execution_authorization?.state;
+    const pendingExternal = Boolean(run && authSt !== 'authorized');
     const statusSnap = buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: r ?? null });
     const statusTruth = formatProviderTruthLines(statusSnap);
     const statusFriendly = formatProviderTruthFriendlyLines(statusSnap);
     const reconLines = freshRun ? formatReconciliationLinesForFounder(freshRun) : [];
     const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
+    const reconBit =
+      completion?.completion_source === 'truth_reconciliation'
+        ? `실행 정본(reconciliation): ${completion.overall_status}`
+        : '';
     const rendered = renderFounderSurface('status_report_surface', buildStatusPacket({
-      current_stage: run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),
+      current_stage: pendingExternal ? 'awaiting_founder_approval' : run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),
       completed: run ? ['scope lock 완료', 'run 생성'] : ['문제 재정의'],
-      in_progress: run ? ['workstream 실행'] : ['scope lock 논의'],
-      blocker: run?.outbound_last_error || '없음',
+      in_progress: pendingExternal
+        ? ['승인 대기 — 외부 디스패치 보류', 'COS·내부 준비만']
+        : run
+          ? ['workstream 실행']
+          : ['scope lock 논의'],
+      blocker: pendingExternal
+        ? '대표 승인 전까지 GitHub/Cursor/Supabase/배포 자동 실행 없음'
+        : run?.outbound_last_error || '없음',
       provider_truth: [...statusTruth, ...reconLines],
       provider_truth_friendly: [...statusFriendly, ...reconLines],
       next_actions: run ? ['blocker 해소', '승인 패킷 업데이트', '배포 준비'] : ['핵심 결정 3개 확정', 'scope lock packet 생성'],
-      founder_action_required:
-        completion?.completion_source === 'truth_reconciliation'
-          ? `실행 정본(reconciliation): ${completion.overall_status}`
+      founder_action_required: pendingExternal
+        ? `*승인 대기* — 외부 mutation은 명시 승인 후에만 진행됩니다.${reconBit ? ` ${reconBit}` : ''}`
+        : completion?.completion_source === 'truth_reconciliation'
+          ? reconBit || '상태 확인'
           : run
             ? '상태 확인 또는 우선순위 조정'
             : 'scope lock 확정',

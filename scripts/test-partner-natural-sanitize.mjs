@@ -17,7 +17,7 @@ await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PLAYBOOKS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
 
-const { founderRequestPipeline } = await import('../src/core/founderRequestPipeline.js');
+const { runFounderDirectKernel } = await import('../src/founder/founderDirectKernel.js');
 const { openProjectIntakeSession } = await import('../src/features/projectIntakeSession.js');
 
 const councilSpam = [
@@ -44,7 +44,7 @@ const meta = {
 };
 openProjectIntakeSession(meta, { goalLine: 'sanitize 회귀 전용 한 줄 목표' });
 
-const out = await founderRequestPipeline({
+const out = await runFounderDirectKernel({
   text: '그냥 잡담 한 줄.',
   metadata: meta,
   route_label: 'dm_ai_router',

@@ -21,7 +21,7 @@ import {
   logPlannerFc,
 } from './plannerRoute.js';
 import { finalizeSlackResponse, logRouterEvent } from './topLevelRouter.js';
-import { founderRequestPipeline } from '../core/founderRequestPipeline.js';
+import { runFounderDirectKernel } from '../founder/founderDirectKernel.js';
 import { parseCouncilCommand, routeTask } from '../agents/index.js';
 import { appendJsonRecord } from '../storage/jsonStore.js';
 import { INTERACTIONS_FILE } from '../storage/paths.js';
@@ -287,7 +287,7 @@ export async function runInboundAiRouter(ctx) {
   // Absolute founder guard: even if caller misroutes,
   // founder-facing turns are forced through founder kernel only.
   if (founderRoute) {
-    const kernel = await founderRequestPipeline({
+    const kernel = await runFounderDirectKernel({
       text: trimmed,
       metadata: { ...metadata, callText },
       route_label: metadata?.slack_route_label,

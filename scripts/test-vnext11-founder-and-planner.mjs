@@ -37,7 +37,7 @@ await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PLAYBOOKS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
 
-const { founderRequestPipeline } = await import('../src/core/founderRequestPipeline.js');
+const { runFounderDirectKernel } = await import('../src/founder/founderDirectKernel.js');
 const { openProjectIntakeSession } = await import('../src/features/projectIntakeSession.js');
 const { extractRunCapabilities } = await import('../src/orchestration/runCapabilityExtractor.js');
 const { planExecutionRoutesForRun } = await import('../src/orchestration/planExecutionRoutes.js');
@@ -57,7 +57,7 @@ async function founderDm(text, callText) {
     callText,
   };
   openProjectIntakeSession(meta, { goalLine: 'vNext11 회귀 스레드' });
-  return founderRequestPipeline({ text, metadata: meta, route_label: 'dm_ai_router' });
+  return runFounderDirectKernel({ text, metadata: meta, route_label: 'dm_ai_router' });
 }
 
 /* Founder outputs */

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { detectFounderLaunchIntent } from '../src/core/founderLaunchIntent.js';
 import { evaluateLaunchReadiness } from '../src/core/launchReadinessEvaluator.js';
 import { buildProviderTruthSnapshot } from '../src/core/providerTruthSnapshot.js';
-import { founderRequestPipeline } from '../src/core/founderRequestPipeline.js';
+import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
@@ -88,7 +88,7 @@ try {
   };
   openProjectIntakeSession(meta, { goalLine: '더그린 갤러리 스케줄 캘린더 MVP' });
 
-  const out = await founderRequestPipeline({
+  const out = await runFounderDirectKernel({
     text: '좋아. 진행하자.',
     metadata: meta,
     route_label: 'dm_ai_router',
@@ -121,7 +121,7 @@ try {
     callText: async () => 'COS 파트너 짧은 응답',
   };
   openProjectIntakeSession(metaNat, { goalLine: '간단한 킥오프 제품 한 줄' });
-  const outNat = await founderRequestPipeline({
+  const outNat = await runFounderDirectKernel({
     text: '오늘 날씨가 참 좋네요.',
     metadata: metaNat,
     route_label: 'dm_ai_router',
@@ -150,12 +150,12 @@ try {
   openProjectIntakeSession(metaR, {
     goalLine: '반복 시퀀스 idempotent 전용 스레드 Drepeat1 — cross-test 라벨 매칭 회피',
   });
-  const o1 = await founderRequestPipeline({
+  const o1 = await runFounderDirectKernel({
     text: '좋아. 진행하자.',
     metadata: metaR,
     route_label: 'dm_ai_router',
   });
-  const o2 = await founderRequestPipeline({
+  const o2 = await runFounderDirectKernel({
     text: '진행하자',
     metadata: metaR,
     route_label: 'dm_ai_router',

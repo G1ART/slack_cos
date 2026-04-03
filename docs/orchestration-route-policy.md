@@ -20,9 +20,10 @@
 - `aggregateReconciliationOverall` → `completed` | `partial` | `failed` | `draft_only` | `observe_only`.
 - `evaluateExecutionRunCompletion`: 엔트리가 있으면 위 스냅샷을 completion 정본으로 사용. **엔트리가 없으면** `overall_status: pending`, `completion_source: 'truth_reconciliation'`만 반환 (레인 outbound 레거시 폴백 없음).
 
-## External dispatch gate (vNext.13)
+## External dispatch gate (vNext.13 / 13.1)
 
-- `ensureExecutionRunDispatched` → 승인 확인 (`approvalGate.isExternalMutationAuthorized`) → `executeApprovedOutboundDispatch` → `dispatchOutboundActionsForRun` → `dispatchPlannedRoutes`.
+- `ensureExecutionRunDispatched` → 스토어에서 최신 런 재조회 → **`external_execution_authorization.state === 'authorized'`만** 통과 (vNext.13.1 default-deny).
+- 통과 시 `dispatchPlannedExecutionForRun` → `dispatchPlannedRoutes`.
 - `external_execution_authorization.state`: `authorized`(기본) | `pending_approval` | `draft_only`.
 
 ## Proposal-derived capabilities (vNext.13)

@@ -6,8 +6,10 @@
 import { emptyProposalPacket, formatProposalPacketForSlack } from './founderProposalPacket.js';
 import { buildFounderApprovalPacket } from './founderApprovalPacket.js';
 
-const RE_EXTERNAL = /github|cursor|supabase|vercel|railway|실제로\s*실행|배포\s*파이프|프로덕션|PR|브랜치|마이그레이션\s*적용/i;
-const RE_INTERNAL = /벤치마크|경쟁사|시장\s*조사|리서치|표로\s*정리|시나리오\s*\d|투자자\s*풀|유형별|초안\s*메모|내부\s*메모/i;
+/** 실제 코드/DB/배포 mutation 의도 — 단어 언급만으로는 외부 실행 금지 */
+const RE_GENUINE_MUTATION =
+  /(?:실제로|지금\s*바로)\s*(?:실행|배포|적용)|마이그레이션\s*적용|프로덕션\s*(?:배포|반영)|\bPR\b\s*(?:열|생성|올려|올리)|브랜치\s*(?:푸시|만들|생성)|supabase\s*(?:에\s*)?(?:직접|라이브)\s*적용|코드\s*반영|DB\s*스키마\s*바꿔|깃허브\s*이슈\s*(?:열|만들)|커서\s*라이브/i;
+const RE_INTERNAL = /벤치마크|경쟁사|시장\s*조사|리서치|표로\s*정리|시나리오\s*\d|투자자\s*풀|유형별|초안\s*메모|내부\s*메모|teardown|티어\s*나눠/i;
 const RE_IR = /IR|원페이저|펀딩|피치|덱|deck|투자자|LP|VC/i;
 const RE_BUDGET = /예산|runway|런웨이|비용|배분|allocation|시나리오/i;
 const RE_PLATFORM = /플랫폼|빌드|MVP|구현|앱|개발/i;
@@ -44,10 +46,18 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
     return finalizeProposal(p, t);
   }
 
-  if (RE_EXTERNAL.test(t)) {
-    p.external_execution_tasks.push('연결된 툴체인으로 GitHub/Cursor/Supabase/배포 계열 액션 실행(승인 후)');
+  const docCosOnlyFirst =
+    /IR\s*덱|덱\s*다시|투자자별|메시지\s*맞춰|예산안?\s*구조|문서\s*(?:비평|크리틱|리뷰|리라이트)|전략\s*메모만|원페이저/i.test(
+      t,
+    ) ||
+    ((RE_IR.test(t) || RE_BUDGET.test(t)) && !RE_PLATFORM.test(t) && !RE_GENUINE_MUTATION.test(t));
+
+  if (RE_GENUINE_MUTATION.test(t) && !docCosOnlyFirst) {
+    p.external_execution_tasks.push(
+      '연결된 툴체인으로 GitHub/Cursor/Supabase/배포 계열 액션 실행 — 대표 승인 패킷 확정 후에만',
+    );
     p.approval_required = true;
-    p.approval_reason = '외부 시스템 상태를 바꿀 수 있는 실행이 포함됩니다.';
+    p.approval_reason = 'COS가 외부 시스템 상태 변경이 필요하다고 판단했습니다. 승인 후에만 디스패치합니다.';
     p.cos_only_tasks.push('승인 전: 범위·리스크·롤백 포인트를 Slack에서 먼저 합의');
     p.internal_support_tasks.push('승인 전: 내부 초안·체크리스트로 실행 계획을 고정');
   }

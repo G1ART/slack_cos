@@ -144,6 +144,7 @@ import {
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
+import { runFounderDirectKernel } from './src/founder/founderDirectKernel.js';
 import {
   classifyFounderRoutingLock,
   formatRuntimeMetaSurfaceText,
@@ -786,7 +787,7 @@ async function handleUserText(userText, metadata = {}) {
     // No command-router / AI-router fallback for founder natural-language path.
     if (founderRoute) {
       try {
-        const founderOnly = await founderRequestPipeline({
+        const founderOnly = await runFounderDirectKernel({
           text: inputNorm,
           metadata: {
             ...metadata,

@@ -23,12 +23,15 @@ function assert(label, condition) {
 // --- 1. app.js wiring ---
 {
   const appContent = await fs.readFile(appPath, 'utf8');
-  assert('app_imports_pipeline', appContent.includes("import { founderRequestPipeline } from './src/core/founderRequestPipeline.js'"));
-  assert('app_calls_pipeline', appContent.includes('founderRequestPipeline({'));
-  assert('app_pipeline_before_command_router', (() => {
-    const pipelineIdx = appContent.indexOf('founderRequestPipeline({');
+  assert('app_imports_operator_pipeline', appContent.includes("import { founderRequestPipeline } from './src/core/founderRequestPipeline.js'"));
+  assert('app_imports_founder_direct_kernel', appContent.includes("import { runFounderDirectKernel } from './src/founder/founderDirectKernel.js'"));
+  assert('app_founder_block_calls_direct_kernel', appContent.includes('await runFounderDirectKernel({'));
+  assert('app_operator_calls_pipeline', appContent.includes('await founderRequestPipeline({'));
+  assert('app_founder_kernel_before_command_router', (() => {
+    const founderBlk = appContent.indexOf('if (founderRoute) {');
+    const dk = appContent.indexOf('await runFounderDirectKernel({');
     const commandIdx = appContent.indexOf('runInboundCommandRouter({');
-    return pipelineIdx > 0 && commandIdx > 0 && pipelineIdx < commandIdx;
+    return founderBlk > 0 && dk > founderBlk && commandIdx > dk;
   })());
   assert(
     'app_returns_surface_type',
@@ -98,6 +101,7 @@ function assert(label, condition) {
     'core/founderRenderer.js',
     'core/founderOutbound.js',
     'core/founderRequestPipeline.js',
+    'founder/founderDirectKernel.js',
     'core/internalDeliberation.js',
   ];
   for (const f of coreFiles) {
