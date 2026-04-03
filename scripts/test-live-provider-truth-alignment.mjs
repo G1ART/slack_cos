@@ -86,6 +86,8 @@ function makeTestRun(overrides = {}) {
     metadata: { user: 'U_T', channel: 'C_T' },
     playbook_id: 'PBK-t',
     task_kind: 'task',
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
   });
 }
 

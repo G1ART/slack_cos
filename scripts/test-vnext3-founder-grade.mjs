@@ -1029,7 +1029,12 @@ try {
     includes: ['dashboard'],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: { user: 'testuser' } });
+  const run = createExecutionRun({
+    packet,
+    metadata: { user: 'testuser' },
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 
   // Detailed mode
   const detailed = renderPMCockpitPacket(run);
@@ -1097,7 +1102,12 @@ try {
   assert.equal(packet.document_context_summary, 'NYC gallery market research summary...');
   assert.equal(packet.document_sources.length, 1);
 
-  const run = createExecutionRun({ packet, metadata: { user: 'test' } });
+  const run = createExecutionRun({
+    packet,
+    metadata: { user: 'test' },
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   assert.equal(run.project_id, 'PROJ-doc-1');
   assert.equal(run.project_label, 'Doc Test Project');
   assert.equal(run.document_context_summary, 'NYC gallery market research summary...');
@@ -1116,7 +1126,12 @@ try {
     thread_key: 'ch:DEPLOY:01',
     goal_line: 'Deploy readiness test',
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 
   const eval_ = evaluateDeployReadiness(run.run_id);
   assert.ok(eval_, 'evaluateDeployReadiness returns result');
@@ -1226,7 +1241,12 @@ try {
   assert.ok(packet.document_context_summary, 'packet has doc context');
   assert.equal(packet.project_id, space.project_id);
 
-  const run = createExecutionRun({ packet, metadata: { user: 'founder' } });
+  const run = createExecutionRun({
+    packet,
+    metadata: { user: 'founder' },
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   linkRunToProjectSpace(space.project_id, run.run_id);
   assert.equal(run.current_stage, 'execution_running');
   assert.equal(run.project_id, space.project_id);

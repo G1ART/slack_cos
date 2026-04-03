@@ -246,6 +246,8 @@ try {
     metadata: { user: 'U_BONUS' },
     playbook_id: 'PBK-test',
     task_kind: 'test_kind',
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
   });
   assert.ok(run.artifacts, 'artifacts structure exists');
   assert.ok(run.originating_playbook_id === 'PBK-test', 'playbook linked');
@@ -300,6 +302,8 @@ try {
     metadata: { user: 'U_TEST' },
     playbook_id: pb.playbook_id,
     task_kind: pb.kind,
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
   });
   linkPlaybookToExecution(pb.playbook_id, { packet_id: packet.packet_id, run_id: run.run_id });
 

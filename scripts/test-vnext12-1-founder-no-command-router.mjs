@@ -10,7 +10,7 @@ const appPath = path.join(__dirname, '..', 'app.js');
 const src = fs.readFileSync(appPath, 'utf8');
 
 const start = src.indexOf('if (founderRoute) {');
-const marker = '// Constitutional pipeline v1.1 — work_object';
+const marker = '// Operator / channel only';
 const end = src.indexOf(marker);
 assert.ok(start !== -1 && end !== -1 && end > start, 'founder block boundaries');
 const founderBlock = src.slice(start, end);

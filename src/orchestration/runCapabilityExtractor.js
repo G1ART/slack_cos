@@ -1,5 +1,7 @@
 /**
- * vNext.12 — Derive execution capabilities from locked run text (planner input).
+ * vNext.13-CORRECTIVE — Capability 정본: 승인된 제안 패킷(또는 명시 플래그) 우선.
+ * 잠긴 런 텍스트 키워드 매핑은 `internal_planner_capability_source === 'locked_run_text'` 또는
+ * (비-foundr-origin & authorized) 호환 폴백에서만.
  */
 
 const DB_PATTERNS = [
@@ -8,20 +10,33 @@ const DB_PATTERNS = [
   /backend.*persist/i, /auth.*store/i, /user.*model/i,
 ];
 
+/** @returns {ReturnType<typeof extractRunCapabilities>} */
+export function defaultEmptyCapabilities() {
+  return {
+    research: false,
+    spec_refine: false,
+    fullstack_code: false,
+    uiux_design: false,
+    db_schema: false,
+    deploy_preview: false,
+    qa_validation: false,
+    research_only: false,
+    market_research: false,
+    strategy_memo: false,
+    document_write: false,
+    document_review: false,
+    budget_planning: false,
+    financial_scenario: false,
+    ir_deck: false,
+    investor_research: false,
+    outreach_copy: false,
+  };
+}
+
 /**
  * @param {object} run
- * @returns {{
- *   research: boolean,
- *   spec_refine: boolean,
- *   fullstack_code: boolean,
- *   uiux_design: boolean,
- *   db_schema: boolean,
- *   deploy_preview: boolean,
- *   qa_validation: boolean,
- *   research_only: boolean,
- * }}
  */
-export function extractRunCapabilities(run) {
+function extractRunCapabilitiesFromLockedRunText(run) {
   const hay = [
     run?.project_goal,
     run?.locked_mvp_summary,
@@ -45,16 +60,16 @@ export function extractRunCapabilities(run) {
   const research_only =
     research_signals && !codeSignals && !hasIncludes && !db_schema && !uiux && !deploy_preview;
 
-  /** GitHub/Cursor 경로: 코드·앱·배포 실행 표면이 있을 때만 (연구-only·문서-only 제외) */
   const fullstack_code =
     !research_only && (codeSignals || deploy_preview || db_schema);
 
   const spec_refine = has(/스펙|요구사항|정의|범위\s*잠금|scope|IA|정보\s*구조|북극성|로드맵/i);
 
-  /** QA: 코드/DB/UI/배포 표면이 하나라도 있을 때만 (순수 리서치-only 제외) */
   const qa_validation = !research_only && (codeSignals || db_schema || uiux || deploy_preview);
 
+  const base = defaultEmptyCapabilities();
   return {
+    ...base,
     research: research_signals,
     spec_refine,
     fullstack_code,
@@ -67,7 +82,6 @@ export function extractRunCapabilities(run) {
 }
 
 /**
- * vNext.13 — 플래너 입력은 제안 패킷의 작업 문장(창업자 원문 직접 키워드 매핑 아님).
  * @param {{ cos_only_tasks?: string[], internal_support_tasks?: string[], external_execution_tasks?: string[] }} proposal
  * @returns {Record<string, boolean>}
  */
@@ -90,6 +104,102 @@ export function extractCapabilitiesFromProposalPacket(proposal) {
     investor_research: has(/투자자|VC|LP|세그먼트/i),
     outreach_copy: has(/아웃리치|메시지|이메일\s*카피|캠페인/i),
   };
+}
+
+function mergeBusinessOntoPlanner(base, biz) {
+  const o = { ...base };
+  o.market_research = !!biz.market_research;
+  o.strategy_memo = !!biz.strategy_memo;
+  o.document_write = !!biz.document_write;
+  o.document_review = !!biz.document_review;
+  o.budget_planning = !!biz.budget_planning;
+  o.financial_scenario = !!biz.financial_scenario;
+  o.ir_deck = !!biz.ir_deck;
+  o.investor_research = !!biz.investor_research;
+  o.outreach_copy = !!biz.outreach_copy;
+
+  if (biz.market_research || biz.investor_research) o.research = true;
+  if (
+    biz.strategy_memo ||
+    biz.document_write ||
+    biz.document_review ||
+    biz.budget_planning ||
+    biz.financial_scenario ||
+    biz.ir_deck ||
+    biz.outreach_copy
+  ) {
+    o.spec_refine = true;
+  }
+  return o;
+}
+
+/**
+ * 승인된 제안 스냅샷 → 플래너 레인 플래그(외부 작업은 authorized 일 때만 fullstack/db/deploy).
+ * @param {object} run
+ */
+export function plannerCapabilitiesFromApprovedProposal(run) {
+  const snap = run?.approved_proposal_snapshot;
+  if (!snap || typeof snap !== 'object') return null;
+  const biz = extractCapabilitiesFromProposalPacket(snap);
+  let o = mergeBusinessOntoPlanner(defaultEmptyCapabilities(), biz);
+
+  const ext = snap.external_execution_tasks || [];
+  const extHay = ext.map((x) => String(x)).join('\n');
+  const authOk = run?.external_execution_authorization?.state === 'authorized';
+  if (ext.length && authOk) {
+    if (/github|cursor|supabase|배포|vercel|railway|PR|브랜치|마이그레이션/i.test(extHay)) {
+      o.fullstack_code = true;
+      o.qa_validation = true;
+    }
+    if (/supabase|스키마|DB|마이그레이션/i.test(extHay)) o.db_schema = true;
+    if (/배포|vercel|railway|프리뷰|프로덕션/i.test(extHay)) o.deploy_preview = true;
+    if (/UI|UX|화면|와이어/i.test(extHay)) o.uiux_design = true;
+  }
+
+  const hasExecSurface =
+    o.fullstack_code || o.db_schema || o.deploy_preview || o.uiux_design || o.qa_validation;
+  o.research_only = o.research && !hasExecSurface && !o.spec_refine;
+  return o;
+}
+
+function hasAnyPlannerTrue(c) {
+  return (
+    c.research ||
+    c.spec_refine ||
+    c.fullstack_code ||
+    c.uiux_design ||
+    c.db_schema ||
+    c.deploy_preview ||
+    c.qa_validation
+  );
+}
+
+/**
+ * @param {object} run
+ * @returns {ReturnType<typeof defaultEmptyCapabilities>}
+ */
+export function extractRunCapabilities(run) {
+  const flags = run?.approved_proposal_capability_flags;
+  if (flags && typeof flags === 'object' && Object.keys(flags).length > 0) {
+    return { ...defaultEmptyCapabilities(), ...flags };
+  }
+
+  const fromProposal = plannerCapabilitiesFromApprovedProposal(run);
+  if (fromProposal && hasAnyPlannerTrue(fromProposal)) {
+    return fromProposal;
+  }
+
+  if (run?.internal_planner_capability_source === 'locked_run_text') {
+    return extractRunCapabilitiesFromLockedRunText(run);
+  }
+
+  const auth = run?.external_execution_authorization?.state;
+  const founderOrigin = run?.founder_origin_run === true;
+  if (auth === 'authorized' && !founderOrigin) {
+    return extractRunCapabilitiesFromLockedRunText(run);
+  }
+
+  return defaultEmptyCapabilities();
 }
 
 export { DB_PATTERNS };

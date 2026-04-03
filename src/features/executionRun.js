@@ -162,9 +162,36 @@ export function createExecutionPacket(opts) {
 /**
  * @param {{ packet: object, metadata: Record<string, unknown>, playbook_id?: string, task_kind?: string }} opts
  */
-export function createExecutionRun({ packet, metadata, playbook_id, task_kind }) {
+/**
+ * @param {{
+ *   packet: object,
+ *   metadata?: Record<string, unknown>,
+ *   playbook_id?: string,
+ *   task_kind?: string,
+ *   external_execution_auth_initial?: 'pending_approval'|'authorized',
+ *   internal_planner_capability_source?: 'locked_run_text'|null,
+ * }} opts
+ */
+export function createExecutionRun({
+  packet,
+  metadata,
+  playbook_id,
+  task_kind,
+  external_execution_auth_initial,
+  internal_planner_capability_source,
+}) {
   const run_id = makeRunId();
   const now = new Date().toISOString();
+  const founderOrigin = metadata?.founder_origin_execution === true;
+  const authState =
+    external_execution_auth_initial === 'authorized'
+      ? 'authorized'
+      : external_execution_auth_initial === 'pending_approval'
+        ? 'pending_approval'
+        : 'pending_approval';
+  const capSrc =
+    internal_planner_capability_source === 'locked_run_text' ? 'locked_run_text' : null;
+
   const run = {
     run_id,
     packet_id: packet.packet_id,
@@ -234,12 +261,23 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     orchestration_plan: null,
     /** @type {{ entries?: object[], overall?: string, evaluated_at?: string } | null} */
     truth_reconciliation: null,
-    /** vNext.13 — 외부 디스패치 게이트; 없으면 승인 게이트는 authorized로 간주 */
+    /** vNext.13-CORRECTIVE — 기본 pending; 내부/오퍼레이터 부트스트랩에서만 authorized 명시 */
     external_execution_authorization: {
-      state: 'authorized',
-      reason: 'default_compat_vnext13',
+      state: authState,
+      reason:
+        authState === 'authorized'
+          ? 'explicit_operator_or_internal_bootstrap'
+          : 'founder_default_pending_approval',
       decided_at: now,
     },
+    /** 대표 발화 기원 실행 스파인 — 승인·제안 스냅샷 없이는 capability 키워드 폴백 금지 */
+    founder_origin_run: founderOrigin,
+    /** 승인된 제안 스냅샷 → capability derive 정본 */
+    approved_proposal_snapshot: null,
+    /** 플래너에 직접 병합되는 플래그(승인 API가 세팅) */
+    approved_proposal_capability_flags: null,
+    /** null | locked_run_text — 오퍼레이터·내부 자동화만 */
+    internal_planner_capability_source: capSrc,
   };
 
   runsByThread.set(packet.thread_key, run);
@@ -305,7 +343,12 @@ export function resolveApproval({ thread_key, text, metadata, packet }) {
     return { matched: false };
   }
 
-  const run = createExecutionRun({ packet, metadata });
+  const run = createExecutionRun({
+    packet,
+    metadata,
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   return {
     matched: true,
     run_id: run.run_id,
@@ -562,6 +605,26 @@ export function updateRunExternalExecutionAuthorization(runId, partial) {
     ...partial,
     decided_at: partial.decided_at || new Date().toISOString(),
   };
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * 승인된 제안 스냅샷 저장( capability 정본은 `extractRunCapabilities`가 여기서 도출).
+ * @param {string} runId
+ * @param {object|null} snapshot
+ * @param {Record<string, boolean>|null} [capabilityFlags] — 있으면 병합 우선
+ */
+export function setRunApprovedProposalSnapshot(runId, snapshot, capabilityFlags = null) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  run.approved_proposal_snapshot = snapshot;
+  if (capabilityFlags && typeof capabilityFlags === 'object') {
+    run.approved_proposal_capability_flags = { ...capabilityFlags };
+  } else {
+    run.approved_proposal_capability_flags = null;
+  }
   run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;

@@ -120,6 +120,8 @@ function makeTestRun(overrides = {}) {
     metadata: { user: 'U_TEST', channel: 'C_TEST' },
     playbook_id: overrides.playbook_id || 'PBK-vnext-test',
     task_kind: overrides.task_kind || 'calendar_tool',
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
   });
 }
 

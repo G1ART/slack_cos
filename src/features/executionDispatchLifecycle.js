@@ -17,7 +17,7 @@ import { deriveExecutionCompletionFromTruthReconciliation } from '../orchestrati
 import { isExternalMutationAuthorized } from '../orchestration/approvalGate.js';
 
 import {
-  dispatchOutboundActionsForRun,
+  dispatchPlannedExecutionForRun,
   retryRunOutbound,
   collectOutboundStatus,
 } from './executionOutboundOrchestrator.js';
@@ -55,10 +55,10 @@ export function shouldDispatchRun(run) {
  * Fire-and-forget safe: catches all errors internally.
  */
 /**
- * 승인된 런만 실제 디스패치 체인으로 넘긴다. (`dispatchOutboundActionsForRun` 직접 호출은 이 함수 내부뿐.)
+ * 승인된 런만 `dispatchPlannedExecutionForRun`(plan → dispatchPlannedRoutes → reconcile)로 넘긴다.
  */
 function executeApprovedOutboundDispatch(run, metadata = {}) {
-  dispatchOutboundActionsForRun(run, metadata)
+  dispatchPlannedExecutionForRun(run, metadata)
     .then((results) => {
       logLifecycle('dispatch_lifecycle_done', { run_id: run.run_id, skipped: !!results?.skipped });
     })
@@ -70,17 +70,18 @@ function executeApprovedOutboundDispatch(run, metadata = {}) {
 
 export function ensureExecutionRunDispatched(run, metadata = {}) {
   if (!run || !run.run_id) return;
-  if (!shouldDispatchRun(run)) {
-    logLifecycle('dispatch_lifecycle_skip', { run_id: run.run_id, state: run.outbound_dispatch_state });
+  const fresh = getExecutionRunById(run.run_id) || run;
+  if (!shouldDispatchRun(fresh)) {
+    logLifecycle('dispatch_lifecycle_skip', { run_id: fresh.run_id, state: fresh.outbound_dispatch_state });
     return;
   }
-  if (!isExternalMutationAuthorized(run)) {
-    logLifecycle('dispatch_lifecycle_approval_required', { run_id: run.run_id });
+  if (!isExternalMutationAuthorized(fresh)) {
+    logLifecycle('dispatch_lifecycle_approval_required', { run_id: fresh.run_id });
     return;
   }
 
-  logLifecycle('dispatch_lifecycle_start', { run_id: run.run_id });
-  executeApprovedOutboundDispatch(run, metadata);
+  logLifecycle('dispatch_lifecycle_start', { run_id: fresh.run_id });
+  executeApprovedOutboundDispatch(fresh, metadata);
 }
 
 /* ------------------------------------------------------------------ */

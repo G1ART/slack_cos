@@ -90,7 +90,13 @@ const packetUi = createExecutionPacket({
   session_id: '',
   requested_by: 'U1',
 });
-const runUi = createExecutionRun({ packet: packetUi, metadata: {}, task_kind: 'task' });
+const runUi = createExecutionRun({
+  packet: packetUi,
+  metadata: {},
+  task_kind: 'task',
+  external_execution_auth_initial: 'authorized',
+  internal_planner_capability_source: 'locked_run_text',
+});
 const capUi = extractRunCapabilities(runUi);
 assert.equal(capUi.research_only, false);
 assert.equal(capUi.uiux_design, true);
@@ -108,7 +114,13 @@ const packetDb = createExecutionPacket({
   session_id: '',
   requested_by: 'U1',
 });
-const runDb = createExecutionRun({ packet: packetDb, metadata: {}, task_kind: 'task' });
+const runDb = createExecutionRun({
+  packet: packetDb,
+  metadata: {},
+  task_kind: 'task',
+  external_execution_auth_initial: 'authorized',
+  internal_planner_capability_source: 'locked_run_text',
+});
 const capDb = extractRunCapabilities(runDb);
 assert.equal(capDb.db_schema, true);
 
@@ -124,7 +136,13 @@ const packetRs = createExecutionPacket({
   session_id: '',
   requested_by: 'U1',
 });
-const runRs = createExecutionRun({ packet: packetRs, metadata: {}, task_kind: 'task' });
+const runRs = createExecutionRun({
+  packet: packetRs,
+  metadata: {},
+  task_kind: 'task',
+  external_execution_auth_initial: 'authorized',
+  internal_planner_capability_source: 'locked_run_text',
+});
 const capRs = extractRunCapabilities(runRs);
 assert.equal(capRs.research_only, true);
 assert.equal(capRs.fullstack_code, false);
