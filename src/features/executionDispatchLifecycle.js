@@ -14,6 +14,7 @@ import {
   updateLaneStatus,
 } from './executionRun.js';
 import { deriveExecutionCompletionFromTruthReconciliation } from '../orchestration/truthReconciliation.js';
+import { isExternalMutationAuthorized } from '../orchestration/approvalGate.js';
 
 import {
   dispatchOutboundActionsForRun,
@@ -53,14 +54,10 @@ export function shouldDispatchRun(run) {
  * Idempotent: if already dispatched, returns immediately.
  * Fire-and-forget safe: catches all errors internally.
  */
-export function ensureExecutionRunDispatched(run, metadata = {}) {
-  if (!run || !run.run_id) return;
-  if (!shouldDispatchRun(run)) {
-    logLifecycle('dispatch_lifecycle_skip', { run_id: run.run_id, state: run.outbound_dispatch_state });
-    return;
-  }
-
-  logLifecycle('dispatch_lifecycle_start', { run_id: run.run_id });
+/**
+ * 승인된 런만 실제 디스패치 체인으로 넘긴다. (`dispatchOutboundActionsForRun` 직접 호출은 이 함수 내부뿐.)
+ */
+function executeApprovedOutboundDispatch(run, metadata = {}) {
   dispatchOutboundActionsForRun(run, metadata)
     .then((results) => {
       logLifecycle('dispatch_lifecycle_done', { run_id: run.run_id, skipped: !!results?.skipped });
@@ -69,6 +66,21 @@ export function ensureExecutionRunDispatched(run, metadata = {}) {
       updateOutboundDispatchState(run.run_id, 'failed', { error: String(err?.message || err).slice(0, 300) });
       logLifecycle('dispatch_lifecycle_error', { run_id: run.run_id, error: String(err?.message || err).slice(0, 200) });
     });
+}
+
+export function ensureExecutionRunDispatched(run, metadata = {}) {
+  if (!run || !run.run_id) return;
+  if (!shouldDispatchRun(run)) {
+    logLifecycle('dispatch_lifecycle_skip', { run_id: run.run_id, state: run.outbound_dispatch_state });
+    return;
+  }
+  if (!isExternalMutationAuthorized(run)) {
+    logLifecycle('dispatch_lifecycle_approval_required', { run_id: run.run_id });
+    return;
+  }
+
+  logLifecycle('dispatch_lifecycle_start', { run_id: run.run_id });
+  executeApprovedOutboundDispatch(run, metadata);
 }
 
 /* ------------------------------------------------------------------ */
@@ -129,10 +141,6 @@ export function markLaneReady(runId, laneType) {
 /*  Completion detection                                                */
 /* ------------------------------------------------------------------ */
 
-const TERMINAL_STATUSES = new Set(['completed', 'dispatched', 'drafted']);
-const BLOCKED_STATUSES = new Set(['manual_required', 'blocked']);
-const FAILED_STATUSES = new Set(['failed']);
-
 /**
  * @param {string} runId
  * @returns {{ overall_status: string, blocking_lanes: string[], manual_required_lanes: string[], completed_lanes: string[], failed_lanes: string[], next_actions: string[] } | null}
@@ -146,55 +154,16 @@ export function evaluateExecutionRunCompletion(runId) {
     return fromTruth;
   }
 
-  const completed = [];
-  const blocking = [];
-  const manualRequired = [];
-  const failed = [];
-  const running = [];
-  const next = [];
-
-  for (const ws of (run.workstreams || [])) {
-    const st = ws.outbound?.outbound_status || 'pending';
-    if (st === 'completed') {
-      completed.push(ws.lane_type);
-    } else if (FAILED_STATUSES.has(st)) {
-      failed.push(ws.lane_type);
-      next.push(`retry \`${ws.lane_type}\` (${ws.outbound?.last_error || 'failed'})`);
-    } else if (BLOCKED_STATUSES.has(st)) {
-      manualRequired.push(ws.lane_type);
-      blocking.push(ws.lane_type);
-      next.push(`manual action for \`${ws.lane_type}\` (${ws.outbound?.outbound_provider || 'unknown'})`);
-    } else {
-      running.push(ws.lane_type);
-    }
-  }
-
-  let overall_status;
-  const total = (run.workstreams || []).length;
-  if (completed.length === total) {
-    overall_status = 'completed';
-  } else if (failed.length > 0 && running.length === 0 && completed.length + failed.length + manualRequired.length === total) {
-    overall_status = 'failed';
-  } else if (manualRequired.length > 0 && running.length === 0 && completed.length + manualRequired.length + failed.length === total) {
-    overall_status = 'manual_blocked';
-  } else if (completed.length > 0 && (running.length > 0 || manualRequired.length > 0 || failed.length > 0)) {
-    overall_status = 'partial';
-  } else {
-    overall_status = 'running';
-  }
-
-  if (running.length > 0) {
-    next.push(`awaiting: ${running.join(', ')}`);
-  }
-
+  /** vNext.13 — 레인 outbound 휴리스틱 폴백 제거; 정본은 truth_reconciliation만 */
   return {
-    overall_status,
-    blocking_lanes: blocking,
-    manual_required_lanes: manualRequired,
-    completed_lanes: completed,
-    failed_lanes: failed,
-    next_actions: next,
-    completion_source: 'legacy_lane_outbound',
+    overall_status: 'pending',
+    truth_reconciliation_overall: null,
+    completion_source: 'truth_reconciliation',
+    blocking_lanes: [],
+    manual_required_lanes: [],
+    completed_lanes: [],
+    failed_lanes: [],
+    next_actions: ['truth_reconciliation entries not yet available for this run'],
   };
 }
 

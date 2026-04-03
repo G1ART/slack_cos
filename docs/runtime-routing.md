@@ -9,8 +9,8 @@
 
 ## 아웃바운드
 
-- `ensureExecutionRunDispatched` → `dispatchOutboundActionsForRun` → 동적 로드 `dispatchPlannedRoutes.js`.
-- 계획: `planExecutionRoutesForRun` / 상태: `orchestration_plan`, `truth_reconciliation`.
+- `ensureExecutionRunDispatched` → (vNext.13) 외부 승인 게이트 통과 시에만 → `dispatchOutboundActionsForRun` → 동적 로드 `dispatchPlannedRoutes.js`.
+- 계획: `planExecutionRoutesForRun` / 상태: `orchestration_plan`, `truth_reconciliation`, `external_execution_authorization`.
 
 `docs/orchestration-route-policy.md` 참고.
 

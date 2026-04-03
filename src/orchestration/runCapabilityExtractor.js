@@ -66,4 +66,30 @@ export function extractRunCapabilities(run) {
   };
 }
 
+/**
+ * vNext.13 — 플래너 입력은 제안 패킷의 작업 문장(창업자 원문 직접 키워드 매핑 아님).
+ * @param {{ cos_only_tasks?: string[], internal_support_tasks?: string[], external_execution_tasks?: string[] }} proposal
+ * @returns {Record<string, boolean>}
+ */
+export function extractCapabilitiesFromProposalPacket(proposal) {
+  const hay = [
+    ...(proposal?.cos_only_tasks || []),
+    ...(proposal?.internal_support_tasks || []),
+    ...(proposal?.external_execution_tasks || []),
+  ].join('\n');
+  const has = (re) => re.test(hay);
+
+  return {
+    market_research: has(/시장|리서치|벤치마크|경쟁사|조사/i),
+    strategy_memo: has(/전략\s*메모|북극성|로드맵|포지셔닝/i),
+    document_write: has(/문서|초안|작성|원페이저|메모/i),
+    document_review: has(/리뷰|비평|red\s*team|크리틱/i),
+    budget_planning: has(/예산|배분|allocation|runway|런웨이/i),
+    financial_scenario: has(/시나리오|재무|숫자\s*가정/i),
+    ir_deck: has(/IR|덱|deck|피치|펀딩/i),
+    investor_research: has(/투자자|VC|LP|세그먼트/i),
+    outreach_copy: has(/아웃리치|메시지|이메일\s*카피|캠페인/i),
+  };
+}
+
 export { DB_PATTERNS };

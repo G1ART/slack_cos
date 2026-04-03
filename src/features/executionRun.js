@@ -234,6 +234,12 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     orchestration_plan: null,
     /** @type {{ entries?: object[], overall?: string, evaluated_at?: string } | null} */
     truth_reconciliation: null,
+    /** vNext.13 — 외부 디스패치 게이트; 없으면 승인 게이트는 authorized로 간주 */
+    external_execution_authorization: {
+      state: 'authorized',
+      reason: 'default_compat_vnext13',
+      decided_at: now,
+    },
   };
 
   runsByThread.set(packet.thread_key, run);
@@ -537,6 +543,25 @@ export function setRunTruthReconciliation(runId, reconciliation) {
   const run = runsById.get(runId);
   if (!run) return false;
   run.truth_reconciliation = reconciliation;
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * vNext.13 — 외부 실행 승인 상태(디스패치 게이트).
+ * @param {string} runId
+ * @param {{ state: string, reason?: string, decided_at?: string }} partial
+ */
+export function updateRunExternalExecutionAuthorization(runId, partial) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  const prev = run.external_execution_authorization || {};
+  run.external_execution_authorization = {
+    ...prev,
+    ...partial,
+    decided_at: partial.decided_at || new Date().toISOString(),
+  };
   run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;

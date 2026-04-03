@@ -2,6 +2,16 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md`
 
+## vNext.13 (2026-04-03) — Proposal kernel + approval-orchestrated execution
+
+1. **창업자 표면**: 기본 응답은 `[COS 제안 패킷]`(`proposal_packet_surface`). 맥락 합성 → 제안 패킷 → (선택) 동일 턴 `runCosNaturalPartner` 보강. intent/키워드 **라우팅 라벨**을 창업자에게 노출하지 않음.
+2. **Launch gate**: `resolveWorkObject`/`resolveWorkPhase` 제거, `launchMinimalWorkContext`만 사용.
+3. **외부 실행**: `run.external_execution_authorization.state === 'pending_approval'`이면 `ensureExecutionRunDispatched`가 디스패치하지 않음. 기본값 `authorized`는 기존 런 호환.
+4. **Completion**: `truth_reconciliation` 엔트리가 없으면 `overall_status: pending`, `completion_source: 'truth_reconciliation'`만 (레인 outbound 레거시 폴백 제거).
+5. **업무 capability 카탈로그**: `market_research`, `strategy_memo`, `document_write`, … — 내부 아티팩트 전용 계약(`cosCapabilityCatalog.js`). 플래너용 제안 작업 문장 입력: `extractCapabilitiesFromProposalPacket`.
+6. **상세**: `docs/cursor-handoffs/COS_vNext13_Founder_Proposal_Kernel_Approval_Orchestrated_Execution_2026-04-03.md`
+7. **회귀**: `scripts/test-vnext13-founder-proposal-kernel.mjs`
+
 ## vNext.12.1 (2026-04-03) — Founder constitution + single truth closure
 
 1. **창업자**: `app.js`에서 `founderRoute`일 때 첫 번째 블록만 사용 — 그 안에 command/AI router 호출 없음 (`test-vnext12-1-founder-no-command-router.mjs`).
@@ -26,7 +36,7 @@
 
 ## 테스트
 
-`npm test`에 `test-vnext12-1-founder-no-command-router`, `test-vnext12-1-single-truth-completion`, `test-vnext12-1-founder-status-from-reconciliation` 포함.
+`npm test`에 `test-vnext12-1-founder-no-command-router`, `test-vnext12-1-single-truth-completion`, `test-vnext12-1-founder-status-from-reconciliation`, `test-vnext13-founder-proposal-kernel` 포함.
 
 ## 남은 리스크
 

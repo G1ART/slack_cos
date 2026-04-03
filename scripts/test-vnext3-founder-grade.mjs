@@ -1171,7 +1171,7 @@ try {
 /* TEST 39: FULL-CYCLE MVP SCENARIO — request → lock → run → toolchain → result → approval → deploy */
 try {
   const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, renderProjectSpaceStatusForSlack, _resetForTest: resetSpacesFC } = await import('../src/features/projectSpaceRegistry.js');
-  const { createExecutionPacket, createExecutionRun, updateRunStage, updateRunReport, updateLaneStatus, getExecutionRunById, _resetForTest: resetRunsFC } = await import('../src/features/executionRun.js');
+  const { createExecutionPacket, createExecutionRun, updateRunStage, updateRunReport, updateLaneStatus, getExecutionRunById, setRunTruthReconciliation, _resetForTest: resetRunsFC } = await import('../src/features/executionRun.js');
   const { evaluateExecutionRunCompletion, detectAndApplyCompletion, evaluateDeployReadiness } = await import('../src/features/executionDispatchLifecycle.js');
   const { renderPMCockpitPacket, renderApprovalPacket, renderDeployPacket, renderOneLineStatus, renderEscalationPacket } = await import('../src/features/executionSpineRouter.js');
   const { buildVercelDeployPacket } = await import('../src/adapters/vercelAdapter.js');
@@ -1247,6 +1247,20 @@ try {
     ws.outbound.outbound_status = 'completed';
     ws.outbound.outbound_provider = 'github';
   }
+
+  setRunTruthReconciliation(run.run_id, {
+    entries: [
+      {
+        route_key: 'research',
+        attempted_action: 'research/internal_artifact',
+        reconciled_status: 'satisfied',
+        reconciliation_notes: '',
+        observed_tool_refs: { research_note_path: 'data/research-note.md' },
+      },
+    ],
+    overall: 'completed',
+    evaluated_at: new Date().toISOString(),
+  });
 
   // === STEP 7: Completion detected → deploy_ready ===
   const completion = detectAndApplyCompletion(run.run_id);

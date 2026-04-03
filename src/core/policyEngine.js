@@ -99,6 +99,9 @@ export function evaluatePolicy(ctx) {
     if (intent_signal === 'runtime_meta' || intent_signal === 'meta_debug' || intent_signal === 'help') {
       surfaceType = utilityOverrides[intent_signal];
     }
+    if (intent_signal === 'proposal_kernel') {
+      surfaceType = FounderSurfaceType.PROPOSAL_PACKET;
+    }
   }
 
   const requiresPacket = [
