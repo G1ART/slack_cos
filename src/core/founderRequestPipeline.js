@@ -32,6 +32,7 @@ import {
   buildStatusPacket,
   buildHandoffPacket,
 } from './founderGoldContract.js';
+import { buildProviderTruthSnapshot, formatProviderTruthLines } from './providerTruthSnapshot.js';
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
@@ -151,6 +152,11 @@ async function executeLock(normalized, metadata, workContext) {
 async function executeSpine(normalized, metadata, workContext) {
   const run = workContext.run || null;
   const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
+  const providerTruthLines = () =>
+    formatProviderTruthLines(
+      buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run }),
+    );
+
   if (completion?.overall_status === 'completed') {
     return {
       packet: buildHandoffPacket({
@@ -159,11 +165,7 @@ async function executeSpine(normalized, metadata, workContext) {
         dispatched_workstreams: completion.completed_lanes?.length
           ? completion.completed_lanes
           : ['research_benchmark', 'fullstack_swe', 'uiux_design', 'qa_qc'],
-        provider_truth: [
-          `github: ${run?.git_trace?.repo ? 'live_or_bridge' : 'manual_bridge'}`,
-          `cursor: ${run?.cursor_trace?.length ? 'live_or_bridge' : 'manual_bridge'}`,
-          `supabase: ${run?.supabase_trace?.length ? 'live_or_bridge' : 'optional'}`,
-        ],
+        provider_truth: providerTruthLines(),
         founder_next_action: '완료 결과를 확인하고 배포/확장 여부를 결정해 주세요.',
       }),
     };
@@ -175,11 +177,7 @@ async function executeSpine(normalized, metadata, workContext) {
         completed: completion.completed_lanes?.length ? completion.completed_lanes : ['scope lock 완료', 'run 생성'],
         in_progress: [],
         blocker: completion.next_actions?.join(' | ') || run?.outbound_last_error || '수동 의사결정 필요',
-        provider_truth: [
-          `github: ${run?.git_trace?.repo ? 'live_or_bridge' : 'manual_bridge'}`,
-          `cursor: ${run?.cursor_trace?.length ? 'live_or_bridge' : 'manual_bridge'}`,
-          `supabase: ${run?.supabase_trace?.length ? 'live_or_bridge' : 'optional'}`,
-        ],
+        provider_truth: providerTruthLines(),
         next_actions: completion.next_actions?.length ? completion.next_actions : ['블로커 해소 의사결정'],
         founder_action_required: '크리티컬 의사결정이 필요합니다. 우선순위/재시도/수동조치를 확정해 주세요.',
       }),
@@ -191,9 +189,9 @@ async function executeSpine(normalized, metadata, workContext) {
       completed: run ? ['scope lock 완료', 'run 생성'] : ['scope lock 후보 합의'],
       in_progress: ['workstream 실행 정렬'],
       blocker: run?.outbound_last_error || '없음',
-      provider_truth: run
-        ? ['github: live_or_bridge', 'cursor: live_or_bridge', 'supabase: optional']
-        : ['github: 없음', 'cursor: 없음', 'supabase: 없음'],
+      provider_truth: formatProviderTruthLines(
+        buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run }),
+      ),
       next_actions: ['오케스트레이션 실행 중'],
       founder_action_required: '현재 오케스트레이션 진행 중입니다. 크리티컬 결정/완료 시점에만 확인하면 됩니다.',
     }),
@@ -468,18 +466,15 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
 
   if (gold.kind === 'status') {
     const run = workContext.run;
+    const statusTruth = formatProviderTruthLines(
+      buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: run ?? null }),
+    );
     const rendered = renderFounderSurface('status_report_surface', buildStatusPacket({
       current_stage: run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),
       completed: run ? ['scope lock 완료', 'run 생성'] : ['문제 재정의'],
       in_progress: run ? ['workstream 실행'] : ['scope lock 논의'],
       blocker: run?.outbound_last_error || '없음',
-      provider_truth: run
-        ? [
-            `github: ${run.git_trace?.repo ? 'live' : 'manual_bridge'}`,
-            `cursor: ${run.cursor_trace?.length ? 'live' : 'manual_bridge'}`,
-            `supabase: ${run.supabase_trace?.length ? 'live' : 'manual_bridge'}`,
-          ]
-        : ['github: 없음', 'cursor: 없음', 'supabase: 없음'],
+      provider_truth: statusTruth,
       next_actions: run ? ['blocker 해소', '승인 패킷 업데이트', '배포 준비'] : ['핵심 결정 3개 확정', 'scope lock packet 생성'],
       founder_action_required: run ? '상태 확인 또는 우선순위 조정' : 'scope lock 확정',
     }));

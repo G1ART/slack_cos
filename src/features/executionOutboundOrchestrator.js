@@ -26,9 +26,10 @@ import {
   createIssueArtifact,
   createBranchArtifact,
   createPullRequestArtifact,
-  getGithubAuthMode,
 } from '../adapters/githubAdapter.js';
 import { EXEC_HANDOFFS_DIR } from '../storage/paths.js';
+import { tryLaunchCursorRun } from '../adapters/cursorCloudAdapter.js';
+import { trySupabaseLiveDispatch } from '../adapters/supabaseExecutionAdapter.js';
 
 /* ------------------------------------------------------------------ */
 /*  Outbound event logger                                              */
@@ -294,11 +295,70 @@ function buildGithubIssueBody(run) {
 /* ------------------------------------------------------------------ */
 
 /**
+ * Try Cursor Cloud live launch; on success skip handoff. Otherwise write handoff (manual_bridge).
+ * @param {object} run
+ * @param {Record<string, unknown>} metadata
+ */
+export async function ensureCursorOutboundForRun(run, metadata = {}) {
+  const live = await tryLaunchCursorRun(run, metadata);
+  if (live.ok && live.mode === 'live') {
+    attachRunArtifact(run.run_id, 'fullstack_swe', {
+      cursor_cloud_run_ref: live.run_ref || null,
+      cursor_conversation_url: live.conversation_url || null,
+      cursor_branch_name: live.branch_name || null,
+      cursor_execution_mode: 'live',
+    });
+    updateRunGitTrace(run.run_id, {
+      cursor_run_ref: String(live.run_ref || ''),
+      cursor_conversation_url: String(live.conversation_url || ''),
+    });
+    appendCursorTrace(run.run_id, {
+      dispatch_mode: 'live',
+      cursor_execution_mode: 'live',
+      cursor_run_ref: live.run_ref || null,
+      cursor_conversation_url: live.conversation_url || null,
+      cursor_fallback_used: false,
+      handoff_path: null,
+      status: 'dispatched',
+      result_summary: 'cursor_cloud_launch_ok',
+      result_link: live.conversation_url || null,
+    });
+    updateLaneOutbound(run.run_id, 'fullstack_swe', {
+      provider: 'cursor',
+      status: 'dispatched',
+      ref_ids: [live.run_ref, live.conversation_url].filter(Boolean),
+      error: null,
+    });
+    logOutbound('outbound_dispatch_succeeded', {
+      run_id: run.run_id,
+      lane_type: 'fullstack_swe',
+      provider: 'cursor',
+      mode: 'live',
+      cursor_run_ref: live.run_ref,
+    });
+    return { mode: 'live', ...live };
+  }
+
+  const fallback = Boolean(live.attemptedRemote);
+  const handoff = await ensureCursorHandoffForRun(run, { cursor_fallback_used: fallback });
+  return {
+    mode: handoff.mode === 'error' ? 'error' : 'manual_bridge',
+    handoff_path: handoff.handoff_path,
+    error_summary: handoff.error_summary,
+    live_error: live.mode === 'error' ? live.error_summary : undefined,
+    skipped: handoff.skipped,
+    cursor_fallback_used: fallback,
+  };
+}
+
+/**
  * Generate a machine-readable Cursor handoff artifact and write to disk.
  * @param {object} run
- * @returns {Promise<{ mode: 'created'|'error', handoff_path?: string, error_summary?: string }>}
+ * @param {{ cursor_fallback_used?: boolean }} [options]
+ * @returns {Promise<{ mode: 'created'|'error', handoff_path?: string, error_summary?: string, skipped?: boolean }>}
  */
-export async function ensureCursorHandoffForRun(run) {
+export async function ensureCursorHandoffForRun(run, options = {}) {
+  const { cursor_fallback_used = false } = options;
   const existingHandoff = run.artifacts?.fullstack_swe?.cursor_handoff_path;
   if (existingHandoff) {
     logOutbound('outbound_dispatch_skipped', {
@@ -396,10 +456,17 @@ export async function ensureCursorHandoffForRun(run) {
     await fs.mkdir(handoffDir, { recursive: true });
     await fs.writeFile(handoffPath, content, 'utf8');
 
-    attachRunArtifact(run.run_id, 'fullstack_swe', { cursor_handoff_path: relPath });
+    attachRunArtifact(run.run_id, 'fullstack_swe', {
+      cursor_handoff_path: relPath,
+      cursor_execution_mode: 'manual_bridge',
+    });
     updateRunGitTrace(run.run_id, { generated_cursor_handoff_path: relPath });
     appendCursorTrace(run.run_id, {
-      dispatch_mode: 'auto_generated',
+      dispatch_mode: 'manual_bridge',
+      cursor_execution_mode: 'manual_bridge',
+      cursor_run_ref: null,
+      cursor_conversation_url: null,
+      cursor_fallback_used,
       handoff_path: relPath,
       status: 'created',
     });
@@ -505,6 +572,131 @@ export async function ensureSupabaseDraftForRun(run) {
     });
     return { mode: 'error', error_summary: summary };
   }
+}
+
+/**
+ * @param {object} run
+ * @param {string} draftRelPath
+ * @returns {Promise<{ relPath: string, filename: string }>}
+ */
+async function writeSupabaseMigrationStubForRun(run, draftRelPath) {
+  const safeRunId = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+  const filename = `${stamp}_cos_${safeRunId}.sql`;
+  const relPath = path.posix.join('supabase/migrations', filename);
+  const absPath = path.resolve(process.cwd(), relPath);
+  const content = [
+    '-- COS auto-generated migration stub (comments only; no DDL executed by COS).',
+    `-- run_id: ${run.run_id}`,
+    `-- packet_id: ${run.packet_id}`,
+    `-- schema_draft_json: ${draftRelPath}`,
+    '-- Replace with real DDL; apply via Supabase CLI to staging before production.',
+    '',
+  ].join('\n');
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  await fs.writeFile(absPath, content, 'utf8');
+  return { relPath, filename };
+}
+
+/**
+ * Schema draft JSON + repo migration stub; optional live dispatch webhook when configured.
+ * @param {object} run
+ * @returns {Promise<{ mode: string, draft_path?: string, migration_path?: string, apply_ref?: string, error_summary?: string }>}
+ */
+export async function tryEnsureSupabaseLiveOrDraftForRun(run) {
+  if (!impliesDbWork(run)) {
+    logOutbound('outbound_dispatch_started', {
+      run_id: run.run_id,
+      lane_type: 'fullstack_swe',
+      provider: 'supabase',
+      mode: 'skipped',
+      reason: 'no_db_work_implied',
+    });
+    return { mode: 'skipped' };
+  }
+
+  const draftRes = await ensureSupabaseDraftForRun(run);
+  if (draftRes.mode === 'skipped') return draftRes;
+  if (draftRes.mode === 'error') return draftRes;
+  if (!draftRes.draft_path) return draftRes;
+
+  let mig;
+  try {
+    mig = await writeSupabaseMigrationStubForRun(run, draftRes.draft_path);
+  } catch (e) {
+    const summary = String(e?.message || e).slice(0, 300);
+    appendSupabaseTrace(run.run_id, {
+      kind: 'migration_stub',
+      status: 'failed',
+      execution_tier: 'draft_only',
+      error: summary,
+    });
+    return { mode: 'draft_only', draft_path: draftRes.draft_path, error_summary: summary };
+  }
+
+  attachRunArtifact(run.run_id, 'fullstack_swe', { supabase_migration_file_path: mig.relPath });
+  appendSupabaseTrace(run.run_id, {
+    kind: 'migration_stub',
+    migration_path: mig.relPath,
+    status: 'created',
+    execution_tier: 'draft_only',
+  });
+  updateRunGitTrace(run.run_id, { supabase_migration_ids: [mig.filename.replace(/\.sql$/, '')] });
+
+  const runFresh = getExecutionRunById(run.run_id) || run;
+  const live = await trySupabaseLiveDispatch(runFresh, {
+    draft_path: draftRes.draft_path,
+    migration_path: mig.relPath,
+    draft_payload: null,
+  });
+
+  if (live.ok && live.mode === 'live') {
+    attachRunArtifact(run.run_id, 'fullstack_swe', {
+      supabase_live_apply_ref: live.apply_ref || null,
+      supabase_execution_mode: 'live',
+    });
+    appendSupabaseTrace(run.run_id, {
+      kind: 'live_dispatch',
+      status: 'dispatched',
+      execution_tier: 'live',
+      apply_ref: live.apply_ref || null,
+      draft_path: draftRes.draft_path,
+      migration_path: mig.relPath,
+    });
+    updateLaneOutbound(run.run_id, 'fullstack_swe', {
+      provider: 'supabase',
+      status: 'dispatched',
+      ref_ids: [draftRes.draft_path, mig.relPath, live.apply_ref].filter(Boolean),
+      error: null,
+    });
+    logOutbound('outbound_dispatch_succeeded', {
+      run_id: run.run_id,
+      lane_type: 'fullstack_swe',
+      provider: 'supabase',
+      mode: 'live',
+      apply_ref: live.apply_ref,
+    });
+    return {
+      mode: 'live',
+      draft_path: draftRes.draft_path,
+      migration_path: mig.relPath,
+      apply_ref: live.apply_ref,
+    };
+  }
+
+  appendSupabaseTrace(run.run_id, {
+    kind: 'live_dispatch',
+    status: live.attemptedRemote ? 'failed_or_skipped' : 'not_configured',
+    execution_tier: 'draft_only',
+    error_summary: live.error_summary || null,
+  });
+
+  return {
+    mode: 'draft_only',
+    draft_path: draftRes.draft_path,
+    migration_path: mig.relPath,
+    live_error: live.mode === 'error' ? live.error_summary : undefined,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -710,10 +902,18 @@ export function planOutboundActionsForRun(run) {
 
   plan.push({ lane_type: 'research_benchmark', provider: 'internal', action: 'seed_research_note' });
   plan.push({ lane_type: 'fullstack_swe', provider: 'github', action: isGithubAuthConfigured() ? 'create_issue_live' : 'create_issue_draft' });
-  plan.push({ lane_type: 'fullstack_swe', provider: 'cursor', action: 'generate_handoff' });
+  plan.push({
+    lane_type: 'fullstack_swe',
+    provider: 'cursor',
+    action: 'cursor_cloud_launch_or_handoff',
+  });
 
   if (impliesDbWork(run)) {
-    plan.push({ lane_type: 'fullstack_swe', provider: 'supabase', action: 'generate_schema_draft' });
+    plan.push({
+      lane_type: 'fullstack_swe',
+      provider: 'supabase',
+      action: 'schema_draft_migration_stub_or_live_dispatch',
+    });
   }
 
   plan.push({ lane_type: 'uiux_design', provider: 'internal', action: 'seed_uiux_artifacts' });
@@ -745,10 +945,10 @@ export async function dispatchOutboundActionsForRun(run, metadata = {}) {
   results.github = await ensureGithubIssueForRun(run, metadata);
   if (results.github.mode === 'error') anyFailed = true;
 
-  results.cursor = await ensureCursorHandoffForRun(run);
+  results.cursor = await ensureCursorOutboundForRun(run, metadata);
   if (results.cursor.mode === 'error') anyFailed = true;
 
-  results.supabase = await ensureSupabaseDraftForRun(run);
+  results.supabase = await tryEnsureSupabaseLiveOrDraftForRun(run);
   if (results.supabase.mode === 'error') anyFailed = true;
 
   updateOutboundDispatchState(run.run_id, anyFailed ? 'partial' : 'completed');
@@ -767,8 +967,8 @@ export async function dispatchWorkstream(run, laneType, metadata = {}) {
       return seedResearchArtifact(run);
     case 'fullstack_swe': {
       const gh = await ensureGithubIssueForRun(run, metadata);
-      const cursor = await ensureCursorHandoffForRun(run);
-      const supa = await ensureSupabaseDraftForRun(run);
+      const cursor = await ensureCursorOutboundForRun(run, metadata);
+      const supa = await tryEnsureSupabaseLiveOrDraftForRun(run);
       return { github: gh, cursor, supabase: supa };
     }
     case 'uiux_design':
@@ -820,6 +1020,13 @@ export async function retryOutboundLane(runId, laneType, metadata = {}) {
       run.artifacts.fullstack_swe.github_issue_url = null;
       run.artifacts.fullstack_swe.github_draft_payload = null;
       run.artifacts.fullstack_swe.cursor_handoff_path = null;
+      run.artifacts.fullstack_swe.cursor_cloud_run_ref = null;
+      run.artifacts.fullstack_swe.cursor_conversation_url = null;
+      run.artifacts.fullstack_swe.cursor_branch_name = null;
+      run.artifacts.fullstack_swe.cursor_execution_mode = null;
+      run.artifacts.fullstack_swe.supabase_migration_file_path = null;
+      run.artifacts.fullstack_swe.supabase_live_apply_ref = null;
+      run.artifacts.fullstack_swe.supabase_execution_mode = null;
     }
   }
 
@@ -888,10 +1095,33 @@ export function formatOutboundStatusForSlack(runId) {
     if (gt.repo) gitParts.push(`repo: \`${gt.repo}\``);
     if (gt.issue_id) gitParts.push(`issue: \`#${gt.issue_id}\``);
     if (gt.branch) gitParts.push(`branch: \`${gt.branch}\``);
-    if (gt.generated_cursor_handoff_path) gitParts.push(`cursor: \`${gt.generated_cursor_handoff_path}\``);
+    if (gt.generated_cursor_handoff_path) gitParts.push(`cursor_handoff: \`${gt.generated_cursor_handoff_path}\``);
+    if (gt.cursor_run_ref) gitParts.push(`cursor_run_ref: \`${gt.cursor_run_ref}\``);
+    if (gt.cursor_conversation_url) gitParts.push(`cursor_url: ${gt.cursor_conversation_url}`);
     if (gitParts.length) {
       lines.push('', '*Git trace*', gitParts.map((p) => `- ${p}`).join('\n'));
     }
+  }
+
+  const swe = run?.artifacts?.fullstack_swe || {};
+  const artLines = [];
+  if (swe.github_issue_url) artLines.push(`github_issue: ${swe.github_issue_url}`);
+  if (swe.pr_url) artLines.push(`github_pr: ${swe.pr_url}`);
+  if (swe.cursor_cloud_run_ref) artLines.push(`cursor_live_ref: \`${swe.cursor_cloud_run_ref}\``);
+  if (swe.cursor_handoff_path && !swe.cursor_cloud_run_ref) artLines.push(`cursor_handoff: \`${swe.cursor_handoff_path}\``);
+  if (swe.supabase_schema_draft_path) artLines.push(`supabase_draft: \`${swe.supabase_schema_draft_path}\``);
+  if (swe.supabase_migration_file_path) artLines.push(`supabase_migration: \`${swe.supabase_migration_file_path}\``);
+  if (swe.supabase_live_apply_ref) artLines.push(`supabase_apply_ref: \`${swe.supabase_live_apply_ref}\``);
+
+  const rb = run?.artifacts?.research_benchmark || {};
+  const ux = run?.artifacts?.uiux_design || {};
+  const qa = run?.artifacts?.qa_qc || {};
+  if (rb.research_note_path) artLines.push(`research: \`${rb.research_note_path}\``);
+  if (ux.ui_spec_delta_path) artLines.push(`uiux_spec: \`${ux.ui_spec_delta_path}\``);
+  if (qa.acceptance_checklist_path) artLines.push(`qa_acceptance: \`${qa.acceptance_checklist_path}\``);
+
+  if (artLines.length) {
+    lines.push('', '*실행 산출물 경로*', artLines.map((p) => `- ${p}`).join('\n'));
   }
 
   return lines.join('\n');

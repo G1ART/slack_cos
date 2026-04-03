@@ -84,8 +84,13 @@ function renderExecutionPacket(payload) {
     `*provider truth:*\n${payload.provider_truth?.length ? payload.provider_truth.map((t) => `- ${t}`).join('\n') : '- (스냅샷 없음)'}`,
   );
 
+  const autoStarted = payload.auto_started_artifacts?.length
+    ? payload.auto_started_artifacts.map((a) => `- ${a}`).join('\n')
+    : '- (아직 디스패치 전이거나 경로 미기록)';
+  lines.push(`*자동 생성·디스패치된 산출물:*\n${autoStarted}`);
+
   lines.push(
-    `*즉시 시작되는 작업:*\n${payload.immediate_actions?.length ? payload.immediate_actions.map((a) => `- ${a}`).join('\n') : '- (오케스트레이션 큐에 맡김)'}`,
+    `*즉시 시작되는 작업(오케스트레이션 계획):*\n${payload.immediate_actions?.length ? payload.immediate_actions.map((a) => `- ${a}`).join('\n') : '- (오케스트레이션 큐에 맡김)'}`,
   );
 
   const bridges = payload.manual_bridge_actions?.length

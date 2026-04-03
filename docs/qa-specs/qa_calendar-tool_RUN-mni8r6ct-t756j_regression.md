@@ -1,0 +1,13 @@
+# Regression Case List — RUN-mni8r6ct-t756j
+
+**Generated**: 2026-04-03T01:44:59.888Z
+
+## Cases
+
+- [ ] Existing flows still work
+- [ ] No scope creep beyond locked MVP
+- [ ] API backward compatibility maintained
+- [ ] Data integrity preserved
+
+---
+_Auto-generated for `RUN-mni8r6ct-t756j`_

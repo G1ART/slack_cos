@@ -378,7 +378,17 @@ export function updateLaneOutbound(runId, laneType, update) {
 /**
  * Append an entry to cursor_trace.
  * @param {string} runId
- * @param {{ dispatch_mode: string, handoff_path: string, status: string, result_summary?: string, result_link?: string }} entry
+ * @param {{
+ *   dispatch_mode: string,
+ *   handoff_path?: string | null,
+ *   status: string,
+ *   cursor_execution_mode?: string,
+ *   cursor_run_ref?: string | null,
+ *   cursor_conversation_url?: string | null,
+ *   cursor_fallback_used?: boolean,
+ *   result_summary?: string,
+ *   result_link?: string | null,
+ * }} entry
  */
 export function appendCursorTrace(runId, entry) {
   const run = runsById.get(runId);
@@ -393,7 +403,17 @@ export function appendCursorTrace(runId, entry) {
 /**
  * Append an entry to supabase_trace.
  * @param {string} runId
- * @param {{ kind: string, draft_path?: string, migration_id?: string, status: string }} entry
+ * @param {{
+ *   kind: string,
+ *   draft_path?: string,
+ *   migration_id?: string,
+ *   migration_path?: string,
+ *   status: string,
+ *   execution_tier?: string,
+ *   apply_ref?: string | null,
+ *   error_summary?: string,
+ *   error?: string,
+ * }} entry
  */
 export function appendSupabaseTrace(runId, entry) {
   const run = runsById.get(runId);
