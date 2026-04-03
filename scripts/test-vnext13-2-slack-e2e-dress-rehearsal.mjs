@@ -116,15 +116,14 @@ assert.equal(getExecutionRunById(run2.run_id).outbound_dispatch_state, 'not_star
 await fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => {});
 delete process.env.EXECUTION_RUNS_FILE;
 
-/* E6 governance advisory — re-org / tooling suggestion */
+/* E6 governance advisory — vNext.13.3: 제안 패킷 서피스에서는 부록 비활성(기본·금지 서피스) */
 const o6 = await dm(
   'De2egov',
   '이제 투자자별 맞춤 아웃리치까지 자동화하고 싶은데, 지금 구조로 충분한가?',
   async () => '',
 );
 assert.equal(o6.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
-assert.equal(o6.trace.cos_governance_advisory, true);
-assert.ok(o6.text.includes('COS 운영 조언'));
-assert.ok(o6.text.includes('Investor Research') || o6.text.includes('Outreach'));
+assert.equal(o6.trace.cos_governance_advisory, false);
+assert.ok(!o6.text.includes('COS 운영 조언'));
 
 console.log('ok: vnext13_2_slack_e2e_dress_rehearsal');

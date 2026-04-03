@@ -22,6 +22,7 @@ import {
 } from './plannerRoute.js';
 import { finalizeSlackResponse, logRouterEvent } from './topLevelRouter.js';
 import { runFounderDirectKernel } from '../founder/founderDirectKernel.js';
+import { resolveFounderRouteDecision } from '../founder/founderRouteInvariant.js';
 import { parseCouncilCommand, routeTask } from '../agents/index.js';
 import { appendJsonRecord } from '../storage/jsonStore.js';
 import { INTERACTIONS_FILE } from '../storage/paths.js';
@@ -274,15 +275,7 @@ export async function runInboundAiRouter(ctx) {
     callJSON,
   } = ctx;
 
-  const sourceType = String(metadata?.source_type || '').toLowerCase();
-  const routeLabel = String(metadata?.slack_route_label || '').toLowerCase();
-  const channel = String(metadata?.channel || '');
-  const founderRoute =
-    sourceType === 'direct_message' ||
-    sourceType === 'channel_mention' ||
-    routeLabel === 'dm_ai_router' ||
-    routeLabel === 'mention_ai_router' ||
-    channel.startsWith('D');
+  const founderRoute = resolveFounderRouteDecision(metadata || {}).founder_route;
 
   // Absolute founder guard: even if caller misroutes,
   // founder-facing turns are forced through founder kernel only.

@@ -16,6 +16,8 @@ import { getExecutionRunById, getExecutionRunByThread } from '../features/execut
 import { formatReconciliationLinesForFounder } from '../orchestration/truthReconciliation.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { detectFounderLaunchIntent } from '../core/founderLaunchIntent.js';
+import { evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { founderTruthClosureWording } from './founderTruthClosureWording.js';
 
 /**
  * @param {string} t
@@ -40,6 +42,13 @@ function wantsAllProviders(t) {
     /(연결\s*상태|외부\s*툴|툴체인|깃허브|GitHub|레일웨이|버셀)/i.test(t)
     && /(전부|모두|한\s*번에|요약|정리)/i.test(t)
   );
+}
+
+/**
+ * @param {string} t
+ */
+function wantsCompletionClosure(t) {
+  return /끝났|완료됐|완료되었|다\s*됐|끝났나|완료됐나|완료\s*여부|끝났는지|다\s*끝난/i.test(t);
 }
 
 function formatRuntimeCosVoice() {
@@ -183,6 +192,31 @@ export function tryResolveFounderDeterministicUtility({ normalized, threadKey, m
 
   if (wantsAllProviders(t)) {
     return { handled: true, kind: 'providers_all', text: formatAllProvidersCosVoice(snap) };
+  }
+
+  if (wantsCompletionClosure(t)) {
+    if (!run?.run_id) {
+      return {
+        handled: true,
+        kind: 'completion_closure',
+        text:
+          '이 스레드에는 실행 런이 아직 없어 `truth_reconciliation` 정본으로 완료를 말할 수 없습니다. 목표 한 줄을 주시면 런·정본 축을 먼저 잡겠습니다.',
+      };
+    }
+    const fresh = getExecutionRunById(run.run_id) || run;
+    const eval_ = evaluateExecutionRunCompletion(run.run_id);
+    const hasTruth = Boolean(fresh?.truth_reconciliation?.entries?.length);
+    const wording = founderTruthClosureWording(eval_, { hasTruthEntries: hasTruth });
+    const recon = formatReconciliationLinesForFounder(fresh);
+    return {
+      handled: true,
+      kind: 'completion_closure',
+      text: [
+        `*완료 여부 (정본 기준)* — ${wording.founder_phrase}`,
+        '',
+        ...recon,
+      ].join('\n'),
+    };
   }
 
   if (wantsRunProgress(t)) {

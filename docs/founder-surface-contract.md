@@ -12,7 +12,7 @@
 1. **Context synthesis** — `synthesizeFounderContext`.
 2. 결정론 유틸 — `founderDeterministicUtilityResolver`; launch 신호 시 launch gate.
 3. Launch gate — `maybeHandleFounderLaunchGate` (`core/founderLaunchGate.js`). vNext.13.2+: 창업자 본문은 `founderLaunchFormatter.js` / `founderLaunchApprovalPacket.js`만 (`policyEngine`·`founderRenderer`의 실행 패킷 렌더 미사용). Launch 문구 예: `실행으로 넘어가` (`founderLaunchIntent.js`).
-4. **Proposal + (조건부) approval packet** — `buildProposalFromFounderInput` + `formatFullFounderProposalSurface`; `external_execution_tasks`가 있을 때만 `buildFounderApprovalPacket` 승인 섹션. 동일 턴 `callText`는 *대화형 보강*만. vNext.13.2+: 운영 질문에 한해 `maybeGovernanceAdvisoryForFounder`가 **선택적** 자연어 부록을 덧붙일 수 있음(라우터 아님).
+4. **Proposal + (조건부) approval packet** — `buildProposalFromFounderInput` + `formatFullFounderProposalSurface`; `external_execution_tasks`가 있을 때만 `buildFounderApprovalPacket` 승인 섹션. 동일 턴 `callText`는 *대화형 보강*만. 내부 계약 필드: `proposal_execution_contract` (`COS_ONLY` / `APPROVAL_REQUIRED` / `EXECUTION_READY`), `proposal_contract_trace.reasons` (분류 근거). vNext.13.3: `maybeGovernanceAdvisoryForFounder`는 **`COS_GOVERNANCE_ADVISORY=1`이고** 제안·승인 등 **금지 서피스가 아닐 때만**(실제로는 프로덕션 제안 경로에서는 호출돼도 항상 금지되어 부록 없음); 부록 1개·본문보다 짧게·`founderDirectKernel`에서만 조건부.
 
 ## 비창업자
 
@@ -29,3 +29,7 @@
 ## 실행 상태 질문 (vNext.12.1)
 
 진행·핸드오프 관련 결정론 유틸은 **`truth_reconciliation` 요약 줄 + `buildProviderTruthSnapshot`** 만 사용. 레인 아웃바운드 상태나 에이전트 자기 서술을 그대로 창업자 면에 붙이지 않음.
+
+## 완료·클로저 (vNext.13.3)
+
+“끝났나?” 등은 `founderTruthClosureWording` + `evaluateExecutionRunCompletion`만 사용. **`truth_reconciliation.entries`가 없으면 완료로 단정하지 않는다.** 문구 축: 완료 / 초안만 준비됨 / 일부만 확인됨 / 아직 미완료.

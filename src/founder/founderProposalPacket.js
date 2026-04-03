@@ -27,6 +27,8 @@ export function emptyProposalPacket() {
       '다시 정리',
       '보류',
     ],
+    proposal_execution_contract: null,
+    proposal_contract_trace: null,
   };
 }
 

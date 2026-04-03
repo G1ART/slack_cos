@@ -2,6 +2,10 @@
  * Execution Run — scope lock 이후 COS가 계속 소유하는 실행 spine 정본 객체.
  * packet_id(승인 패킷) → run_id(실행 단위) → workstreams(내부 lane) → git trace.
  *
+ * vNext.13.3 — 창업자 면 “완료/초안/일부/미완료” 문구는 `truth_reconciliation.entries`가 있을 때만
+ * `evaluateExecutionRunCompletion`·`deriveExecutionCompletionFromTruthReconciliation`을 정본으로 삼는다.
+ * 엔트리가 없으면 satisfied/완료로 단정하지 않는다.
+ *
  * 저장: data/execution-runs.json (append-only JSONL-ish array).
  */
 
