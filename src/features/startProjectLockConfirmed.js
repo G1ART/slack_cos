@@ -272,7 +272,12 @@ export async function tryStartProjectLockConfirmedResponse(trimmed, metadata) {
     document_sources: docCtx?.sources || [],
   });
 
-  const run = createExecutionRun({ packet, metadata });
+  const run = createExecutionRun({
+    packet,
+    metadata,
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 
   let resolved = resolveProjectSpaceForThread({ threadKey, text: goalLine, metadata });
   if (!resolved.resolved) {

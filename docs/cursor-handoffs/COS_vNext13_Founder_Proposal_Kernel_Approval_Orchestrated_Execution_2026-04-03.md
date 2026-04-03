@@ -21,9 +21,9 @@
 
 ## 승인 게이트
 
-- `src/orchestration/approvalGate.js` — `isExternalMutationAuthorized(run)`.
-- 런 필드: `external_execution_authorization` (기본 `authorized` — 기존 회귀 호환).
-- `ensureExecutionRunDispatched` (`executionDispatchLifecycle.js`)가 게이트 통과 후에만 `dispatchOutboundActionsForRun`을 호출한다.
+- `src/orchestration/approvalGate.js` — `isExternalMutationAuthorized(run)`; 필드가 없으면 레거시 호환으로 허용.
+- 신규 `createExecutionRun` 기본값: `external_execution_authorization.state === 'pending_approval'` (명시 `external_execution_auth_initial: 'authorized'`는 오퍼레이터·회귀 전용).
+- `ensureExecutionRunDispatched`는 **스토어에서 최신 런을 다시 읽은 뒤** 승인·상태를 판정한 다음, 통과 시에만 `dispatchPlannedExecutionForRun`을 비동기 실행한다 (`dispatchOutboundActionsForRun`은 동일 본문의 deprecated 별칭).
 
 ## Completion
 
@@ -35,10 +35,15 @@
 
 플래너 입력용: `extractCapabilitiesFromProposalPacket` (`runCapabilityExtractor.js`).
 
-## 테스트
+## 테스트 (`package.json` `npm test` 체인)
 
-- `scripts/test-vnext13-founder-proposal-kernel.mjs`
-- 기존 `test-founder-launch-gate`, `test-partner-natural-sanitize`는 `proposal_packet_surface` 기대로 갱신.
+- `scripts/test-vnext13-founder-no-routing-surface.mjs`
+- `scripts/test-vnext13-proposal-packet.mjs`
+- `scripts/test-vnext13-approval-before-execution.mjs`
+- `scripts/test-vnext13-cos-only-business-ops.mjs`
+- `scripts/test-vnext13-approved-proposal-to-capability-derivation.mjs`
+- `scripts/test-vnext13-single-truth-completion.mjs`
+- `test-vnext12-1-founder-no-command-router.mjs` 창업자 블록 끝 마커는 `// Operator / channel only` 기준.
 
 ## Owner actions
 

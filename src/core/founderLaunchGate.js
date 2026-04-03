@@ -18,7 +18,6 @@ import {
   openProjectIntakeSession,
 } from '../features/projectIntakeSession.js';
 import { createExecutionPacket, createExecutionRun, getExecutionRunByThread } from '../features/executionRun.js';
-import { ensureExecutionRunDispatched } from '../features/executionDispatchLifecycle.js';
 import { bootstrapProjectSpace } from '../features/projectSpaceBootstrap.js';
 import {
   getProjectSpaceByThread,
@@ -230,17 +229,16 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       project_label: space.human_label,
     });
     launchPacketId = execPacket.packet_id;
-    run = createExecutionRun({ packet: execPacket, metadata });
+    run = createExecutionRun({
+      packet: execPacket,
+      metadata: { ...metadata, founder_origin_execution: true },
+    });
     linkRunToProjectSpace(space.project_id, run.run_id);
-    ensureExecutionRunDispatched(run, metadata);
     transitionProjectIntakeStage(metadata, 'execution_running', {
       packet_id: execPacket.packet_id,
       run_id: run.run_id,
     });
   } else {
-    if (run.outbound_dispatch_state === 'not_started') {
-      ensureExecutionRunDispatched(run, metadata);
-    }
     launchPacketId = run.packet_id || launchPacketId;
   }
 

@@ -1,8 +1,7 @@
 /**
- * COS Constitution v1.1 + vNext.12.1
- * - 창업자 면(DM/멘션): 이 파일의 `founderDirectInboundFourStep` 만 — work_object/gold/phase 레거시 없음.
- * - 오퍼레이터/채널: 아래 work_object → work_phase → policy 경로만 (레거시 라우터 전 `founderRoute===false`).
- * @see docs/architecture/COS_CONSTITUTION_v1.md §6
+ * vNext.13-CORRECTIVE
+ * - 창업자 면: `founderDirectInboundFourStep` — 맥락 합성 → 이해 → 제안 패킷 → 승인 인지 응답 (classify/resolveWorkObject/phase 없음).
+ * - 오퍼레이터/채널만: work_object → phase → policy (아래 구간; `founderRoute===false`).
  */
 
 // GREP_COS_CONSTITUTION_PIPELINE
@@ -56,7 +55,7 @@ import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
-import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
 import { synthesizeFounderContext } from '../founder/founderContextSynthesizer.js';
 import {
   buildProposalFromFounderInput,
@@ -68,7 +67,7 @@ import { selectExecutionModeFromProposalPacket } from '../founder/executionModeF
  * 구현 본문: `founderLaunchGate.js` → `detectFounderLaunchIntent` · `buildProviderTruthSnapshot` ·
  * `evaluateLaunchReadiness` · `buildExecutionLaunchRenderPayload` / `buildLaunchBlockedPayload` ·
  * `bootstrapProjectSpace` / `getProjectSpaceByThread` · `createExecutionPacket` · `createExecutionRun` ·
- * `ensureExecutionRunDispatched`(단일 디스패치 진입점; `dispatchOutboundActionsForRun` 직접 호출 없음) ·
+ * 외부 디스패치는 대표 승인 후 `ensureExecutionRunDispatched`만(이 파일에서 직접 호출하지 않음) ·
  * `renderFounderSurface(EXECUTION_PACKET|LAUNCH_BLOCKED)`.
  * trace: `launch_gate_taken`, `launch_intent_detected`, `launch_intent_signal`, `launch_readiness`,
  * `provider_truth_snapshot`, `manual_bridge_actions`, `defaults_applied`, `launch_packet_id`.
@@ -453,34 +452,29 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const threadKey = buildSlackThreadKey(metadata);
 
   if (metadata.founder_hard_recover === true) {
-    const recoveredPacket = buildDialoguePacket(normalized, isActiveProjectIntake(metadata) ? 'followup' : 'kickoff');
-    const recoveredQuality = validateDialogueContract(recoveredPacket);
-    if (!recoveredQuality.ok) {
-      const fallback = buildFounderHardFail(FounderHardFailReason.INVARIANT_BREACH);
-      return {
-        text: fallback.text,
-        trace: {
-          surface_type: FounderSurfaceType.SAFE_FALLBACK,
-          responder_kind: 'founder_kernel',
-          passed_pipeline: true,
-          passed_renderer: true,
-          legacy_router_used: false,
-          hard_fail_reason: fallback.reason,
-          route_label: route_label || null,
-        },
-      };
-    }
-    const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, recoveredPacket);
+    const ctx0 = synthesizeFounderContext({ threadKey, metadata });
+    const prop0 = buildProposalFromFounderInput({ rawText: normalized, contextFrame: ctx0 });
+    const body0 = formatFullFounderProposalSurface(prop0);
+    evaluatePolicy({
+      actor: Actor.FOUNDER,
+      work_object_type: founderMinimalWorkContext(metadata, threadKey).primary_type,
+      work_phase: WorkPhase.DISCOVER,
+      intent_signal: 'proposal_kernel',
+      metadata,
+    });
+    const rendered0 = renderFounderSurface(FounderSurfaceType.PROPOSAL_PACKET, { text: body0 });
     return {
-      text: rendered.text,
-      blocks: rendered.blocks,
+      text: rendered0.text,
+      blocks: rendered0.blocks,
       trace: {
-        surface_type: FounderSurfaceType.DIALOGUE,
+        surface_type: FounderSurfaceType.PROPOSAL_PACKET,
         responder_kind: 'founder_kernel',
         passed_pipeline: true,
         passed_renderer: true,
         legacy_router_used: false,
-        hard_fail_reason: null,
+        founder_hard_recover: true,
+        founder_classifier_used: false,
+        founder_keyword_route_used: false,
         route_label: route_label || null,
       },
     };
@@ -627,7 +621,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
       project_id: workContext.project_id || null,
     });
     const run = createExecutionRun({ packet: execPacket, metadata });
-    ensureExecutionRunDispatched(run, metadata);
     transitionProjectIntakeStage(metadata, 'execution_ready', {
       packet_id: execPacket.packet_id,
       run_id: run.run_id,
@@ -639,7 +632,11 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
       handoff: buildHandoffPacket({
         project_ref: scope.project_name,
         run_ref: run.run_id,
-        provider_truth: ['github: manual_bridge', 'cursor: manual_bridge', 'supabase: manual_bridge'],
+        provider_truth: [
+          'github: 대표 승인 전 외부 디스패치 없음 (pending_approval)',
+          'cursor: 승인 후 ensureExecutionRunDispatched',
+          'supabase: 승인 후에만 적용 경로',
+        ],
       }),
     });
     return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase }, intentResult, policy, route_label });

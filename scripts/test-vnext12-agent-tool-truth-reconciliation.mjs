@@ -36,7 +36,13 @@ const packet = createExecutionPacket({
   session_id: '',
   requested_by: 'U1',
 });
-const run = createExecutionRun({ packet, metadata: {}, task_kind: 'task' });
+const run = createExecutionRun({
+  packet,
+  metadata: {},
+  task_kind: 'task',
+  external_execution_auth_initial: 'authorized',
+  internal_planner_capability_source: 'locked_run_text',
+});
 await dispatchOutboundActionsForRun(run, {});
 
 const updated = getExecutionRunById(run.run_id);

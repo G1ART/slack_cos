@@ -845,7 +845,7 @@ async function handleUserText(userText, metadata = {}) {
       };
     }
 
-    // Constitutional pipeline v1.1 — work_object → work_phase → policy → packet → surface
+    // Operator / channel only — 창업자 면은 위 블록에서 항상 return (command·AI 라우터 미도달).
     try {
       const pipelineResult = await founderRequestPipeline({
         text: inputNorm,
@@ -861,7 +861,7 @@ async function handleUserText(userText, metadata = {}) {
         mergeInboundAudit({
           routing_exit: 'pipeline',
           passed_pipeline: true,
-          founder_route: founderRoute,
+          founder_route: false,
           legacy_command_router_used: false,
           legacy_ai_router_used: false,
           pipeline_surface: pipelineResult.trace?.surface_type ?? null,
@@ -869,9 +869,9 @@ async function handleUserText(userText, metadata = {}) {
         });
         console.info(
           JSON.stringify({
-            event: 'G1COS_FOUNDER_DOOR',
+            event: 'G1COS_OPERATOR_PIPELINE',
             routing_exit: 'pipeline',
-            founder_route: founderRoute,
+            founder_route: false,
             passed_pipeline: true,
             legacy_command_router_used: false,
             legacy_ai_router_used: false,
@@ -893,23 +893,20 @@ async function handleUserText(userText, metadata = {}) {
       mergeInboundAudit({
         routing_exit: 'pipeline_miss',
         passed_pipeline: false,
-        founder_route: founderRoute,
+        founder_route: false,
       });
-      console.info(`[G1COS PIPELINE MISS] text="${inputNorm.slice(0, 80)}" — delegating to legacy routers`);
+      console.info(`[G1COS PIPELINE MISS] text="${inputNorm.slice(0, 80)}" — delegating to command router`);
     } catch (pipelineErr) {
       mergeInboundAudit({
         routing_exit: 'pipeline_error',
         passed_pipeline: false,
-        founder_route: founderRoute,
+        founder_route: false,
         pipeline_error: String(pipelineErr?.message || pipelineErr),
       });
       console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
-    /** 비창업자만 structured command router (창업자 면은 위에서 항상 종료). */
-    const shouldRunCommandRouter = !founderRoute;
-    const routed = shouldRunCommandRouter
-      ? await runInboundCommandRouter({
+    const routed = await runInboundCommandRouter({
           userText,
           metadata,
           structuredOnly: false,
@@ -950,24 +947,22 @@ async function handleUserText(userText, metadata = {}) {
             parseResultReject,
             parseBlockedRun,
           },
-        })
-      : { done: false, aiCtx: { userText, metadata, channelContext: null } };
+        });
     if (routed.done) {
-      const commandRouterExit = shouldRunCommandRouter ? 'command_router' : 'pipeline_miss_non_command';
       mergeInboundAudit({
-        routing_exit: commandRouterExit,
+        routing_exit: 'command_router',
         passed_pipeline: false,
-        founder_route: founderRoute,
-        legacy_command_router_used: shouldRunCommandRouter,
+        founder_route: false,
+        legacy_command_router_used: true,
         legacy_ai_router_used: false,
       });
       console.info(
         JSON.stringify({
-          event: 'G1COS_FOUNDER_DOOR',
-          routing_exit: commandRouterExit,
-          founder_route: founderRoute,
+          event: 'G1COS_COMMAND_ROUTER',
+          routing_exit: 'command_router',
+          founder_route: false,
           passed_pipeline: false,
-          legacy_command_router_used: shouldRunCommandRouter,
+          legacy_command_router_used: true,
           legacy_ai_router_used: false,
         }),
       );

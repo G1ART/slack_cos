@@ -95,7 +95,12 @@ try {
   });
   assert.ok(packet.document_context_summary, 'packet has doc context');
 
-  const run = createExecutionRun({ packet, metadata: { user: 'founder' } });
+  const run = createExecutionRun({
+    packet,
+    metadata: { user: 'founder' },
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   linkRunToProjectSpace(space.project_id, run.run_id);
   assert.equal(run.current_stage, 'execution_running');
   assert.equal(run.deploy_status, 'none');
@@ -192,7 +197,12 @@ try {
     includes: [],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 
   // Initially: no GitHub data
   const truth0 = deriveGithubExecutionTruth(run);
@@ -246,7 +256,12 @@ try {
     includes: [],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   assert.equal(run.deploy_status, 'none');
 
   updateRunDeployStatus(run.run_id, { deploy_status: 'manual_bridge_prepared' });
@@ -356,7 +371,12 @@ try {
     includes: ['feature A'],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   run.git_trace.issue_id = 10;
   run.git_trace.branch = 'feat/status-test';
 
@@ -385,7 +405,12 @@ try {
     includes: [],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'deploy_ready');
 
   // Detect approval intent
@@ -423,7 +448,12 @@ try {
     includes: [],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'deploy_ready');
 
   const result = applyApprovalDecision(run, 'rework', '로그인 화면 수정 필요');
@@ -453,7 +483,12 @@ try {
     includes: [],
     excludes: [],
   });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'deploy_ready');
 
   const result = applyApprovalDecision(run, 'hold', '다음 주에 재검토');
@@ -547,7 +582,12 @@ try {
     document_sources: docCtx?.sources || [],
   });
 
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   linkRunToProjectSpace(space.project_id, run.run_id);
 
   // Simulate toolchain execution
@@ -605,7 +645,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:BTN:01', goal_line: 'btn test', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'deploy_ready');
 
   const blocks = buildDeployApprovalBlocks(run);
@@ -631,7 +676,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:URL:01', goal_line: 'url test', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'approved_for_deploy');
 
   const { url, isComplete, providerHint } = detectDeployUrlAndCompletion('배포 URL: https://my-app.vercel.app');
@@ -660,7 +710,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:URLC:01', goal_line: 'url complete', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'approved_for_deploy');
 
   const { url, isComplete, providerHint } = detectDeployUrlAndCompletion('배포 완료! https://gallery.railway.app');
@@ -689,7 +744,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:NOURL:01', goal_line: 'no url', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'approved_for_deploy');
 
   const result = confirmDeployComplete(run);
@@ -708,7 +768,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:BAD:01', goal_line: 'bad url', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   updateRunStage(run.run_id, 'approved_for_deploy');
 
   const result = ingestDeployUrl(run, 'not-a-url', null, false);
@@ -727,7 +792,12 @@ try {
   resetRuns();
 
   const packet = createExecutionPacket({ thread_key: 'ch:WRONG:01', goal_line: 'wrong stage', locked_scope_summary: 't', includes: [], excludes: [] });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 
   const result = ingestDeployUrl(run, 'https://example.com', null, false);
   assert.equal(result.ok, false);
@@ -756,7 +826,12 @@ try {
 
   const docCtx = buildDocumentContextForExecution(tk);
   const packet = createExecutionPacket({ thread_key: tk, goal_line: 'Gallery Cal MVP', locked_scope_summary: 'gallery cal', includes: ['events'], excludes: [], project_id: space.project_id, document_context_summary: docCtx?.summary, document_sources: docCtx?.sources });
-  const run = createExecutionRun({ packet, metadata: {} });
+  const run = createExecutionRun({
+    packet,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   linkRunToProjectSpace(space.project_id, run.run_id);
 
   run.git_trace.repo = 'g1/gal-cal';

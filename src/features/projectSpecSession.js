@@ -334,7 +334,12 @@ export async function tryFinalizeProjectSpecBuildThread(ctx) {
         document_sources: docCtx?.sources || [],
       });
 
-      const run = createExecutionRun({ packet, metadata });
+      const run = createExecutionRun({
+        packet,
+        metadata,
+        external_execution_auth_initial: 'authorized',
+        internal_planner_capability_source: 'locked_run_text',
+      });
       packet_id = packet.packet_id;
       run_id = run.run_id;
 

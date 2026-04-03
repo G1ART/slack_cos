@@ -101,7 +101,12 @@ try {
     project_id: space.project_id,
     project_label: space.human_label,
   });
-  const run = createExecutionRun({ packet: pkt, metadata: {} });
+  const run = createExecutionRun({
+    packet: pkt,
+    metadata: {},
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
   linkRunToProjectSpace(space.project_id, run.run_id);
 
   const rB = bootstrapProjectSpace({ label, threadKey: 'im:hard-run-b' });

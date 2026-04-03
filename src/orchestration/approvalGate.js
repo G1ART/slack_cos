@@ -13,6 +13,7 @@ import { getExecutionRunById, updateRunExternalExecutionAuthorization } from '..
  */
 export function isExternalMutationAuthorized(run) {
   const st = run?.external_execution_authorization?.state;
+  if (st === undefined || st === null) return true;
   if (st === 'pending_approval') return false;
   if (st === 'draft_only') return false;
   return true;

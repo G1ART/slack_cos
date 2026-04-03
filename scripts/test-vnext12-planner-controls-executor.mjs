@@ -36,7 +36,13 @@ function makeRun(goal, includes, thread = 'ch:V12:rs:1') {
     session_id: '',
     requested_by: 'U1',
   });
-  return createExecutionRun({ packet, metadata: {}, task_kind: 'task' });
+  return createExecutionRun({
+    packet,
+    metadata: {},
+    task_kind: 'task',
+    external_execution_auth_initial: 'authorized',
+    internal_planner_capability_source: 'locked_run_text',
+  });
 }
 
 /* research-only: GitHub 경로 없음 */

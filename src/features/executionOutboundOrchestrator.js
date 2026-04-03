@@ -1044,13 +1044,12 @@ export function planOutboundActionsForRun(run, space = null) {
 }
 
 /**
- * Dispatch all outbound actions for a run — **only** planned route_decisions (vNext.12).
- * vNext.13: 창업자 면에서의 진입은 `ensureExecutionRunDispatched` → 외부 승인 게이트 통과 후에만 호출되는 것이 계약.
+ * Canonical executor: plan → `dispatchPlannedRoutes` → truth reconciliation.
  * @param {object} run
  * @param {Record<string, unknown>} metadata
  * @returns {Promise<Record<string, unknown>>}
  */
-export async function dispatchOutboundActionsForRun(run, metadata = {}) {
+export async function dispatchPlannedExecutionForRun(run, metadata = {}) {
   const dispatchSt = run.outbound_dispatch_state || 'not_started';
   /** 한 번 디스패치가 끝나면 partial/completed 모두 재실행 금지 — truth가 draft여도 아티팩트 중복 방지. failed 만 재시도 허용. */
   if (dispatchSt !== 'not_started' && dispatchSt !== 'failed') {
@@ -1085,6 +1084,13 @@ export async function dispatchOutboundActionsForRun(run, metadata = {}) {
     anyFailed ? 'partial' : recon.overall === 'completed' ? 'completed' : 'partial';
   updateOutboundDispatchState(run.run_id, dispatchState);
   return results;
+}
+
+/**
+ * @deprecated Use `dispatchPlannedExecutionForRun` (lifecycle canonical name).
+ */
+export async function dispatchOutboundActionsForRun(run, metadata = {}) {
+  return dispatchPlannedExecutionForRun(run, metadata);
 }
 
 /**
