@@ -1,5 +1,7 @@
 # COS vNext.13.2 — Launch gate purification, harness constitution, E2E dress rehearsal
 
+> **보다 최신 정본:** `COS_vNext13_2_COS_Autonomy_Harness_Governance_2026-04-03.md` (18 에이전트 헌법, 리뷰 매트릭스, COS governance advisory, 테스트 8종).
+
 **Date:** 2026-04-03
 
 ## Summary
@@ -21,7 +23,7 @@
 
 ## E2E dress rehearsal
 
-See `scripts/test-vnext13-2-slack-e2e-dress-rehearsal.mjs` for six founder-facing scenarios (IR deck, competitor memo, budget, external approval, hold, launch).
+See `scripts/test-vnext13-2-slack-e2e-dress-rehearsal.mjs` — 시나리오 6번은 **COS 운영 조언**(re-org / tooling) 검증으로 갱신됨 (launch 게이트는 `test-founder-launch-gate.mjs` 등).
 
 ## Owner actions
 

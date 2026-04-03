@@ -30,4 +30,4 @@
 
 ## 회귀
 
-`npm test` → `test-vnext13-2-approval-escalation-language.mjs`
+`npm test` → `test-vnext13-2-default-deny-approval.mjs`

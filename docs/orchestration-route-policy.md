@@ -43,5 +43,6 @@
 ## Harness constitution (vNext.13.2)
 
 - `harnessAgentCharters.js` — 13 에이전트: mission, forbidden_actions, overlap, review.
-- `harnessSkillsRegistry.js` — on-demand skill packets (planner attach); not founder-keyword routes.
-- 문서: `docs/harness-constitution.md`, `docs/harness-subagent-skills.md`.
+- `harnessSkillsRegistry.js`, `harnessSkillBindings.js`, `harnessOrgModel.js` — skill bind + org lanes.
+- `cosGovernanceAdvisory.js`, `toolExpansionAdvisory.js` — 운영 조언(창업자 면 선택적 부록, 라우터 아님).
+- 문서: `docs/harness-constitution.md`, `docs/harness-skills-registry.md`, `docs/harness-review-matrix.md`, `docs/cos-governance-advisory.md`.

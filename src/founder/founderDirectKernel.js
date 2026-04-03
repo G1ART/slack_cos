@@ -19,6 +19,7 @@ import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
+import { maybeGovernanceAdvisoryForFounder } from '../orchestration/cosGovernanceAdvisory.js';
 
 function stripFounderStructuredCommandPrefixes(t) {
   return String(t || '')
@@ -116,6 +117,10 @@ async function runFounderProposalKernelTurn(normalized, metadata, route_label, c
   const proposal = buildProposalFromFounderInput({ rawText: normalized, contextFrame });
   const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
   let body = formatFullFounderProposalSurface(proposal);
+  const gov = maybeGovernanceAdvisoryForFounder({ rawText: normalized, contextFrame });
+  if (gov?.text) {
+    body += `\n\n${gov.text}`;
+  }
   let partner_output_sanitized = false;
 
   if (typeof callText === 'function') {
@@ -168,6 +173,8 @@ async function runFounderProposalKernelTurn(normalized, metadata, route_label, c
       founder_proposal_kernel: true,
       founder_direct_kernel: true,
       execution_mode_selected,
+      cos_governance_advisory: Boolean(gov?.text),
+      governance_advisory_topics: gov?.topics || [],
       partner_natural: typeof callText === 'function',
       partner_output_sanitized,
       approval_required: proposal.approval_required === true || ext,

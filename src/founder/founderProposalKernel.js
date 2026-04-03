@@ -30,8 +30,18 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
   // C1 — primary: 맥락·목표·제약·의도; 정규식은 아래 보조 신호로만 사용
   p.context_assumptions = [];
   const goalHint = contextFrame?.goal_line_hint ? String(contextFrame.goal_line_hint).trim() : '';
+  const northStar = contextFrame?.north_star_hint ? String(contextFrame.north_star_hint).trim() : '';
+  const successHint = contextFrame?.success_condition_hint
+    ? String(contextFrame.success_condition_hint).trim()
+    : '';
   if (goalHint) {
     p.context_assumptions.push(`기존 프로젝트·인테이크 목표(우선): ${goalHint}`);
+  }
+  if (northStar && northStar !== goalHint) {
+    p.context_assumptions.push(`북극성·우선순위 힌트: ${northStar}`);
+  }
+  if (successHint) {
+    p.context_assumptions.push(`직전에 잡힌 성공 조건·지표 힌트: ${successHint}`);
   }
   const tx = contextFrame?.transcript_excerpt ? String(contextFrame.transcript_excerpt).trim() : '';
   if (tx) {
@@ -47,10 +57,13 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
     p.context_assumptions.push('아직 실행 스파인이 없을 수 있습니다. 외부 실행이 필요하면 별도 승인 패킷을 먼저 드립니다.');
   }
 
+  const goalForVoice = goalHint || northStar;
   p.understood_request = t
-    ? `창업자가 지금 묻는 의도(원문): 「${t.slice(0, 500)}${t.length > 500 ? '…' : ''}」${
-        goalHint ? ` — 위 목표 맥락과 함께 해석합니다: 「${goalHint.slice(0, 140)}${goalHint.length > 140 ? '…' : ''}」` : ''
-      }`
+    ? `지금 말씀을 함께 읽었습니다: 「${t.slice(0, 500)}${t.length > 500 ? '…' : ''}」${
+        goalForVoice
+          ? ` 목표·북극성 맥락으로는 「${goalForVoice.slice(0, 140)}${goalForVoice.length > 140 ? '…' : ''}」을 기준에 둡니다.`
+          : ''
+      }${successHint ? ` 성공 조건 힌트: 「${successHint.slice(0, 120)}${successHint.length > 120 ? '…' : ''}」` : ''}`
     : '빈 입력입니다. 한 문장만 더 구체화해 주시면 제안을 좁히겠습니다.';
 
   if (!t) {

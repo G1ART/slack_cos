@@ -12,7 +12,7 @@
 1. **Context synthesis** — `synthesizeFounderContext`.
 2. 결정론 유틸 — `founderDeterministicUtilityResolver`; launch 신호 시 launch gate.
 3. Launch gate — `maybeHandleFounderLaunchGate` (`core/founderLaunchGate.js`). vNext.13.2+: 창업자 본문은 `founderLaunchFormatter.js` / `founderLaunchApprovalPacket.js`만 (`policyEngine`·`founderRenderer`의 실행 패킷 렌더 미사용). Launch 문구 예: `실행으로 넘어가` (`founderLaunchIntent.js`).
-4. **Proposal + (조건부) approval packet** — `buildProposalFromFounderInput` + `formatFullFounderProposalSurface`; `external_execution_tasks`가 있을 때만 `buildFounderApprovalPacket` 승인 섹션. 동일 턴 `callText`는 *대화형 보강*만.
+4. **Proposal + (조건부) approval packet** — `buildProposalFromFounderInput` + `formatFullFounderProposalSurface`; `external_execution_tasks`가 있을 때만 `buildFounderApprovalPacket` 승인 섹션. 동일 턴 `callText`는 *대화형 보강*만. vNext.13.2+: 운영 질문에 한해 `maybeGovernanceAdvisoryForFounder`가 **선택적** 자연어 부록을 덧붙일 수 있음(라우터 아님).
 
 ## 비창업자
 

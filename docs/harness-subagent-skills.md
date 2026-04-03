@@ -17,4 +17,4 @@ Founder 대화 전체를 capability로 쪼개지 말고, 실행 시점에 필요
 
 ## 회귀
 
-`npm test` → `test-vnext13-2-subagent-skills-registry.mjs`
+`npm test` → `test-vnext13-2-skills-registry.mjs` (see also `docs/harness-skills-registry.md`)

@@ -116,13 +116,15 @@ assert.equal(getExecutionRunById(run2.run_id).outbound_dispatch_state, 'not_star
 await fs.promises.rm(tmp, { recursive: true, force: true }).catch(() => {});
 delete process.env.EXECUTION_RUNS_FILE;
 
-/* E6 launch gate — founder formatter only */
-const o6 = await dm('De2eln', '이제 실행으로 넘어가자.', async () => {
-  throw new Error('launch must not call partner');
-});
-assert.equal(o6.trace.launch_gate_taken, true);
-assert.ok(o6.text.includes('*[COS 실행 준비 패킷]*'));
-assert.ok(!o6.text.includes('*[실행 패킷]*'));
-assert.ok(o6.text.includes('제가 이해한 실행 범위'));
+/* E6 governance advisory — re-org / tooling suggestion */
+const o6 = await dm(
+  'De2egov',
+  '이제 투자자별 맞춤 아웃리치까지 자동화하고 싶은데, 지금 구조로 충분한가?',
+  async () => '',
+);
+assert.equal(o6.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
+assert.equal(o6.trace.cos_governance_advisory, true);
+assert.ok(o6.text.includes('COS 운영 조언'));
+assert.ok(o6.text.includes('Investor Research') || o6.text.includes('Outreach'));
 
 console.log('ok: vnext13_2_slack_e2e_dress_rehearsal');

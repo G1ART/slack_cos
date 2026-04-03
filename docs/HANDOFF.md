@@ -7,8 +7,9 @@
 1. **Launch gate**: `founderLaunchGate.js`는 `evaluatePolicy` / `renderFounderSurface` 없음. 창업자 텍스트는 `founderLaunchFormatter.js`·`founderLaunchApprovalPacket.js`만.
 2. **Harness**: `harnessAgentCharters.js` 등 13 에이전트 헌법, 오버랩·리뷰·에스컬레이션·`harnessSkillsRegistry.js` 스킬 패킷.
 3. **제안·승인**: 맥락 우선 제안 커널; 승인 패킷 결제 표면 확장; `holdExternalExecutionForRun` → `draft_only`.
-4. **문서**: `docs/harness-constitution.md`, `docs/harness-subagent-skills.md`, `docs/approval-escalation-policy.md`, `docs/cursor-handoffs/COS_vNext13_2_Launch_Gate_Purification_Harness_Constitution_E2E_2026-04-03.md`
-5. **회귀**: `scripts/test-vnext13-2-*.mjs` 여섯 + 기존 vNext.13.1 여섯.
+4. **문서**: `docs/harness-constitution.md`, `docs/harness-review-matrix.md`, `docs/harness-skills-registry.md`, `docs/cos-governance-advisory.md`, `docs/approval-escalation-policy.md`, `docs/cursor-handoffs/COS_vNext13_2_COS_Autonomy_Harness_Governance_2026-04-03.md` (구 E2E 메모는 `COS_vNext13_2_Launch_Gate_Purification_…` 참고)
+5. **회귀**: `test-vnext13-2-launch-gate-purification`, `default-deny-approval`, `proposal-softening`, `cos-governance-advisory`, `harness-charters`, `harness-review-matrix`, `skills-registry`, `slack-e2e-dress-rehearsal` + vNext.13.1 여섯.
+6. **정본 메모**: `docs/cursor-handoffs/COS_vNext13_2_COS_Autonomy_Harness_Governance_2026-04-03.md` (COS 자율 vs 하네스 거버넌스·어드바이저리).
 
 ## vNext.13.1 (2026-04-03) — Founder kernel final lock + default-deny
 
@@ -51,7 +52,7 @@
 
 ## 테스트
 
-`npm test`에 vNext.12.1·vNext.13(여섯 스크립트)·vNext.13.1·**vNext.13.2(여섯 스크립트)** 포함.
+`npm test`에 vNext.12.1·vNext.13(여섯)·vNext.13.1·**vNext.13.2(여덟 스크립트)** 포함.
 
 ## 남은 리스크
 

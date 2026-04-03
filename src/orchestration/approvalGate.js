@@ -1,9 +1,14 @@
 /**
  * vNext.13.1 — default-deny: 명시적 `authorized`만 외부 mutation 허용.
  * 필드 누락·null·pending_approval·draft_only → 거부.
+ *
+ * Founder flow와 오퍼레이터 부트스트랩은 섞지 말 것 — `isOperatorExplicitAuthorizedBootstrapRun`만
+ * 오퍼레이터 명시 부트스트랩에 사용.
  */
 
 import { getExecutionRunById, updateRunExternalExecutionAuthorization } from '../features/executionRun.js';
+
+export const EXTERNAL_MUTATION_DENY_STATES = ['pending_approval', 'draft_only', null, undefined];
 
 /** @typedef {'authorized'|'pending_approval'|'draft_only'} ExternalExecutionAuthState */
 
