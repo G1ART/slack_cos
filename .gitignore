@@ -14,3 +14,6 @@ node_modules/
 
 # 실행 런 자동 생성 핸드오프 (executionOutboundOrchestrator)
 data/exec-handoffs/
+
+# Supabase CLI 로컬 캐시 (db pull 등)
+supabase/.temp/
