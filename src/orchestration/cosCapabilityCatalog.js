@@ -72,8 +72,13 @@ export const CAPABILITY_EXECUTION_CONTRACTS = {
     allowed_providers: ['vercel', 'railway', 'observe_only'],
     default_execution_mode: 'preview',
     forbidden_actions: ['schema_drop', 'raw_prod_secret_write'],
-    expected_artifacts: ['deploy_readiness_packet', 'optional_preview_url'],
-    truth_source: 'vercel_or_railway_packet',
+    expected_artifacts: [
+      'vercel_packet_path or vercel_preview_url',
+      'railway_packet_path or railway_deploy_url',
+      'observe_summary_path (observe_only)',
+    ],
+    truth_source: 'vercel_or_railway_packet_or_observe_summary',
+    planner_notes: 'Reconciliation: deploy_preview/vercel|railway|observe_only 각각 expected ref 충족 시 satisfied',
   },
   qa_validation: {
     owning_agent: 'qa_agent',

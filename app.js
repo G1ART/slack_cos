@@ -908,7 +908,7 @@ async function handleUserText(userText, metadata = {}) {
       ? await runInboundCommandRouter({
           userText,
           metadata,
-          structuredOnly: founderRoute,
+          structuredOnly: false,
           getExecutiveHelpText: () => formatExecutiveHelpText(),
           getOperatorHelpText: () => operatorHelpText(),
           runPlannerHardLockedBranch,

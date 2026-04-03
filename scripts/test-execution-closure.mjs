@@ -129,7 +129,7 @@ try {
 
   const r2 = await dispatchOutboundActionsForRun(run, { channel: 'C_TEST' });
   assert.ok(r2.skipped, 'second dispatch skipped');
-  assert.equal(r2.reason, 'already_completed');
+  assert.equal(r2.reason, 'already_dispatched');
 
   // Collect generated files for cleanup
   if (after1.artifacts?.fullstack_swe?.cursor_handoff_path) cleanupPaths.push(after1.artifacts.fullstack_swe.cursor_handoff_path);

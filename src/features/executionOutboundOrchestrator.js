@@ -1050,9 +1050,15 @@ export function planOutboundActionsForRun(run, space = null) {
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function dispatchOutboundActionsForRun(run, metadata = {}) {
-  if (run.outbound_dispatch_state === 'completed') {
-    logOutbound('outbound_dispatch_skipped', { run_id: run.run_id, reason: 'already_completed' });
-    return { skipped: true, reason: 'already_completed' };
+  const dispatchSt = run.outbound_dispatch_state || 'not_started';
+  /** 한 번 디스패치가 끝나면 partial/completed 모두 재실행 금지 — truth가 draft여도 아티팩트 중복 방지. failed 만 재시도 허용. */
+  if (dispatchSt !== 'not_started' && dispatchSt !== 'failed') {
+    logOutbound('outbound_dispatch_skipped', {
+      run_id: run.run_id,
+      reason: 'already_dispatched',
+      state: dispatchSt,
+    });
+    return { skipped: true, reason: 'already_dispatched', prior_state: dispatchSt };
   }
 
   updateOutboundDispatchState(run.run_id, 'in_progress');

@@ -41,7 +41,10 @@ await dispatchOutboundActionsForRun(run, {});
 
 const updated = getExecutionRunById(run.run_id);
 assert.ok(updated.truth_reconciliation?.entries?.length, 'reconciliation entries');
-assert.ok(['completed', 'partial', 'failed'].includes(updated.truth_reconciliation.overall), 'overall');
+assert.ok(
+  ['completed', 'partial', 'failed', 'draft_only', 'observe_only'].includes(updated.truth_reconciliation.overall),
+  'overall',
+);
 const unsat = updated.truth_reconciliation.entries.filter((e) => e.reconciled_status === 'unsatisfied');
 assert.ok(unsat.length === 0, `expected all routes satisfied after dispatch, got: ${JSON.stringify(unsat)}`);
 

@@ -13,6 +13,7 @@ import {
   updateRunReport,
   updateLaneStatus,
 } from './executionRun.js';
+import { deriveExecutionCompletionFromTruthReconciliation } from '../orchestration/truthReconciliation.js';
 
 import {
   dispatchOutboundActionsForRun,
@@ -140,6 +141,11 @@ export function evaluateExecutionRunCompletion(runId) {
   const run = getExecutionRunById(runId);
   if (!run) return null;
 
+  const fromTruth = deriveExecutionCompletionFromTruthReconciliation(run);
+  if (fromTruth) {
+    return fromTruth;
+  }
+
   const completed = [];
   const blocking = [];
   const manualRequired = [];
@@ -188,6 +194,7 @@ export function evaluateExecutionRunCompletion(runId) {
     completed_lanes: completed,
     failed_lanes: failed,
     next_actions: next,
+    completion_source: 'legacy_lane_outbound',
   };
 }
 
@@ -205,6 +212,12 @@ export function detectAndApplyCompletion(runId) {
     updateRunStage(runId, 'deploy_ready');
     updateRunReport(runId, `All ${eval_.completed_lanes.length} lanes completed. Deploy decision required.`);
     logLifecycle('completion_detected', { run_id: runId, overall: 'completed', stage_transition: 'deploy_ready' });
+  } else if (eval_.overall_status === 'draft_only' || eval_.overall_status === 'observe_only') {
+    logLifecycle('completion_detected', {
+      run_id: runId,
+      overall: eval_.overall_status,
+      source: eval_.completion_source || 'unknown',
+    });
   } else if (eval_.overall_status === 'manual_blocked') {
     logLifecycle('completion_detected', { run_id: runId, overall: 'manual_blocked', blocking: eval_.blocking_lanes });
   }
@@ -230,7 +243,10 @@ export function evaluateDeployReadiness(runId) {
   if (!railwayToken) envMissing.push('RAILWAY_TOKEN');
 
   const hasDeployTarget = Boolean(vercelToken || railwayToken || run.deploy_provider);
-  const codeReady = eval_.overall_status === 'completed' || eval_.overall_status === 'partial';
+  const codeReady =
+    eval_.overall_status === 'completed' ||
+    eval_.overall_status === 'partial' ||
+    eval_.overall_status === 'observe_only';
   const deployReadiness = codeReady && hasDeployTarget ? 'ready' : codeReady ? 'manual_required' : 'not_ready';
 
   const manualSteps = [];
