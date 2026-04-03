@@ -2,28 +2,24 @@
 
 ## 원칙
 
-- 창업자-facing 표면은 단일 자연어 채널. 업무/계획 등록 문법, council/responder 용어, command router를 실행 원리로 노출하지 않음.
-- 맥락은 트랜스크립트·프로젝트 메모리·런 상태에서 가져옴.
+- 창업자-facing 표면은 단일 자연어. 업무/계획 등록 문법·council·command router는 실행 원리로 노출하지 않음.
+- 맥락은 **트랜스크립트·스레드 런/스페이스 인테이크**에서만 로드하고, 발화를 워크 오브젝트로 강제 해석하지 않음 (`founderMinimalWorkContext`).
 
-## 런타임 경로 (직접 채팅 ON)
+## 4단계 (vNext.12)
 
-`founderRequestPipeline`에서 `founderRoute`이고 `callText`가 있을 때:
+1. Transcript / thread context 로드 (trace에 `transcript_ready` 등).
+2. 결정론 유틸 — 단, `detectFounderLaunchIntent`가 참이면 유틸에서 빠져 launch gate로 넘김 (`founderDeterministicUtilityResolver.js`).
+3. Launch / scope-lock gate (`maybeHandleFounderLaunchGate`).
+4. 자연어 파트너 (`callText` 있음) 또는 생성 경로 없을 때 짧은 COS 폴백 문구.
 
-1. Launch gate (`maybeHandleFounderLaunchGate`)
-2. 결정론 유틸 (`tryResolveFounderDeterministicUtility`)
-3. 자연어 파트너 (`runFounderNaturalPartnerTurn`)
+## 비창업자
 
-## 비창업자 경로
+`founderRoute === false`인 채널 등에서만 헌법 파이프라인·골드 스펙·워크 오브젝트 분기. 테스트는 `source_type: 'channel'`로 구분.
 
-채널 커맨드·구조화 명령은 operator/admin 경로에서 처리. 창업자 DM과 책임 분리.
+## 금지어
 
-## 금지어 (최종 사용자 텍스트)
+회귀: `scripts/test-vnext12-founder-and-planner.mjs` 계열 — 업무등록, 계획등록, 협의모드, 페르소나, council, command router 등.
 
-회귀: `scripts/test-vnext11-founder-and-planner.mjs` — 업무등록, 계획등록, 협의모드, 페르소나, 참여 페르소나, responder, council, structured command, planner mode, command router.
+## trace 불변식
 
-## 관련 코드
-
-- `app.js`
-- `src/founder/founderDeterministicUtilityResolver.js`
-- `src/core/founderRequestPipeline.js`
-- `src/features/inboundFounderRoutingLock.js`
+`legacy_command_router_used === false` (창업자 응답 `buildResult`).

@@ -2,19 +2,18 @@
 
 ## 인바운드
 
-- **창업자 DM/멘션 (`founderRoute`)**: `runInboundAiRouter` → `founderRequestPipeline` (직접 채팅 ON 시 자연어 단일 경로). **커맨드 라우터 미사용** (`app.js`).
-- **그 외**: `runInboundCommandRouter` 및 구조화 커맨드 경로.
+- **창업자 (`founderRoute`)**: `app.js` → `founderRequestPipeline` 4단계만. **command router 미진입** (`shouldRunCommandRouter = !founderRoute` 아래 분기는 비창업자만).
+- **채널/오퍼레이터**: `founderRequestPipeline` 헌법 경로 또는 `runInboundCommandRouter` → `runInboundAiRouter`.
 
-자세한 계약: [`founder-surface-contract.md`](founder-surface-contract.md).
+자세한 계약: `docs/founder-surface-contract.md`.
 
-## 아웃바운드 실행
+## 아웃바운드
 
-- 진입: `ensureExecutionRunDispatched` → `dispatchOutboundActionsForRun`
-- 계획: `planExecutionRoutesForRun` (`src/orchestration/planExecutionRoutes.js`)
-- 상태: `execution_run.orchestration_plan`
+- `ensureExecutionRunDispatched` → `dispatchOutboundActionsForRun` → 동적 로드 `dispatchPlannedRoutes.js`.
+- 계획: `planExecutionRoutesForRun` / 상태: `orchestration_plan`, `truth_reconciliation`.
 
-자세한 정책: [`orchestration-route-policy.md`](orchestration-route-policy.md).
+`docs/orchestration-route-policy.md` 참고.
 
-## 핸드오프 문서 트리
+## 핸드오프 트리
 
-[`docs/cursor-handoffs/00_Document_Authority_Read_Path.md`](cursor-handoffs/00_Document_Authority_Read_Path.md) — 세션 간 정본 순서.
+`docs/cursor-handoffs/00_Document_Authority_Read_Path.md`

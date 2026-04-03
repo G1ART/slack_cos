@@ -902,7 +902,7 @@ async function handleUserText(userText, metadata = {}) {
       console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
-    /** vNext.11 — 창업자 면은 커맨드 라우터를 타지 않는다(이미 위에서 founder 파이프라인 단일 종료). */
+    /** 비창업자만 structured command router (창업자 면은 위에서 항상 종료). */
     const shouldRunCommandRouter = !founderRoute;
     const routed = shouldRunCommandRouter
       ? await runInboundCommandRouter({

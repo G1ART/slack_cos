@@ -17,3 +17,13 @@ data/exec-handoffs/
 
 # Supabase CLI 로컬 캐시 (db pull 등)
 supabase/.temp/
+
+# COS 실행/디스패치 자동 산출물 (커밋 대상 아님 — pull --rebase 막힘 방지)
+docs/qa-specs/*_RUN-*.md
+docs/research-notes/*_RUN-*.md
+docs/design-specs/*_RUN-*.md
+docs/spec-refine/spec_refine_*_RUN-*.md
+data/deploy-results/run_*.json
+data/supabase-drafts/
+# Supabase draft migrations emitted by local runs (keep hand-authored migrations only)
+supabase/migrations/*_cos_RUN-*.sql

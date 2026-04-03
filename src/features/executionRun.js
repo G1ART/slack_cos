@@ -194,7 +194,20 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     supabase_trace: [],
     artifacts: {
       research_benchmark: { research_note_id: null, research_note_path: null },
-      fullstack_swe: { github_issue_id: null, github_issue_url: null, branch_name: null, pr_id: null, pr_url: null, cursor_handoff_path: null, supabase_schema_draft_path: null },
+      fullstack_swe: {
+        github_issue_id: null,
+        github_issue_url: null,
+        branch_name: null,
+        pr_id: null,
+        pr_url: null,
+        cursor_handoff_path: null,
+        cursor_cloud_run_ref: null,
+        supabase_schema_draft_path: null,
+        supabase_migration_file_path: null,
+        supabase_live_apply_ref: null,
+      },
+      spec_refine: { outline_path: null },
+      deploy_preview: { vercel_packet_path: null, railway_packet_path: null, observe_summary_path: null },
       uiux_design: { ui_spec_delta_path: null, wireframe_note_path: null, component_checklist_path: null },
       qa_qc: { acceptance_checklist_path: null, regression_case_list_path: null, smoke_test_plan_path: null },
     },
@@ -219,6 +232,8 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     latest_report: null,
     /** @type {{ capabilities?: object, route_decisions?: object[], planned_at?: string, provider_truth_ref?: object } | null} */
     orchestration_plan: null,
+    /** @type {{ entries?: object[], overall?: string, evaluated_at?: string } | null} */
+    truth_reconciliation: null,
   };
 
   runsByThread.set(packet.thread_key, run);
@@ -508,6 +523,20 @@ export function setRunOrchestrationPlan(runId, plan) {
       ? { summary: plan.provider_truth_snapshot.summary }
       : null,
   };
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * vNext.12 — Tool-truth reconciliation snapshot (post-dispatch).
+ * @param {string} runId
+ * @param {{ entries: object[], overall: string, evaluated_at?: string }} reconciliation
+ */
+export function setRunTruthReconciliation(runId, reconciliation) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  run.truth_reconciliation = reconciliation;
   run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;

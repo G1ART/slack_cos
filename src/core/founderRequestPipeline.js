@@ -41,10 +41,16 @@ import {
 import {
   openProjectIntakeSession,
   isActiveProjectIntake,
+  getProjectIntakeSession,
   transitionProjectIntakeStage,
   hasOpenExecutionOwnership,
 } from '../features/projectIntakeSession.js';
-import { createExecutionPacket, createExecutionRun } from '../features/executionRun.js';
+import {
+  createExecutionPacket,
+  createExecutionRun,
+  getExecutionRunByThread,
+} from '../features/executionRun.js';
+import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
@@ -86,10 +92,100 @@ const PIPELINE_HANDLED_PHASES = new Set([
   WorkPhase.EXCEPTION,
 ]);
 
-/** `COS_FOUNDER_DIRECT_CHAT=0` 이면 3b 직답 경로 비활성(레거시 패킷·대화 계약 경로로 복귀) */
-function isFounderDirectNaturalChatEnabled() {
-  const v = String(process.env.COS_FOUNDER_DIRECT_CHAT ?? '1').trim().toLowerCase();
-  return v !== '0' && v !== 'false' && v !== 'no' && v !== 'off';
+/**
+ * 창업자 면: structured command 접두는 실행 의미 없음 — 표시용 텍스트만 정리.
+ */
+function stripFounderStructuredCommandPrefixes(t) {
+  return String(t || '')
+    .replace(/^(업무등록|계획등록|조회|결정)\s*[:：]\s*/i, '')
+    .trim();
+}
+
+/**
+ * work object 파서 없이 스레드·인테이크에서만 맥락 로드 (vNext.12 founder brain).
+ */
+function founderMinimalWorkContext(metadata, threadKey) {
+  const run = getExecutionRunByThread(threadKey);
+  const space = getProjectSpaceByThread(threadKey);
+  const intake = getProjectIntakeSession(metadata);
+  return {
+    resolved: Boolean(run || space || intake),
+    primary_type: run ? 'execution_run' : intake ? 'intake_session' : space ? 'project_space' : 'none',
+    project_space: space,
+    run: run || null,
+    intake_session: intake || null,
+    intake_session_id: intake?.session_id ?? intake?.id ?? null,
+    project_id: run?.project_id ?? space?.project_id ?? null,
+    run_id: run?.run_id ?? null,
+    phase_hint: 'discover',
+    confidence: 1,
+  };
+}
+
+/**
+ * 창업자 DM/멘션 전용 4단계: (1) 맥락 로드 (2) 결정론 유틸 (3) launch gate (4) 자연어 파트너.
+ * `COS_FOUNDER_DIRECT_CHAT=0` 은 창업자 면에서 무시 — operator 레거시는 `founderRoute === false` 경로만 사용.
+ */
+async function founderDirectInboundFourStep(brainText, metadata, route_label, threadKey, callText) {
+  const transcriptExcerpt = getConversationTranscript(threadKey);
+  const transcript_ready = Boolean(transcriptExcerpt && String(transcriptExcerpt).trim().length > 0);
+
+  const du = tryResolveFounderDeterministicUtility({ normalized: brainText, threadKey, metadata });
+  if (du.handled) {
+    const r = handleFounderDeterministicUtility(brainText, metadata, route_label, threadKey, du);
+    return {
+      ...r,
+      trace: { ...r.trace, founder_four_step: true, founder_step: 'deterministic_utility', transcript_ready },
+    };
+  }
+
+  const launchHandled = await maybeHandleFounderLaunchGate(brainText, metadata, route_label, threadKey);
+  if (launchHandled) {
+    return {
+      ...launchHandled,
+      trace: {
+        ...launchHandled.trace,
+        founder_four_step: true,
+        founder_step: 'launch_gate',
+        transcript_ready,
+      },
+    };
+  }
+
+  if (typeof callText === 'function') {
+    const r = await runFounderNaturalPartnerTurn(brainText, metadata, route_label, callText, threadKey);
+    return {
+      ...r,
+      trace: { ...r.trace, founder_four_step: true, founder_step: 'natural_partner', transcript_ready },
+    };
+  }
+
+  const workContext = founderMinimalWorkContext(metadata, threadKey);
+  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_no_llm_fallback', confidence: 1 };
+  const intentResult = {
+    intent: FounderIntent.UNKNOWN_EXPLORATORY,
+    confidence: 0,
+    signals: ['founder_no_call_text'],
+  };
+  const policy = evaluatePolicy({
+    actor: Actor.FOUNDER,
+    work_object_type: workContext.primary_type,
+    work_phase: phaseProbe.phase,
+    intent_signal: intentResult.intent,
+    metadata,
+  });
+  const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, {
+    text: '[COS] 이 프로세스에서는 생성형 응답 경로가 꺼져 있어, 실행 상태나 연결 정보가 필요하면 같은 스레드에서 평문으로만 짧게 물어봐 주세요.',
+  });
+  const r = buildResult(
+    rendered,
+    { workContext, phaseResult: phaseProbe, intentResult, policy, route_label },
+    { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true, founder_no_call_text: true },
+  );
+  return {
+    ...r,
+    trace: { ...r.trace, founder_four_step: true, founder_step: 'no_llm_fallback', transcript_ready },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -225,8 +321,8 @@ async function executeDeploy(normalized, metadata, workContext) {
  * (테스트·가드 경로는 `callText` 없음 또는 `COS_FOUNDER_DIRECT_CHAT=0` 일 때만 아래 헌법 파이프라인으로 내려감)
  */
 function handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du) {
-  const workContext = resolveWorkObject(normalized, metadata);
-  const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
+  const workContext = founderMinimalWorkContext(metadata, threadKey);
+  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_deterministic_utility', confidence: 1 };
   const intentResult = {
     intent: FounderIntent.RUNTIME_META,
     confidence: 1,
@@ -254,8 +350,8 @@ function handleFounderDeterministicUtility(normalized, metadata, route_label, th
 }
 
 async function runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey) {
-  const workContext = resolveWorkObject(normalized, metadata);
-  const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
+  const workContext = founderMinimalWorkContext(metadata, threadKey);
+  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_natural_partner', confidence: 1 };
   const intentResult = {
     intent: FounderIntent.UNKNOWN_EXPLORATORY,
     confidence: 0,
@@ -375,21 +471,12 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     };
   }
 
-  if (
-    founderRoute &&
-    isFounderDirectNaturalChatEnabled() &&
-    typeof callText === 'function'
-  ) {
-    const launchHandled = await maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey);
-    if (launchHandled) return launchHandled;
-    const du = tryResolveFounderDeterministicUtility({ normalized, threadKey, metadata });
-    if (du.handled) {
-      return handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du);
-    }
-    return await runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey);
+  if (founderRoute) {
+    const brainText = stripFounderStructuredCommandPrefixes(normalized);
+    return founderDirectInboundFourStep(brainText, metadata, route_label, threadKey, callText);
   }
 
-  // 1. Work Object Resolver — "which project/run/session does this turn belong to?"
+  // 1. Work Object Resolver — operator/channel 경로만 (창업자 면은 위에서 종료)
   let gold = classifyGoldContract(normalized, metadata);
   let workContext = resolveWorkObject(normalized, metadata);
 
@@ -853,6 +940,7 @@ function buildResult(rendered, { workContext, phaseResult, intentResult, policy,
       passed_pipeline: true,
       passed_renderer: true,
       legacy_router_used: false,
+      legacy_command_router_used: false,
       ...restTraceExtras,
     },
   };

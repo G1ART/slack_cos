@@ -26,8 +26,9 @@ function mustIncludeAll(text, list, label) {
   }
 }
 
+/** 채널(operator) 경로 — 창업자 DM 4단계와 분리된 헌법 대화 골드 스펙 */
 const meta = {
-  source_type: 'direct_message',
+  source_type: 'channel',
   channel: 'C_TEST_GOLD',
   thread_ts: '1700000000.200001',
   user: 'U_FOUNDER',

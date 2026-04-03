@@ -6,6 +6,7 @@ import { getBuildInfo } from '../runtime/buildInfo.js';
 import {
   looksLikeRuntimeShaQuery,
   classifyFounderOperationalProbe,
+  classifyFounderRoutingLock,
 } from '../features/inboundFounderRoutingLock.js';
 import {
   buildProviderTruthSnapshot,
@@ -13,6 +14,7 @@ import {
 } from '../core/providerTruthSnapshot.js';
 import { getExecutionRunByThread } from '../features/executionRun.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
+import { detectFounderLaunchIntent } from '../core/founderLaunchIntent.js';
 
 /**
  * @param {string} t
@@ -42,8 +44,9 @@ function wantsAllProviders(t) {
 function formatRuntimeCosVoice() {
   const b = getBuildInfo();
   return [
+    '*[G1 COS Runtime]*',
     '지금 이 프로세스에서 보이는 코드 스탬프는 이렇게 정리됩니다.',
-    `- 전체 SHA는 \`${b.release_sha}\`, 짧게는 \`${b.release_sha_short}\`입니다.`,
+    `- release_sha 전체값은 \`${b.release_sha}\`, 짧게는 \`${b.release_sha_short}\`입니다.`,
     `- 브랜치는 \`${b.branch}\`, 부팅 시각은 ${b.started_at}, 실행 모드는 \`${b.runtime_mode}\`입니다.`,
     '배포 플랫폼에 올라가 있으면 이미지에 박힌 SHA가 우선일 수 있습니다.',
   ].join('\n');
@@ -150,9 +153,22 @@ export function tryResolveFounderDeterministicUtility({ normalized, threadKey, m
   const t = String(normalized || '').trim();
   if (!t) return { handled: false };
 
+  try {
+    if (detectFounderLaunchIntent(t, _metadata, threadKey).detected) {
+      return { handled: false };
+    }
+  } catch {
+    /* launch probe must never block utility path */
+  }
+
   const run = getExecutionRunByThread(threadKey) || null;
   const space = getProjectSpaceByThread(threadKey) || null;
   const snap = buildProviderTruthSnapshot({ space, run });
+
+  const routeLock = classifyFounderRoutingLock(t);
+  if (routeLock?.kind === 'version') {
+    return { handled: true, kind: 'runtime_stamp', text: formatRuntimeCosVoice() };
+  }
 
   if (looksLikeRuntimeShaQuery(t)) {
     return { handled: true, kind: 'runtime_stamp', text: formatRuntimeCosVoice() };

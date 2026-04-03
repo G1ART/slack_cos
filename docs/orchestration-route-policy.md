@@ -1,40 +1,30 @@
-# Orchestration route policy (vNext.11)
+# Orchestration route policy (vNext.12)
 
-## 목표
+## Planner = law
 
-정적 “전 레인 항상 발사” 대신, **런 텍스트에서 뽑은 capability**와 **provider truth 스냅샷**으로 디스패치 후보를 계산한다.
+- `planExecutionRoutesForRun` → `route_decisions[]`에 `owning_agent`, `execution_mode`, `truth_source`, `expected_refs`, `success_condition`, `fallback_rule` 등을 둠 (`planExecutionRoutes.js` + `cosCapabilityCatalog.js` 계약).
+- **Executor**는 `dispatchPlannedRoutes`만 호출해 결정된 (capability, provider) 쌍을 실행.
 
-## Capability taxonomy
+## Capability 추출
 
-`src/orchestration/runCapabilityExtractor.js`가 `project_goal`, `locked_mvp_summary`, includes/excludes에서 신호를 읽는다:
+`runCapabilityExtractor.js`: `fullstack_code`는 코드/DB/배포 표면이 있을 때만 (순수 UI 카피·리서치-only는 GitHub 미발사). `qa_validation`은 코드·DB·UI·배포 중 하나일 때만.
 
-- `research` — 벤치/시장/경쟁사 등
-- `fullstack_code` — 구현·코드·MVP 등 (research-only가 아닐 때)
-- `db_schema` — Supabase/스키마/마이그레이션 등
-- `uiux_design` — UI/UX/화면/인터랙션 등
-- `deploy_preview` — 배포/프리뷰/Vercel/Railway 등 (trace; 실행 단계는 확장 여지)
-- `qa_validation` — 코드/DB/UI/배포 표면이 있을 때 자동 포함
+## Deploy
 
-## Provider truth → 적격성
+- Provider truth에서 Vercel/Railway `live`면 해당 패킷 JSON 기록.
+- 아니면 `observe_only` 결정 + bootstrap 요약 JSON.
 
-`src/orchestration/planExecutionRoutes.js`가 `buildProviderTruthSnapshot` 결과로 `route_decisions[]`를 만든다:
+## Truth reconciliation
 
-- **GitHub**: `live` 선호, 그 외 draft/manual_bridge 시 `fallback_used`
-- **Cursor**: `live` → 라이브 산출; `manual_bridge` / `unavailable` → handoff·스킵 경로
-- **Supabase**: `live` → apply 후보; `draft_only` / `not_configured` → 드래프트만
+- `truthReconciliation.js`가 각 `route_decision`에 대해 `artifacts`·trace를 검사해 `satisfied` / `unsatisfied`.
+- 결과는 `execution_run.truth_reconciliation`에 저장 (dispatch 로그 포함).
 
-각 결정에 `capability`, `selected_agent`, `selected_provider`, `preconditions_passed`, `fallback_used`, `rationale`, `produced_artifacts`를 둔다.
+## 레거시
 
-## 실행 계층
+- `planOutboundActionsForRun`: route_decisions의 어댑터(호환용).
+- `dispatchWorkstream('fullstack_swe')`: 플랜에서 `fullstack_code`·`db_schema` 결정만 필터해 디스패치 (Supabase 무조건 묶기 제거).
 
-- **Planner**: `planExecutionRoutesForRun` + `extractRunCapabilities`
-- **Executor**: `dispatchOutboundActionsForRun` — planner가 켠 capability에 대응하는 레인만 `generateResearchArtifact` / `generateUiuxArtifacts` / `generateQaArtifacts` / GitHub·Cursor·Supabase 호출
+## 에이전트·툴 계약
 
-## 카탈로그
-
-`src/orchestration/cosCapabilityCatalog.js` — capability ↔ agent ↔ provider 매핑(설명·확장용; 판정 정본은 extractor + planExecutionRoutes).
-
-## 남은 리스크
-
-- `deploy_preview`에 대한 실제 Vercel/Railway 아웃바운드는 어댑터 연결 시점에 맞춰 executor에 편입 필요.
-- `dispatchWorkstream`은 레거시로 fullstack_swe 시 supabase까지 묶일 수 있음 — 전체 런 디스패치는 `dispatchOutboundActionsForRun`을 정본으로 둔다.
+- `src/orchestration/agentContracts.js` — 역할 경계.
+- `src/orchestration/toolActuatorContracts.js` — 툴별 기대 truth 필드.

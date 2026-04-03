@@ -1,5 +1,5 @@
 /**
- * vNext.11 — Derive execution capabilities from locked run text (not static lanes).
+ * vNext.12 — Derive execution capabilities from locked run text (planner input).
  */
 
 const DB_PATTERNS = [
@@ -43,13 +43,16 @@ export function extractRunCapabilities(run) {
   const hasIncludes = Array.isArray(run?.includes) && run.includes.length > 0;
 
   const research_only =
-    research_signals && !codeSignals && !hasIncludes && !db_schema && !uiux;
+    research_signals && !codeSignals && !hasIncludes && !db_schema && !uiux && !deploy_preview;
 
-  const fullstack_code = !research_only;
-  const spec_refine = has(/스펙|요구사항|정의|범위\s*잠금|scope|IA|정보\s*구조/i);
+  /** GitHub/Cursor 경로: 코드·앱·배포 실행 표면이 있을 때만 (연구-only·문서-only 제외) */
+  const fullstack_code =
+    !research_only && (codeSignals || deploy_preview || db_schema);
 
-  const qa_validation =
-    !research_only && (fullstack_code || db_schema || uiux || deploy_preview);
+  const spec_refine = has(/스펙|요구사항|정의|범위\s*잠금|scope|IA|정보\s*구조|북극성|로드맵/i);
+
+  /** QA: 코드/DB/UI/배포 표면이 하나라도 있을 때만 (순수 리서치-only 제외) */
+  const qa_validation = !research_only && (codeSignals || db_schema || uiux || deploy_preview);
 
   return {
     research: research_signals,

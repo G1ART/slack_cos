@@ -20,6 +20,7 @@ import {
   appendSupabaseTrace,
   updateOutboundDispatchState,
   setRunOrchestrationPlan,
+  setRunTruthReconciliation,
 } from './executionRun.js';
 import { planExecutionRoutesForRun } from '../orchestration/planExecutionRoutes.js';
 import { extractRunCapabilities } from '../orchestration/runCapabilityExtractor.js';
@@ -36,6 +37,16 @@ import {
   diagnoseSupabaseExecutionContext,
   trySupabaseLiveDispatch,
 } from '../adapters/supabaseExecutionAdapter.js';
+import {
+  buildVercelDeployPacket,
+  buildVercelBootstrapDraft,
+} from '../adapters/vercelAdapter.js';
+import {
+  buildRailwayDeployPacket,
+  buildRailwayBootstrapDraft,
+} from '../adapters/railwayAdapter.js';
+import { getProjectSpaceByThread } from './projectSpaceRegistry.js';
+import { reconcileRunTruthAfterDispatch } from '../orchestration/truthReconciliation.js';
 
 /* ------------------------------------------------------------------ */
 /*  Outbound event logger                                              */
@@ -901,6 +912,100 @@ export async function generateQaArtifacts(run) {
   }
 }
 
+/**
+ * vNext.12 — Spec / IA / north-star outline (internal artifact only).
+ */
+export async function generateSpecRefineArtifact(run) {
+  const slug = slugify(run.originating_task_kind || run.project_goal || 'spec');
+  const rid = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const relPath = `docs/spec-refine/spec_refine_${slug}_${rid}.md`;
+  const absPath = path.resolve(process.cwd(), relPath);
+  try {
+    const body = [
+      `# Spec / scope outline — ${run.run_id}`,
+      '',
+      `**Generated**: ${new Date().toISOString()}`,
+      '',
+      '## Goal',
+      run.project_goal || '(not set)',
+      '',
+      '## Locked scope',
+      run.locked_mvp_summary || '(not set)',
+      '',
+      '## Includes',
+      ...(run.includes || []).map((x) => `- ${x}`),
+      '',
+      '## Excludes / deferred',
+      ...(run.excludes || []).map((x) => `- ${x}`),
+      ...(run.deferred_items || []).map((x) => `- (deferred) ${x}`),
+      '',
+      '## IA / risks (fill with COS)',
+      '',
+      '- (structure)',
+      '- (open questions)',
+      '',
+      '---',
+      `_Auto-generated for \`${run.run_id}\`_`,
+    ].join('\n');
+    await fs.mkdir(path.dirname(absPath), { recursive: true });
+    await fs.writeFile(absPath, body, 'utf8');
+    attachRunArtifact(run.run_id, 'spec_refine', { outline_path: relPath });
+    logOutbound('artifact_attached', { run_id: run.run_id, lane_type: 'spec_refine', artifact: 'spec_outline' });
+    return { mode: 'created', path: relPath };
+  } catch (err) {
+    return { mode: 'error', error_summary: String(err?.message || err).slice(0, 200) };
+  }
+}
+
+/**
+ * @param {object} run
+ * @param {object|null} space
+ * @param {{ selected_provider: string }} decision
+ */
+export async function executeDeployPreviewActuator(run, space, decision) {
+  const rid = run.run_id.replace(/[^a-zA-Z0-9-]/g, '');
+  const baseDir = path.resolve(process.cwd(), 'data/deploy-results');
+  await fs.mkdir(baseDir, { recursive: true });
+
+  try {
+    if (decision.selected_provider === 'vercel') {
+      const pkt = buildVercelDeployPacket(space || {}, run);
+      const relPath = `data/deploy-results/run_${rid}_vercel.json`;
+      await fs.writeFile(path.join(process.cwd(), relPath), JSON.stringify(pkt, null, 2), 'utf8');
+      attachRunArtifact(run.run_id, 'deploy_preview', { vercel_packet_path: relPath });
+      logOutbound('deploy_preview_actuator', { run_id: run.run_id, provider: 'vercel', path: relPath });
+      return { mode: 'created', path: relPath };
+    }
+    if (decision.selected_provider === 'railway') {
+      const pkt = buildRailwayDeployPacket(space || {}, run);
+      const relPath = `data/deploy-results/run_${rid}_railway.json`;
+      await fs.writeFile(path.join(process.cwd(), relPath), JSON.stringify(pkt, null, 2), 'utf8');
+      attachRunArtifact(run.run_id, 'deploy_preview', { railway_packet_path: relPath });
+      logOutbound('deploy_preview_actuator', { run_id: run.run_id, provider: 'railway', path: relPath });
+      return { mode: 'created', path: relPath };
+    }
+    if (decision.selected_provider === 'observe_only') {
+      const summary = {
+        kind: 'deploy_observe_only',
+        run_id: run.run_id,
+        vercel_bootstrap: buildVercelBootstrapDraft(space || {}),
+        railway_bootstrap: buildRailwayBootstrapDraft(space || {}),
+        generated_at: new Date().toISOString(),
+      };
+      const relPath = `data/deploy-results/run_${rid}_deploy_observe.json`;
+      await fs.writeFile(path.join(process.cwd(), relPath), JSON.stringify(summary, null, 2), 'utf8');
+      attachRunArtifact(run.run_id, 'deploy_preview', {
+        observe_summary_path: relPath,
+      });
+      logOutbound('deploy_preview_actuator', { run_id: run.run_id, provider: 'observe_only', path: relPath });
+      return { mode: 'created', path: relPath };
+    }
+    return { mode: 'skipped', reason: 'unknown_deploy_provider' };
+  } catch (err) {
+    return { mode: 'error', error_summary: String(err?.message || err).slice(0, 200) };
+  }
+}
+
 // Keep backward-compat aliases
 export const seedResearchArtifact = generateResearchArtifact;
 export const seedUiuxArtifacts = generateUiuxArtifacts;
@@ -911,54 +1016,38 @@ export const seedQaArtifacts = generateQaArtifacts;
 /* ------------------------------------------------------------------ */
 
 /**
- * Plan outbound actions for all lanes in a run (capability-routed).
- * @param {object} run
- * @param {object|null} [space]
- * @returns {{ lane_type: string, provider: string, action: string, capability?: string }[]}
+ * Planner-derived outbound plan (vNext.12 — mirrors route_decisions; tests / UX helpers).
+ * @deprecated Prefer `planExecutionRoutesForRun` + `route_decisions` for execution authority.
  */
 export function planOutboundActionsForRun(run, space = null) {
-  const { capabilities } = planExecutionRoutesForRun(run, space);
-  /** @type {{ lane_type: string, provider: string, action: string, capability?: string }[]} */
-  const plan = [];
-  if (capabilities.research) {
-    plan.push({ lane_type: 'research_benchmark', provider: 'internal', action: 'seed_research_note', capability: 'research' });
-  }
-  if (capabilities.fullstack_code) {
-    plan.push({
-      lane_type: 'fullstack_swe',
-      provider: 'github',
-      action: isGithubAuthConfigured() ? 'create_issue_live' : 'create_issue_draft',
-      capability: 'fullstack_code',
-    });
-    plan.push({
-      lane_type: 'fullstack_swe',
-      provider: 'cursor',
-      action: 'cursor_cloud_launch_or_handoff',
-      capability: 'fullstack_code',
-    });
-  }
-  if (capabilities.db_schema) {
-    plan.push({
-      lane_type: 'fullstack_swe',
-      provider: 'supabase',
-      action: 'schema_draft_migration_stub_or_live_dispatch',
-      capability: 'db_schema',
-    });
-  }
-  if (capabilities.uiux_design) {
-    plan.push({ lane_type: 'uiux_design', provider: 'internal', action: 'seed_uiux_artifacts', capability: 'uiux_design' });
-  }
-  if (capabilities.qa_validation) {
-    plan.push({ lane_type: 'qa_qc', provider: 'internal', action: 'seed_qa_artifacts', capability: 'qa_validation' });
-  }
-  return plan;
+  const plan = planExecutionRoutesForRun(run, space);
+  const mapProv = (p) => {
+    if (p === 'cursor_cloud') return 'cursor';
+    if (p === 'supabase_dispatch') return 'supabase';
+    if (p === 'internal_artifact') return 'internal';
+    return p;
+  };
+  const lane = (d) => {
+    if (d.capability === 'research') return 'research_benchmark';
+    if (d.capability === 'uiux_design') return 'uiux_design';
+    if (d.capability === 'qa_validation') return 'qa_qc';
+    if (d.capability === 'spec_refine') return 'spec_refine';
+    if (d.capability === 'deploy_preview') return 'deploy_preview';
+    return 'fullstack_swe';
+  };
+  return plan.route_decisions.map((d) => ({
+    lane_type: lane(d),
+    provider: mapProv(d.selected_provider),
+    action: d.capability,
+    capability: d.capability,
+  }));
 }
 
 /**
- * Dispatch all outbound actions for a run.
+ * Dispatch all outbound actions for a run — **only** planned route_decisions (vNext.12).
  * @param {object} run
  * @param {Record<string, unknown>} metadata
- * @returns {Promise<{ github: object, cursor: object, supabase: object, research: object, uiux: object, qa: object }>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 export async function dispatchOutboundActionsForRun(run, metadata = {}) {
   if (run.outbound_dispatch_state === 'completed') {
@@ -967,57 +1056,27 @@ export async function dispatchOutboundActionsForRun(run, metadata = {}) {
   }
 
   updateOutboundDispatchState(run.run_id, 'in_progress');
-  const space = null;
+  const space = getProjectSpaceByThread(run.owner_thread_key) || null;
   const orchestrationPlan = planExecutionRoutesForRun(run, space);
   setRunOrchestrationPlan(run.run_id, {
     ...orchestrationPlan,
     planned_at: new Date().toISOString(),
   });
 
-  const caps = orchestrationPlan.capabilities;
-  const results = {};
-  let anyFailed = false;
+  const { dispatchPlannedRoutes } = await import('../orchestration/dispatchPlannedRoutes.js');
+  const { results, dispatch_log, anyFailed } = await dispatchPlannedRoutes(
+    run,
+    orchestrationPlan,
+    space,
+    metadata,
+  );
 
-  if (caps.research) {
-    results.research = await generateResearchArtifact(run);
-    if (results.research.mode === 'error') anyFailed = true;
-  } else {
-    results.research = { mode: 'skipped', reason: 'planner_capability_off' };
-  }
+  const recon = reconcileRunTruthAfterDispatch(run.run_id, orchestrationPlan);
+  setRunTruthReconciliation(run.run_id, { ...recon, dispatch_log });
 
-  if (caps.uiux_design) {
-    results.uiux = await generateUiuxArtifacts(run);
-    if (results.uiux.mode === 'error') anyFailed = true;
-  } else {
-    results.uiux = { mode: 'skipped', reason: 'planner_capability_off' };
-  }
-
-  if (caps.qa_validation) {
-    results.qa = await generateQaArtifacts(run);
-    if (results.qa.mode === 'error') anyFailed = true;
-  } else {
-    results.qa = { mode: 'skipped', reason: 'planner_capability_off' };
-  }
-
-  if (caps.fullstack_code) {
-    results.github = await ensureGithubIssueForRun(run, metadata);
-    if (results.github.mode === 'error') anyFailed = true;
-
-    results.cursor = await ensureCursorOutboundForRun(run, metadata);
-    if (results.cursor.mode === 'error') anyFailed = true;
-  } else {
-    results.github = { mode: 'skipped', reason: 'planner_capability_off' };
-    results.cursor = { mode: 'skipped', reason: 'planner_capability_off' };
-  }
-
-  if (caps.db_schema) {
-    results.supabase = await tryEnsureSupabaseLiveOrDraftForRun(run);
-    if (results.supabase.mode === 'error') anyFailed = true;
-  } else {
-    results.supabase = { mode: 'skipped', reason: 'planner_capability_off' };
-  }
-
-  updateOutboundDispatchState(run.run_id, anyFailed ? 'partial' : 'completed');
+  const dispatchState =
+    anyFailed ? 'partial' : recon.overall === 'completed' ? 'completed' : 'partial';
+  updateOutboundDispatchState(run.run_id, dispatchState);
   return results;
 }
 
@@ -1032,10 +1091,21 @@ export async function dispatchWorkstream(run, laneType, metadata = {}) {
     case 'research_benchmark':
       return seedResearchArtifact(run);
     case 'fullstack_swe': {
-      const gh = await ensureGithubIssueForRun(run, metadata);
-      const cursor = await ensureCursorOutboundForRun(run, metadata);
-      const supa = await tryEnsureSupabaseLiveOrDraftForRun(run);
-      return { github: gh, cursor, supabase: supa };
+      const space = getProjectSpaceByThread(run.owner_thread_key) || null;
+      const fullPlan = planExecutionRoutesForRun(run, space);
+      const filteredPlan = {
+        ...fullPlan,
+        route_decisions: fullPlan.route_decisions.filter(
+          (d) => d.capability === 'fullstack_code' || d.capability === 'db_schema',
+        ),
+      };
+      const { dispatchPlannedRoutes } = await import('../orchestration/dispatchPlannedRoutes.js');
+      const { results } = await dispatchPlannedRoutes(run, filteredPlan, space, metadata);
+      return {
+        github: results.github,
+        cursor: results.cursor,
+        supabase: results.supabase,
+      };
     }
     case 'uiux_design':
       return seedUiuxArtifacts(run);
