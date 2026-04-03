@@ -166,7 +166,12 @@ try {
     updateLaneOutbound(run.run_id, ws.lane_type, { status: 'completed' });
   }
   const eval2 = evaluateExecutionRunCompletion(run.run_id);
-  assert.equal(eval2.overall_status, 'completed', 'legacy lanes all completed → completed');
+  assert.equal(eval2.completion_source, 'truth_reconciliation');
+  assert.equal(
+    eval2.overall_status,
+    'pending',
+    'vNext.13: lane outbound alone does not complete — truth_reconciliation only',
+  );
   ok('completion detection');
 } catch (e) { fail('completion detection', e); }
 

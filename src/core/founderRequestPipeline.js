@@ -57,6 +57,12 @@ import { buildSlackThreadKey, getConversationTranscript } from '../features/slac
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
 import { ensureExecutionRunDispatched, evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { synthesizeFounderContext } from '../founder/founderContextSynthesizer.js';
+import {
+  buildProposalFromFounderInput,
+  formatFullFounderProposalSurface,
+} from '../founder/founderProposalKernel.js';
+import { selectExecutionModeFromProposalPacket } from '../founder/executionModeFromProposalPacket.js';
 /**
  * Founder direct natural 경로 직전 launch gate (LLM 이전, 결정론).
  * 구현 본문: `founderLaunchGate.js` → `detectFounderLaunchIntent` · `buildProviderTruthSnapshot` ·
@@ -153,39 +159,10 @@ async function founderDirectInboundFourStep(brainText, metadata, route_label, th
     };
   }
 
-  if (typeof callText === 'function') {
-    const r = await runFounderNaturalPartnerTurn(brainText, metadata, route_label, callText, threadKey);
-    return {
-      ...r,
-      trace: { ...r.trace, founder_four_step: true, founder_step: 'natural_partner', transcript_ready },
-    };
-  }
-
-  const workContext = founderMinimalWorkContext(metadata, threadKey);
-  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_no_llm_fallback', confidence: 1 };
-  const intentResult = {
-    intent: FounderIntent.UNKNOWN_EXPLORATORY,
-    confidence: 0,
-    signals: ['founder_no_call_text'],
-  };
-  const policy = evaluatePolicy({
-    actor: Actor.FOUNDER,
-    work_object_type: workContext.primary_type,
-    work_phase: phaseProbe.phase,
-    intent_signal: intentResult.intent,
-    metadata,
-  });
-  const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, {
-    text: '[COS] 이 프로세스에서는 생성형 응답 경로가 꺼져 있어, 실행 상태나 연결 정보가 필요하면 같은 스레드에서 평문으로만 짧게 물어봐 주세요.',
-  });
-  const r = buildResult(
-    rendered,
-    { workContext, phaseResult: phaseProbe, intentResult, policy, route_label },
-    { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true, founder_no_call_text: true },
-  );
+  const r = await runFounderProposalKernelTurn(brainText, metadata, route_label, callText, threadKey);
   return {
     ...r,
-    trace: { ...r.trace, founder_four_step: true, founder_step: 'no_llm_fallback', transcript_ready },
+    trace: { ...r.trace, founder_four_step: true, founder_step: 'proposal_kernel', transcript_ready },
   };
 }
 
@@ -368,74 +345,89 @@ function handleFounderDeterministicUtility(normalized, metadata, route_label, th
       policy,
       route_label,
     },
-    { surface_type: FounderSurfaceType.RUNTIME_META, founder_deterministic_utility: du.kind },
+    {
+      surface_type: FounderSurfaceType.RUNTIME_META,
+      founder_deterministic_utility: du.kind,
+      founder_classifier_used: false,
+      founder_keyword_route_used: false,
+    },
   );
 }
 
-async function runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey) {
+/**
+ * vNext.13 — 제안 패킷이 창업자 표면의 기본; LLM은 동일 턴에서 선택적 보강만.
+ */
+async function runFounderProposalKernelTurn(normalized, metadata, route_label, callText, threadKey) {
   const workContext = founderMinimalWorkContext(metadata, threadKey);
-  const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_natural_partner', confidence: 1 };
-  const intentResult = {
-    intent: FounderIntent.UNKNOWN_EXPLORATORY,
-    confidence: 0,
-    signals: ['founder_natural_only'],
-  };
-  const policyChat = evaluatePolicy({
+  const contextFrame = synthesizeFounderContext({ threadKey, metadata });
+  const proposal = buildProposalFromFounderInput({ rawText: normalized, contextFrame });
+  const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
+  let body = formatFullFounderProposalSurface(proposal);
+  let partner_output_sanitized = false;
+
+  if (typeof callText === 'function') {
+    try {
+      const priorTranscript = getConversationTranscript(threadKey);
+      const generated = await runCosNaturalPartner({
+        callText,
+        userText: normalized,
+        channelContext: null,
+        route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+        priorTranscript,
+      });
+      const rawPlain = String(generated || '').trim();
+      const { text: plain, stripped_to_empty: partnerCouncilShapeStripped } = rawPlain
+        ? sanitizePartnerNaturalLlmOutput(rawPlain)
+        : { text: '', stripped_to_empty: false };
+      partner_output_sanitized = plain !== rawPlain || partnerCouncilShapeStripped;
+      if (plain) {
+        body += `\n\n—\n*대화형 보강*\n${plain}`;
+      }
+    } catch (e) {
+      console.error('[FOUNDER_PROPOSAL_KERNEL_PARTNER]', e?.message || e);
+    }
+  }
+
+  evaluatePolicy({
     actor: Actor.FOUNDER,
     work_object_type: workContext.primary_type,
-    work_phase: phaseProbe.phase,
-    intent_signal: intentResult.intent,
+    work_phase: WorkPhase.DISCOVER,
+    intent_signal: 'proposal_kernel',
     metadata,
   });
-  try {
-    const priorTranscript = getConversationTranscript(threadKey);
-    const generated = await runCosNaturalPartner({
-      callText,
-      userText: normalized,
-      channelContext: null,
-      route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
-      priorTranscript,
-    });
-    const rawPlain = String(generated || '').trim();
-    /** Council 메모 포맷 흉내 제거(LLM은 Council을 호출하지 않아도 형식만 복제할 수 있음). */
-    const { text: plain, stripped_to_empty: partnerCouncilShapeStripped } = rawPlain
-      ? sanitizePartnerNaturalLlmOutput(rawPlain)
-      : { text: '', stripped_to_empty: false };
-    if (plain) {
-      const rendered = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, { text: plain });
-      return buildResult(
-        rendered,
-        {
-          workContext,
-          phaseResult: { ...phaseProbe, phase_source: 'founder_natural_only_surface' },
-          intentResult,
-          policy: policyChat,
-          route_label,
-        },
-        {
-          surface_type: FounderSurfaceType.PARTNER_NATURAL,
-          partner_natural: true,
-          partner_output_sanitized: plain !== rawPlain || partnerCouncilShapeStripped,
-        },
-      );
-    }
-  } catch (e) {
-    console.error('[FOUNDER_NATURAL_ONLY]', e?.message || e);
-  }
-  const fallback = renderFounderSurface(FounderSurfaceType.PARTNER_NATURAL, {
-    text: '[COS] 지금은 응답을 생성하지 못했습니다. 잠시 후 다시 보내 주세요.',
-  });
-  return buildResult(
-    fallback,
-    {
-      workContext,
-      phaseResult: { ...phaseProbe, phase_source: 'founder_natural_only_error' },
-      intentResult,
-      policy: policyChat,
-      route_label,
+
+  const rendered = renderFounderSurface(FounderSurfaceType.PROPOSAL_PACKET, { text: body });
+  return {
+    text: rendered.text,
+    blocks: rendered.blocks,
+    surface_type: FounderSurfaceType.PROPOSAL_PACKET,
+    trace: {
+      work_object: {
+        type: workContext.primary_type,
+        id: workContext.run_id || workContext.project_id || null,
+      },
+      work_phase: 'proposal_synthesis',
+      phase_source: 'founder_proposal_kernel',
+      surface_type: FounderSurfaceType.PROPOSAL_PACKET,
+      route_label: route_label || null,
+      responder_kind: 'founder_kernel',
+      pipeline_version: 'vNext.13',
+      responder: 'founder_kernel',
+      passed_pipeline: true,
+      passed_renderer: true,
+      legacy_router_used: false,
+      legacy_command_router_used: false,
+      legacy_ai_router_used: false,
+      founder_classifier_used: false,
+      founder_keyword_route_used: false,
+      founder_proposal_kernel: true,
+      execution_mode_selected,
+      partner_natural: typeof callText === 'function',
+      partner_output_sanitized,
+      approval_required: proposal.approval_required === true,
+      intake_session_id: workContext.intake_session_id ?? null,
     },
-    { surface_type: FounderSurfaceType.PARTNER_NATURAL, partner_natural: true },
-  );
+  };
 }
 
 // ---------------------------------------------------------------------------

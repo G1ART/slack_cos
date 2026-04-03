@@ -43,7 +43,7 @@ console.log('=== Golden Path Full-Cycle MVP Tests ===\n');
 /* ================================================================== */
 try {
   const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, renderProjectSpaceStatusForSlack, _resetForTest: resetSpaces } = await import('../src/features/projectSpaceRegistry.js');
-  const { createExecutionPacket, createExecutionRun, updateRunStage, updateRunDeployStatus, getExecutionRunById, DEPLOY_STATUS_VALUES, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { createExecutionPacket, createExecutionRun, updateRunStage, updateRunDeployStatus, getExecutionRunById, setRunTruthReconciliation, DEPLOY_STATUS_VALUES, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
   const { evaluateExecutionRunCompletion, detectAndApplyCompletion, evaluateDeployReadiness, buildUnifiedDeployPacket } = await import('../src/features/executionDispatchLifecycle.js');
   const { renderPMCockpitPacket, renderApprovalPacket, renderDeployPacket, renderOneLineStatus, renderEscalationPacket, deriveGithubExecutionTruth, renderExecutionStatusPacket } = await import('../src/features/executionSpineRouter.js');
   const { buildVercelDeployPacket } = await import('../src/adapters/vercelAdapter.js');
@@ -121,6 +121,20 @@ try {
     ws.outbound.outbound_status = 'completed';
     ws.outbound.outbound_provider = 'github';
   }
+
+  setRunTruthReconciliation(run.run_id, {
+    entries: [
+      {
+        route_key: 'research',
+        attempted_action: 'research/internal_artifact',
+        reconciled_status: 'satisfied',
+        reconciliation_notes: '',
+        observed_tool_refs: { research_note_path: 'data/research-note.md' },
+      },
+    ],
+    overall: 'completed',
+    evaluated_at: new Date().toISOString(),
+  });
 
   // STEP 8: Completion → deploy_ready
   detectAndApplyCompletion(run.run_id);
@@ -494,7 +508,7 @@ try {
 /* ================================================================== */
 try {
   const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, _resetForTest: resetSpaces } = await import('../src/features/projectSpaceRegistry.js');
-  const { createExecutionPacket, createExecutionRun, getExecutionRunById, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { createExecutionPacket, createExecutionRun, getExecutionRunById, setRunTruthReconciliation, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
   const { detectAndApplyCompletion } = await import('../src/features/executionDispatchLifecycle.js');
   const { detectApprovalIntent, applyApprovalDecision, renderDeployPacket } = await import('../src/features/executionSpineRouter.js');
   const { addDocumentToThread, buildDocumentContextForExecution, _resetForTest: resetDoc } = await import('../src/features/slackDocumentContext.js');
@@ -548,6 +562,20 @@ try {
     ws.outbound.outbound_status = 'completed';
     ws.outbound.outbound_provider = 'github';
   }
+
+  setRunTruthReconciliation(run.run_id, {
+    entries: [
+      {
+        route_key: 'research',
+        attempted_action: 'research/internal_artifact',
+        reconciled_status: 'satisfied',
+        reconciliation_notes: '',
+        observed_tool_refs: { research_note_path: 'data/research-note.md' },
+      },
+    ],
+    overall: 'completed',
+    evaluated_at: new Date().toISOString(),
+  });
 
   // Completion → deploy_ready
   detectAndApplyCompletion(run.run_id);
@@ -713,7 +741,7 @@ try {
 /* ================================================================== */
 try {
   const { createProjectSpace, linkRunToProjectSpace, linkThreadToProjectSpace, _resetForTest: resetSpaces } = await import('../src/features/projectSpaceRegistry.js');
-  const { createExecutionPacket, createExecutionRun, getExecutionRunById, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
+  const { createExecutionPacket, createExecutionRun, getExecutionRunById, setRunTruthReconciliation, _resetForTest: resetRuns } = await import('../src/features/executionRun.js');
   const { detectAndApplyCompletion } = await import('../src/features/executionDispatchLifecycle.js');
   const { detectApprovalIntent, applyApprovalDecision, detectDeployUrlAndCompletion, ingestDeployUrl, confirmDeployComplete } = await import('../src/features/executionSpineRouter.js');
   const { addDocumentToThread, buildDocumentContextForExecution, _resetForTest: resetDoc } = await import('../src/features/slackDocumentContext.js');
@@ -738,6 +766,19 @@ try {
   run.supabase_trace.push({ status: 'draft_created' });
 
   for (const ws of run.workstreams) { ws.outbound = ws.outbound || {}; ws.outbound.outbound_status = 'completed'; ws.outbound.outbound_provider = 'github'; }
+  setRunTruthReconciliation(run.run_id, {
+    entries: [
+      {
+        route_key: 'research',
+        attempted_action: 'research/internal_artifact',
+        reconciled_status: 'satisfied',
+        reconciliation_notes: '',
+        observed_tool_refs: { research_note_path: 'data/research-note.md' },
+      },
+    ],
+    overall: 'completed',
+    evaluated_at: new Date().toISOString(),
+  });
   detectAndApplyCompletion(run.run_id);
   assert.equal(getExecutionRunById(run.run_id).current_stage, 'deploy_ready');
 

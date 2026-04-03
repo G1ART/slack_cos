@@ -41,6 +41,7 @@ const {
   updateLaneOutbound,
   updateOutboundDispatchState,
   getRunDispatchState,
+  setRunTruthReconciliation,
 } = await import('../src/features/executionRun.js');
 
 const {
@@ -244,40 +245,59 @@ try {
 try {
   const run = makeTestRun();
 
-  // All pending
   let eval_ = evaluateExecutionRunCompletion(run.run_id);
-  assert.equal(eval_.overall_status, 'running');
+  assert.equal(eval_.overall_status, 'pending');
+  assert.equal(eval_.completion_source, 'truth_reconciliation');
 
-  // Mark all completed
-  for (const ws of run.workstreams) {
-    updateLaneOutbound(run.run_id, ws.lane_type, { status: 'completed' });
-  }
+  const entry = (route_key, action, status, notes = '') => ({
+    route_key,
+    attempted_action: action,
+    reconciled_status: status,
+    reconciliation_notes: notes,
+    observed_tool_refs: {},
+  });
+
+  setRunTruthReconciliation(run.run_id, {
+    entries: [
+      entry('r', 'research/internal_artifact', 'satisfied'),
+      entry('s', 'fullstack_code/github', 'satisfied'),
+      entry('u', 'uiux_design/internal_artifact', 'satisfied'),
+      entry('q', 'qa_validation/internal_artifact', 'satisfied'),
+    ],
+    overall: 'completed',
+    evaluated_at: new Date().toISOString(),
+  });
 
   eval_ = evaluateExecutionRunCompletion(run.run_id);
   assert.equal(eval_.overall_status, 'completed');
-  assert.equal(eval_.completed_lanes.length, 4);
+  assert.equal(eval_.completion_source, 'truth_reconciliation');
+  assert.ok(eval_.completed_lanes.length >= 1);
 
-  // Reset and test partial
   clearExecutionRunsForTest();
   const run2 = makeTestRun();
-  updateLaneOutbound(run2.run_id, 'research_benchmark', { status: 'completed' });
-  updateLaneOutbound(run2.run_id, 'fullstack_swe', { status: 'failed', error: 'test' });
+  setRunTruthReconciliation(run2.run_id, {
+    entries: [
+      entry('r', 'research/internal_artifact', 'satisfied'),
+      entry('g', 'fullstack_code/github', 'unsatisfied', 'no ref'),
+    ],
+    overall: 'partial',
+    evaluated_at: new Date().toISOString(),
+  });
 
   eval_ = evaluateExecutionRunCompletion(run2.run_id);
   assert.equal(eval_.overall_status, 'partial');
-  assert.ok(eval_.failed_lanes.includes('fullstack_swe'));
   assert.ok(eval_.next_actions.length > 0);
 
-  // Test manual_blocked
   clearExecutionRunsForTest();
   const run3 = makeTestRun();
-  updateLaneOutbound(run3.run_id, 'research_benchmark', { status: 'completed' });
-  updateLaneOutbound(run3.run_id, 'fullstack_swe', { status: 'completed' });
-  updateLaneOutbound(run3.run_id, 'uiux_design', { status: 'completed' });
-  updateLaneOutbound(run3.run_id, 'qa_qc', { status: 'manual_required', error: 'need review' });
+  setRunTruthReconciliation(run3.run_id, {
+    entries: [entry('g', 'fullstack_code/github', 'unsatisfied', 'blocked')],
+    overall: 'failed',
+    evaluated_at: new Date().toISOString(),
+  });
 
   eval_ = evaluateExecutionRunCompletion(run3.run_id);
-  assert.equal(eval_.overall_status, 'manual_blocked');
+  assert.equal(eval_.overall_status, 'failed');
 
   clearExecutionRunsForTest();
   ok('completion detection');

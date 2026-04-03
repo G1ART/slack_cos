@@ -1045,6 +1045,7 @@ export function planOutboundActionsForRun(run, space = null) {
 
 /**
  * Dispatch all outbound actions for a run — **only** planned route_decisions (vNext.12).
+ * vNext.13: 창업자 면에서의 진입은 `ensureExecutionRunDispatched` → 외부 승인 게이트 통과 후에만 호출되는 것이 계약.
  * @param {object} run
  * @param {Record<string, unknown>} metadata
  * @returns {Promise<Record<string, unknown>>}

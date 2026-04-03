@@ -803,6 +803,8 @@ async function handleUserText(userText, metadata = {}) {
             founder_route: true,
             legacy_command_router_used: false,
             legacy_ai_router_used: false,
+            founder_classifier_used: false,
+            founder_keyword_route_used: false,
           });
           return {
             text: founderOnly.text,
@@ -825,6 +827,8 @@ async function handleUserText(userText, metadata = {}) {
         founder_route: true,
         legacy_command_router_used: false,
         legacy_ai_router_used: false,
+        founder_classifier_used: false,
+        founder_keyword_route_used: false,
         hard_fail_reason: 'invariant_breach',
       });
       return {

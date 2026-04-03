@@ -1,4 +1,4 @@
-# Orchestration route policy (vNext.12)
+# Orchestration route policy (vNext.12 + vNext.13)
 
 ## Planner = law
 
@@ -14,11 +14,20 @@
 - Provider truth에서 Vercel/Railway `live`면 해당 패킷 JSON 기록.
 - 아니면 `observe_only` 결정 + bootstrap 요약 JSON.
 
-## Truth reconciliation (vNext.12.1 정본)
+## Truth reconciliation (vNext.12.1 정본, vNext.13 단일화)
 
 - `truthReconciliation.js`: 경로별 `reconciled_status` — `satisfied` | `unsatisfied` | `draft_only` (예: GitHub는 issue id 없으면 draft_only, Cursor는 handoff+live ref 둘 다 있어야 satisfied).
 - `aggregateReconciliationOverall` → `completed` | `partial` | `failed` | `draft_only` | `observe_only`.
-- `evaluateExecutionRunCompletion`은 엔트리가 있으면 **이 스냅샷을 completion 정본**으로 사용 (`legacy_lane_outbound`는 truth 없을 때만).
+- `evaluateExecutionRunCompletion`: 엔트리가 있으면 위 스냅샷을 completion 정본으로 사용. **엔트리가 없으면** `overall_status: pending`, `completion_source: 'truth_reconciliation'`만 반환 (레인 outbound 레거시 폴백 없음).
+
+## External dispatch gate (vNext.13)
+
+- `ensureExecutionRunDispatched` → 승인 확인 (`approvalGate.isExternalMutationAuthorized`) → `executeApprovedOutboundDispatch` → `dispatchOutboundActionsForRun` → `dispatchPlannedRoutes`.
+- `external_execution_authorization.state`: `authorized`(기본) | `pending_approval` | `draft_only`.
+
+## Proposal-derived capabilities (vNext.13)
+
+- `extractCapabilitiesFromProposalPacket(proposal)`: 제안 패킷의 작업 문장에서만 업무 capability 플래그 도출 (창업자 원문 직접 키워드 매핑 아님).
 
 ## 레거시
 

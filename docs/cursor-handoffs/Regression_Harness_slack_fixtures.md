@@ -12,7 +12,7 @@
 
 **Founder operational probe (2026-04-02)**: `scripts/test-founder-operational-probe.mjs` — 창업자 DM에서 SHA·Cursor/Supabase **브리지 상태** 질문이 파트너 LLM으로 가지 않고 런타임 메타·provider truth로 응답함(`npm test` 포함).
 
-**Partner natural sanitize (2026-04-02)**: `scripts/test-partner-natural-sanitize.mjs` — `PARTNER_NATURAL` 응답에서 Council형 헤더·페르소나 줄이 제거됨(`npm test` 포함).
+**Partner natural sanitize (2026-04-03, vNext.13)**: `scripts/test-partner-natural-sanitize.mjs` — 기본 표면은 `proposal_packet_surface`이며, *대화형 보강* 구간에서 Council형 헤더·페르소나 줄이 제거됨(`npm test` 포함).
 
 ---
 

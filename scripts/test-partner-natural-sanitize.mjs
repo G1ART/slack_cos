@@ -50,7 +50,8 @@ const out = await founderRequestPipeline({
   route_label: 'dm_ai_router',
 });
 
-assert.equal(out.surface_type, 'partner_natural_surface');
+assert.equal(out.surface_type, 'proposal_packet_surface');
+assert.ok(out.text.includes('[COS 제안 패킷]'), 'proposal wraps partner');
 assert.equal(out.trace.partner_output_sanitized, true);
 assert.ok(!out.text.includes('한 줄 요약'), out.text.slice(0, 400));
 assert.ok(!out.text.includes('페르소나별'), out.text);

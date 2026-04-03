@@ -9,8 +9,6 @@ import {
   buildExecutionLaunchRenderPayload,
   buildLaunchBlockedPayload,
 } from './executionLaunchPacketBuilder.js';
-import { resolveWorkObject } from './workObjectResolver.js';
-import { resolveWorkPhase } from './workPhaseResolver.js';
 import { evaluatePolicy } from './policyEngine.js';
 import { Actor, FounderIntent, FounderSurfaceType, WorkPhase } from './founderContracts.js';
 import { renderFounderSurface } from './founderRenderer.js';
@@ -29,6 +27,23 @@ import {
   countDistinctThreadsForSpace,
   getRelatedSpaceCandidatesForTrace,
 } from '../features/projectSpaceRegistry.js';
+
+/** vNext.13 — 창업자 launch gate: work_object 파서 없이 스레드·인테이크 기준 맥락만 */
+function launchMinimalWorkContext(metadata, threadKey) {
+  const run = getExecutionRunByThread(threadKey);
+  let space = getProjectSpaceByThread(threadKey);
+  const intake = getProjectIntakeSession(metadata);
+  return {
+    resolved: Boolean(run || space || intake),
+    primary_type: run ? 'execution_run' : intake ? 'intake_session' : space ? 'project_space' : 'none',
+    project_space: space,
+    run: run || null,
+    intake_session: intake || null,
+    intake_session_id: intake?.session_id ?? intake?.id ?? null,
+    project_id: run?.project_id ?? space?.project_id ?? null,
+    run_id: run?.run_id ?? null,
+  };
+}
 
 function flattenSpaceResolutionForTrace(r) {
   if (!r) return {};
@@ -97,6 +112,8 @@ function buildLaunchPipelineResult(rendered, workContext, phaseResult, intentRes
       passed_pipeline: true,
       passed_renderer: true,
       legacy_router_used: false,
+      founder_classifier_used: false,
+      founder_keyword_route_used: false,
       ...traceExtras,
     },
   };
@@ -109,7 +126,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
   const probe = detectFounderLaunchIntent(normalized, metadata, threadKey);
   if (!probe.detected) return null;
 
-  const workContext = resolveWorkObject(normalized, metadata);
+  const workContext = launchMinimalWorkContext(metadata, threadKey);
   let space = workContext.project_space || getProjectSpaceByThread(threadKey);
   const runPre = getExecutionRunByThread(threadKey);
 
@@ -124,7 +141,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     metadata,
   });
 
-  const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
+  const phaseProbe = { phase: WorkPhase.SEED, phase_source: 'founder_launch_gate', confidence: 1 };
   const intentResult = {
     intent: FounderIntent.EXECUTION_DECISION,
     confidence: 1,
@@ -133,7 +150,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
   const policy = evaluatePolicy({
     actor: Actor.FOUNDER,
     work_object_type: workContext.primary_type,
-    work_phase: WorkPhase.SEED,
+    work_phase: phaseProbe.phase,
     intent_signal: intentResult.intent,
     metadata,
   });
@@ -227,7 +244,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     launchPacketId = run.packet_id || launchPacketId;
   }
 
-  const workContextFresh = resolveWorkObject(normalized, metadata);
+  const workContextFresh = launchMinimalWorkContext(metadata, threadKey);
   run = getExecutionRunByThread(threadKey) || run;
   space = getProjectSpaceByThread(threadKey) || space || workContextFresh.project_space;
 
