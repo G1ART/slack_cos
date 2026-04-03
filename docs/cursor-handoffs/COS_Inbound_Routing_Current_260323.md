@@ -101,7 +101,7 @@
 |------|------|
 | `app.js` | `handleUserText` — **M2a** `runInboundTurnTraceScope` 안에서 **`founderRequestPipeline`** 선행(3b pre-AI 스파인 포함) → 미스 시 **`runInboundCommandRouter`** → founder 경로면 deterministic fallback / 아니면 **`runInboundAiRouter`**. |
 | `src/core/founderRequestPipeline.js` | 창업자+`callText`+직답 on → **launch 게이트**(`maybeHandleFounderLaunchGate`) 다음 **자연어 단일 경로**(`runFounderNaturalPartnerTurn`). 그 외(비창업자·테스트·`COS_FOUNDER_DIRECT_CHAT=0`)는 Constitution: 유틸 → 조회/구조화 `null` → phase·실행기·골드. |
-| `src/core/founderLaunchGate.js` | **`maybeHandleFounderLaunchGate`** — launch intent·truth·readiness·(차단) `LAUNCH_BLOCKED` / (통과) 실행 패킷·런 생성·dispatch·인테이크 전이. |
+| `src/core/founderLaunchGate.js` | **`maybeHandleFounderLaunchGate`** — launch intent·truth·readiness; 창업자 표면은 **`src/founder/founderLaunchFormatter.js`**(+ `founderLaunchApprovalPacket.js`)만 사용 (`evaluatePolicy` / `renderFounderSurface` 없음). (차단) `LAUNCH_BLOCKED` / (통과) 실행 준비 패킷·런 생성·인테이크 전이. 회귀: `test-founder-launch-gate.mjs`, `test-vnext13-2-launch-gate-purification.mjs`. |
 | `src/core/founderLaunchIntent.js` | launch 문구 결정론 감지. |
 | `src/core/providerTruthSnapshot.js` | 스레드/프로바이더 truth 스냅샷(실행 패킷·관측). |
 | `src/core/launchReadinessEvaluator.js` | `launch_ready`·`launch_blocked_*` 등 준비도 코드. |

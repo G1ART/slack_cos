@@ -9,9 +9,11 @@ import {
   buildExecutionLaunchRenderPayload,
   buildLaunchBlockedPayload,
 } from './executionLaunchPacketBuilder.js';
-import { evaluatePolicy } from './policyEngine.js';
-import { Actor, FounderIntent, FounderSurfaceType, WorkPhase } from './founderContracts.js';
-import { renderFounderSurface } from './founderRenderer.js';
+import { FounderSurfaceType } from './founderContracts.js';
+import {
+  formatFounderLaunchBlockedSurface,
+  formatFounderLaunchExecutionSurface,
+} from '../founder/founderLaunchFormatter.js';
 import {
   getProjectIntakeSession,
   transitionProjectIntakeStage,
@@ -140,19 +142,12 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     metadata,
   });
 
-  const phaseProbe = { phase: WorkPhase.SEED, phase_source: 'founder_launch_gate', confidence: 1 };
+  const phaseProbe = { phase: 'launch_gate', phase_source: 'founder_launch_gate', confidence: 1 };
   const intentResult = {
-    intent: FounderIntent.EXECUTION_DECISION,
+    intent: 'launch_continue',
     confidence: 1,
     signals: ['founder_launch_gate', probe.signal].filter(Boolean),
   };
-  const policy = evaluatePolicy({
-    actor: Actor.FOUNDER,
-    work_object_type: workContext.primary_type,
-    work_phase: phaseProbe.phase,
-    intent_signal: intentResult.intent,
-    metadata,
-  });
 
   const live_actions = (providerTruth.providers || [])
     .filter((p) => p.status === 'live')
@@ -165,7 +160,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       blockers: readiness.blockers,
       readiness: readiness.readiness,
     });
-    const rendered = renderFounderSurface(FounderSurfaceType.LAUNCH_BLOCKED, blockedPayload);
+    const rendered = formatFounderLaunchBlockedSurface(blockedPayload);
     return buildLaunchPipelineResult(
       rendered,
       workContext,
@@ -256,7 +251,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     projectSpaceResolution: spaceResolution,
   });
 
-  const rendered = renderFounderSurface(FounderSurfaceType.EXECUTION_PACKET, payload);
+  const rendered = formatFounderLaunchExecutionSurface(payload);
 
   const live_actions2 = (truthAfter.providers || [])
     .filter((p) => p.status === 'live')

@@ -56,6 +56,20 @@ export function setExternalExecutionPendingApproval(runId, extra = {}) {
 }
 
 /**
+ * 창업자 보류: 외부 디스패치 없이 draft-only 유지.
+ * @param {string} runId
+ * @param {{ reason?: string }} [extra]
+ * @returns {boolean}
+ */
+export function holdExternalExecutionForRun(runId, extra = {}) {
+  return updateRunExternalExecutionAuthorization(runId, {
+    state: 'draft_only',
+    reason: extra.reason || 'founder_hold',
+    decided_at: new Date().toISOString(),
+  });
+}
+
+/**
  * 테스트·내부 도구용: 현재 런의 승인 상태 확인.
  * @param {string} runId
  * @returns {ExternalExecutionAuthState|string|null}
