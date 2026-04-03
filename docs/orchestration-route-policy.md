@@ -39,3 +39,9 @@
 
 - `src/orchestration/agentContracts.js` — 역할 경계.
 - `src/orchestration/toolActuatorContracts.js` — 툴별 기대 truth 필드.
+
+## Harness constitution (vNext.13.2)
+
+- `harnessAgentCharters.js` — 13 에이전트: mission, forbidden_actions, overlap, review.
+- `harnessSkillsRegistry.js` — on-demand skill packets (planner attach); not founder-keyword routes.
+- 문서: `docs/harness-constitution.md`, `docs/harness-subagent-skills.md`.

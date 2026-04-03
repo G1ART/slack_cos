@@ -2,6 +2,14 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md`
 
+## vNext.13.2 (2026-04-03) — Launch gate purification + harness constitution + E2E dress rehearsal
+
+1. **Launch gate**: `founderLaunchGate.js`는 `evaluatePolicy` / `renderFounderSurface` 없음. 창업자 텍스트는 `founderLaunchFormatter.js`·`founderLaunchApprovalPacket.js`만.
+2. **Harness**: `harnessAgentCharters.js` 등 13 에이전트 헌법, 오버랩·리뷰·에스컬레이션·`harnessSkillsRegistry.js` 스킬 패킷.
+3. **제안·승인**: 맥락 우선 제안 커널; 승인 패킷 결제 표면 확장; `holdExternalExecutionForRun` → `draft_only`.
+4. **문서**: `docs/harness-constitution.md`, `docs/harness-subagent-skills.md`, `docs/approval-escalation-policy.md`, `docs/cursor-handoffs/COS_vNext13_2_Launch_Gate_Purification_Harness_Constitution_E2E_2026-04-03.md`
+5. **회귀**: `scripts/test-vnext13-2-*.mjs` 여섯 + 기존 vNext.13.1 여섯.
+
 ## vNext.13.1 (2026-04-03) — Founder kernel final lock + default-deny
 
 1. **창업자 커널**: `src/founder/founderDirectKernel.js` → `runFounderDirectKernel` 만 `app.js`·`runInboundAiRouter` 창업자 경로에서 호출. `founderRequestPipeline.js`는 **오퍼레이터/채널 spine 전용**.
@@ -43,7 +51,7 @@
 
 ## 테스트
 
-`npm test`에 vNext.12.1·vNext.13(여섯 스크립트)·`test-vnext13-1-founder-kernel-final-lock` 포함.
+`npm test`에 vNext.12.1·vNext.13(여섯 스크립트)·vNext.13.1·**vNext.13.2(여섯 스크립트)** 포함.
 
 ## 남은 리스크
 

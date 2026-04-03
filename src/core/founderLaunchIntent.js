@@ -42,6 +42,7 @@ export function detectFounderLaunchIntent(normalized, metadata, threadKey) {
     { re: /바로\s*(개시|진행|시작)/u, signal: 'immediate_start' },
     { re: /등록하고\s*(시작|개시)/u, signal: 'register_start' },
     { re: /이\s*방향으로\s*실행/u, signal: 'direction_execute' },
+    { re: /실행(?:으로)?\s*넘어가/u, signal: 'execute_transition' },
   ];
 
   for (const { re, signal } of patterns) {
