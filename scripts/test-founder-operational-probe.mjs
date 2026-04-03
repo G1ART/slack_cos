@@ -25,7 +25,7 @@ const {
   looksLikeRuntimeShaQuery,
   classifyFounderRoutingLock,
 } = await import('../src/features/inboundFounderRoutingLock.js');
-const { founderRequestPipeline } = await import('../src/core/founderRequestPipeline.js');
+const { runFounderDirectKernel } = await import('../src/founder/founderDirectKernel.js');
 
 assert.equal(classifyFounderOperationalProbe('현재 SHA 버전이 뭔지 출력해줘.')?.kind, 'runtime_sha');
 assert.equal(classifyFounderOperationalProbe('Cursor 상태는 어때?')?.kind, 'provider_cursor');
@@ -38,7 +38,7 @@ assert.ok(looksLikeRuntimeShaQuery('HEAD sha 알려줘'));
 assert.equal(classifyFounderRoutingLock('현재 SHA 뭐야')?.kind, 'version');
 
 let llmCalled = 0;
-const outSha = await founderRequestPipeline({
+const outSha = await runFounderDirectKernel({
   text: '현재 SHA 버전이 뭔지 출력해줘.',
   metadata: {
     source_type: 'direct_message',
@@ -56,7 +56,7 @@ assert.equal(llmCalled, 0, 'LLM must not run for SHA probe');
 assert.ok(outSha?.text?.includes('SHA'), outSha?.text);
 assert.equal(outSha.trace.founder_deterministic_utility, 'runtime_stamp');
 
-const outCur = await founderRequestPipeline({
+const outCur = await runFounderDirectKernel({
   text: 'Cursor 상태는 어때?',
   metadata: {
     source_type: 'direct_message',
@@ -74,7 +74,7 @@ assert.ok(outCur?.text?.includes('Cursor Cloud'), outCur?.text);
 assert.ok(/연결\s*준비도|상태/u.test(outCur?.text || ''), outCur?.text);
 assert.equal(outCur.trace.founder_deterministic_utility, 'provider_cursor');
 
-const outSb = await founderRequestPipeline({
+const outSb = await runFounderDirectKernel({
   text: 'Supabase 연결 상태는 어때?',
   metadata: {
     source_type: 'direct_message',

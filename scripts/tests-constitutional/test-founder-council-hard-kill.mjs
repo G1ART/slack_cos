@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { founderRequestPipeline } from '../../src/core/founderRequestPipeline.js';
+import { runFounderDirectKernel } from '../../src/founder/founderDirectKernel.js';
 import { finalizeSlackResponse } from '../../src/features/topLevelRouter.js';
 
 const COUNCIL_MARKERS = [
@@ -22,7 +22,7 @@ function assertNoCouncilMarkers(text, label) {
 }
 
 async function testFounderKickoffExactSentence() {
-  const result = await founderRequestPipeline({
+  const result = await runFounderDirectKernel({
     text: '오늘부터 테스트용 작은 프로젝트 하나 시작하자',
     metadata: {
       source_type: 'direct_message',
@@ -37,7 +37,7 @@ async function testFounderKickoffExactSentence() {
 }
 
 async function testFounderMetaExactSentence() {
-  const result = await founderRequestPipeline({
+  const result = await runFounderDirectKernel({
     text: '버전',
     metadata: {
       source_type: 'direct_message',
@@ -52,7 +52,7 @@ async function testFounderMetaExactSentence() {
 }
 
 async function testFounderFollowUpExactSentence() {
-  const result = await founderRequestPipeline({
+  const result = await runFounderDirectKernel({
     text: 'responder surface sanitize 한 줄로만 말해.',
     metadata: {
       source_type: 'direct_message',

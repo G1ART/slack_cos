@@ -13,7 +13,8 @@
  * @returns {string}
  */
 export function formatExternalApprovalPacketLines(opts = {}) {
-  const systems = (opts.systems || ['GitHub', 'Cursor Cloud', 'Supabase', 'Vercel/Railway']).join(', ');
+  const sysArr = Array.isArray(opts.systems) && opts.systems.length ? opts.systems : ['GitHub', 'Cursor Cloud', 'Supabase', 'Vercel/Railway'];
+  const systems = sysArr.join(', ');
   const actions = (opts.actions || [
     '이슈/브랜치/PR 시드',
     'Cursor handoff 또는 실행 참조',
@@ -39,7 +40,5 @@ export function formatExternalApprovalPacketLines(opts = {}) {
     '*롤백 / 중단점:*',
     rollback,
     `*드래프트 전용 대안:* ${draftAlt}`,
-    '',
-    '*승인 옵션:* 승인 · 드래프트만 · 범위 줄이기 · 다시 정리 · 보류',
   ].join('\n');
 }

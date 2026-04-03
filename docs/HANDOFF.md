@@ -2,20 +2,27 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md`
 
+## vNext.13.1 (2026-04-03) — Founder kernel final lock + default-deny
+
+1. **창업자 커널**: `src/founder/founderDirectKernel.js` → `runFounderDirectKernel` 만 `app.js`·`runInboundAiRouter` 창업자 경로에서 호출. `founderRequestPipeline.js`는 **오퍼레이터/채널 spine 전용**.
+2. **승인 게이트**: `isExternalMutationAuthorized` — **`authorized`만 true**; auth 필드 없음/null/pending/draft_only는 **전부 거부**. `getExternalExecutionAuthState` 기본은 `pending_approval`.
+3. **제안·승인**: `external_execution_tasks`가 있을 때만 승인 패킷 섹션; IR/예산/투자자 카피 등은 단어 언급만으로 외부 실행으로 가지 않음(실제 mutation 문구일 때만).
+4. **상세**: `docs/cursor-handoffs/COS_vNext13_1_Founder_Kernel_Final_Lock_Default_Deny_Approval_2026-04-03.md`
+5. **회귀**: `scripts/test-vnext13-1-founder-kernel-final-lock.mjs` + vNext.13 여섯 스크립트.
+
 ## vNext.13 (2026-04-03) — Proposal kernel + approval-orchestrated execution
 
-1. **창업자 표면**: 기본 응답은 `[COS 제안 패킷]`(`proposal_packet_surface`). 맥락 합성 → 제안 패킷 → (선택) 동일 턴 `runCosNaturalPartner` 보강. intent/키워드 **라우팅 라벨**을 창업자에게 노출하지 않음.
-2. **Launch gate**: `resolveWorkObject`/`resolveWorkPhase` 제거, `launchMinimalWorkContext`만 사용.
-3. **외부 실행**: `run.external_execution_authorization.state === 'pending_approval'`이면 `ensureExecutionRunDispatched`가 디스패치하지 않음. 기본값 `authorized`는 기존 런 호환.
-4. **Completion**: `truth_reconciliation` 엔트리가 없으면 `overall_status: pending`, `completion_source: 'truth_reconciliation'`만 (레인 outbound 레거시 폴백 제거).
-5. **업무 capability 카탈로그**: `market_research`, `strategy_memo`, `document_write`, … — 내부 아티팩트 전용 계약(`cosCapabilityCatalog.js`). 플래너용 제안 작업 문장 입력: `extractCapabilitiesFromProposalPacket`.
+1. **창업자 표면**: 기본 응답은 `[COS 제안 패킷]`; vNext.13.1부터 구현체는 `runFounderDirectKernel`.
+2. **Launch gate**: `launchMinimalWorkContext` 등 `core/founderLaunchGate.js`.
+3. **외부 실행**: `pending_approval`이면 디스패치 스킵; 신규 런 기본 pending, 내부/회귀는 `external_execution_auth_initial: 'authorized'` 명시.
+4. **Completion**: `truth_reconciliation` 정본 유지.
+5. **업무 capability**: `cosCapabilityCatalog.js` + `extractCapabilitiesFromProposalPacket`.
 6. **상세**: `docs/cursor-handoffs/COS_vNext13_Founder_Proposal_Kernel_Approval_Orchestrated_Execution_2026-04-03.md`
-7. **회귀**: `scripts/test-vnext13-founder-proposal-kernel.mjs`
 
 ## vNext.12.1 (2026-04-03) — Founder constitution + single truth closure
 
 1. **창업자**: `app.js`에서 `founderRoute`일 때 첫 번째 블록만 사용 — 그 안에 command/AI router 호출 없음 (`test-vnext12-1-founder-no-command-router.mjs`).
-2. **`founderRequestPipeline`**: 창업자는 4단계 조기 반환 이하만; 아래 구간은 오퍼레이터용. 죽은 founder 분기·별도 제품 클리핑 헬퍼 제거.
+2. **`founderRequestPipeline`**: 오퍼레이터/채널 전용 spine. 창업자 DM은 `runFounderDirectKernel`.
 3. **Completion 정본**: `truth_reconciliation.entries`가 있으면 `evaluateExecutionRunCompletion`이 이를 우선(`deriveExecutionCompletionFromTruthReconciliation`). 경로별 `satisfied` / `draft_only` / `unsatisfied`.
 4. **창업자 문구**: `founderDeterministicUtilityResolver` 진행·핸드오프 + `executeSpine`/status 패킷은 reconciliation 줄 + provider truth (lane 휴리스틱만으로 “완료” 말하지 않음).
 5. **디스패치 idempotency**: `outbound_dispatch_state !== 'not_started'` 이고 `failed`가 아니면 재디스패치 스킵 (`already_dispatched`) — truth가 partial이어도 아티팩트 중복 방지.
@@ -36,7 +43,7 @@
 
 ## 테스트
 
-`npm test`에 `test-vnext12-1-founder-no-command-router`, `test-vnext12-1-single-truth-completion`, `test-vnext12-1-founder-status-from-reconciliation`, `test-vnext13-founder-proposal-kernel` 포함.
+`npm test`에 vNext.12.1·vNext.13(여섯 스크립트)·`test-vnext13-1-founder-kernel-final-lock` 포함.
 
 ## 남은 리스크
 

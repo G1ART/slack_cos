@@ -15,15 +15,19 @@ assert.ok(!founderBlock.includes('runInboundCommandRouter'));
 assert.ok(!founderBlock.includes('runInboundAiRouter'));
 assert.ok(!founderBlock.includes('founderCanUseCommandRouter'));
 assert.ok(!founderBlock.includes('structuredOnly'));
+assert.ok(founderBlock.includes('runFounderDirectKernel({'), 'founder path uses runFounderDirectKernel only');
 
-const pipePath = path.join(__dirname, '..', 'src', 'core', 'founderRequestPipeline.js');
-const pipeSrc = fs.readFileSync(pipePath, 'utf8');
-const idxFour = pipeSrc.indexOf('return founderDirectInboundFourStep');
-const idxGold = pipeSrc.indexOf('classifyGoldContract(normalized, metadata)');
-assert.ok(idxFour !== -1 && idxGold !== -1);
-assert.ok(idxFour < idxGold, 'founder DM returns before operator gold/intent spine');
+const kernelPath = path.join(__dirname, '..', 'src', 'founder', 'founderDirectKernel.js');
+const kernelSrc = fs.readFileSync(kernelPath, 'utf8');
+for (const banned of ['classifyFounderIntent', 'resolveWorkObject', 'resolveWorkPhase', 'WorkPhase']) {
+  assert.ok(!kernelSrc.includes(banned), `founderDirectKernel must not reference ${banned}`);
+}
 
-const { founderRequestPipeline } = await import('../src/core/founderRequestPipeline.js');
+const opPipePath = path.join(__dirname, '..', 'src', 'core', 'founderRequestPipeline.js');
+const opPipeSrc = fs.readFileSync(opPipePath, 'utf8');
+assert.ok(opPipeSrc.includes('classifyGoldContract(normalized, metadata)'), 'operator spine remains in founderRequestPipeline');
+
+const { runFounderDirectKernel } = await import('../src/founder/founderDirectKernel.js');
 const { openProjectIntakeSession } = await import('../src/features/projectIntakeSession.js');
 
 const meta = {
@@ -35,10 +39,11 @@ const meta = {
   callText: async () => '',
 };
 openProjectIntakeSession(meta, { goalLine: 'routing surface test' });
-const out = await founderRequestPipeline({ text: 'short status', metadata: meta });
+const out = await runFounderDirectKernel({ text: 'short status', metadata: meta });
 assert.equal(out.trace.founder_classifier_used, false);
 assert.equal(out.trace.founder_keyword_route_used, false);
 assert.equal(out.trace.legacy_command_router_used, false);
 assert.equal(out.trace.legacy_ai_router_used, false);
+assert.equal(out.trace.founder_direct_kernel, true);
 
 console.log('ok: vnext13_founder_no_routing_surface');
