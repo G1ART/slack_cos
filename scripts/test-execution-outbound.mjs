@@ -124,7 +124,7 @@ try {
   assert.ok(updatedRun.git_trace.generated_cursor_handoff_path, 'cursor path in git_trace');
   assert.ok(updatedRun.cursor_trace.length > 0, 'cursor_trace has entries');
   assert.equal(updatedRun.cursor_trace[0].status, 'created');
-  assert.equal(updatedRun.cursor_trace[0].dispatch_mode, 'auto_generated');
+  assert.equal(updatedRun.cursor_trace[0].dispatch_mode, 'manual_bridge');
 
   // Verify file actually exists on disk
   const fullPath = path.resolve(process.cwd(), result.handoff_path);
@@ -294,7 +294,7 @@ try {
 
   // cursor_trace
   assert.ok(r.cursor_trace.length >= 1, 'cursor_trace populated');
-  assert.equal(r.cursor_trace[0].dispatch_mode, 'auto_generated');
+  assert.equal(r.cursor_trace[0].dispatch_mode, 'manual_bridge');
   assert.ok(r.cursor_trace[0].handoff_path, 'handoff_path in trace');
   assert.ok(r.cursor_trace[0].created_at, 'created_at in trace');
 
@@ -411,6 +411,9 @@ try {
   }
   if (updatedRun.artifacts?.fullstack_swe?.supabase_schema_draft_path) {
     await fs.unlink(path.resolve(process.cwd(), updatedRun.artifacts.fullstack_swe.supabase_schema_draft_path)).catch(() => {});
+  }
+  if (updatedRun.artifacts?.fullstack_swe?.supabase_migration_file_path) {
+    await fs.unlink(path.resolve(process.cwd(), updatedRun.artifacts.fullstack_swe.supabase_migration_file_path)).catch(() => {});
   }
 
   clearExecutionRunsForTest();

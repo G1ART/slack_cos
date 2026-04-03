@@ -1130,6 +1130,7 @@ data/
 
 ### 22.5 Milestone 2 — Cursor Execution Loop Closure
 - 목표: work item -> Cursor spec/payload -> 결과 ingest -> qa/review 상태 반영을 닫는다.
+- 현행 코드(2026-04-02): execution outbound는 `ensureCursorOutboundForRun`이 **`COS_CURSOR_CLOUD_LAUNCH_URL`로 JSON POST(live)** 를 먼저 시도하고, 실패·미구성 시에만 **`data/exec-handoffs/` 핸드오프(manual_bridge)** 로 떨어진다. Supabase는 JSON 드래프트 + `supabase/migrations/` 코멘트 스텁이 `draft_only`, **`COS_SUPABASE_LIVE_DISPATCH_URL` 웹훅 성공 시에만** `live` 트레이스·truth.
 - 포함:
   - Cursor handoff payload 표준
   - result ingestion + qa/review status update
