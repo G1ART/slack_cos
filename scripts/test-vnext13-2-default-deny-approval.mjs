@@ -6,6 +6,7 @@ import {
   FOUNDER_APPROVAL_WORDING,
 } from '../src/orchestration/harnessEscalationPolicy.js';
 import { buildFounderApprovalPacket } from '../src/founder/founderApprovalPacket.js';
+import { EXTERNAL_MUTATION_DENY_STATES, isExternalMutationAuthorized } from '../src/orchestration/approvalGate.js';
 
 const lines = formatExternalApprovalPacketLines({
   systems: ['GitHub'],
@@ -27,4 +28,14 @@ const ap = buildFounderApprovalPacket({
 assert.ok(ap.visible_section.includes('승인'));
 assert.ok(!ap.visible_section.includes('실행하겠습니다'));
 
-console.log('ok: vnext13_2_approval_escalation_language');
+assert.ok(Array.isArray(EXTERNAL_MUTATION_DENY_STATES));
+assert.equal(isExternalMutationAuthorized(null), false);
+assert.equal(isExternalMutationAuthorized({ external_execution_authorization: {} }), false);
+assert.equal(isExternalMutationAuthorized({ external_execution_authorization: { state: 'pending_approval' } }), false);
+assert.equal(isExternalMutationAuthorized({ external_execution_authorization: { state: 'draft_only' } }), false);
+assert.equal(isExternalMutationAuthorized({ external_execution_authorization: { state: 'authorized' } }), true);
+
+assert.ok(EXTERNAL_MUTATION_DENY_STATES.includes('pending_approval'));
+assert.ok(EXTERNAL_MUTATION_DENY_STATES.includes('draft_only'));
+
+console.log('ok: vnext13_2_default_deny_approval');

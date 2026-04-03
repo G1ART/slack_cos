@@ -26,6 +26,13 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata }) {
     (space?.human_label && String(space.human_label).trim()) ||
     null;
 
+  const spec = intake?.spec && typeof intake.spec === 'object' ? intake.spec : null;
+  const success_condition_hint =
+    (spec?.success_metrics && String(spec.success_metrics).trim().slice(0, 500)) ||
+    (spec?.mvpSuccess && String(spec.mvpSuccess).trim().slice(0, 500)) ||
+    (spec?.successMetrics && String(spec.successMetrics).trim().slice(0, 500)) ||
+    null;
+
   const constraints = [];
   if (run?.run_id) constraints.push(`활성 실행 런: ${run.run_id}`);
   if (space?.project_id) constraints.push(`프로젝트 공간: ${space.human_label || space.project_id}`);
@@ -36,6 +43,8 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata }) {
     transcript_excerpt,
     intake_active,
     goal_line_hint,
+    north_star_hint: goal_line_hint,
+    success_condition_hint,
     has_run: Boolean(run?.run_id),
     has_space: Boolean(space?.project_id),
     project_label: space?.human_label || null,
