@@ -117,8 +117,13 @@ async function runFounderProposalKernelTurn(normalized, metadata, route_label, c
   const proposal = buildProposalFromFounderInput({ rawText: normalized, contextFrame });
   const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
   let body = formatFullFounderProposalSurface(proposal);
-  const gov = maybeGovernanceAdvisoryForFounder({ rawText: normalized, contextFrame });
-  if (gov?.text) {
+  const ext0 = proposal.external_execution_tasks?.length > 0;
+  const gov = maybeGovernanceAdvisoryForFounder({
+    rawText: normalized,
+    contextFrame,
+    founderSurface: ext0 ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
+  });
+  if (gov?.text && gov.text.length < body.length) {
     body += `\n\n${gov.text}`;
   }
   let partner_output_sanitized = false;
@@ -175,6 +180,8 @@ async function runFounderProposalKernelTurn(normalized, metadata, route_label, c
       execution_mode_selected,
       cos_governance_advisory: Boolean(gov?.text),
       governance_advisory_topics: gov?.topics || [],
+      proposal_execution_contract: proposal.proposal_execution_contract ?? null,
+      proposal_contract_trace: proposal.proposal_contract_trace ?? null,
       partner_natural: typeof callText === 'function',
       partner_output_sanitized,
       approval_required: proposal.approval_required === true || ext,

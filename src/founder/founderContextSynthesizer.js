@@ -49,5 +49,6 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata }) {
     has_space: Boolean(space?.project_id),
     project_label: space?.human_label || null,
     constraints,
+    external_execution_authorization_state: run?.external_execution_authorization?.state ?? null,
   };
 }

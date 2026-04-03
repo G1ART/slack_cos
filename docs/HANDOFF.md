@@ -2,6 +2,32 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md`
 
+## vNext.13.3 (2026-04-01) — Release lock / founder contract hardening
+
+**목적**: 기능 확장이 아니라 창업자 단일 진입·승인·truth completion·advisory 부록을 **회귀하기 어렵게 고정**.
+
+**잠근 것**
+
+1. **Founder entry SSOT**: `src/founder/founderRouteInvariant.js` — `app.js`·`runInboundAiRouter.js`만 사용.
+2. **제안 계약**: `proposal_execution_contract` (`COS_ONLY` / `APPROVAL_REQUIRED` / `EXECUTION_READY`) + `proposal_contract_trace.reasons`; 모호한 “시작/진행”·짧은 PR/배포만으로 외부 실행 태스크 생성 억제; 활성 런 맥락의 승인 캐리 문구는 유지.
+3. **Completion**: `founderTruthClosureWording.js` + 결정론 유틸의 “끝났나?” — `truth_reconciliation` 없으면 완료 단정 금지; 오퍼레이터 status 패킷도 동일 문구 축 사용(`founderRequestPipeline`).
+4. **Advisory**: 기본 off (`COS_GOVERNANCE_ADVISORY=1` 아니면 null); 제안·승인 등 표준 서피스에서 부록 금지; 단위 테스트 전용 표면만 허용.
+5. **문서 정본**: `docs/RELEASE_LOCK.md` (불변식·금지 회귀 목록).
+
+**남은 리스크 (릴리스 블로커 아님 — 실사용 검증 단계)**
+
+- 스코프 락 휴리스틱은 여전히 **문자 기반**; 매우 교묘한 실행 회피/강제 문장은 실슬랙에서 드물게 어긋날 수 있음.
+- Partner natural 보강 LLM은 계약 밖 변형 가능 — sanitize·패킷 골격은 유지하나 문장 품질은 모델 의존.
+- Cursor strict satisfied 등 **프로바이더별** 세부는 로컬에서 대부분 draft/partial.
+
+**슬랙 실사용에서 볼 것**
+
+- DM/멘션에서 command·협의모드 흔적 없이 제안 패킷만 나오는지.
+- 외부 실행이 필요해 보일 때만 승인 섹션이 붙는지; 짧은 “진행해”만으로 승인 패킷이 안 뜨는지.
+- “끝났나?”에 대해 정본 없을 때 **미완료·정본 대기**로 답하는지.
+
+**다음 단계**: 기능 빌드보다 **usage validation**(위 관측) 우선. 상세: `docs/RELEASE_LOCK.md`, `docs/cursor-handoffs/COS_vNext13_3_Release_Lock_Founder_Contract_2026-04-01.md`.
+
 ## vNext.13.2 (2026-04-03) — Launch gate purification + harness constitution + E2E dress rehearsal
 
 1. **Launch gate**: `founderLaunchGate.js`는 `evaluatePolicy` / `renderFounderSurface` 없음. 창업자 텍스트는 `founderLaunchFormatter.js`·`founderLaunchApprovalPacket.js`만.
@@ -52,7 +78,7 @@
 
 ## 테스트
 
-`npm test`에 vNext.12.1·vNext.13(여섯)·vNext.13.1·**vNext.13.2(여덟 스크립트)** 포함.
+`npm test`에 vNext.12.1·vNext.13(여섯)·vNext.13.1·**vNext.13.2(여덟)**·**vNext.13.3(넷: single-entry / ambiguous / advisory-budget / status-closure)** 포함.
 
 ## 남은 리스크
 

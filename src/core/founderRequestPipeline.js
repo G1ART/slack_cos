@@ -54,6 +54,7 @@ import { buildSlackThreadKey, getConversationTranscript } from '../features/slac
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
 import { evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
+import { founderTruthClosureWording } from '../founder/founderTruthClosureWording.js';
 /**
  * Utility intents the pipeline handles regardless of work object state.
  */
@@ -372,9 +373,10 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     const statusFriendly = formatProviderTruthFriendlyLines(statusSnap);
     const reconLines = freshRun ? formatReconciliationLinesForFounder(freshRun) : [];
     const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
+    const hasTruthEntries = Boolean(r?.truth_reconciliation?.entries?.length);
     const reconBit =
-      completion?.completion_source === 'truth_reconciliation'
-        ? `실행 정본(reconciliation): ${completion.overall_status}`
+      completion?.completion_source === 'truth_reconciliation' && run?.run_id
+        ? founderTruthClosureWording(completion, { hasTruthEntries }).founder_phrase
         : '';
     const rendered = renderFounderSurface('status_report_surface', buildStatusPacket({
       current_stage: pendingExternal ? 'awaiting_founder_approval' : run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),

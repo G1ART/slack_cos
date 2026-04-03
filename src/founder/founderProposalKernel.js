@@ -1,5 +1,6 @@
 /**
  * vNext.13 — 창업자 자연어 → 제안 패킷(실행 분기 라벨이 아님).
+ * vNext.13.3 — 실행 승인 계약(COS_ONLY / APPROVAL_REQUIRED / EXECUTION_READY) + 분류 trace.
  * 휴리스틱은 "이해·제안" 본문 생성용이며 intent/keyword 라우팅 표면으로 노출하지 않는다.
  */
 
@@ -18,6 +19,41 @@ const RE_STRATEGY = /전략|벤치마킹|로드맵|북극성|메모/i;
 /** genuine mutation 없을 때 business·문서 업무는 COS_ONLY 기본 (C3) */
 const RE_BUSINESS_OPS_COS_DEFAULT =
   /IR\s*덱|덱\s*(?:narrative|내러티브|서사)|투자자별|톤(?:을)?\s*나눠|메시지\s*맞춰|원페이저|one-?pager|예산(?:안)?\s*구조|시나리오\s*\d|전략\s*메모|크리틱|비평|리프레이밍|리라이트/i;
+/** 모호한 “진행/시작”만 있고 mutation 어휘가 없을 때 — execution으로 넘기지 않음 */
+const RE_VAGUE_PROGRESS =
+  /(?:이제\s*)?(?:시작|진행)(?:하자|해|해줘|해주세요|합시다|할게)?|등록하고\s*개시|개시해|바로\s*(?:가자|시작)|끝내자|해\s*보자/i;
+
+/** 승인·범위 고정 맥락에서의 실행 캐리 (활성 런 전제) */
+function textLooksLikeApprovalCarry(t) {
+  return /(?:좋아|OK|okay|승인|이\s*대로|이안으로|이\s*안으로).{0,48}(?:진행|개시|실행|가자)/i.test(t);
+}
+
+/**
+ * @param {string} t
+ * @param {Record<string, unknown>} contextFrame
+ */
+function hasScopeLockSignal(t, contextFrame) {
+  if (Boolean(contextFrame?.has_run)) return true;
+  if (contextFrame?.goal_line_hint && String(contextFrame.goal_line_hint).trim().length >= 8) return true;
+  if (t.length >= 100) return true;
+  const hasSystemCue =
+    /github|깃허브|supabase|PR|풀\s*리퀘|pull\s*request|배포|마이그레이션|프로덕션|커서\s*라이브|브랜치\s*(?:푸시|생성|만들)/i.test(
+      t,
+    );
+  if (!hasSystemCue) return false;
+  /** 짧은 한 줄 + 배포/프로덕션 단어만 있으면 스코프 락으로 보지 않음(실행 오인 방지) */
+  if (
+    t.length < 48 &&
+    /배포|마이그레이션|프로덕션/i.test(t) &&
+    !/github|깃허브|supabase|\bPR\b|풀\s*리퀘|브랜치|커서\s*라이브/i.test(t)
+  ) {
+    return false;
+  }
+  if (t.length < 48 && /\bPR\b|PR\s*올려/i.test(t) && !/github|깃허브|브랜치|저장소|supabase|repo/i.test(t)) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * @param {{ rawText: string, contextFrame: Record<string, unknown> }} args
@@ -26,6 +62,7 @@ const RE_BUSINESS_OPS_COS_DEFAULT =
 export function buildProposalFromFounderInput({ rawText, contextFrame }) {
   const t = String(rawText || '').trim();
   const p = emptyProposalPacket();
+  const traceReasons = [];
 
   // C1 — primary: 맥락·목표·제약·의도; 정규식은 아래 보조 신호로만 사용
   p.context_assumptions = [];
@@ -69,7 +106,8 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
   if (!t) {
     p.open_questions.push('어떤 결과물(문서/실행/검토)까지가 이번 턴의 목표인가요?');
     p.cos_only_tasks.push('목표가 정해지면 COS_ONLY로 먼저 응답·초안을 드립니다.');
-    return finalizeProposal(p, t);
+    traceReasons.push('empty_input_cos_only');
+    return finalizeProposal(p, t, contextFrame, traceReasons);
   }
 
   const sig = {
@@ -81,18 +119,57 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
     strategy: RE_STRATEGY.test(t),
   };
 
+  const vagueProgressSurface =
+    RE_VAGUE_PROGRESS.test(t) && !sig.genuineMutation && !textLooksLikeApprovalCarry(t);
+  if (vagueProgressSurface) {
+    traceReasons.push('vague_progress_without_mutation_lexicon');
+    p.open_questions.push(
+      '지금 문장만으로는 “무엇을 어디까지”가 열려 있습니다. (1) 산출물 정의: 문서·초안만 vs 실제 툴 반영 (2) 대상 시스템이 있다면 무엇인지 (3) 이번 턴의 끝을 어떻게 판정할지 — 빠진 항목을 한 줄씩만 짚어 주실 수 있을까요?',
+    );
+  }
+
   const docCosOnlyFirst =
     RE_BUSINESS_OPS_COS_DEFAULT.test(t) ||
-    ((sig.ir || sig.budget) && !sig.platform && !sig.genuineMutation);
+    ((sig.ir || sig.budget) && !sig.platform && !sig.genuineMutation) ||
+    (sig.internal && /비교|조사|조사해|서베|survey|리서치|benchmark/i.test(t) && !sig.genuineMutation);
+
+  if (sig.internal && !sig.genuineMutation) {
+    traceReasons.push('research_or_internal_memo_cos_only_bias');
+  }
+  if (RE_BUSINESS_OPS_COS_DEFAULT.test(t) && !sig.genuineMutation) {
+    traceReasons.push('document_narrative_cos_only_bias');
+  }
 
   const domainCount = [sig.ir, sig.budget, sig.platform, sig.strategy, sig.internal].filter(Boolean).length;
   if (domainCount >= 2 && !sig.genuineMutation && t.length < 90) {
     p.open_questions.push(
       '제가 이해한 바가 맞다면… 이번 턴은 (A) 문서·서사·시나리오 초안만 인가요, (B) 툴 실행 승인까지 포함인가요? 한 글자만 A/B로 답해 주셔도 됩니다.',
     );
+    traceReasons.push('multi_domain_short_text_clarify_ab');
   }
 
-  if (sig.genuineMutation && !docCosOnlyFirst) {
+  const scopeOk = hasScopeLockSignal(t, contextFrame);
+  const approvalCarry = textLooksLikeApprovalCarry(t) && contextFrame?.has_run && !docCosOnlyFirst;
+
+  let allowExternalMutationBlock =
+    !docCosOnlyFirst && !vagueProgressSurface && (sig.genuineMutation || approvalCarry);
+
+  if (allowExternalMutationBlock && !scopeOk && !approvalCarry) {
+    traceReasons.push('mutation_or_carry_blocked_pending_scope_lock_signal');
+    allowExternalMutationBlock = false;
+    p.open_questions.push(
+      '외부 시스템 반영 의도로 읽히는 표현이 있으나, 아직 범위·대상이 스레드 정본으로 고정되지 않았습니다. 어떤 저장소/환경에 어떤 변경을 원하시는지 한 문장으로 좁혀 주시면, 그때 승인 패킷 표면으로 정리합니다.',
+    );
+  }
+
+  if (approvalCarry && allowExternalMutationBlock) {
+    traceReasons.push('approval_carry_with_active_run');
+  }
+  if (sig.genuineMutation && allowExternalMutationBlock) {
+    traceReasons.push('genuine_mutation_lexicon_with_scope_or_run');
+  }
+
+  if (allowExternalMutationBlock) {
     p.external_execution_tasks.push(
       '연결된 툴체인으로 GitHub/Cursor/Supabase/배포 계열 액션 실행 — 대표 승인 패킷 확정 후에만',
     );
@@ -140,18 +217,46 @@ export function buildProposalFromFounderInput({ rawText, contextFrame }) {
     p.open_questions.push(
       '이 두 갈래 중 어디가 맞는지요: 문서·톤만 다듬기 vs GitHub/Cursor/Supabase까지 실제 반영? 후자면 mutation 의도를 한 문장으로 명시해 주세요.',
     );
+    traceReasons.push('ir_budget_plus_platform_split_clarify');
   }
 
-  return finalizeProposal(p, t);
+  return finalizeProposal(p, t, contextFrame, traceReasons);
 }
 
-function finalizeProposal(p, raw) {
+/**
+ * @param {object} p
+ * @param {string} raw
+ * @param {Record<string, unknown>} contextFrame
+ * @param {string[]} traceReasons
+ */
+function finalizeProposal(p, raw, contextFrame, traceReasons) {
   if (!p.open_questions.length && raw.length < 8) {
     p.open_questions.push('이번 턴에서 “끝”의 정의(예: 초안만 vs 실행까지)를 한 줄로 알려주실 수 있을까요?');
+    traceReasons.push('very_short_text_completion_definition');
   }
   if (!p.open_questions.length && raw.length > 8 && raw.length < 40 && !p.external_execution_tasks.length) {
-    p.open_questions.push('불명확할 때는 external task를 바로 만들지 않고 여기서 질문으로 좁힙니다. 구체적으로 어떤 산출물이 필요하신가요?');
+    p.open_questions.push(
+      '짧은 한 줄만으로는 외부 실행 태스크를 만들지 않습니다. 이번에 꼭 필요한 산출물(문서/표/실제 PR/배포 등)을 한 문장으로 재정의해 주세요.',
+    );
+    traceReasons.push('short_text_no_external_without_reframe');
   }
+
+  const auth = contextFrame?.external_execution_authorization_state;
+  let contract = 'COS_ONLY';
+  if (p.external_execution_tasks.length > 0) {
+    contract = auth === 'authorized' ? 'EXECUTION_READY' : 'APPROVAL_REQUIRED';
+    traceReasons.push(
+      auth === 'authorized'
+        ? 'contract_execution_ready_authorized'
+        : 'contract_approval_required_pending_auth',
+    );
+  } else {
+    traceReasons.push('contract_cos_only_no_external_tasks');
+  }
+
+  p.proposal_execution_contract = contract;
+  p.proposal_contract_trace = { reasons: [...new Set(traceReasons)] };
+
   return p;
 }
 

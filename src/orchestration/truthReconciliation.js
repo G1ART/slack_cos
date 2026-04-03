@@ -175,6 +175,9 @@ export function formatReconciliationLinesForFounder(run) {
 
 /**
  * vNext.12.1 — `evaluateExecutionRunCompletion` 가 우선 사용하는 정본.
+ * vNext.13.3 — 엔트리별 `reconciled_status`: `satisfied`(경로 충족) · `draft_only`(초안·관측만, 실행 증거 부족) ·
+ * `unsatisfied`(미충족). `partial` overall은 일부 경로 satisfied·일부 미충족 혼합; `draft_only` overall은
+ * 아직 실제 실행 증거가 초안 단계에 머무는 경우에 가깝다. 창업자 면 문구는 `founderTruthClosureWording`이 이 정본만 본다.
  * @param {object} run
  * @returns {{ overall_status: string, blocking_lanes: string[], manual_required_lanes: string[], completed_lanes: string[], failed_lanes: string[], next_actions: string[], truth_reconciliation_overall?: string, completion_source: string } | null}
  */
