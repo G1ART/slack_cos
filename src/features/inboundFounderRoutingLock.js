@@ -44,6 +44,47 @@ export function normalizeFounderMetaCommandLine(raw) {
 }
 
 /**
+ * Git SHA / 커밋 스탬프 질문 — `버전` 유틸과 동일하게 `formatRuntimeMetaSurfaceText`로 응답한다.
+ * (창업자 direct chat 경로는 `classifyFounderOperationalProbe`에서도 매칭)
+ */
+export function looksLikeRuntimeShaQuery(t) {
+  const s = String(t || '').trim();
+  if (!s) return false;
+  return (
+    (/(SHA|sha|커밋\s*해시|git\s*rev|rev-parse|릴리스\s*sha|빌드\s*해시)/i.test(s) &&
+      /(현재|지금|무엇|뭔지|뭐|알려|출력|확인|조회|보여|몇)/i.test(s)) ||
+    /^\s*(현재\s*)?(코드\s*)?(커밋|git)\s*(해시|버전|sha)/i.test(s)
+  );
+}
+
+/**
+ * COS_FOUNDER_DIRECT_CHAT=1 일 때 LLM 이전에 처리하는 운영 질문 (SHA / Cursor·Supabase 브리지 truth).
+ * @returns {{ kind: 'runtime_sha'|'provider_cursor'|'provider_supabase' } | null}
+ */
+export function classifyFounderOperationalProbe(trimmed) {
+  const t = normalizeFounderMetaCommandLine(String(trimmed || '').trim());
+  if (!t || t.length > 280) return null;
+
+  if (looksLikeRuntimeShaQuery(t)) return { kind: 'runtime_sha' };
+
+  if (
+    /(커서|Cursor|cursor_cloud|CURSOR)/i.test(t) &&
+    /(상태|연결|설정|브리지|디스패치|launch|런치|준비|연동|통합)/i.test(t)
+  ) {
+    return { kind: 'provider_cursor' };
+  }
+
+  if (
+    /(Supabase|수파베이스|SUPABASE)/i.test(t) &&
+    /(연결|상태|설정|디스패치|드래프트|준비|연동|통합)/i.test(t)
+  ) {
+    return { kind: 'provider_supabase' };
+  }
+
+  return null;
+}
+
+/**
  * @param {string} trimmed normalizeSlackUserPayload 결과
  * @returns {{ kind: 'version'|'meta_debug'|'kickoff_test' } | null}
  */
@@ -54,7 +95,8 @@ export function classifyFounderRoutingLock(trimmed) {
   if (
     /^\s*버전\s*[。.!！…]*\s*$/u.test(t) ||
     /^\s*version\s*[!.…]*\s*$/i.test(t) ||
-    /^\s*runtime\s*status\s*[!.…]*\s*$/i.test(t)
+    /^\s*runtime\s*status\s*[!.…]*\s*$/i.test(t) ||
+    looksLikeRuntimeShaQuery(t)
   ) {
     return { kind: 'version' };
   }

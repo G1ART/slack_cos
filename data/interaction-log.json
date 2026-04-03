@@ -18955,5 +18955,153 @@
     ],
     "matrix_reasons": [],
     "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775200271244-je69g2",
+    "created_at": "2026-04-03T07:11:11.244Z",
+    "user_text": "Cursor 상태는 어때?",
+    "source": {
+      "source_type": "direct_message",
+      "channel": "D0AM9BE2YUB",
+      "user": "U0AN9S75CRW",
+      "ts": "1775200259.481679",
+      "event_id": "Ev0ARJ08S28Y"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "질문이 매우 짧고 맥락이 없어 특정 기능/제품/기술/운영 이슈로 단정하기 어렵다. 우선 일반 현황 문의로 분류하는 것이 적절하다."
+    },
+    "primary": {
+      "one_line_summary": "Cursor는 AI 코딩 도구 시장에서 강한 제품-시장 적합성을 보이지만, 경쟁 심화와 차별화 지속성이 핵심 변수다.",
+      "recommendation": "지금은 ‘관심 유지 + 제한적 실사용 검증’으로 접근하고, 팀 생산성 개선 수치가 명확히 나오면 그때 본격 도입이나 협업 검토로 확대하라.",
+      "strongest_objection": "기능 우위가 빠르게 평준화되는 시장이라 현재의 성장세만 보고 과대평가하면 안 된다.",
+      "key_risks": [
+        "GitHub Copilot, VS Code 생태계, 대형 모델 사업자와의 경쟁 압박",
+        "핵심 기능 차별화의 지속 가능성 부족",
+        "사용량 증가 대비 수익성과 비용 구조 악화 가능성",
+        "특정 사용자층 중심의 초기 열광이 장기 확산으로 이어지지 않을 가능성",
+        "평가 대상이 불명확해 기술 상태와 사업 상태를 혼동할 수 있음",
+        "최근 업데이트·장애·정책 변경이 반영되지 않은 구정보에 의존할 수 있음",
+        "특정 워크플로에 깊게 통합한 뒤 가격·정책·품질 변화에 락인될 수 있음",
+        "코드 생성 도구 특성상 보안, 라이선스, 품질 책임이 사용자에게 전가될 수 있음"
+      ],
+      "next_actions": [
+        "우리 팀 기준으로 Cursor 사용 전후 개발 속도와 코드 품질을 2주간 측정하라.",
+        "대표와 핵심 개발자 2~3명만 먼저 써보고 실제 전환율을 확인하라.",
+        "대체재(Copilot, Windsurf 등)와 비교해 월간 비용 대비 효익을 숫자로 정리하라.",
+        "무엇의 상태를 묻는지 범위를 1개로 좁혀라.",
+        "최근 30일 기준 공식 릴리스 노트·상태 페이지·사용자 이슈를 확인하라.",
+        "도입 판단이면 파일럿에서 생산성, 오류율, 보안 이슈를 측정하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "기능 우위가 빠르게 평준화되는 시장이라 현재의 성장세만 보고 과대평가하면 안 된다.",
+      "hidden_risks": [
+        "GitHub Copilot, VS Code 생태계, 대형 모델 사업자와의 경쟁 압박",
+        "핵심 기능 차별화의 지속 가능성 부족",
+        "사용량 증가 대비 수익성과 비용 구조 악화 가능성",
+        "특정 사용자층 중심의 초기 열광이 장기 확산으로 이어지지 않을 가능성",
+        "평가 대상이 불명확해 기술 상태와 사업 상태를 혼동할 수 있음",
+        "최근 업데이트·장애·정책 변경이 반영되지 않은 구정보에 의존할 수 있음",
+        "특정 워크플로에 깊게 통합한 뒤 가격·정책·품질 변화에 락인될 수 있음",
+        "코드 생성 도구 특성상 보안, 라이선스, 품질 책임이 사용자에게 전가될 수 있음"
+      ],
+      "reconsider_triggers": [
+        "빠른 사용자 성장과 장기 방어력 사이의 간극",
+        "제품 선호도와 플랫폼 종속 리스크의 충돌",
+        "빠른 도입으로 얻는 생산성 vs 검증 부족으로 인한 품질·보안 리스크",
+        "개발자 선호도 vs 조직 차원의 통제·감사 가능성"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775200299455-8mxkxb",
+    "created_at": "2026-04-03T07:11:39.455Z",
+    "user_text": "Supabase 연결 상태는 어때?",
+    "source": {
+      "source_type": "direct_message",
+      "channel": "D0AM9BE2YUB",
+      "user": "U0AN9S75CRW",
+      "ts": "1775200290.107549",
+      "event_id": "Ev0AQ88F0QLF"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "engineering",
+      "primary_agent": "engineering",
+      "include_risk": true,
+      "urgency": "medium",
+      "reason": "Supabase 연결 상태 확인은 인프라/백엔드 기술 상태 점검으로 engineering에 해당한다. 연결 이슈는 서비스 장애나 데이터 접근 문제로 이어질 수 있어 기술 리스크가 있으므로 include_risk를 true로 설정한다."
+    },
+    "primary": {
+      "one_line_summary": "현재 대화만으로는 Supabase 연결 상태를 확인할 수 없다.",
+      "recommendation": "Supabase 프로젝트 URL·키·환경변수 주입 상태와 헬스체크용 쿼리 결과를 먼저 확인해 연결 상태를 판별하라.",
+      "strongest_objection": "실제 로그, 에러 코드, 헬스체크 결과 없이 연결 상태를 단정하면 잘못된 조치로 이어질 가능성이 크다.",
+      "key_risks": [
+        "환경변수 누락 또는 잘못된 키 사용",
+        "네트워크/방화벽 또는 CORS 설정 문제",
+        "DB는 살아있지만 Auth/Storage 등 일부 서비스만 장애인 상태",
+        "운영 환경과 로컬 환경의 설정 불일치",
+        "환경변수 누락 또는 잘못된 SUPABASE_URL/SUPABASE_KEY",
+        "Anon 키와 Service Role 키 혼용으로 인한 권한 오류",
+        "RLS 정책 미설정으로 조회/쓰기 실패 또는 과도한 노출",
+        "로컬에서는 되지만 배포 환경에서 네트워크/CORS 문제 발생"
+      ],
+      "next_actions": [
+        "애플리케이션 서버 로그와 브라우저 콘솔의 Supabase 에러를 수집하라.",
+        "SUPABASE_URL, SUPABASE_ANON_KEY 또는 SERVICE_ROLE_KEY 주입 여부를 점검하라.",
+        "간단한 read-only 쿼리로 헬스체크를 실행해 응답/에러 코드를 확인하라.",
+        "문제가 재현되면 변경 없이 롤백 가능한 범위에서 설정만 분리 점검하라.",
+        "프로젝트 URL과 키가 현재 실행 환경에 주입됐는지 확인하라.",
+        "간단한 select 1 또는 대표 테이블 조회로 DB 연결을 실제 테스트하라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "실제 로그, 에러 코드, 헬스체크 결과 없이 연결 상태를 단정하면 잘못된 조치로 이어질 가능성이 크다.",
+      "hidden_risks": [
+        "환경변수 누락 또는 잘못된 키 사용",
+        "네트워크/방화벽 또는 CORS 설정 문제",
+        "DB는 살아있지만 Auth/Storage 등 일부 서비스만 장애인 상태",
+        "운영 환경과 로컬 환경의 설정 불일치",
+        "환경변수 누락 또는 잘못된 SUPABASE_URL/SUPABASE_KEY",
+        "Anon 키와 Service Role 키 혼용으로 인한 권한 오류",
+        "RLS 정책 미설정으로 조회/쓰기 실패 또는 과도한 노출",
+        "로컬에서는 되지만 배포 환경에서 네트워크/CORS 문제 발생",
+        "DB는 살아 있으나 Auth/Storage 등 일부 서비스만 장애인 부분 장애 미감지"
+      ],
+      "reconsider_triggers": [
+        "빠른 추정이 필요하지만 현재는 관측 데이터가 없다.",
+        "빠른 확인을 위해 Anon 키만 볼지, 운영 관점에서 Service Role 경로까지 함께 점검할지",
+        "DB 연결 확인만으로 충분한지, Auth/Storage까지 포함해 '연결 상태' 범위를 어디까지 볼지"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "engineering",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
   }
 ]

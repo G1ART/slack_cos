@@ -33,6 +33,7 @@ export const OLD_STYLE_COUNCIL_SECTION_HEADERS = [
   '남아 있는 긴장',
   '종합 추천안',
   '핵심 리스크',
+  '다음 행동',
   '승인 대기열',
   /** LLM이 자주 쓰는 구형 Council 첫 헤더 — 본문까지 함께 제거 */
   '한 줄 요약',
@@ -223,6 +224,23 @@ export const FOUNDER_HARD_BLOCK_FALLBACK =
  * @param {{ debugMode?: boolean, responder?: string, allowUnsafeDebugBypass?: boolean }} opts
  * @returns {string}
  */
+/**
+ * 창업자 `PARTNER_NATURAL` 전용 — Council 메모 흉내를 걷은 뒤, **남는 본문이 없으면** 짧은 COS 톤으로 대체한다.
+ * (전 블록이 섹션 헤더만이면 `sanitizeFounderOutput`이 빈 문자열을 줄 수 있음)
+ * @param {string} text
+ * @returns {{ text: string, stripped_to_empty: boolean }}
+ */
+export function sanitizePartnerNaturalLlmOutput(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return { text: '', stripped_to_empty: false };
+  const cleaned = sanitizeFounderOutput(raw, { responder: 'partner_natural_surface' }).trim();
+  if (cleaned) return { text: cleaned, stripped_to_empty: false };
+  return {
+    text: '말씀은 받았습니다. 보고서·위원회 포맷 말고, **평문 한두 문장**으로만 이어가 주시면 그에 맞춰 답하겠습니다.',
+    stripped_to_empty: true,
+  };
+}
+
 export function sanitizeFounderOutput(text, opts = {}) {
   if (opts.debugMode && opts.allowUnsafeDebugBypass === true) return text;
   if (!text) return text;

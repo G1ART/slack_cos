@@ -10,6 +10,10 @@
 
 **Outbound / provider truth (2026-04-02)**: `scripts/test-live-provider-truth-alignment.mjs` + `scripts/test-execution-outbound.mjs`가 Cursor Cloud launch URL·Supabase live dispatch URL·`buildProviderTruthSnapshot`(Cursor `live`/`live_ready`/`manual_bridge`/`unavailable`, Supabase `live`/`live_ready`/`draft_only`/`not_configured`)·실행 패킷 렌더에서 `live_ready`≠`draft_only`를 고정한다(`npm test` 포함).
 
+**Founder operational probe (2026-04-02)**: `scripts/test-founder-operational-probe.mjs` — 창업자 DM에서 SHA·Cursor/Supabase **브리지 상태** 질문이 파트너 LLM으로 가지 않고 런타임 메타·provider truth로 응답함(`npm test` 포함).
+
+**Partner natural sanitize (2026-04-02)**: `scripts/test-partner-natural-sanitize.mjs` — `PARTNER_NATURAL` 응답에서 Council형 헤더·페르소나 줄이 제거됨(`npm test` 포함).
+
 ---
 
 ## 1. 추가된 fixture 목록

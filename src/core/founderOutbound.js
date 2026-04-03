@@ -1,6 +1,7 @@
 /**
  * COS — 창업자 면 Slack 전송 단일 출구.
- * 텍스트는 **검열·Council 형태 감지·내부 마커 치환 없이** 그대로 전달한다(등록된 surface_type·텍스트 전용만 유지).
+ * 텍스트는 **이 게이트에서** Council 키워드 스캔·치환 없이 그대로 전달한다.
+ * `PARTNER_NATURAL` 등 일부 표면은 `founderRequestPipeline`에서 이미 `sanitizeFounderOutput`을 통과할 수 있다.
  * @see docs/architecture/COS_CONSTITUTION_v1.md §7
  */
 
