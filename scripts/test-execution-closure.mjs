@@ -100,6 +100,19 @@ async function cleanup() {
   cleanupPaths.length = 0;
 }
 
+/** macOS 등에서 tmp 안에 예기치 않은 항목이 있으면 단일 fs.rm(tmp)가 ENOTEMPTY로 실패할 수 있어 자식부터 제거 */
+async function removeTmpWorkspace() {
+  try {
+    const entries = await fs.readdir(tmp);
+    for (const name of entries) {
+      await fs.rm(path.join(tmp, name), { recursive: true, force: true });
+    }
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5 });
+  } catch {
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5 }).catch(() => {});
+  }
+}
+
 /* ============================== */
 /* TEST 1: dispatch exactly once + idempotency */
 /* ============================== */
@@ -129,6 +142,18 @@ try {
   if (qa?.acceptance_checklist_path) cleanupPaths.push(qa.acceptance_checklist_path);
   if (qa?.regression_case_list_path) cleanupPaths.push(qa.regression_case_list_path);
   if (qa?.smoke_test_plan_path) cleanupPaths.push(qa.smoke_test_plan_path);
+  const dep = after1.artifacts?.deploy_preview;
+  if (dep?.vercel_packet_path) cleanupPaths.push(dep.vercel_packet_path);
+  if (dep?.railway_packet_path) cleanupPaths.push(dep.railway_packet_path);
+  if (dep?.observe_summary_path) cleanupPaths.push(dep.observe_summary_path);
+  const spec = after1.artifacts?.spec_refine;
+  if (spec?.outline_path) cleanupPaths.push(spec.outline_path);
+  if (after1.artifacts?.fullstack_swe?.supabase_schema_draft_path) {
+    cleanupPaths.push(after1.artifacts.fullstack_swe.supabase_schema_draft_path);
+  }
+  if (after1.artifacts?.fullstack_swe?.supabase_migration_file_path) {
+    cleanupPaths.push(after1.artifacts.fullstack_swe.supabase_migration_file_path);
+  }
   await cleanup();
   clearExecutionRunsForTest();
   ok('dispatch exactly once + idempotency');
@@ -160,6 +185,18 @@ try {
   if (uiux?.ui_spec_delta_path) cleanupPaths.push(uiux.ui_spec_delta_path, uiux.wireframe_note_path, uiux.component_checklist_path);
   const qa = after.artifacts?.qa_qc;
   if (qa?.acceptance_checklist_path) cleanupPaths.push(qa.acceptance_checklist_path, qa.regression_case_list_path, qa.smoke_test_plan_path);
+  const dep2 = after.artifacts?.deploy_preview;
+  if (dep2?.vercel_packet_path) cleanupPaths.push(dep2.vercel_packet_path);
+  if (dep2?.railway_packet_path) cleanupPaths.push(dep2.railway_packet_path);
+  if (dep2?.observe_summary_path) cleanupPaths.push(dep2.observe_summary_path);
+  const spec2 = after.artifacts?.spec_refine;
+  if (spec2?.outline_path) cleanupPaths.push(spec2.outline_path);
+  if (after.artifacts?.fullstack_swe?.supabase_schema_draft_path) {
+    cleanupPaths.push(after.artifacts.fullstack_swe.supabase_schema_draft_path);
+  }
+  if (after.artifacts?.fullstack_swe?.supabase_migration_file_path) {
+    cleanupPaths.push(after.artifacts.fullstack_swe.supabase_migration_file_path);
+  }
   await cleanup();
   clearExecutionRunsForTest();
   ok('progress does not duplicate outbound');
@@ -438,7 +475,7 @@ try {
 /* ============================== */
 clearExecutionRunsForTest();
 await cleanup();
-await fs.rm(tmp, { recursive: true, force: true });
+await removeTmpWorkspace();
 delete process.env.COS_WORKSPACE_QUEUE_FILE;
 delete process.env.EXECUTION_RUNS_FILE;
 delete process.env.PLAYBOOKS_FILE;
