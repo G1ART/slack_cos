@@ -36,8 +36,9 @@ export const AGENT_ROLES = {
   },
   deploy_ops: {
     id: 'deploy_ops',
-    may_invoke_tools: ['vercel', 'railway', 'internal_artifact'],
+    may_invoke_tools: ['vercel', 'railway', 'observe_only', 'internal_artifact'],
     may_mutate_external: true,
+    notes: 'observe_only = readiness summary artifact only; truth ref observe_summary_path',
   },
   audit_reconciliation_agent: {
     id: 'audit_reconciliation_agent',

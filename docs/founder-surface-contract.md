@@ -23,3 +23,7 @@
 ## trace 불변식
 
 `legacy_command_router_used === false` (창업자 응답 `buildResult`).
+
+## 실행 상태 질문 (vNext.12.1)
+
+진행·핸드오프 관련 결정론 유틸은 **`truth_reconciliation` 요약 줄 + `buildProviderTruthSnapshot`** 만 사용. 레인 아웃바운드 상태나 에이전트 자기 서술을 그대로 창업자 면에 붙이지 않음.

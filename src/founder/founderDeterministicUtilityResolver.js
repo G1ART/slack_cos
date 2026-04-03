@@ -12,7 +12,8 @@ import {
   buildProviderTruthSnapshot,
   PROVIDER_STATUS_KO,
 } from '../core/providerTruthSnapshot.js';
-import { getExecutionRunByThread } from '../features/executionRun.js';
+import { getExecutionRunById, getExecutionRunByThread } from '../features/executionRun.js';
+import { formatReconciliationLinesForFounder } from '../orchestration/truthReconciliation.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { detectFounderLaunchIntent } from '../core/founderLaunchIntent.js';
 
@@ -99,41 +100,39 @@ function formatRunProgressCosVoice(run, snap) {
   if (!run?.run_id) {
     return '이 스레드에는 아직 실행 런이 붙어 있지 않습니다. 목표를 한 줄만 더 보내 주시면 다음 단계로 묶어 드리겠습니다.';
   }
-  const od = run.orchestration_plan;
-  const cap = od?.capabilities;
+  const fresh = getExecutionRunById(run.run_id) || run;
+  const recon = formatReconciliationLinesForFounder(fresh);
   const lines = [
-    `실행 런 \`${run.run_id}\` 기준으로 보면,`,
-    `- 단계: ${run.current_stage || 'unknown'} · 상태: ${run.status || 'unknown'}`,
-    `- 바깥으로 나간 작업 묶음: ${run.outbound_dispatch_state || 'not_started'}`,
+    `실행 런 \`${run.run_id}\` — 아래는 **truth_reconciliation + provider 스냅샷**만입니다.`,
+    '',
+    ...recon,
+    '',
+    '*Provider truth (요약)*',
+    ...(snap.providers || []).map(formatProviderLine),
   ];
-  if (cap) {
-    lines.push(
-      `- 이번 런에서 켜 둔 역할: research=${cap.research} · 코드/저장소=${cap.fullstack_code} · DB스키마=${cap.db_schema} · UI=${cap.uiux_design} · QA=${cap.qa_validation}`,
-    );
-  }
-  if (od?.route_decisions?.length) {
-    lines.push(`- 경로 결정 ${od.route_decisions.length}건이 기록돼 있습니다(스냅샷 요약만 표시).`);
-  }
-  lines.push('', '더 자세한 줄 단위 로그가 필요하면 그 부분만 짚어 말씀해 주세요.');
-  const gh = snap.providers.find((p) => p.provider === 'github');
-  if (gh) lines.push(`- GitHub 쪽 한 줄: \`${gh.status}\``);
   return lines.join('\n');
 }
 
 function formatHandoffCosVoice(snap, run) {
   const c = snap.providers.find((x) => x.provider === 'cursor_cloud');
+  const fresh = run?.run_id ? getExecutionRunById(run.run_id) : null;
+  const recon = fresh ? formatReconciliationLinesForFounder(fresh) : [];
   const parts = [
-    '핸드오프로 보이는 경우는 보통 아래 중 하나입니다.',
-    '- 자동 실행 URL이 비어 있거나, 원격 호출이 실패했을 때',
-    '- 아직 이 스레드에 live 디스패치 성공 기록이 없을 때',
+    '**정본 기준 설명** (에이전트 서술이 아니라 reconciliation·provider truth)',
+    '',
+    ...recon,
+    '',
+    'Cursor provider 한 줄:',
   ];
   if (c?.status === 'manual_bridge') {
-    parts.push(`- 지금 Cursor는 **수동 브리지**로 분류됩니다: ${c.note || '설정을 확인해 주세요.'}`);
+    parts.push(`- **수동 브리지**: ${c.note || 'launch/handoff ref를 스냅샷에서 확인하세요.'}`);
+  } else if (c) {
+    parts.push(`- 상태: \`${c.status}\`${c.note ? ` — ${c.note}` : ''}`);
   }
   if (run?.artifacts?.fullstack_swe?.cursor_handoff_path) {
-    parts.push(`- 생성된 핸드오프 파일: \`${run.artifacts.fullstack_swe.cursor_handoff_path}\``);
+    parts.push(`- 관측된 핸드오프 경로: \`${run.artifacts.fullstack_swe.cursor_handoff_path}\``);
   }
-  parts.push('', '원하시면 launch URL을 채운 뒤 같은 런에서 다시 밀어 올릴 수 있습니다.');
+  parts.push('', '부족한 ref는 reconciliation 줄의 unsatisfied/draft_only를 기준으로 보시면 됩니다.');
   return parts.join('\n');
 }
 

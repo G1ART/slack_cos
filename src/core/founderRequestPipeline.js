@@ -1,7 +1,7 @@
 /**
- * COS Constitution v1.1 — Single inbound pipeline (work-state-first).
- * Center of gravity: work_object → work_phase → policy → packet → surface.
- * Called before legacy routers. Returns null if the pipeline cannot fully handle the request.
+ * COS Constitution v1.1 + vNext.12.1
+ * - 창업자 면(DM/멘션): 이 파일의 `founderDirectInboundFourStep` 만 — work_object/gold/phase 레거시 없음.
+ * - 오퍼레이터/채널: 아래 work_object → work_phase → policy 경로만 (레거시 라우터 전 `founderRoute===false`).
  * @see docs/architecture/COS_CONSTITUTION_v1.md §6
  */
 
@@ -48,8 +48,10 @@ import {
 import {
   createExecutionPacket,
   createExecutionRun,
+  getExecutionRunById,
   getExecutionRunByThread,
 } from '../features/executionRun.js';
+import { formatReconciliationLinesForFounder } from '../orchestration/truthReconciliation.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
@@ -124,7 +126,6 @@ function founderMinimalWorkContext(metadata, threadKey) {
 
 /**
  * 창업자 DM/멘션 전용 4단계: (1) 맥락 로드 (2) 결정론 유틸 (3) launch gate (4) 자연어 파트너.
- * `COS_FOUNDER_DIRECT_CHAT=0` 은 창업자 면에서 무시 — operator 레거시는 `founderRoute === false` 경로만 사용.
  */
 async function founderDirectInboundFourStep(brainText, metadata, route_label, threadKey, callText) {
   const transcriptExcerpt = getConversationTranscript(threadKey);
@@ -253,12 +254,16 @@ async function executeLock(normalized, metadata, workContext) {
 
 async function executeSpine(normalized, metadata, workContext) {
   const run = workContext.run || null;
+  const freshRun = run?.run_id ? getExecutionRunById(run.run_id) : null;
   const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
   const providerTruthPayload = () => {
-    const snap = buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run });
+    const snap = buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: freshRun || run });
+    const recon = freshRun ? formatReconciliationLinesForFounder(freshRun) : [];
+    const baseTruth = formatProviderTruthLines(snap);
+    const baseFriendly = formatProviderTruthFriendlyLines(snap);
     return {
-      provider_truth: formatProviderTruthLines(snap),
-      provider_truth_friendly: formatProviderTruthFriendlyLines(snap),
+      provider_truth: [...baseTruth, ...recon],
+      provider_truth_friendly: [...baseFriendly, ...recon],
     };
   };
 
@@ -271,7 +276,8 @@ async function executeSpine(normalized, metadata, workContext) {
           ? completion.completed_lanes
           : ['research_benchmark', 'fullstack_swe', 'uiux_design', 'qa_qc'],
         ...providerTruthPayload(),
-        founder_next_action: '완료 결과를 확인하고 배포/확장 여부를 결정해 주세요.',
+        founder_next_action:
+          '정본(reconciliation)상 전 경로 satisfied — 결과·배포 여부만 확인하면 됩니다.',
       }),
     };
   }
@@ -285,6 +291,26 @@ async function executeSpine(normalized, metadata, workContext) {
         ...providerTruthPayload(),
         next_actions: completion.next_actions?.length ? completion.next_actions : ['블로커 해소 의사결정'],
         founder_action_required: '크리티컬 의사결정이 필요합니다. 우선순위/재시도/수동조치를 확정해 주세요.',
+      }),
+    };
+  }
+  if (
+    completion?.overall_status === 'draft_only' ||
+    completion?.overall_status === 'observe_only' ||
+    completion?.overall_status === 'partial'
+  ) {
+    return {
+      packet: buildStatusPacket({
+        current_stage: run?.current_stage || 'execute',
+        completed: completion.completed_lanes?.length ? completion.completed_lanes : [],
+        in_progress:
+          completion.overall_status === 'partial' ? ['일부 경로 대기'] : ['draft/관측 단계'],
+        blocker: completion.next_actions?.join(' | ') || completion.overall_status,
+        ...providerTruthPayload(),
+        next_actions: completion.next_actions?.length
+          ? completion.next_actions
+          : ['부족한 툴 ref를 채우면 정본이 completed로 올라갑니다.'],
+        founder_action_required: `실행 정본 상태: ${completion.overall_status} — lane 휴리스틱이 아니라 reconciliation만 참고했습니다.`,
       }),
     };
   }
@@ -316,10 +342,7 @@ async function executeDeploy(normalized, metadata, workContext) {
   };
 }
 
-/**
- * 창업자 면(DM/멘션) + LLM 호출 가능 시 **유일한** 표면: 키워드·골드·접두·의도 분류 없이 자연어 1패스.
- * (테스트·가드 경로는 `callText` 없음 또는 `COS_FOUNDER_DIRECT_CHAT=0` 일 때만 아래 헌법 파이프라인으로 내려감)
- */
+/** 창업자 4단계 중 (2) 결정론 유틸 — SHA·툴 브리지·진행 질문 등. */
 function handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du) {
   const workContext = founderMinimalWorkContext(metadata, threadKey);
   const phaseProbe = { phase: WorkPhase.DISCOVER, phase_source: 'founder_deterministic_utility', confidence: 1 };
@@ -505,52 +528,12 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
     intentResult.intent === FounderIntent.QUERY_LOOKUP ||
     intentResult.intent === FounderIntent.STRUCTURED_COMMAND
   ) {
-    if (founderRoute) {
-      return renderScopeLockOnlyDialogue(
-        normalized,
-        metadata,
-        workContext,
-        intentResult,
-        route_label,
-        '이 창에서는 특정 문법으로 맞출 필요 없습니다. 평문으로 이어가 주시면 COS가 맞춰 응답합니다.',
-      );
-    }
     return null;
   }
 
-  if (founderRoute && gold.kind === 'kickoff' && !isActiveProjectIntake(metadata)) {
+  if (gold.kind === 'kickoff' && !isActiveProjectIntake(metadata)) {
     openProjectIntakeSession(metadata, { goalLine: normalized });
     workContext = resolveWorkObject(normalized, metadata);
-  }
-
-  if (founderRoute && shouldAskSeparateProductConfirmation(gold, workContext, normalized)) {
-    const clarifyPacket = buildSeparateProductClarificationPacket(workContext, normalized);
-    const quality = validateDialogueContract(clarifyPacket);
-    if (!quality.ok) {
-      return founderKernelHardFail(
-        normalized,
-        metadata,
-        workContext,
-        intentResult,
-        route_label,
-        FounderHardFailReason.INVARIANT_BREACH,
-        'separate_product_clarification_quality_fail',
-      );
-    }
-    const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, clarifyPacket);
-    return buildResult(rendered, {
-      workContext,
-      phaseResult: { phase: WorkPhase.ALIGN, phase_source: 'separate_product_clarification', confidence: 1 },
-      intentResult,
-      policy: evaluatePolicy({
-        actor: Actor.FOUNDER,
-        work_object_type: workContext.primary_type,
-        work_phase: WorkPhase.ALIGN,
-        intent_signal: intentResult.intent,
-        metadata,
-      }),
-      route_label,
-    });
   }
 
   // 4. Work Phase Resolver
@@ -561,19 +544,8 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   if (gold.kind === 'approval') phase = WorkPhase.APPROVE;
   if (gold.kind === 'deploy') phase = WorkPhase.DEPLOY;
 
-  // 5. For phases we don't handle yet → founder는 대화 계약 폴백, 비대표만 레거시
+  // 5. For phases we don't handle yet → 레거시 라우터로 위임
   if (!PIPELINE_HANDLED_PHASES.has(phase)) {
-    if (founderRoute) {
-      return founderKernelHardFail(
-        normalized,
-        metadata,
-        workContext,
-        intentResult,
-        route_label,
-        FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
-        'founder_unhandled_phase',
-      );
-    }
     return null;
   }
 
@@ -601,18 +573,27 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
 
   if (gold.kind === 'status') {
     const run = workContext.run;
-    const statusSnap = buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: run ?? null });
+    const freshRun = run?.run_id ? getExecutionRunById(run.run_id) : null;
+    const r = freshRun || run;
+    const statusSnap = buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: r ?? null });
     const statusTruth = formatProviderTruthLines(statusSnap);
     const statusFriendly = formatProviderTruthFriendlyLines(statusSnap);
+    const reconLines = freshRun ? formatReconciliationLinesForFounder(freshRun) : [];
+    const completion = run?.run_id ? evaluateExecutionRunCompletion(run.run_id) : null;
     const rendered = renderFounderSurface('status_report_surface', buildStatusPacket({
       current_stage: run?.current_stage || (isActiveProjectIntake(metadata) ? 'align' : 'discover'),
       completed: run ? ['scope lock 완료', 'run 생성'] : ['문제 재정의'],
       in_progress: run ? ['workstream 실행'] : ['scope lock 논의'],
       blocker: run?.outbound_last_error || '없음',
-      provider_truth: statusTruth,
-      provider_truth_friendly: statusFriendly,
+      provider_truth: [...statusTruth, ...reconLines],
+      provider_truth_friendly: [...statusFriendly, ...reconLines],
       next_actions: run ? ['blocker 해소', '승인 패킷 업데이트', '배포 준비'] : ['핵심 결정 3개 확정', 'scope lock packet 생성'],
-      founder_action_required: run ? '상태 확인 또는 우선순위 조정' : 'scope lock 확정',
+      founder_action_required:
+        completion?.completion_source === 'truth_reconciliation'
+          ? `실행 정본(reconciliation): ${completion.overall_status}`
+          : run
+            ? '상태 확인 또는 우선순위 조정'
+            : 'scope lock 확정',
     }));
     return buildResult(rendered, { workContext, phaseResult: { ...phaseResult, phase }, intentResult, policy, route_label });
   }
@@ -675,17 +656,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   // 7. Route to executor
   const executorResult = await routeToExecutor(phase, policy, normalized, metadata, workContext, callText);
   if (executorResult === null) {
-    if (founderRoute) {
-      return founderKernelHardFail(
-        normalized,
-        metadata,
-        workContext,
-        intentResult,
-        route_label,
-        FounderHardFailReason.UNSUPPORTED_FOUNDER_INTENT,
-        'founder_executor_miss',
-      );
-    }
     return null;
   }
 
@@ -714,77 +684,6 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   const rendered = renderFounderSurface(surfaceType, packet);
 
   return buildResult(rendered, { workContext, phaseResult, intentResult, policy, route_label });
-}
-
-/** 스레드 제품 분기 확인용 최소 힌트(숨은 계약 추출기·Council 스캔과 무관) */
-function roughProductDomainHint(text) {
-  const t = String(text || '');
-  if (/(캘린더|스케줄|일정|예약)/u.test(t)) return 'calendar';
-  if (/(crm|리드|세일즈)/i.test(t)) return 'crm';
-  return 'generic';
-}
-
-function shouldAskSeparateProductConfirmation(gold, workContext, normalized) {
-  if (gold?.kind !== 'kickoff') return false;
-  const intakeGoal = String(workContext?.intake_session?.goalLine || '').trim();
-  if (!intakeGoal) return false;
-  const prevDomain = roughProductDomainHint(intakeGoal);
-  const nowDomain = roughProductDomainHint(normalized);
-  if (prevDomain === 'generic' || nowDomain === 'generic') return false;
-  return prevDomain !== nowDomain;
-}
-
-function buildSeparateProductClarificationPacket(workContext, normalized) {
-  const base = buildDialoguePacket(normalized, 'followup');
-  const priorGoal = String(workContext?.intake_session?.goalLine || '').trim();
-  return {
-    ...base,
-    reframed_problem:
-      '현재 스레드에는 이미 진행 중인 제품 맥락이 있습니다. 새 요청이 별도 프로덕트인지 먼저 확인한 뒤 분기하겠습니다.',
-    pushback_point:
-      '같은 스레드에서 서로 다른 제품을 병행하면 의사결정 로그와 스코프가 섞여 품질이 떨어집니다.',
-    key_questions: [
-      '지금 요청은 기존 스레드의 같은 프로덕트 연장인가요, 아니면 별도 프로덕트인가요?',
-      `기존 맥락 유지 시 기준 목표: "${priorGoal.slice(0, 120)}${priorGoal.length > 120 ? '…' : ''}"`,
-      ...base.key_questions,
-    ].slice(0, 5),
-    next_step:
-      '“같은 프로덕트” 또는 “별도 프로덕트”로만 답해주시면, 같은 스레드 유지/새 스레드 분리 중 하나로 즉시 정렬하겠습니다.',
-  };
-}
-
-function renderScopeLockOnlyDialogue(normalized, metadata, workContext, intentResult, route_label, message) {
-  const packet = {
-    ...buildDialoguePacket(normalized, 'followup'),
-    reframed_problem: message,
-    next_step: '요청을 스코프 락인 질문(포함/제외/성공기준/제약)으로 바꿔주시면 즉시 이어서 잠그겠습니다.',
-  };
-  const quality = validateDialogueContract(packet);
-  if (!quality.ok) {
-    return founderKernelHardFail(
-      normalized,
-      metadata,
-      workContext,
-      intentResult,
-      route_label,
-      FounderHardFailReason.INVARIANT_BREACH,
-      'scope_lock_only_dialogue_quality_fail',
-    );
-  }
-  const rendered = renderFounderSurface(FounderSurfaceType.DIALOGUE, packet);
-  return buildResult(rendered, {
-    workContext,
-    phaseResult: { phase: WorkPhase.ALIGN, phase_source: 'scope_lock_only_dialogue', confidence: 1 },
-    intentResult,
-    policy: evaluatePolicy({
-      actor: Actor.FOUNDER,
-      work_object_type: workContext.primary_type,
-      work_phase: WorkPhase.ALIGN,
-      intent_signal: intentResult.intent,
-      metadata,
-    }),
-    route_label,
-  });
 }
 
 async function buildAdaptiveDialoguePacket(normalized, metadata, mode, callText) {

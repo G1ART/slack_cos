@@ -14,10 +14,11 @@
 - Provider truth에서 Vercel/Railway `live`면 해당 패킷 JSON 기록.
 - 아니면 `observe_only` 결정 + bootstrap 요약 JSON.
 
-## Truth reconciliation
+## Truth reconciliation (vNext.12.1 정본)
 
-- `truthReconciliation.js`가 각 `route_decision`에 대해 `artifacts`·trace를 검사해 `satisfied` / `unsatisfied`.
-- 결과는 `execution_run.truth_reconciliation`에 저장 (dispatch 로그 포함).
+- `truthReconciliation.js`: 경로별 `reconciled_status` — `satisfied` | `unsatisfied` | `draft_only` (예: GitHub는 issue id 없으면 draft_only, Cursor는 handoff+live ref 둘 다 있어야 satisfied).
+- `aggregateReconciliationOverall` → `completed` | `partial` | `failed` | `draft_only` | `observe_only`.
+- `evaluateExecutionRunCompletion`은 엔트리가 있으면 **이 스냅샷을 completion 정본**으로 사용 (`legacy_lane_outbound`는 truth 없을 때만).
 
 ## 레거시
 
