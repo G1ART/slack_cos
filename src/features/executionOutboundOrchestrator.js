@@ -19,7 +19,10 @@ import {
   appendCursorTrace,
   appendSupabaseTrace,
   updateOutboundDispatchState,
+  setRunOrchestrationPlan,
 } from './executionRun.js';
+import { planExecutionRoutesForRun } from '../orchestration/planExecutionRoutes.js';
+import { extractRunCapabilities } from '../orchestration/runCapabilityExtractor.js';
 import {
   isGithubAuthConfigured,
   resolveGitHubRepoTarget,
@@ -45,23 +48,11 @@ function logOutbound(event, fields = {}) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  DB-work detection heuristic                                        */
+/*  DB-work — capability extractor (vNext.11, replaces ad-hoc haystack) */
 /* ------------------------------------------------------------------ */
 
-const DB_PATTERNS = [
-  /supabase/i, /database/i, /schema/i, /migration/i, /table/i, /column/i,
-  /RLS/i, /policy/i, /스키마/i, /테이블/i, /데이터/i, /DB/i, /저장/i,
-  /backend.*persist/i, /auth.*store/i, /user.*model/i,
-];
-
 function impliesDbWork(run) {
-  const haystack = [
-    run.project_goal,
-    run.locked_mvp_summary,
-    ...(run.includes || []),
-    ...(run.workstreams || []).map((w) => w.objective),
-  ].join(' ');
-  return DB_PATTERNS.some((re) => re.test(haystack));
+  return extractRunCapabilities(run).db_schema;
 }
 
 /* ------------------------------------------------------------------ */
@@ -920,32 +911,46 @@ export const seedQaArtifacts = generateQaArtifacts;
 /* ------------------------------------------------------------------ */
 
 /**
- * Plan outbound actions for all lanes in a run.
+ * Plan outbound actions for all lanes in a run (capability-routed).
  * @param {object} run
- * @returns {{ lane_type: string, provider: string, action: string }[]}
+ * @param {object|null} [space]
+ * @returns {{ lane_type: string, provider: string, action: string, capability?: string }[]}
  */
-export function planOutboundActionsForRun(run) {
+export function planOutboundActionsForRun(run, space = null) {
+  const { capabilities } = planExecutionRoutesForRun(run, space);
+  /** @type {{ lane_type: string, provider: string, action: string, capability?: string }[]} */
   const plan = [];
-
-  plan.push({ lane_type: 'research_benchmark', provider: 'internal', action: 'seed_research_note' });
-  plan.push({ lane_type: 'fullstack_swe', provider: 'github', action: isGithubAuthConfigured() ? 'create_issue_live' : 'create_issue_draft' });
-  plan.push({
-    lane_type: 'fullstack_swe',
-    provider: 'cursor',
-    action: 'cursor_cloud_launch_or_handoff',
-  });
-
-  if (impliesDbWork(run)) {
+  if (capabilities.research) {
+    plan.push({ lane_type: 'research_benchmark', provider: 'internal', action: 'seed_research_note', capability: 'research' });
+  }
+  if (capabilities.fullstack_code) {
+    plan.push({
+      lane_type: 'fullstack_swe',
+      provider: 'github',
+      action: isGithubAuthConfigured() ? 'create_issue_live' : 'create_issue_draft',
+      capability: 'fullstack_code',
+    });
+    plan.push({
+      lane_type: 'fullstack_swe',
+      provider: 'cursor',
+      action: 'cursor_cloud_launch_or_handoff',
+      capability: 'fullstack_code',
+    });
+  }
+  if (capabilities.db_schema) {
     plan.push({
       lane_type: 'fullstack_swe',
       provider: 'supabase',
       action: 'schema_draft_migration_stub_or_live_dispatch',
+      capability: 'db_schema',
     });
   }
-
-  plan.push({ lane_type: 'uiux_design', provider: 'internal', action: 'seed_uiux_artifacts' });
-  plan.push({ lane_type: 'qa_qc', provider: 'internal', action: 'seed_qa_artifacts' });
-
+  if (capabilities.uiux_design) {
+    plan.push({ lane_type: 'uiux_design', provider: 'internal', action: 'seed_uiux_artifacts', capability: 'uiux_design' });
+  }
+  if (capabilities.qa_validation) {
+    plan.push({ lane_type: 'qa_qc', provider: 'internal', action: 'seed_qa_artifacts', capability: 'qa_validation' });
+  }
   return plan;
 }
 
@@ -962,21 +967,55 @@ export async function dispatchOutboundActionsForRun(run, metadata = {}) {
   }
 
   updateOutboundDispatchState(run.run_id, 'in_progress');
+  const space = null;
+  const orchestrationPlan = planExecutionRoutesForRun(run, space);
+  setRunOrchestrationPlan(run.run_id, {
+    ...orchestrationPlan,
+    planned_at: new Date().toISOString(),
+  });
+
+  const caps = orchestrationPlan.capabilities;
   const results = {};
   let anyFailed = false;
 
-  results.research = await generateResearchArtifact(run);
-  results.uiux = await generateUiuxArtifacts(run);
-  results.qa = await generateQaArtifacts(run);
+  if (caps.research) {
+    results.research = await generateResearchArtifact(run);
+    if (results.research.mode === 'error') anyFailed = true;
+  } else {
+    results.research = { mode: 'skipped', reason: 'planner_capability_off' };
+  }
 
-  results.github = await ensureGithubIssueForRun(run, metadata);
-  if (results.github.mode === 'error') anyFailed = true;
+  if (caps.uiux_design) {
+    results.uiux = await generateUiuxArtifacts(run);
+    if (results.uiux.mode === 'error') anyFailed = true;
+  } else {
+    results.uiux = { mode: 'skipped', reason: 'planner_capability_off' };
+  }
 
-  results.cursor = await ensureCursorOutboundForRun(run, metadata);
-  if (results.cursor.mode === 'error') anyFailed = true;
+  if (caps.qa_validation) {
+    results.qa = await generateQaArtifacts(run);
+    if (results.qa.mode === 'error') anyFailed = true;
+  } else {
+    results.qa = { mode: 'skipped', reason: 'planner_capability_off' };
+  }
 
-  results.supabase = await tryEnsureSupabaseLiveOrDraftForRun(run);
-  if (results.supabase.mode === 'error') anyFailed = true;
+  if (caps.fullstack_code) {
+    results.github = await ensureGithubIssueForRun(run, metadata);
+    if (results.github.mode === 'error') anyFailed = true;
+
+    results.cursor = await ensureCursorOutboundForRun(run, metadata);
+    if (results.cursor.mode === 'error') anyFailed = true;
+  } else {
+    results.github = { mode: 'skipped', reason: 'planner_capability_off' };
+    results.cursor = { mode: 'skipped', reason: 'planner_capability_off' };
+  }
+
+  if (caps.db_schema) {
+    results.supabase = await tryEnsureSupabaseLiveOrDraftForRun(run);
+    if (results.supabase.mode === 'error') anyFailed = true;
+  } else {
+    results.supabase = { mode: 'skipped', reason: 'planner_capability_off' };
+  }
 
   updateOutboundDispatchState(run.run_id, anyFailed ? 'partial' : 'completed');
   return results;

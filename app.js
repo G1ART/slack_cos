@@ -148,8 +148,6 @@ import {
   classifyFounderRoutingLock,
   formatRuntimeMetaSurfaceText,
 } from './src/features/inboundFounderRoutingLock.js';
-import { classifyFounderIntent } from './src/core/founderIntentClassifier.js';
-import { FounderIntent } from './src/core/founderContracts.js';
 import {
   runInboundTurnTraceScope,
   setInboundTurnSlackRouteLabel,
@@ -904,13 +902,8 @@ async function handleUserText(userText, metadata = {}) {
       console.error(`[G1COS PIPELINE ERROR] ${pipelineErr?.message || pipelineErr}`, pipelineErr);
     }
 
-    const founderIntent = founderRoute ? classifyFounderIntent(inputNorm, metadata) : null;
-    const founderCanUseCommandRouter =
-      founderRoute &&
-      (founderIntent?.intent === FounderIntent.QUERY_LOOKUP ||
-        founderIntent?.intent === FounderIntent.STRUCTURED_COMMAND);
-
-    const shouldRunCommandRouter = !founderRoute || founderCanUseCommandRouter;
+    /** vNext.11 — 창업자 면은 커맨드 라우터를 타지 않는다(이미 위에서 founder 파이프라인 단일 종료). */
+    const shouldRunCommandRouter = !founderRoute;
     const routed = shouldRunCommandRouter
       ? await runInboundCommandRouter({
           userText,

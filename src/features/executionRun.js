@@ -217,6 +217,8 @@ export function createExecutionRun({ packet, metadata, playbook_id, task_kind })
     requested_by: packet.requested_by || String(metadata?.user || ''),
     approved_by: String(metadata?.user || ''),
     latest_report: null,
+    /** @type {{ capabilities?: object, route_decisions?: object[], planned_at?: string, provider_truth_ref?: object } | null} */
+    orchestration_plan: null,
   };
 
   runsByThread.set(packet.thread_key, run);
@@ -480,6 +482,32 @@ export function updateRunReport(runId, report) {
   const run = runsById.get(runId);
   if (!run) return false;
   run.latest_report = report;
+  run.updated_at = new Date().toISOString();
+  persistRun(run);
+  return true;
+}
+
+/**
+ * vNext.11 — Persist capability-routed plan + route_decisions on the run.
+ * @param {string} runId
+ * @param {{
+ *   capabilities: object,
+ *   route_decisions: object[],
+ *   provider_truth_snapshot?: object,
+ *   planned_at?: string,
+ * }} plan
+ */
+export function setRunOrchestrationPlan(runId, plan) {
+  const run = runsById.get(runId);
+  if (!run) return false;
+  run.orchestration_plan = {
+    capabilities: plan.capabilities,
+    route_decisions: plan.route_decisions,
+    planned_at: plan.planned_at || new Date().toISOString(),
+    provider_truth_ref: plan.provider_truth_snapshot
+      ? { summary: plan.provider_truth_snapshot.summary }
+      : null,
+  };
   run.updated_at = new Date().toISOString();
   persistRun(run);
   return true;

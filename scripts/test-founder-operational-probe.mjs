@@ -53,8 +53,8 @@ const outSha = await founderRequestPipeline({
   route_label: 'dm_ai_router',
 });
 assert.equal(llmCalled, 0, 'LLM must not run for SHA probe');
-assert.ok(outSha?.text?.includes('sha:'), outSha?.text);
-assert.equal(outSha.trace.founder_operational_probe, 'runtime_sha');
+assert.ok(outSha?.text?.includes('SHA'), outSha?.text);
+assert.equal(outSha.trace.founder_deterministic_utility, 'runtime_stamp');
 
 const outCur = await founderRequestPipeline({
   text: 'Cursor 상태는 어때?',
@@ -70,9 +70,9 @@ const outCur = await founderRequestPipeline({
   },
   route_label: 'dm_ai_router',
 });
-assert.ok(outCur?.text?.includes('Cursor Cloud 브리지'), outCur?.text);
-assert.ok(outCur?.text?.includes('COS 판정:'), outCur?.text);
-assert.equal(outCur.trace.founder_operational_probe, 'provider_cursor');
+assert.ok(outCur?.text?.includes('Cursor Cloud'), outCur?.text);
+assert.ok(/연결\s*준비도|상태/u.test(outCur?.text || ''), outCur?.text);
+assert.equal(outCur.trace.founder_deterministic_utility, 'provider_cursor');
 
 const outSb = await founderRequestPipeline({
   text: 'Supabase 연결 상태는 어때?',
@@ -89,7 +89,7 @@ const outSb = await founderRequestPipeline({
   route_label: 'dm_ai_router',
 });
 assert.ok(outSb?.text?.includes('Supabase'), outSb?.text);
-assert.equal(outSb.trace.founder_operational_probe, 'provider_supabase');
+assert.equal(outSb.trace.founder_deterministic_utility, 'provider_supabase');
 
 await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
 delete process.env.COS_WORKSPACE_QUEUE_FILE;

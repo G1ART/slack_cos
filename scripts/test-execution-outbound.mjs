@@ -80,6 +80,23 @@ function makeTestRun(overrides = {}) {
   });
 }
 
+/** vNext.11 planner: research + UI + DB + code 키워드를 한 번에 켜기 */
+function makeTestRunFullPlanner(overrides = {}) {
+  return makeTestRun({
+    thread_key: overrides.thread_key || 'ch:OB_TEST:FULL:1000.1002',
+    goal:
+      overrides.goal
+      || '벤치마크 조사 후 화면·인터랙션 개선과 Supabase 스키마를 포함한 MVP 개발',
+    includes: overrides.includes || [
+      '경쟁사 벤치마크',
+      'UI 시안',
+      'schema migration',
+      'user table',
+    ],
+    ...overrides,
+  });
+}
+
 /* ============================== */
 /* TEST 1: GitHub draft issue attachment (no auth configured) */
 /* ============================== */
@@ -357,10 +374,7 @@ try {
 /* BONUS: planOutboundActionsForRun + collectOutboundStatus */
 /* ============================== */
 try {
-  const run = makeTestRun({
-    goal: 'DB + 앱 구축',
-    includes: ['schema migration', 'user model'],
-  });
+  const run = makeTestRunFullPlanner();
 
   const plan = planOutboundActionsForRun(run);
   assert.ok(plan.length >= 5, 'plan has multiple steps');
@@ -382,10 +396,7 @@ try {
 /* BONUS: full dispatch pipeline */
 /* ============================== */
 try {
-  const run = makeTestRun({
-    goal: 'DB 스키마 기반 앱 개발',
-    includes: ['schema migration', 'table 설계'],
-  });
+  const run = makeTestRunFullPlanner();
 
   const results = await dispatchOutboundActionsForRun(run, { channel: 'C_TEST' });
   assert.ok(results.github, 'github result');
@@ -394,12 +405,15 @@ try {
   assert.ok(results.research, 'research result');
   assert.ok(results.uiux, 'uiux result');
   assert.ok(results.qa, 'qa result');
+  assert.equal(results.research.mode, 'created', 'research not skipped when capability on');
+  assert.equal(results.uiux.mode, 'created', 'uiux not skipped when capability on');
 
   const status = collectOutboundStatus(run.run_id);
   const nonPending = status.lanes.filter((l) => l.outbound_status !== 'pending');
   assert.ok(nonPending.length >= 3, 'at least 3 lanes have outbound status beyond pending');
 
   const updatedRun = getExecutionRunById(run.run_id);
+  assert.ok(updatedRun.orchestration_plan?.route_decisions?.length, 'route_decisions persisted');
   assert.ok(updatedRun.artifacts.research_benchmark.research_note_path, 'research artifact');
   assert.ok(updatedRun.artifacts.uiux_design.ui_spec_delta_path, 'uiux artifact');
   assert.ok(updatedRun.artifacts.qa_qc.acceptance_checklist_path, 'qa artifact');

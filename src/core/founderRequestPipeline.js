@@ -20,11 +20,11 @@ import { FounderHardFailReason, buildFounderHardFail } from './founderHardFailRu
 
 import {
   classifyFounderRoutingLock,
-  classifyFounderOperationalProbe,
   formatRuntimeMetaSurfaceText,
   formatMetaDebugSurfaceText,
   normalizeFounderMetaCommandLine,
 } from '../features/inboundFounderRoutingLock.js';
+import { tryResolveFounderDeterministicUtility } from '../founder/founderDeterministicUtilityResolver.js';
 import { formatExecutiveHelpText } from '../features/executiveSurfaceHelp.js';
 import {
   classifyGoldContract,
@@ -37,7 +37,6 @@ import {
   buildProviderTruthSnapshot,
   formatProviderTruthLines,
   formatProviderTruthFriendlyLines,
-  PROVIDER_STATUS_KO,
 } from './providerTruthSnapshot.js';
 import {
   openProjectIntakeSession,
@@ -225,48 +224,13 @@ async function executeDeploy(normalized, metadata, workContext) {
  * 창업자 면(DM/멘션) + LLM 호출 가능 시 **유일한** 표면: 키워드·골드·접두·의도 분류 없이 자연어 1패스.
  * (테스트·가드 경로는 `callText` 없음 또는 `COS_FOUNDER_DIRECT_CHAT=0` 일 때만 아래 헌법 파이프라인으로 내려감)
  */
-function formatFounderProviderProbeSurfaceText(probeKind, snap) {
-  const cursor = snap.providers.find((p) => p.provider === 'cursor_cloud');
-  const sb = snap.providers.find((p) => p.provider === 'supabase');
-  if (probeKind === 'provider_cursor') {
-    const ko = cursor ? (PROVIDER_STATUS_KO[cursor.status] || cursor.status) : '?';
-    return [
-      `*[COS에 연결된 Cursor Cloud 브리지]*`,
-      cursor
-        ? `- COS 판정: \`${cursor.status}\` (${ko})`
-        : '- provider 스냅샷 없음',
-      cursor?.note ? `- 상세: ${cursor.note}` : null,
-      '',
-      '_참고: AI 코딩 툴 “Cursor”의 시장·제품 평가가 아니라, 이 런타임의 **launch URL·핸드오프·디스패치 트레이스** 기준 연동 상태입니다._',
-    ]
-      .filter(Boolean)
-      .join('\n');
-  }
-  if (probeKind === 'provider_supabase') {
-    const ko = sb ? (PROVIDER_STATUS_KO[sb.status] || sb.status) : '?';
-    return [
-      `*[COS에 연결된 Supabase]*`,
-      sb ? `- COS 판정: \`${sb.status}\` (${ko})` : '- provider 스냅샷 없음',
-      sb?.note ? `- 상세: ${sb.note}` : null,
-      '',
-      '_참고: 실제 DB ping은 배포 환경의 `SUPABASE_URL`/키·네트워크에 달립니다. COS는 프로젝트 연결·드래프트·live dispatch 준비도를 위와 같이 표시합니다._',
-    ]
-      .filter(Boolean)
-      .join('\n');
-  }
-  return SAFE_FALLBACK_TEXT;
-}
-
-/**
- * 창업자 direct chat에서 Council/파트너 LLM 대신 결정론 응답 (SHA, Cursor/Supabase 브리지 truth).
- */
-function handleFounderOperationalProbe(normalized, metadata, route_label, probe) {
+function handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du) {
   const workContext = resolveWorkObject(normalized, metadata);
   const phaseProbe = resolveWorkPhase(workContext, normalized, metadata);
   const intentResult = {
     intent: FounderIntent.RUNTIME_META,
     confidence: 1,
-    signals: ['founder_operational_probe', probe.kind],
+    signals: ['founder_deterministic_utility', du.kind],
   };
   const policy = evaluatePolicy({
     actor: Actor.FOUNDER,
@@ -275,24 +239,17 @@ function handleFounderOperationalProbe(normalized, metadata, route_label, probe)
     intent_signal: intentResult.intent,
     metadata,
   });
-  const text =
-    probe.kind === 'runtime_sha'
-      ? formatRuntimeMetaSurfaceText()
-      : formatFounderProviderProbeSurfaceText(
-          probe.kind,
-          buildProviderTruthSnapshot({ space: workContext.project_space ?? null, run: workContext.run ?? null }),
-        );
-  const rendered = renderFounderSurface(FounderSurfaceType.RUNTIME_META, { text });
+  const rendered = renderFounderSurface(FounderSurfaceType.RUNTIME_META, { text: du.text });
   return buildResult(
     rendered,
     {
       workContext,
-      phaseResult: { ...phaseProbe, phase_source: 'founder_operational_probe', confidence: 1 },
+      phaseResult: { ...phaseProbe, phase_source: 'founder_deterministic_utility', confidence: 1 },
       intentResult,
       policy,
       route_label,
     },
-    { surface_type: FounderSurfaceType.RUNTIME_META, founder_operational_probe: probe.kind },
+    { surface_type: FounderSurfaceType.RUNTIME_META, founder_deterministic_utility: du.kind },
   );
 }
 
@@ -425,9 +382,9 @@ export async function founderRequestPipeline({ text, metadata = {}, route_label 
   ) {
     const launchHandled = await maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey);
     if (launchHandled) return launchHandled;
-    const opProbe = classifyFounderOperationalProbe(normalized);
-    if (opProbe) {
-      return handleFounderOperationalProbe(normalized, metadata, route_label, opProbe);
+    const du = tryResolveFounderDeterministicUtility({ normalized, threadKey, metadata });
+    if (du.handled) {
+      return handleFounderDeterministicUtility(normalized, metadata, route_label, threadKey, du);
     }
     return await runFounderNaturalPartnerTurn(normalized, metadata, route_label, callText, threadKey);
   }

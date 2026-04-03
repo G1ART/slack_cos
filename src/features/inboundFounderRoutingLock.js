@@ -118,7 +118,7 @@ export function classifyFounderRoutingLock(trimmed) {
  * `tryExecutiveSurfaceResponse` 가 executive / start_project 면으로 빠지도록 붙이는 접두.
  */
 export function surfaceLineForFounderKickoffLock(trimmed) {
-  return `툴제작: ${String(trimmed || '').trim()}`;
+  return String(trimmed || '').trim();
 }
 
 export function formatRuntimeMetaSurfaceText() {
