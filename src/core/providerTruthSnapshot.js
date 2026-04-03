@@ -1,15 +1,27 @@
 /**
  * Project space / env / bootstrap 힌트를 founder-facing provider truth로 정규화 (thin layer).
- * 실행 경로가 없으면 live로 표기하지 않음 (Cursor/Supabase 정렬).
+ * Cursor/Supabase는 live / live_ready / draft_only / manual_bridge / unavailable / not_configured 로 구분.
  */
 
 import { diagnoseGithubConfig } from '../features/executionDispatchLifecycle.js';
 import { diagnoseVercelReadiness } from '../adapters/vercelAdapter.js';
 import { diagnoseRailwayReadiness } from '../adapters/railwayAdapter.js';
 import { diagnoseCursorCloudLaunch } from '../adapters/cursorCloudAdapter.js';
-import { diagnoseSupabaseLiveExecution } from '../adapters/supabaseExecutionAdapter.js';
+import { diagnoseSupabaseExecutionContext } from '../adapters/supabaseExecutionAdapter.js';
 
-/** @typedef {'live'|'manual_bridge'|'draft_only'|'unavailable'|'not_configured'} ProviderStatus */
+/**
+ * @typedef {'live'|'live_ready'|'manual_bridge'|'draft_only'|'unavailable'|'not_configured'} ProviderStatus
+ */
+
+/** Founder-facing 상태 해석 (Slack). */
+export const PROVIDER_STATUS_KO = {
+  live: '자동 시작됨',
+  live_ready: '발사 준비됨',
+  manual_bridge: '수동 브리지 필요',
+  draft_only: '로컬 드래프트·스텁',
+  unavailable: '미연결',
+  not_configured: '미연결',
+};
 
 /**
  * @param {{ providers?: Array<{ provider: string, status: string, note: string | null }> }} snap
@@ -19,6 +31,17 @@ export function formatProviderTruthLines(snap) {
   return (snap.providers || []).map(
     (p) => `${p.provider}: ${p.status}${p.note ? ` — ${p.note}` : ''}`,
   );
+}
+
+/**
+ * @param {{ providers?: Array<{ provider: string, status: string, note: string | null }> }} snap
+ * @returns {string[]}
+ */
+export function formatProviderTruthFriendlyLines(snap) {
+  return (snap.providers || []).map((p) => {
+    const ko = PROVIDER_STATUS_KO[p.status] || p.status;
+    return `${p.provider}: ${ko} (\`${p.status}\`)${p.note ? ` — ${p.note}` : ''}`;
+  });
 }
 
 function cursorTruthFromRunAndEnv(run) {
@@ -37,28 +60,29 @@ function cursorTruthFromRunAndEnv(run) {
   }
 
   const diag = diagnoseCursorCloudLaunch();
-  if (diag.liveRouteConfigured) {
+  if (diag.launchUrlConfigured) {
+    const authNote = diag.authConfigured ? 'auth 구성됨' : 'auth 미구성(선택)';
     return {
-      status: /** @type {ProviderStatus} */ ('draft_only'),
+      status: /** @type {ProviderStatus} */ ('live_ready'),
       actions: ['cloud_launch_on_dispatch'],
-      note: 'COS_CURSOR_CLOUD_LAUNCH_URL 구성됨 — outbound dispatch 시 자동 POST',
+      note: `dispatch 시 Cursor launch POST 예정 — ${authNote} · 응답 권장 필드: ${diag.expectedResponseKeys.join(', ')}`,
     };
   }
 
-  const handoff = run?.artifacts?.fullstack_swe?.cursor_handoff_path
-    || traces.some((t) => t.handoff_path);
-  if (handoff || process.cwd()) {
+  const handoffPath = run?.artifacts?.fullstack_swe?.cursor_handoff_path;
+  const handoffInTrace = traces.some((t) => t.handoff_path);
+  if (handoffPath || handoffInTrace) {
     return {
       status: /** @type {ProviderStatus} */ ('manual_bridge'),
       actions: ['handoff_doc'],
-      note: 'Cursor Cloud 자동 실행 경로 미구성 — `data/exec-handoffs/` 핸드오프',
+      note: 'COS_CURSOR_CLOUD_LAUNCH_URL 미구성 — `data/exec-handoffs/` 핸드오프',
     };
   }
 
   return {
     status: 'unavailable',
     actions: [],
-    note: 'workspace 경로 없음',
+    note: 'launch URL·핸드오프 경로 없음',
   };
 }
 
@@ -68,39 +92,59 @@ function supabaseTruthFromRunAndSpace(space, run) {
   if (liveHit) {
     const last = [...traces].reverse().find((t) => t.execution_tier === 'live');
     const ref = last?.apply_ref || last?.migration_path || '';
+    const target = last?.dispatch_target ? `target: ${last.dispatch_target}` : '';
     return {
       status: /** @type {ProviderStatus} */ ('live'),
-      actions: ['live_dispatch', 'migration'],
-      note: ref ? `apply/dispatch ref: ${String(ref).slice(0, 120)}` : 'live dispatch 확인됨',
+      actions: ['staged_dispatch', 'migration'],
+      note: [ref ? `apply ref: ${String(ref).slice(0, 100)}` : 'staged dispatch 완료', target].filter(Boolean).join(' · '),
     };
   }
 
-  const spaceLinked =
-    space?.supabase_ready_status === 'configured'
-    || Boolean(space?.supabase_project_ref)
-    || Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const ctx = diagnoseSupabaseExecutionContext(space, run);
+  const hasDraftTrace = traces.some((t) => t.kind === 'schema_draft');
+  const hasStubTrace = traces.some((t) => t.kind === 'migration_stub');
+  const dispatchFailed = traces.some(
+    (t) => t.kind === 'live_dispatch' && (t.status === 'failed_or_skipped' || t.status === 'failed'),
+  );
+  const linkedOrArtifacts = ctx.project_linked || hasDraftTrace || hasStubTrace || ctx.migration_stub_available;
 
-  const hasDraftTrace = traces.some((t) => t.kind === 'schema_draft' || t.kind === 'migration_stub');
-
-  if (spaceLinked || hasDraftTrace) {
-    const liveDiag = diagnoseSupabaseLiveExecution();
-    const noteParts = [
-      '스키마 JSON 드래프트 + `supabase/migrations/` 스텁 — 원격 적용은 COS에서 기본 수행 안 함',
+  if (ctx.live_dispatch_configured && !dispatchFailed) {
+    const parts = [
+      `안전 타깃: ${ctx.safe_target}`,
+      'production 직접 apply 기본 비활성',
     ];
-    if (liveDiag.liveDispatchConfigured) {
-      noteParts.push('COS_SUPABASE_LIVE_DISPATCH_URL 구성됨 — dispatch 시 웹훅 전달 시도');
+    if (linkedOrArtifacts) {
+      parts.push('연결/드래프트 있음 — dispatch 시 staged 전달');
+    } else {
+      parts.push('웹훅만 구성 — DB 작업 런에서 드래프트·스텁 생성 후 전달');
+    }
+    return {
+      status: /** @type {ProviderStatus} */ ('live_ready'),
+      actions: ['staged_dispatch_webhook'],
+      note: parts.join(' · '),
+    };
+  }
+
+  if (linkedOrArtifacts || dispatchFailed) {
+    const parts = [
+      ctx.project_linked ? 'Supabase 프로젝트/env 연결됨' : '로컬 드래프트·스텁·이력',
+      '스키마 JSON + `supabase/migrations/` 스텁 경로',
+    ];
+    if (dispatchFailed) parts.push('live dispatch 실패/스킵 — 웹훅·네트워크 확인');
+    if (!ctx.live_dispatch_configured) {
+      parts.push('COS_SUPABASE_LIVE_DISPATCH_URL 미구성 — staged 자동 전달 없음');
     }
     return {
       status: /** @type {ProviderStatus} */ ('draft_only'),
       actions: ['schema_draft_json', 'migration_stub_repo'],
-      note: noteParts.join(' · '),
+      note: parts.join(' · '),
     };
   }
 
   return {
     status: /** @type {ProviderStatus} */ ('not_configured'),
     actions: [],
-    note: 'Supabase project/url 미연결 — 스키마 드래프트는 DB 작업 키워드 시 로컬 생성',
+    note: '프로젝트 ref/URL 미연결 — DB 키워드 시 로컬 드래프트만 생성',
   };
 }
 
@@ -169,7 +213,7 @@ export function buildProviderTruthSnapshot({ space = null, run = null } = {}) {
     note: sbT.note,
   });
   if (sbT.status === 'not_configured') {
-    manual_bridge_actions.push('Supabase: 프로젝트 ref/URL 연결 후 스테이징에서 마이그레이션 적용');
+    manual_bridge_actions.push('Supabase: 프로젝트 연결 또는 DB 작업 런으로 드래프트 생성');
   }
 
   // Railway
@@ -218,6 +262,7 @@ export function buildProviderTruthSnapshot({ space = null, run = null } = {}) {
 
   const summary = {
     live_count: providers.filter((p) => p.status === 'live').length,
+    live_ready_count: providers.filter((p) => p.status === 'live_ready').length,
     manual_bridge_count: providers.filter((p) => p.status === 'manual_bridge').length,
     draft_only_count: providers.filter((p) => p.status === 'draft_only').length,
     unavailable_count: providers.filter((p) => p.status === 'unavailable').length,

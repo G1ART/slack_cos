@@ -29,7 +29,10 @@ import {
 } from '../adapters/githubAdapter.js';
 import { EXEC_HANDOFFS_DIR } from '../storage/paths.js';
 import { tryLaunchCursorRun } from '../adapters/cursorCloudAdapter.js';
-import { trySupabaseLiveDispatch } from '../adapters/supabaseExecutionAdapter.js';
+import {
+  diagnoseSupabaseExecutionContext,
+  trySupabaseLiveDispatch,
+} from '../adapters/supabaseExecutionAdapter.js';
 
 /* ------------------------------------------------------------------ */
 /*  Outbound event logger                                              */
@@ -307,26 +310,35 @@ export async function ensureCursorOutboundForRun(run, metadata = {}) {
       cursor_conversation_url: live.conversation_url || null,
       cursor_branch_name: live.branch_name || null,
       cursor_execution_mode: 'live',
+      cursor_launch_source: live.source || 'cursor_cloud',
+      cursor_launch_contract_version: live.launch_contract_version || null,
+      cursor_response_incomplete: Boolean(live.response_incomplete),
     });
     updateRunGitTrace(run.run_id, {
       cursor_run_ref: String(live.run_ref || ''),
       cursor_conversation_url: String(live.conversation_url || ''),
+      cursor_branch_name: String(live.branch_name || ''),
     });
     appendCursorTrace(run.run_id, {
       dispatch_mode: 'live',
       cursor_execution_mode: 'live',
+      source: live.source || 'cursor_cloud',
+      launch_contract_version: live.launch_contract_version || null,
       cursor_run_ref: live.run_ref || null,
       cursor_conversation_url: live.conversation_url || null,
+      branch_name: live.branch_name || null,
       cursor_fallback_used: false,
+      fallback_reason: null,
       handoff_path: null,
       status: 'dispatched',
-      result_summary: 'cursor_cloud_launch_ok',
+      result_summary: live.response_incomplete ? 'cursor_cloud_launch_ok_incomplete_shape' : 'cursor_cloud_launch_ok',
       result_link: live.conversation_url || null,
+      response_incomplete: Boolean(live.response_incomplete),
     });
     updateLaneOutbound(run.run_id, 'fullstack_swe', {
       provider: 'cursor',
       status: 'dispatched',
-      ref_ids: [live.run_ref, live.conversation_url].filter(Boolean),
+      ref_ids: [live.run_ref, live.conversation_url, live.branch_name].filter(Boolean),
       error: null,
     });
     logOutbound('outbound_dispatch_succeeded', {
@@ -643,6 +655,14 @@ export async function tryEnsureSupabaseLiveOrDraftForRun(run) {
   });
   updateRunGitTrace(run.run_id, { supabase_migration_ids: [mig.filename.replace(/\.sql$/, '')] });
 
+  const runAfterStub = getExecutionRunById(run.run_id) || run;
+  const sbCtx = diagnoseSupabaseExecutionContext(null, runAfterStub);
+  attachRunArtifact(run.run_id, 'fullstack_swe', {
+    supabase_outbound_phases: ['schema_draft_json', 'migration_stub_repo'],
+    supabase_safe_target: sbCtx.safe_target,
+    supabase_live_dispatch_configured: sbCtx.live_dispatch_configured,
+  });
+
   const runFresh = getExecutionRunById(run.run_id) || run;
   const live = await trySupabaseLiveDispatch(runFresh, {
     draft_path: draftRes.draft_path,
@@ -654,6 +674,9 @@ export async function tryEnsureSupabaseLiveOrDraftForRun(run) {
     attachRunArtifact(run.run_id, 'fullstack_swe', {
       supabase_live_apply_ref: live.apply_ref || null,
       supabase_execution_mode: 'live',
+      supabase_outbound_phases: ['schema_draft_json', 'migration_stub_repo', 'live_dispatch'],
+      supabase_dispatch_target: live.dispatch_target || null,
+      supabase_safe_target: live.safe_target || sbCtx.safe_target,
     });
     appendSupabaseTrace(run.run_id, {
       kind: 'live_dispatch',
@@ -662,11 +685,13 @@ export async function tryEnsureSupabaseLiveOrDraftForRun(run) {
       apply_ref: live.apply_ref || null,
       draft_path: draftRes.draft_path,
       migration_path: mig.relPath,
+      dispatch_target: live.dispatch_target || null,
+      safe_target: live.safe_target || sbCtx.safe_target,
     });
     updateLaneOutbound(run.run_id, 'fullstack_swe', {
       provider: 'supabase',
       status: 'dispatched',
-      ref_ids: [draftRes.draft_path, mig.relPath, live.apply_ref].filter(Boolean),
+      ref_ids: [draftRes.draft_path, mig.relPath, live.apply_ref, live.dispatch_target].filter(Boolean),
       error: null,
     });
     logOutbound('outbound_dispatch_succeeded', {
@@ -689,6 +714,8 @@ export async function tryEnsureSupabaseLiveOrDraftForRun(run) {
     status: live.attemptedRemote ? 'failed_or_skipped' : 'not_configured',
     execution_tier: 'draft_only',
     error_summary: live.error_summary || null,
+    dispatch_target: live.dispatch_target || null,
+    safe_target: live.safe_target || sbCtx.safe_target,
   });
 
   return {

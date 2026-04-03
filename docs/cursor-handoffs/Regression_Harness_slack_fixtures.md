@@ -8,7 +8,7 @@
 
 **헌법 골드 스펙 (2026-04-01)**: `scripts/tests-constitutional/test-founder-gold-spec-v1.mjs`는 **턴마다 `clearProjectIntakeSessionsForTest`만** 호출해 파이프라인 3b의 spec 스레드 선점을 막고, **테스트 4 scope lock → 테스트 7 승인**까지 이어지는 **`clearExecutionRunsForTest`는 파일 최상단 한 번만** 유지한다.
 
-**Outbound / provider truth (2026-04-02)**: `scripts/test-live-provider-truth-alignment.mjs` + `scripts/test-execution-outbound.mjs`가 Cursor Cloud launch URL·Supabase live dispatch URL·`buildProviderTruthSnapshot` 정렬을 고정한다(`npm test` 포함).
+**Outbound / provider truth (2026-04-02)**: `scripts/test-live-provider-truth-alignment.mjs` + `scripts/test-execution-outbound.mjs`가 Cursor Cloud launch URL·Supabase live dispatch URL·`buildProviderTruthSnapshot`(Cursor `live`/`live_ready`/`manual_bridge`/`unavailable`, Supabase `live`/`live_ready`/`draft_only`/`not_configured`)·실행 패킷 렌더에서 `live_ready`≠`draft_only`를 고정한다(`npm test` 포함).
 
 ---
 

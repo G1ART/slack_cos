@@ -69,6 +69,7 @@ export function buildStatusPacket(ctx = {}) {
     in_progress: ctx.in_progress || ['MVP 범위 잠금'],
     blocker: ctx.blocker || '없음',
     provider_truth: ctx.provider_truth || ['live: 없음', 'manual_bridge: 없음'],
+    provider_truth_friendly: ctx.provider_truth_friendly || [],
     next_actions: ctx.next_actions || ['scope lock 확정', 'run 생성', 'workstream 분배'],
     founder_action_required: ctx.founder_action_required || '핵심 결정 3개 확정',
   };
@@ -81,6 +82,7 @@ export function buildHandoffPacket(ctx = {}) {
     run_ref: ctx.run_ref || 'run_pending',
     dispatched_workstreams: ctx.dispatched_workstreams || ['research_benchmark', 'fullstack_swe', 'uiux_design', 'qa_qc'],
     provider_truth: ctx.provider_truth || ['github: manual_bridge', 'cursor: manual_bridge', 'supabase: optional'],
+    provider_truth_friendly: ctx.provider_truth_friendly || [],
     founder_next_action: ctx.founder_next_action || '첫 실행 패킷 승인',
   };
 }

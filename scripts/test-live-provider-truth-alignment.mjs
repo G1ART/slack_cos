@@ -54,7 +54,10 @@ const {
   tryEnsureSupabaseLiveOrDraftForRun,
 } = await import('../src/features/executionOutboundOrchestrator.js');
 
-const { buildProviderTruthSnapshot } = await import('../src/core/providerTruthSnapshot.js');
+const {
+  buildProviderTruthSnapshot,
+  formatProviderTruthFriendlyLines,
+} = await import('../src/core/providerTruthSnapshot.js');
 
 function ok(name) {
   passed++;
@@ -178,6 +181,95 @@ try {
   ok('supabase live dispatch: truth live + trace');
 } catch (e) {
   fail('supabase live dispatch', e);
+}
+
+/* Cursor live_ready: launch URL only, no live trace — friendly ≠ draft_only */
+try {
+  delete process.env.COS_CURSOR_CLOUD_DISABLE;
+  process.env.COS_CURSOR_CLOUD_LAUNCH_URL = 'https://hooks.example/__cursor_ready__/launch';
+  const run = makeTestRun();
+  const r = getExecutionRunById(run.run_id);
+  const snap = buildProviderTruthSnapshot({ space: null, run: r });
+  const cur = snap.providers.find((p) => p.provider === 'cursor_cloud');
+  assert.equal(cur.status, 'live_ready');
+  const friendly = formatProviderTruthFriendlyLines(snap);
+  const curFriendly = friendly.find((l) => l.startsWith('cursor_cloud:'));
+  assert.ok(curFriendly.includes('live_ready'), curFriendly);
+  assert.ok(curFriendly.includes('발사 준비됨'), curFriendly);
+  assert.ok(!curFriendly.includes('draft_only'), curFriendly);
+
+  const { evaluateLaunchReadiness } = await import('../src/core/launchReadinessEvaluator.js');
+  const { buildExecutionLaunchRenderPayload } = await import('../src/core/executionLaunchPacketBuilder.js');
+  const { renderFounderSurface } = await import('../src/core/founderRenderer.js');
+  const { FounderSurfaceType } = await import('../src/core/founderContracts.js');
+  const readiness = evaluateLaunchReadiness({
+    workContext: {
+      run: r,
+      project_space: { project_id: 'p_test', human_label: 'integration goal line for readiness' },
+    },
+    threadKey: 'ch:READY:1',
+    providerSnapshot: snap,
+    metadata: {},
+  });
+  const payload = buildExecutionLaunchRenderPayload({
+    run: r,
+    space: null,
+    providerTruth: snap,
+    readiness,
+    manualBridgeActions: snap.manual_bridge_actions,
+  });
+  const rendered = renderFounderSurface(FounderSurfaceType.EXECUTION_PACKET, payload);
+  assert.ok(rendered.text.includes('live_ready'), rendered.text.slice(0, 800));
+  assert.ok(rendered.text.includes('발사 준비됨'), rendered.text.slice(0, 800));
+
+  delete process.env.COS_CURSOR_CLOUD_LAUNCH_URL;
+  clearExecutionRunsForTest();
+  ok('cursor live_ready + execution packet does not collapse to draft_only');
+} catch (e) {
+  fail('cursor live_ready render', e);
+}
+
+/* Cursor unavailable: no URL, no handoff artifact */
+try {
+  delete process.env.COS_CURSOR_CLOUD_LAUNCH_URL;
+  const run = makeTestRun();
+  const r = getExecutionRunById(run.run_id);
+  const snap = buildProviderTruthSnapshot({ space: null, run: r });
+  const cur = snap.providers.find((p) => p.provider === 'cursor_cloud');
+  assert.equal(cur.status, 'unavailable');
+  clearExecutionRunsForTest();
+  ok('cursor unavailable when no launch URL and no handoff');
+} catch (e) {
+  fail('cursor unavailable', e);
+}
+
+/* Supabase live_ready: dispatch URL + linked project, no run trace */
+try {
+  process.env.COS_SUPABASE_LIVE_DISPATCH_URL = 'https://worker.example/__sb_ready__/hook';
+  delete process.env.COS_SUPABASE_LIVE_DISABLE;
+  const snap = buildProviderTruthSnapshot({
+    space: { supabase_project_ref: 'proj-ref-1', supabase_ready_status: 'configured' },
+    run: null,
+  });
+  const sb = snap.providers.find((p) => p.provider === 'supabase');
+  assert.equal(sb.status, 'live_ready');
+  delete process.env.COS_SUPABASE_LIVE_DISPATCH_URL;
+  ok('supabase live_ready: linked + dispatch URL, no trace');
+} catch (e) {
+  fail('supabase live_ready', e);
+}
+
+/* Supabase not_configured: no space, no env keys (dispatch off) */
+try {
+  delete process.env.COS_SUPABASE_LIVE_DISPATCH_URL;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const snap = buildProviderTruthSnapshot({ space: null, run: null });
+  const sb = snap.providers.find((p) => p.provider === 'supabase');
+  assert.equal(sb.status, 'not_configured');
+  ok('supabase not_configured');
+} catch (e) {
+  fail('supabase not_configured', e);
 }
 
 clearExecutionRunsForTest();

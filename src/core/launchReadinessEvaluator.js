@@ -40,7 +40,11 @@ export function evaluateLaunchReadiness({ workContext, threadKey, providerSnapsh
   }
 
   const s = providerSnapshot.summary;
-  const executablePaths = s.live_count + s.manual_bridge_count + s.draft_only_count;
+  const executablePaths =
+    s.live_count
+    + (s.live_ready_count || 0)
+    + s.manual_bridge_count
+    + s.draft_only_count;
   if (executablePaths === 0) {
     return {
       readiness: 'launch_blocked_missing_provider',
@@ -61,7 +65,9 @@ export function evaluateLaunchReadiness({ workContext, threadKey, providerSnapsh
     'manual bridge: 허용',
   ];
 
-  const hasBridge = s.manual_bridge_count + s.draft_only_count > 0 || s.unavailable_count > 0;
+  const hasBridge =
+    s.manual_bridge_count + s.draft_only_count + (s.live_ready_count || 0) > 0
+    || s.unavailable_count > 0;
   const readiness =
     hasBridge || s.not_configured_count > 0
       ? 'launch_ready_with_manual_bridge'

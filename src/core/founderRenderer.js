@@ -83,6 +83,30 @@ function renderExecutionPacket(payload) {
   lines.push(
     `*provider truth:*\n${payload.provider_truth?.length ? payload.provider_truth.map((t) => `- ${t}`).join('\n') : '- (스냅샷 없음)'}`,
   );
+  if (payload.provider_truth_friendly?.length) {
+    lines.push(
+      `*provider 상태 해석:*\n${payload.provider_truth_friendly.map((t) => `- ${t}`).join('\n')}`,
+    );
+  }
+
+  const native = payload.provider_native_refs;
+  if (native && typeof native === 'object') {
+    const nlines = [];
+    if (native.github_issue_url) nlines.push(`GitHub issue: ${native.github_issue_url}`);
+    if (native.github_pr_url) nlines.push(`GitHub PR: ${native.github_pr_url}`);
+    if (native.cursor_run_ref) nlines.push(`Cursor run_ref: \`${native.cursor_run_ref}\``);
+    if (native.cursor_conversation_url) nlines.push(`Cursor conversation: ${native.cursor_conversation_url}`);
+    if (native.cursor_branch_name) nlines.push(`Cursor branch: \`${native.cursor_branch_name}\``);
+    if (native.supabase_draft_path) nlines.push(`Supabase draft: \`${native.supabase_draft_path}\``);
+    if (native.supabase_migration_path) nlines.push(`Supabase migration: \`${native.supabase_migration_path}\``);
+    if (native.supabase_live_apply_ref) nlines.push(`Supabase apply_ref: \`${native.supabase_live_apply_ref}\``);
+    if (native.supabase_dispatch_target) {
+      nlines.push(`Supabase dispatch: \`${native.supabase_dispatch_target}\` · safe_target=${native.supabase_safe_target || 'unknown'}`);
+    }
+    if (nlines.length) {
+      lines.push(`*provider 네이티브 참조:*\n${nlines.map((l) => `- ${l}`).join('\n')}`);
+    }
+  }
 
   const autoStarted = payload.auto_started_artifacts?.length
     ? payload.auto_started_artifacts.map((a) => `- ${a}`).join('\n')
@@ -200,6 +224,9 @@ function renderStatusReportPacket(payload) {
   lines.push(`*진행 중:*\n- ${(payload.in_progress || []).join('\n- ') || '-'}`);
   lines.push(`*blocker:* ${payload.blocker || '없음'}`);
   lines.push(`*외부 툴 truth:*\n- ${(payload.provider_truth || []).join('\n- ') || '-'}`);
+  if (payload.provider_truth_friendly?.length) {
+    lines.push(`*truth 해석:*\n- ${payload.provider_truth_friendly.join('\n- ')}`);
+  }
   lines.push(`*다음 예정 작업:*\n- ${(payload.next_actions || []).join('\n- ') || '-'}`);
   lines.push(`*Founder action 필요:* ${payload.founder_action_required || '없음'}`);
   return { text: lines.join('\n\n') };
@@ -211,6 +238,9 @@ function renderHandoffPacket(payload) {
   lines.push(`*run:* ${payload.run_ref || '-'}`);
   lines.push(`*dispatched workstreams:*\n- ${(payload.dispatched_workstreams || []).join('\n- ') || '-'}`);
   lines.push(`*provider truth:*\n- ${(payload.provider_truth || []).join('\n- ') || '-'}`);
+  if (payload.provider_truth_friendly?.length) {
+    lines.push(`*truth 해석:*\n- ${payload.provider_truth_friendly.join('\n- ')}`);
+  }
   lines.push(`*다음 founder action:* ${payload.founder_next_action || '없음'}`);
   return { text: lines.join('\n\n') };
 }

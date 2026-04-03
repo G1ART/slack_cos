@@ -1,0 +1,15 @@
+# Acceptance Checklist — RUN-mniiu54p-0j5k4
+**Generated**: 2026-04-03T06:27:14.495Z
+## Objective
+acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.
+## Success Criteria
+- [ ] 멤버·팀 일정 보기/등록(v1)
+- [ ] 승인 규칙 반영(v1)
+## User Journey Checks
+- [ ] Primary happy path verified
+- [ ] Edge case handling acceptable
+- [ ] Error states user-friendly
+## Regression Sensitivity
+- [ ] No existing functionality broken
+---
+_Auto-generated for `RUN-mniiu54p-0j5k4`_
