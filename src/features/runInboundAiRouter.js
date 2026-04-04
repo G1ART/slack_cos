@@ -282,7 +282,11 @@ export async function runInboundAiRouter(ctx) {
   if (founderRoute) {
     const kernel = await runFounderDirectKernel({
       text: trimmed,
-      metadata: { ...metadata, callText },
+      metadata: {
+        ...metadata,
+        callText,
+        ...(typeof callJSON === 'function' ? { callJSON } : {}),
+      },
       route_label: metadata?.slack_route_label,
     });
     if (kernel?.text) {

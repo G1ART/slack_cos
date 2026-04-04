@@ -42,7 +42,11 @@ assert.equal(isExternalMutationAuthorized({ ...baseRun, external_execution_autho
 assert.equal(isExternalMutationAuthorized({ ...baseRun, external_execution_authorization: { state: 'draft_only' } }), false);
 assert.equal(isExternalMutationAuthorized({ ...baseRun, external_execution_authorization: { state: 'authorized' } }), true);
 
-import { buildProposalFromFounderInput } from '../src/founder/founderProposalKernel.js';
+import {
+  buildProposalFromFounderInput,
+  buildProposalPacketFromSidecar,
+} from '../src/founder/founderProposalKernel.js';
+import { emptySidecarFromPartner } from '../src/founder/founderArtifactSchemas.js';
 import { selectExecutionModeFromProposalPacket } from '../src/founder/executionModeFromProposalPacket.js';
 import { synthesizeFounderContext } from '../src/founder/founderContextSynthesizer.js';
 import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
@@ -71,17 +75,37 @@ const pBud = buildProposalFromFounderInput({
 assert.ok(['COS_ONLY', 'INTERNAL_SUPPORT'].includes(selectExecutionModeFromProposalPacket(pBud)));
 assert.equal((pBud.external_execution_tasks || []).length, 0);
 
-const pBench = buildProposalFromFounderInput({
-  rawText: '경쟁사 벤치마킹 정리해줘',
-  contextFrame: ctx('Dbc'),
-});
+const pBench = buildProposalPacketFromSidecar(
+  {
+    ...emptySidecarFromPartner(''),
+    conversation_status: 'exploring',
+    proposal_artifact: {
+      understood_request: '경쟁사 벤치마킹',
+      internal_support_tasks: ['벤치마크 표'],
+    },
+  },
+  ctx('Dbc'),
+  '경쟁사 벤치마킹 정리해줘',
+  { source: 'test' },
+);
 assert.equal(selectExecutionModeFromProposalPacket(pBench), 'INTERNAL_SUPPORT');
 assert.equal((pBench.external_execution_tasks || []).length, 0);
 
-const pExt = buildProposalFromFounderInput({
-  rawText: '좋아, 이제 GitHub와 Supabase까지 실제로 실행해',
-  contextFrame: ctx('Dex'),
-});
+const pExt = buildProposalPacketFromSidecar(
+  {
+    ...emptySidecarFromPartner(''),
+    conversation_status: 'approval_pending',
+    proposal_artifact: {},
+    approval_artifact: {
+      requires_external_dispatch: true,
+      external_tasks: ['GitHub와 Supabase 실제 실행'],
+      rationale: 'sidecar test',
+    },
+  },
+  ctx('Dex'),
+  '좋아, 이제 GitHub와 Supabase까지 실제로 실행해',
+  { source: 'test' },
+);
 assert.ok(pExt.external_execution_tasks.length);
 const ap = buildFounderApprovalPacket(pExt);
 assert.ok(ap.visible_section.includes('롤백') || ap.visible_section.includes('중단점'));

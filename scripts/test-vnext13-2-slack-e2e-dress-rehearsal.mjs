@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
@@ -26,6 +27,10 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const e2eTmp = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'g1cos-e2e-dress-'));
+process.env.FOUNDER_CONVERSATION_STATE_FILE = path.join(e2eTmp, 'founder-conv.json');
+await fsPromises.writeFile(process.env.FOUNDER_CONVERSATION_STATE_FILE, '{"by_thread":{}}', 'utf8');
+
 async function dm(channel, text, callText) {
   const meta = {
     source_type: 'direct_message',
@@ -35,6 +40,36 @@ async function dm(channel, text, callText) {
     slack_route_label: 'dm_ai_router',
     callText,
   };
+  if (channel === 'De2eex') {
+    meta.mockFounderPlannerRow = {
+      natural_language_reply: '외부 실행은 승인 패킷으로 정리합니다.',
+      state_delta: {},
+      conversation_status: 'approval_pending',
+      proposal_artifact: {},
+      approval_artifact: {
+        requires_external_dispatch: true,
+        external_tasks: ['GitHub/Cursor/Supabase MVP 실행'],
+        rationale: 'E2E dress 외부 실행 후보',
+      },
+      execution_artifact: {},
+      follow_up_questions: [],
+      requires_founder_confirmation: true,
+    };
+  } else {
+    meta.mockFounderPlannerRow = {
+      natural_language_reply: '',
+      state_delta: {},
+      conversation_status: 'exploring',
+      proposal_artifact: {
+        understood_request: text.slice(0, 200),
+        cos_only_tasks: ['스레드 맥락 정리'],
+      },
+      approval_artifact: {},
+      execution_artifact: {},
+      follow_up_questions: [],
+      requires_founder_confirmation: false,
+    };
+  }
   openProjectIntakeSession(meta, { goalLine: `E2E dress ${channel}` });
   return runFounderDirectKernel({ text, metadata: meta, route_label: 'dm_ai_router' });
 }
@@ -125,5 +160,8 @@ const o6 = await dm(
 assert.equal(o6.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
 assert.equal(o6.trace.cos_governance_advisory, false);
 assert.ok(!o6.text.includes('COS 운영 조언'));
+
+await fsPromises.rm(e2eTmp, { recursive: true, force: true }).catch(() => {});
+delete process.env.FOUNDER_CONVERSATION_STATE_FILE;
 
 console.log('ok: vnext13_2_slack_e2e_dress_rehearsal');

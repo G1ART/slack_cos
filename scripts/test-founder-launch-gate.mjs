@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
  * Founder launch gate + execution awareness — acceptance & determinism.
+ * vNext.13.4: 실행 스파인은 유효한 execution_artifact(mockFounderPlannerRow)로만 연결.
  */
 import assert from 'node:assert/strict';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 
 import { detectFounderLaunchIntent } from '../src/core/founderLaunchIntent.js';
 import { evaluateLaunchReadiness } from '../src/core/launchReadinessEvaluator.js';
@@ -11,6 +15,34 @@ import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
+
+const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'g1cos-flg-'));
+process.env.STORAGE_MODE = 'json';
+process.env.STORE_READ_PREFERENCE = 'json';
+process.env.FOUNDER_CONVERSATION_STATE_FILE = path.join(tmp, 'founder-conv.json');
+process.env.EXECUTION_RUNS_FILE = path.join(tmp, 'execution-runs.json');
+process.env.PROJECT_SPACES_FILE = path.join(tmp, 'project-spaces.json');
+await fs.writeFile(process.env.FOUNDER_CONVERSATION_STATE_FILE, '{"by_thread":{}}', 'utf8');
+await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
+await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
+
+function launchMockRow(goalLine, lockedScope) {
+  return {
+    natural_language_reply: '구조화 실행 아티팩트에 따라 스파인을 연결합니다.',
+    state_delta: {},
+    conversation_status: 'execution_ready',
+    proposal_artifact: {},
+    approval_artifact: {},
+    execution_artifact: {
+      request_execution_spine: true,
+      approval_lineage_confirmed: true,
+      goal_line: goalLine,
+      locked_scope_summary: lockedScope,
+    },
+    follow_up_questions: [],
+    requires_founder_confirmation: false,
+  };
+}
 
 let passed = 0;
 let failed = 0;
@@ -25,7 +57,7 @@ function fail(name, e) {
 
 console.log('\n=== Founder Launch Gate ===\n');
 
-/* Determinism: intent detection */
+/* Determinism: intent detection (레거시 모듈 — 커널에서는 미사용, 회귀만) */
 try {
   const meta = { source_type: 'direct_message', channel: 'D1', user: 'U1', ts: '1.0' };
   openProjectIntakeSession(meta, { goalLine: '테스트 프로덕트 킥오프' });
@@ -74,19 +106,21 @@ try {
   fail('readiness scope', e);
 }
 
-/* Pipeline: launch → EXECUTION_PACKET */
+/* Pipeline: artifact-gated launch → EXECUTION_PACKET */
 try {
+  const goalLine = '더그린 갤러리 스케줄 캘린더 MVP';
   const meta = {
     source_type: 'direct_message',
     channel: 'Dlaunch1',
     user: 'Ulaunch',
     ts: '100.0',
     slack_route_label: 'dm_ai_router',
+    mockFounderPlannerRow: launchMockRow(goalLine, '캘린더 MVP · 외부 예약 우선'),
     callText: async () => {
       throw new Error('callText must not run when launch gate handles');
     },
   };
-  openProjectIntakeSession(meta, { goalLine: '더그린 갤러리 스케줄 캘린더 MVP' });
+  openProjectIntakeSession(meta, { goalLine });
 
   const out = await runFounderDirectKernel({
     text: '좋아. 진행하자.',
@@ -96,7 +130,7 @@ try {
 
   assert.ok(out, 'pipeline returns');
   assert.equal(out.trace.launch_gate_taken, true);
-  assert.equal(out.trace.launch_intent_detected, true);
+  assert.equal(out.trace.founder_artifact_gated_launch, true);
   assert.equal(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
   assert.ok(out.trace.launch_packet_id, 'launch_packet_id');
   assert.ok(out.trace.provider_truth_snapshot?.providers?.length, 'provider_truth');
@@ -105,7 +139,7 @@ try {
   assert.ok(out.text.includes('대표 next action') || out.text.includes('next action'), 'next action');
   assert.ok(out.text.includes('수동 브리지'), 'manual bridge section');
   assert.ok(out.text.includes('적용된 기본값'), 'defaults section');
-  ok('pipeline launch → EXECUTION_PACKET + trace');
+  ok('pipeline artifact launch → EXECUTION_PACKET + trace');
 } catch (e) {
   fail('pipeline launch', e);
 }
@@ -137,19 +171,19 @@ try {
 
 /* Repeat launch same thread → same surface class + stable packet id */
 try {
+  const goalR = '반복 시퀀스 idempotent 전용 스레드 Drepeat1 — cross-test 라벨 매칭 회피';
   const metaR = {
     source_type: 'direct_message',
     channel: 'Drepeat1',
     user: 'Urep',
     ts: '300.0',
     slack_route_label: 'dm_ai_router',
+    mockFounderPlannerRow: launchMockRow(goalR, '반복 스레드 스코프'),
     callText: async () => {
       throw new Error('callText must not run on launch');
     },
   };
-  openProjectIntakeSession(metaR, {
-    goalLine: '반복 시퀀스 idempotent 전용 스레드 Drepeat1 — cross-test 라벨 매칭 회피',
-  });
+  openProjectIntakeSession(metaR, { goalLine: goalR });
   const o1 = await runFounderDirectKernel({
     text: '좋아. 진행하자.',
     metadata: metaR,
@@ -182,6 +216,11 @@ try {
 } catch (e) {
   fail('provider shape', e);
 }
+
+await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
+delete process.env.FOUNDER_CONVERSATION_STATE_FILE;
+delete process.env.EXECUTION_RUNS_FILE;
+delete process.env.PROJECT_SPACES_FILE;
 
 console.log(`\n=== ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed ? 1 : 0);
