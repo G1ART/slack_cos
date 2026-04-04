@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** vNext.13.4 — SHA/Cursor/Supabase 운영 메타는 대화 플래너 경로 밖에서 처리 */
+/** vNext.13.5 — 운영 메타 숏서킷은 founder_explicit_meta_utility_path === true 일 때만 */
 import assert from 'node:assert/strict';
 
 import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
@@ -24,7 +24,7 @@ const base = {
 
 const sha = await runFounderDirectKernel({
   text: '현재 SHA 버전이 뭔지 출력해줘.',
-  metadata: { ...base },
+  metadata: { ...base, founder_explicit_meta_utility_path: true },
   route_label: 'dm_ai_router',
 });
 assert.equal(llm, 0);
@@ -35,7 +35,7 @@ assert.equal(sha.trace.founder_deterministic_utility, 'runtime_stamp');
 
 const cur = await runFounderDirectKernel({
   text: 'Cursor 상태는 어때?',
-  metadata: { ...base, ts: '2.0' },
+  metadata: { ...base, ts: '2.0', founder_explicit_meta_utility_path: true },
   route_label: 'dm_ai_router',
 });
 assert.equal(cur.trace.founder_deterministic_utility, 'provider_cursor');

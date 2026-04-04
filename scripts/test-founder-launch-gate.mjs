@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Founder launch gate + execution awareness — acceptance & determinism.
- * vNext.13.4: 실행 스파인은 유효한 execution_artifact(mockFounderPlannerRow)로만 연결.
+ * Founder launch + 레거시 raw-text intent 회귀(scripts 전용) + 아티팩트 게이트 스모크.
+ * vNext.13.5: detectFounderLaunchIntentRawText 는 legacy 모듈만.
  */
 import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-import { detectFounderLaunchIntent } from '../src/core/founderLaunchIntent.js';
+import { detectFounderLaunchIntentRawText } from '../src/legacy/founderLaunchIntentRawText.js';
 import { evaluateLaunchReadiness } from '../src/core/launchReadinessEvaluator.js';
 import { buildProviderTruthSnapshot } from '../src/core/providerTruthSnapshot.js';
 import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
@@ -27,15 +27,24 @@ await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
 
 function launchMockRow(goalLine, lockedScope) {
+  const pid = 'mock-proposal-launch';
+  const aid = 'mock-approval-launch';
   return {
     natural_language_reply: '구조화 실행 아티팩트에 따라 스파인을 연결합니다.',
-    state_delta: {},
+    state_delta: {
+      latest_proposal_artifact_id: pid,
+      latest_approval_artifact_id: aid,
+      last_founder_confirmation_at: '2026-04-01T12:00:00.000Z',
+      last_founder_confirmation_kind: 'test_fixture',
+      approval_lineage_status: 'confirmed',
+    },
     conversation_status: 'execution_ready',
-    proposal_artifact: {},
-    approval_artifact: {},
+    proposal_artifact: { _cos_artifact_id: pid, understood_request: 'launch' },
+    approval_artifact: { _cos_artifact_id: aid },
     execution_artifact: {
       request_execution_spine: true,
-      approval_lineage_confirmed: true,
+      source_proposal_artifact_id: pid,
+      source_approval_artifact_id: aid,
       goal_line: goalLine,
       locked_scope_summary: lockedScope,
     },
@@ -57,33 +66,31 @@ function fail(name, e) {
 
 console.log('\n=== Founder Launch Gate ===\n');
 
-/* Determinism: intent detection (레거시 모듈 — 커널에서는 미사용, 회귀만) */
+/* Legacy raw-text intent (회귀 전용 모듈) */
 try {
   const meta = { source_type: 'direct_message', channel: 'D1', user: 'U1', ts: '1.0' };
   openProjectIntakeSession(meta, { goalLine: '테스트 프로덕트 킥오프' });
   const threadKey = buildSlackThreadKey(meta);
   for (let i = 0; i < 10; i++) {
-    const d = detectFounderLaunchIntent('좋아. 진행하자.', meta, threadKey);
+    const d = detectFounderLaunchIntentRawText('좋아. 진행하자.', meta, threadKey);
     assert.equal(d.detected, true);
     assert.equal(d.signal, 'affirm_progress');
   }
-  ok('detectFounderLaunchIntent determinism x10');
+  ok('detectFounderLaunchIntentRawText determinism x10');
 } catch (e) {
   fail('determinism intent', e);
 }
 
-/* No context → no launch detect */
 try {
   const metaBare = { source_type: 'direct_message', channel: 'D99', user: 'U9', ts: '9.0' };
   const tk = buildSlackThreadKey(metaBare);
-  const d = detectFounderLaunchIntent('좋아. 진행하자.', metaBare, tk);
+  const d = detectFounderLaunchIntentRawText('좋아. 진행하자.', metaBare, tk);
   assert.equal(d.detected, false);
   ok('launch intent requires thread context');
 } catch (e) {
   fail('no context', e);
 }
 
-/* Readiness blocked: no scope */
 try {
   const snap = buildProviderTruthSnapshot({ space: null, run: null });
   const r = evaluateLaunchReadiness({
@@ -106,7 +113,6 @@ try {
   fail('readiness scope', e);
 }
 
-/* Pipeline: artifact-gated launch → EXECUTION_PACKET */
 try {
   const goalLine = '더그린 갤러리 스케줄 캘린더 MVP';
   const meta = {
@@ -144,7 +150,6 @@ try {
   fail('pipeline launch', e);
 }
 
-/* Non-launch → natural partner (launch gate not taken) */
 try {
   const metaNat = {
     source_type: 'direct_message',
@@ -169,7 +174,6 @@ try {
   fail('non-launch path', e);
 }
 
-/* Repeat launch same thread → same surface class + stable packet id */
 try {
   const goalR = '반복 시퀀스 idempotent 전용 스레드 Drepeat1 — cross-test 라벨 매칭 회피';
   const metaR = {
@@ -202,7 +206,6 @@ try {
   fail('repeat launch', e);
 }
 
-/* Provider snapshot shape stable */
 try {
   const snap = buildProviderTruthSnapshot({ space: null, run: null });
   assert.ok(Array.isArray(snap.providers));

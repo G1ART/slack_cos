@@ -20,9 +20,11 @@ const PLANNER_INSTRUCTIONS = `
 - proposal_artifact: 제안·범위 정리에 쓸 구조화 힌트(없으면 빈 객체).
 - approval_artifact: 외부 툴 실행이 필요하면 requires_external_dispatch 등을 채운다. 불필요하면 빈 객체.
 - execution_artifact: **실행 스파인(런)을 새로 붙이려면** 반드시 채운다. 그렇지 않으면 빈 객체 {}.
-  - execution_artifact.request_execution_spine === true 는 대표가 범위·승인이 명확히 잡힌 경우에만.
-  - goal_line, locked_scope_summary, approval_lineage_confirmed 필수.
-- state_delta: 스레드 durable state에 병합할 문자열 필드만 (north_star, constraints 추가 등).
+  - request_execution_spine === true 일 때만 스파인 요청으로 간주한다.
+  - goal_line, locked_scope_summary 필수.
+  - source_proposal_artifact_id / source_approval_artifact_id 는 반드시 아래 state·아티팩트의 _cos_artifact_id 와 동일한 문자열이어야 한다 (자기주장 불충분).
+- proposal_artifact / approval_artifact 에 안정 id가 필요하면 _cos_artifact_id 에 짧은 고유 문자열을 둔다.
+- state_delta: durable state — 실행 요청 시 최소 포함 후보: latest_proposal_artifact_id, latest_approval_artifact_id, last_founder_confirmation_at (ISO), last_founder_confirmation_kind, approval_lineage_status(확정 시 confirmed).
 - follow_up_questions: 필요 시 되물음.
 `.trim();
 

@@ -1,6 +1,14 @@
 # COS Slack — 운영 핸드오프 (요약)
 
-**정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md`
+**정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
+
+## vNext.13.5 (2026-04-04) — Preflight hardening / staging gate lock
+
+**목적**: founder DM **실전형 staging** 직전 하드닝 (새 기능 아님).
+
+**잠금 요약**: (1) 운영 메타 숏서킷은 `founder_explicit_meta_utility_path === true` 만. (2) raw-text launch 는 `src/legacy/` 회귀 전용, 프로덕션 import 0. (3) launch 는 execution artifact + **durable lineage cross-check**. (4) trace `founder_staging_mode` (기본 on, `COS_FOUNDER_STAGING_MODE=0` 로 끔). (5) `docs/FOUNDATION_RESET.md` + 본 릴리스 락 갱신.
+
+**회귀**: `scripts/test-vnext13-5-*.mjs`. **비목표**: 팀 전체 무인 운영.
 
 ## vNext.13.3 (2026-04-01) — Release lock / founder contract hardening
 

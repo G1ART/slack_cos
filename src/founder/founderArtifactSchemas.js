@@ -1,6 +1,9 @@
 /**
  * vNext.13.4 — COS sidecar / execution artifact 스키마 (코드는 검증·경계만).
+ * vNext.13.5 — lineage preview + state cross-check (boolean self-claim 금지).
  */
+
+import { previewMergeFounderConversationState } from './founderConversationState.js';
 
 /** OpenAI responses json_schema strict — 모든 property required */
 export const FOUNDER_CONVERSATION_PLANNER_SCHEMA = {
@@ -76,15 +79,60 @@ export function normalizePlannerRow(row) {
 }
 
 /**
- * @param {unknown} a
+ * sidecar state_delta + proposal/approval의 _cos_artifact_id 를 한 델타로 합친다.
+ * @param {Record<string, unknown>} delta
+ * @param {object} sidecar
  */
-export function validateExecutionArtifactForSpine(a) {
+export function mergeStateDeltaWithSidecarArtifactIds(delta, sidecar) {
+  const d = { ...(delta && typeof delta === 'object' ? delta : {}) };
+  const pa = sidecar?.proposal_artifact;
+  const aa = sidecar?.approval_artifact;
+  if (pa && typeof pa === 'object' && typeof pa._cos_artifact_id === 'string' && pa._cos_artifact_id.trim()) {
+    d.latest_proposal_artifact_id = pa._cos_artifact_id.trim();
+  }
+  if (aa && typeof aa === 'object' && typeof aa._cos_artifact_id === 'string' && aa._cos_artifact_id.trim()) {
+    d.latest_approval_artifact_id = aa._cos_artifact_id.trim();
+  }
+  return d;
+}
+
+/**
+ * @param {object} convStateBeforeTurn getFounderConversationState 결과
+ * @param {object} sidecar planner sidecar (state_delta는 이미 아이디 병합 권장)
+ */
+export function buildFounderLineagePreview(convStateBeforeTurn, sidecar) {
+  const mergedDelta = mergeStateDeltaWithSidecarArtifactIds(sidecar.state_delta || {}, sidecar);
+  return previewMergeFounderConversationState(convStateBeforeTurn, mergedDelta);
+}
+
+/**
+ * @param {unknown} a execution_artifact
+ * @param {object | null | undefined} lineagePreview buildFounderLineagePreview(...)
+ */
+export function validateExecutionArtifactForSpine(a, lineagePreview) {
   if (!a || typeof a !== 'object') return { ok: false, reason: 'not_object' };
   const x = /** @type {Record<string, unknown>} */ (a);
   if (x.request_execution_spine !== true) return { ok: false, reason: 'not_requested' };
-  if (x.approval_lineage_confirmed !== true) return { ok: false, reason: 'lineage' };
   if (!String(x.goal_line || '').trim()) return { ok: false, reason: 'goal' };
   if (!String(x.locked_scope_summary || '').trim()) return { ok: false, reason: 'scope' };
+
+  if (!lineagePreview || typeof lineagePreview !== 'object') {
+    return { ok: false, reason: 'no_lineage_preview' };
+  }
+  const lp = String(lineagePreview.latest_proposal_artifact_id || '').trim();
+  const la = String(lineagePreview.latest_approval_artifact_id || '').trim();
+  const srcP = String(x.source_proposal_artifact_id || '').trim();
+  const srcA = String(x.source_approval_artifact_id || '').trim();
+  if (!srcP || !srcA) return { ok: false, reason: 'missing_lineage_ref' };
+  if (!lp || !la) return { ok: false, reason: 'state_missing_artifact_ids' };
+  if (srcP !== lp || srcA !== la) return { ok: false, reason: 'lineage_id_mismatch' };
+
+  const confAt = String(lineagePreview.last_founder_confirmation_at || '').trim();
+  if (!confAt) return { ok: false, reason: 'no_founder_confirmation' };
+  if (String(lineagePreview.approval_lineage_status || '').trim() !== 'confirmed') {
+    return { ok: false, reason: 'lineage_not_confirmed' };
+  }
+
   return { ok: true };
 }
 

@@ -71,7 +71,7 @@ const framed = buildProposalPacketFromSidecar(
   { source: 'test' },
 );
 assert.ok(String(framed.understood_request || '').includes('Series A'));
-assert.ok((framed.context_assumptions || []).some((l) => String(l).includes('직전 합의')));
+assert.ok((framed.context_assumptions || []).some((l) => String(l).includes('운영 제약')));
 
 const ambiguous = buildProposalPacketFromSidecar(
   {
