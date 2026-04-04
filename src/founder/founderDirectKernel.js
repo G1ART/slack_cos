@@ -94,7 +94,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
   const mergedDelta = mergeStateDeltaWithSidecarArtifactIds(sidecar.state_delta || {}, sidecar);
   const sidecarForGate = { ...sidecar, state_delta: mergedDelta };
 
-  const launchFromArtifact = await tryArtifactGatedExecutionSpine({
+  const gateResult = await tryArtifactGatedExecutionSpine({
     execution_artifact: sidecar.execution_artifact,
     threadKey,
     metadata,
@@ -109,11 +109,12 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
     project_id: space?.project_id ?? convState.project_id ?? null,
   });
 
-  if (launchFromArtifact) {
+  if (gateResult?.launch_succeeded) {
+    const { launch_succeeded: _ls, ...launchPayload } = gateResult;
     return {
-      ...launchFromArtifact,
+      ...launchPayload,
       trace: {
-        ...launchFromArtifact.trace,
+        ...launchPayload.trace,
         ...founderPreflightTrace(),
         founder_conversation_path: true,
         founder_planner_source: plan.source,
@@ -124,6 +125,14 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       },
     };
   }
+
+  const spineRejectTrace =
+    gateResult?.spine_eligibility_failed === true
+      ? {
+          founder_spine_eligibility_failed: true,
+          founder_spine_eligibility_reason: gateResult.eligibility_reason,
+        }
+      : {};
 
   const convState2 = await getFounderConversationState(threadKey);
   const contextAfter = synthesizeFounderContext({
@@ -168,7 +177,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.5',
+      pipeline_version: 'vNext.13.5b',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,
@@ -177,7 +186,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       legacy_ai_router_used: false,
       founder_classifier_used: false,
       founder_keyword_route_used: false,
-      founder_four_step: true,
+      founder_four_step: false,
       founder_direct_kernel: true,
       founder_conversation_path: true,
       founder_planner_source: plan.source,
@@ -194,6 +203,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       approval_packet_attached: ext,
       intake_session_id: workContext.intake_session_id ?? null,
       conversation_status: sidecar.conversation_status ?? null,
+      ...spineRejectTrace,
       ...founderPreflightTrace(),
     },
   };
@@ -240,7 +250,7 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
             legacy_ai_router_used: false,
             founder_classifier_used: false,
             founder_keyword_route_used: false,
-            founder_four_step: true,
+            founder_four_step: false,
             founder_deterministic_utility: util.kind,
             founder_conversation_path: false,
             founder_operational_meta_short_circuit: true,
@@ -275,7 +285,7 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
         founder_hard_recover: true,
         founder_classifier_used: false,
         founder_keyword_route_used: false,
-        founder_four_step: true,
+        founder_four_step: false,
         founder_direct_kernel: true,
         route_label: route_label || null,
         ...founderPreflightTrace(),

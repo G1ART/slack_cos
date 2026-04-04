@@ -108,6 +108,8 @@
 | `scripts/test-founder-launch-gate.mjs` | v13.4: **`mockFounderPlannerRow` + 유효 `execution_artifact`** 로만 `EXECUTION_PACKET`; 레거시 intent 감지·readiness·비-launch 제안 패킷·idempotent (`npm test` 포함) |
 | `scripts/test-vnext13-4-founder-no-prelaunch-from-raw-text.mjs` 등 5종 | v13.4 founder: 원문 prelaunch 금지·state carryover·아티팩트 게이트·런타임 메타 경로·sidecar 스키마 (`npm test` 포함) |
 | `scripts/test-vnext13-5-*.mjs` 5종 | v13.5 preflight: 프로덕션 legacy import 0·lineage cross-check·메타 숏서킷 명시 경로·문서 정본·staging trace (`npm test` 포함) |
+| `scripts/test-vnext13-5b-*.mjs` | v13.5b: spine eligibility = **pre-turn persisted lineage** 만; same-turn self-approval 차단; 2턴 persist 후 launch (`npm test` 포함) |
+| `npm run test:legacy-launch-regression` | `test-founder-launch-gate.mjs` — 레거시 raw-text intent + 아티팩트 launch 스모크 (기본 `npm test` 비포함) |
 | `src/core/founderLaunchGate.js` | **`runFounderLaunchPipelineCore`** — artifact-gated 또는 legacy 회귀 `trace_tags.legacy_raw_text_launch` 만; 창업자 표면 `founderLaunchFormatter.js`; **project space resolution trace**; raw-text 프로덕션 경로 없음 |
 | `scripts/test-project-space-bootstrap-hardening.mjs` | thread-first space·보수적 exact 라벨/alias·cross-thread active run·fingerprint (`npm test`) |
 | `src/features/projectSpaceBootstrap.js` | `getOrCreateProjectSpaceForBootstrap` — fuzzy label score 재사용 제거, `resolution` 객체 |
