@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** vNext.13.5 — execution artifact lineage: state cross-check; boolean self-claim insufficient */
+/** vNext.13.5+13.5b — lineage cross-check; same-turn merged preview는 spine 근거 불가 */
 import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import os from 'os';
@@ -8,6 +8,8 @@ import path from 'path';
 import {
   validateExecutionArtifactForSpine,
   buildFounderLineagePreview,
+  evaluateExecutionSpineEligibility,
+  mergeStateDeltaWithSidecarArtifactIds,
 } from '../src/founder/founderArtifactSchemas.js';
 import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
@@ -77,6 +79,24 @@ const previewPending = buildFounderLineagePreview(
 );
 assert.equal(validateExecutionArtifactForSpine(eaBase, previewPending).reason, 'lineage_not_confirmed');
 
+const sidecarResolved = {
+  ...sidecarOk,
+  state_delta: mergeStateDeltaWithSidecarArtifactIds(sidecarOk.state_delta, sidecarOk),
+};
+const emptyPreTurn = { thread_key: 'im:empty' };
+const evSameTurn = evaluateExecutionSpineEligibility(eaBase, emptyPreTurn, sidecarResolved);
+assert.equal(evSameTurn.ok, false);
+assert.equal(evSameTurn.reason, 'same_turn_lineage_not_eligible');
+
+const convPersisted = {
+  thread_key: 'im:ok',
+  latest_proposal_artifact_id: 'lc-p1',
+  latest_approval_artifact_id: 'lc-a1',
+  last_founder_confirmation_at: '2026-04-04T12:00:00.000Z',
+  approval_lineage_status: 'confirmed',
+};
+assert.equal(evaluateExecutionSpineEligibility(eaBase, convPersisted, sidecarResolved).ok, true);
+
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'g1cos-v135-lineage-'));
 process.env.STORAGE_MODE = 'json';
 process.env.STORE_READ_PREFERENCE = 'json';
@@ -98,6 +118,8 @@ const meta = {
     state_delta: {
       latest_proposal_artifact_id: 'lc-p1',
       latest_approval_artifact_id: 'lc-a1',
+      last_founder_confirmation_at: '2026-04-04T12:00:00.000Z',
+      last_founder_confirmation_kind: 'test',
       approval_lineage_status: 'confirmed',
     },
     conversation_status: 'execution_ready',
@@ -116,6 +138,8 @@ const out = await runFounderDirectKernel({
   route_label: 'dm_ai_router',
 });
 assert.notEqual(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
+assert.equal(out.trace.founder_spine_eligibility_failed, true);
+assert.equal(out.trace.founder_spine_eligibility_reason, 'same_turn_lineage_not_eligible');
 
 await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
 delete process.env.FOUNDER_CONVERSATION_STATE_FILE;

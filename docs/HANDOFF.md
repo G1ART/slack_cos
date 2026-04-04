@@ -10,6 +10,14 @@
 
 **회귀**: `scripts/test-vnext13-5-*.mjs`. **비목표**: 팀 전체 무인 운영.
 
+## vNext.13.5b (2026-04-04) — Durable approval lineage hard lock
+
+**목적**: 같은 턴 planner sidecar 가 lineage+execution 을 한꺼번에 써서 spine 을 열 수 없게 **최종 하드락**.
+
+**핵심**: spine eligibility 는 **`convStateBeforeTurn` persisted 필드만** (`evaluateExecutionSpineEligibility` / `buildPersistedEligibleLineageView`). `mergeStateDeltaWithSidecarArtifactIds` 는 **persist 후보** 전용. 차단 시 trace: `founder_spine_eligibility_reason` (`same_turn_lineage_not_eligible`, `lineage_only_in_sidecar_delta`, `lineage_requires_persisted_confirmation` 등).
+
+**회귀**: `scripts/test-vnext13-5b-*.mjs`, 갱신된 `test-vnext13-5-approval-lineage-crosscheck.mjs`. **레거시 raw-text·launch 회귀**: `npm run test:legacy-launch-regression` (`test-founder-launch-gate.mjs` — 기본 `npm test` 에서 분리).
+
 ## vNext.13.3 (2026-04-01) — Release lock / founder contract hardening
 
 **목적**: 기능 확장이 아니라 창업자 단일 진입·승인·truth completion·advisory 부록을 **회귀하기 어렵게 고정**.

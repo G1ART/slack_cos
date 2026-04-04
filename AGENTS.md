@@ -18,9 +18,10 @@ The app requires valid Slack tokens. On startup it runs env validation, creates 
 
 ### Running tests
 ```
-npm test           # runs all 22+ test scripts sequentially (no framework, pure ESM scripts)
+npm test           # runs all test scripts sequentially (no framework, pure ESM scripts); excludes legacy launch gate — see below
 npm run test:router    # router lockdown + fixture replay only
 npm run test:fixtures  # fixture replay only
+npm run test:legacy-launch-regression  # `test-founder-launch-gate.mjs` (raw-text intent + artifact launch smoke)
 ```
 Tests are self-contained `.mjs` scripts in `scripts/` — they do NOT require Slack or OpenAI credentials.
 

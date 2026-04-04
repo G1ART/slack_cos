@@ -19,5 +19,6 @@ assert.match(releaseLock, /lineage|artifact-gated/i);
 const foundation = await fs.readFile(path.join(root, 'docs/FOUNDATION_RESET.md'), 'utf8');
 assert.match(foundation, /Raw founder text/);
 assert.match(foundation, /validateExecutionArtifactForSpine/);
+assert.match(foundation, /evaluateExecutionSpineEligibility|buildPersistedEligibleLineageView/);
 
 console.log('ok: vnext13_5_doc_authority_currentness');

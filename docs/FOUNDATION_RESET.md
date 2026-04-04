@@ -1,4 +1,4 @@
-# Foundation reset — founder authority (vNext.13.5)
+# Foundation reset — founder authority (vNext.13.5 / 13.5b)
 
 이 문서는 **창업자(COS 대표) 면**의 권한·기억·실행 연결을 한 페이지로 고정한다. `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` 하위 보조 정본이다.
 
@@ -10,9 +10,10 @@
 
 ## 2. Launch / approval / execution 권한
 
-- **Launch(실행 스파인)** 은 **execution artifact**가 유효하고, **approval lineage**가 durable state와 대조될 때만 허용된다.
-  - `source_proposal_artifact_id` / `source_approval_artifact_id` 는 state의 `latest_*` 및 sidecar `_cos_artifact_id` 와 일치해야 한다.
-  - `last_founder_confirmation_at` 및 `approval_lineage_status === 'confirmed'` 없이는 스파인 생성 불가.
+- **Launch(실행 스파인)** 은 **execution artifact**가 유효하고, **approval lineage**가 **이번 턴 이전에 이미 persisted 된 durable state** 와만 대조될 때 허용된다 (vNext.13.5b hard lock).
+  - 같은 턴 planner sidecar 의 `state_delta` 및 proposal/approval `_cos_artifact_id` 병합분은 **다음 턴 persist 후보**일 뿐이며, **현재 턴 spine eligibility 근거가 될 수 없다** (`evaluateExecutionSpineEligibility`, `buildPersistedEligibleLineageView`).
+  - `source_proposal_artifact_id` / `source_approval_artifact_id` 는 **턴 직전** state의 `latest_proposal_artifact_id` / `latest_approval_artifact_id` 와 일치해야 한다.
+  - `last_founder_confirmation_at` 및 `approval_lineage_status === 'confirmed'` 는 **턴 직전 durable 행에 이미 있어야** 하며, 이번 턴 sidecar 가 방금 쓴 값만으로는 불충분하다.
 - **Raw founder text만으로 launch 하는 경로는 금지**다. 레거시 raw-text 감지는 `src/legacy/` 회귀 전용이며 프로덕션 import 에서 제외된다.
 - **외부 디스패치**는 기존과 같이 `external_execution_authorization.state === 'authorized'` 일 때만 (default-deny 유지).
 
@@ -30,6 +31,6 @@
 
 - `src/founder/founderDirectKernel.js` — 단일 커널.
 - `src/founder/founderArtifactGate.js` — lineage 검증 후 `runFounderLaunchPipelineCore`.
-- `src/founder/founderArtifactSchemas.js` — `validateExecutionArtifactForSpine`, `buildFounderLineagePreview`.
+- `src/founder/founderArtifactSchemas.js` — `validateExecutionArtifactForSpine`(persisted lineage 전용), `evaluateExecutionSpineEligibility`, `buildPersistedEligibleLineageView`, `buildFounderLineagePreview`(persist 미리보기·진단).
 - `src/founder/founderConversationState.js` — durable 필드·`previewMergeFounderConversationState`.
 - `src/legacy/founderLaunchIntentRawText.js` — **회귀 전용**, 프로덕션 금지.
