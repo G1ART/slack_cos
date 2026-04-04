@@ -1750,6 +1750,7 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 #### 마이그레이션
 
 - Supabase에 `supabase/migrations/20260320_g1cos_plans.sql` 적용 후 운영. 기존 `plans.json`만 있는 환경은 **백필** 절차가 필요할 수 있음(다음 패치 권장).
+- 로컬 Supabase CLI 기준점 확보를 위해 `npx supabase init`을 실행해 `supabase/config.toml`, `supabase/.gitignore`를 추가했다(프로젝트 ID 기본값: `workspace`).
 
 ### 23.18 Query Commands — Council-Free Structured Response
 

@@ -11,6 +11,7 @@
 |------|------|
 | 스키마 | `supabase/migrations/20260319_g1cos_live_core_tables.sql` — **복구** (work_items, work_runs, approvals, project/environment context) |
 | 스키마 | `supabase/migrations/20260320_g1cos_plans.sql` — `g1cos_plans` |
+| Supabase CLI 초기화 | `supabase/config.toml`, `supabase/.gitignore` — `npx supabase init` 생성 기본 로컬 스캐폴드 |
 | 합본 SQL (복붙용) | `docs/cursor-handoffs/Phase_4_supabase_combined_migrations.sql` |
 | 코어 타입 | `src/storage/core/types.js` — `CORE_DUAL_WRITE_COLLECTIONS` (plans, approvals, work_items, work_runs, project_context, environment_context) |
 | Supabase 어댑터 | `src/storage/core/supabaseStoreAdapter.js` — plans/work/approval 등 `toArrayRow` |
@@ -104,6 +105,7 @@
 - 본 파일
 - `docs/G1_ART_Slack_COS_Handoff_v2_2026-03-18.md` §23.17
 - `docs/cursor-handoffs/Phase_4_supabase_combined_migrations.sql`
+- `supabase/config.toml`, `supabase/.gitignore` (Supabase CLI 초기화)
 
 ### Fallback 정책
 
