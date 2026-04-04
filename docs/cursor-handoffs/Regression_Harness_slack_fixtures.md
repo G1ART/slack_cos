@@ -10,9 +10,9 @@
 
 **Outbound / provider truth (2026-04-02)**: `scripts/test-live-provider-truth-alignment.mjs` + `scripts/test-execution-outbound.mjs`가 Cursor Cloud launch URL·Supabase live dispatch URL·`buildProviderTruthSnapshot`(Cursor `live`/`live_ready`/`manual_bridge`/`unavailable`, Supabase `live`/`live_ready`/`draft_only`/`not_configured`)·실행 패킷 렌더에서 `live_ready`≠`draft_only`를 고정한다(`npm test` 포함).
 
-**Founder operational probe (2026-04-02)**: `scripts/test-founder-operational-probe.mjs` — 창업자 DM에서 SHA·Cursor/Supabase **브리지 상태** 질문이 파트너 LLM으로 가지 않고 런타임 메타·provider truth로 응답함(`npm test` 포함).
+**Founder operational probe (2026-04-04, v13.4)**: `scripts/test-founder-operational-probe.mjs` — SHA·Cursor/Supabase 질문이 **`runFounderDirectKernel` 입구 운영 메타 숏서킷**으로 처리되어 `callText`/`callJSON`이 호출되지 않음(`npm test` 포함).
 
-**Partner natural sanitize (2026-04-03, vNext.13)**: `scripts/test-partner-natural-sanitize.mjs` — 기본 표면은 `proposal_packet_surface`이며, *대화형 보강* 구간에서 Council형 헤더·페르소나 줄이 제거됨(`npm test` 포함).
+**Partner natural sanitize (2026-04-04)**: `scripts/test-partner-natural-sanitize.mjs` — `planFounderConversationTurn` 파트너 폴백에서 **`sanitizePartnerNaturalLlmOutput`**·trace `partner_output_sanitized`(`npm test` 포함).
 
 ---
 
@@ -105,7 +105,8 @@
 | `src/testing/councilLeakRules.js` | Council 누수 **단일 문자열** 규칙 (회귀 전용) |
 | `src/slack/councilCommandPrefixes.js` | `isCouncilCommand` — `parseCouncilCommand` 정합 + 킥오프 제외 |
 | `scripts/test-henry-turn2-scope-lock.mjs` | Henry 2턴 잠금이 Council 합성이 아님 (`npm test` 포함) |
-| `scripts/test-founder-launch-gate.mjs` | 창업자 **launch 게이트**: intent 결정론·readiness 차단·파이프라인→`EXECUTION_PACKET`·trace 필드·비-launch는 `PARTNER_NATURAL`·동일 스레드 재진입 idempotent (`npm test` 포함) |
+| `scripts/test-founder-launch-gate.mjs` | v13.4: **`mockFounderPlannerRow` + 유효 `execution_artifact`** 로만 `EXECUTION_PACKET`; 레거시 intent 감지·readiness·비-launch 제안 패킷·idempotent (`npm test` 포함) |
+| `scripts/test-vnext13-4-founder-no-prelaunch-from-raw-text.mjs` 등 5종 | v13.4 founder: 원문 prelaunch 금지·state carryover·아티팩트 게이트·런타임 메타 경로·sidecar 스키마 (`npm test` 포함) |
 | `src/core/founderLaunchGate.js` | `maybeHandleFounderLaunchGate` — direct chat launch → spine (LLM 파트너 우회); 창업자 텍스트는 `founderLaunchFormatter.js` 전용; **project space resolution trace**; `test-vnext13-2-launch-gate-purification.mjs` |
 | `scripts/test-project-space-bootstrap-hardening.mjs` | thread-first space·보수적 exact 라벨/alias·cross-thread active run·fingerprint (`npm test`) |
 | `src/features/projectSpaceBootstrap.js` | `getOrCreateProjectSpaceForBootstrap` — fuzzy label score 재사용 제거, `resolution` 객체 |

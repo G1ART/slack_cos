@@ -1,5 +1,7 @@
 /**
- * Founder direct chat 직전 결정론적 launch gate → execution spine 연결.
+ * Founder launch → execution spine 연결.
+ * vNext.13.4: 창업자 자연어 직접 경로는 `runFounderLaunchPipelineCore`를 **아티팩트 검증 후에만** 호출한다.
+ * 레거시/테스트: `maybeHandleFounderLaunchGate` + `detectFounderLaunchIntent` (원문 기반) — founder kernel에서는 미사용.
  */
 
 import { detectFounderLaunchIntent } from './founderLaunchIntent.js';
@@ -121,17 +123,32 @@ function buildLaunchPipelineResult(rendered, workContext, phaseResult, intentRes
 }
 
 /**
- * @returns {Promise<null | { text: string, blocks?: object[], surface_type: string, trace: object }>}
+ * goal_line / locked_scope 는 **구조화 아티팩트 또는 인테이크**에서만 온다 (founder 원문 폴백 없음).
+ * @param {{
+ *   threadKey: string,
+ *   metadata: Record<string, unknown>,
+ *   route_label?: string | null,
+ *   goal_line_source: string,
+ *   locked_scope_summary_source?: string | null,
+ *   trace_tags?: { artifact_gated?: boolean, launch_signal?: string | null },
+ * }} args
  */
-export async function maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey) {
-  const probe = detectFounderLaunchIntent(normalized, metadata, threadKey);
-  if (!probe.detected) return null;
+export async function runFounderLaunchPipelineCore(args) {
+  const {
+    threadKey,
+    metadata,
+    route_label,
+    goal_line_source,
+    locked_scope_summary_source = null,
+    trace_tags = {},
+  } = args;
 
+  const artifactGated = trace_tags.artifact_gated === true;
   const workContext = launchMinimalWorkContext(metadata, threadKey);
   let space = workContext.project_space || getProjectSpaceByThread(threadKey);
   const runPre = getExecutionRunByThread(threadKey);
 
-  const goalLineProbe = String(getProjectIntakeSession(metadata)?.goalLine || normalized).slice(0, 500);
+  const goalLineProbe = String(goal_line_source || getProjectIntakeSession(metadata)?.goalLine || '').slice(0, 500);
   let spaceResolution = space ? inferResolutionFromExistingSpace(space, threadKey, goalLineProbe) : null;
 
   const providerTruth = buildProviderTruthSnapshot({ space, run: runPre });
@@ -144,9 +161,11 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
 
   const phaseProbe = { phase: 'launch_gate', phase_source: 'founder_launch_gate', confidence: 1 };
   const intentResult = {
-    intent: 'launch_continue',
+    intent: artifactGated ? 'artifact_gated_launch' : 'launch_continue',
     confidence: 1,
-    signals: ['founder_launch_gate', probe.signal].filter(Boolean),
+    signals: artifactGated
+      ? ['founder_artifact_gate']
+      : ['founder_launch_gate', trace_tags.launch_signal].filter(Boolean),
   };
 
   const live_actions = (providerTruth.providers || [])
@@ -169,8 +188,9 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       route_label,
       {
         surface_type: FounderSurfaceType.LAUNCH_BLOCKED,
-        launch_intent_detected: true,
-        launch_intent_signal: probe.signal,
+        launch_intent_detected: !artifactGated,
+        launch_intent_signal: artifactGated ? null : trace_tags.launch_signal,
+        founder_artifact_gated_launch: artifactGated,
         launch_readiness: readiness.readiness,
         provider_truth_snapshot: providerTruth,
         manual_bridge_actions,
@@ -186,7 +206,8 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
 
   if (!space) {
     const intake = getProjectIntakeSession(metadata);
-    const goalSeed = String(intake?.goalLine || normalized).slice(0, 500).trim() || 'COS Launch';
+    const goalSeed =
+      String(intake?.goalLine || goal_line_source).slice(0, 500).trim() || 'COS Launch';
     const { space: sp, resolution } = bootstrapProjectSpace({
       label: goalSeed,
       threadKey,
@@ -199,7 +220,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     }
   } else if (!getProjectIntakeSession(metadata)) {
     openProjectIntakeSession(metadata, {
-      goalLine: String(space.human_label || normalized).slice(0, 500) || 'COS Launch',
+      goalLine: String(space.human_label || goal_line_source).slice(0, 500) || 'COS Launch',
     });
   }
 
@@ -208,8 +229,11 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
 
   if (!run || run.status !== 'active') {
     const intake = getProjectIntakeSession(metadata);
-    const goalLine = String(intake?.goalLine || space?.human_label || normalized).slice(0, 500);
-    const locked = `MVP 실행 개시 — 기본값 적용: ${readiness.defaults_applied.slice(0, 2).join('; ')}`;
+    const goalLine = String(intake?.goalLine || space?.human_label || goal_line_source).slice(0, 500);
+    const locked =
+      locked_scope_summary_source?.trim()
+        ? String(locked_scope_summary_source).trim().slice(0, 2000)
+        : `MVP 실행 개시 — 기본값 적용: ${readiness.defaults_applied.slice(0, 2).join('; ')}`;
     const execPacket = createExecutionPacket({
       thread_key: threadKey,
       goal_line: goalLine,
@@ -217,7 +241,7 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       includes: ['모바일 반응형 웹 MVP', '외부 예약 request-first', '이메일 알림 우선'],
       excludes: ['결제 연동', 'MVP 외 필수 연동'],
       deferred_items: [],
-      approval_rules: ['founder_launch_gate'],
+      approval_rules: artifactGated ? ['founder_execution_artifact_gate'] : ['founder_launch_gate'],
       session_id: threadKey,
       requested_by: String(metadata.user || ''),
       project_id: space.project_id,
@@ -226,7 +250,11 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     launchPacketId = execPacket.packet_id;
     run = createExecutionRun({
       packet: execPacket,
-      metadata: { ...metadata, founder_origin_execution: true },
+      metadata: {
+        ...metadata,
+        founder_origin_execution: true,
+        founder_launch_via_artifact: artifactGated,
+      },
     });
     linkRunToProjectSpace(space.project_id, run.run_id);
     transitionProjectIntakeStage(metadata, 'execution_running', {
@@ -265,8 +293,9 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
     route_label,
     {
       surface_type: FounderSurfaceType.EXECUTION_PACKET,
-      launch_intent_detected: true,
-      launch_intent_signal: probe.signal,
+      launch_intent_detected: !artifactGated,
+      launch_intent_signal: artifactGated ? null : trace_tags.launch_signal,
+      founder_artifact_gated_launch: artifactGated,
       launch_readiness: readiness.readiness,
       provider_truth_snapshot: truthAfter,
       manual_bridge_actions: truthAfter.manual_bridge_actions,
@@ -278,4 +307,24 @@ export async function maybeHandleFounderLaunchGate(normalized, metadata, route_l
       ...flattenSpaceResolutionForTrace(spaceResolution),
     },
   );
+}
+
+/**
+ * 레거시·단위 테스트 전용: 원문 + launch intent 정규식.
+ * @returns {Promise<null | { text: string, blocks?: object[], surface_type: string, trace: object }>}
+ */
+export async function maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey) {
+  const probe = detectFounderLaunchIntent(normalized, metadata, threadKey);
+  if (!probe.detected) return null;
+
+  const intake = getProjectIntakeSession(metadata);
+  const goalSrc = String(intake?.goalLine || normalized).slice(0, 500);
+  return runFounderLaunchPipelineCore({
+    threadKey,
+    metadata,
+    route_label,
+    goal_line_source: goalSrc,
+    locked_scope_summary_source: null,
+    trace_tags: { artifact_gated: false, launch_signal: probe.signal },
+  });
 }

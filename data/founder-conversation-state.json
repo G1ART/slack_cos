@@ -1,0 +1,42 @@
+{
+  "by_thread": {
+    "im:Dsanitize1": {
+      "thread_key": "im:Dsanitize1",
+      "project_id": null,
+      "north_star": null,
+      "current_problem_statement": null,
+      "current_scope_summary": null,
+      "locked_scope": null,
+      "decisions": [],
+      "open_questions": [],
+      "constraints": [],
+      "benchmarks": [],
+      "pending_confirmations": [],
+      "approval_state": null,
+      "execution_readiness": null,
+      "latest_proposal_artifact_id": null,
+      "latest_execution_artifact_id": null,
+      "last_cos_summary": "말씀은 받았습니다. 보고서·위원회 포맷 말고, **평문 한두 문장**으로만 이어가 주시면 그에 맞춰 답하겠습니다.",
+      "updated_at": "2026-04-04T03:15:38.743Z"
+    },
+    "im:Dv11": {
+      "thread_key": "im:Dv11",
+      "project_id": null,
+      "north_star": null,
+      "current_problem_statement": null,
+      "current_scope_summary": null,
+      "locked_scope": null,
+      "decisions": [],
+      "open_questions": [],
+      "constraints": [],
+      "benchmarks": [],
+      "pending_confirmations": [],
+      "approval_state": null,
+      "execution_readiness": null,
+      "latest_proposal_artifact_id": null,
+      "latest_execution_artifact_id": null,
+      "last_cos_summary": "짧게 되물을게요. 어떤 제품 맥락인가요?",
+      "updated_at": "2026-04-04T03:15:53.516Z"
+    }
+  }
+}

@@ -33,7 +33,7 @@ const meta = { source_type: 'direct_message', channel: 'Dcl', user: 'Ux', ts: '1
 const closureAsk = tryResolveFounderDeterministicUtility({
   normalized: '이 스레드 실행 끝났나?',
   threadKey: `${meta.channel}:${meta.thread_ts || meta.ts}`,
-  metadata: meta,
+  metadata: { ...meta, founder_explicit_meta_utility_path: true },
 });
 assert.equal(closureAsk.handled, true);
 assert.equal(closureAsk.kind, 'completion_closure');

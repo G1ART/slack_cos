@@ -57,7 +57,7 @@ setRunTruthReconciliation(run.run_id, {
 const prog = tryResolveFounderDeterministicUtility({
   normalized: '지금 어디까지 됐어?',
   threadKey: 'Dstatus:th1:1',
-  metadata: {},
+  metadata: { founder_explicit_meta_utility_path: true },
 });
 assert.ok(prog.handled);
 assert.ok(String(prog.text).includes('truth_reconciliation'), 'progress must cite reconciliation');
@@ -66,7 +66,7 @@ assert.ok(String(prog.text).includes('draft_only'), 'overall visible');
 const ho = tryResolveFounderDeterministicUtility({
   normalized: '왜 아직 handoff야?',
   threadKey: 'Dstatus:th1:1',
-  metadata: {},
+  metadata: { founder_explicit_meta_utility_path: true },
 });
 assert.ok(ho.handled);
 assert.ok(String(ho.text).includes('truth_reconciliation'), 'handoff explainer uses reconciliation');

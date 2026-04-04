@@ -15,7 +15,6 @@ import {
 import { getExecutionRunById, getExecutionRunByThread } from '../features/executionRun.js';
 import { formatReconciliationLinesForFounder } from '../orchestration/truthReconciliation.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
-import { detectFounderLaunchIntent } from '../core/founderLaunchIntent.js';
 import { evaluateExecutionRunCompletion } from '../features/executionDispatchLifecycle.js';
 import { founderTruthClosureWording } from './founderTruthClosureWording.js';
 
@@ -161,12 +160,9 @@ export function tryResolveFounderDeterministicUtility({ normalized, threadKey, m
   const t = String(normalized || '').trim();
   if (!t) return { handled: false };
 
-  try {
-    if (detectFounderLaunchIntent(t, _metadata, threadKey).detected) {
-      return { handled: false };
-    }
-  } catch {
-    /* launch probe must never block utility path */
+  /** vNext.13.4 — 창업자 자연 대화 경로에서는 호출 금지. 명시 메타·회귀만. */
+  if (_metadata?.founder_explicit_meta_utility_path !== true) {
+    return { handled: false };
   }
 
   const run = getExecutionRunByThread(threadKey) || null;
