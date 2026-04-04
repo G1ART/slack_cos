@@ -37,6 +37,25 @@
       "latest_execution_artifact_id": null,
       "last_cos_summary": "짧게 되물을게요. 어떤 제품 맥락인가요?",
       "updated_at": "2026-04-04T03:15:53.516Z"
+    },
+    "im:Dv12": {
+      "thread_key": "im:Dv12",
+      "project_id": null,
+      "north_star": null,
+      "current_problem_statement": null,
+      "current_scope_summary": null,
+      "locked_scope": null,
+      "decisions": [],
+      "open_questions": [],
+      "constraints": [],
+      "benchmarks": [],
+      "pending_confirmations": [],
+      "approval_state": null,
+      "execution_readiness": null,
+      "latest_proposal_artifact_id": null,
+      "latest_execution_artifact_id": null,
+      "last_cos_summary": "어떤 맥락인지 한 줄만 더 알려주세요.",
+      "updated_at": "2026-04-04T04:12:10.753Z"
     }
   }
 }
