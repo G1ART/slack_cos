@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** vNext.13.4 — execution_artifact 검증 통과 시에만 launch 파이프라인 */
+/** vNext.13.4+13.5 — execution_artifact + lineage cross-check 통과 시에만 launch */
 import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import os from 'os';
@@ -20,6 +20,8 @@ await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
 
 const goal = '아티팩트 게이트 전용 목표';
+const pid = 'agl-prop-1';
+const aid = 'agl-appr-1';
 const meta = {
   source_type: 'direct_message',
   channel: 'Dagl1',
@@ -28,13 +30,20 @@ const meta = {
   slack_route_label: 'dm_ai_router',
   mockFounderPlannerRow: {
     natural_language_reply: '',
-    state_delta: {},
+    state_delta: {
+      latest_proposal_artifact_id: pid,
+      latest_approval_artifact_id: aid,
+      last_founder_confirmation_at: '2026-04-02T10:00:00.000Z',
+      last_founder_confirmation_kind: 'test',
+      approval_lineage_status: 'confirmed',
+    },
     conversation_status: 'execution_ready',
-    proposal_artifact: {},
-    approval_artifact: {},
+    proposal_artifact: { _cos_artifact_id: pid },
+    approval_artifact: { _cos_artifact_id: aid },
     execution_artifact: {
       request_execution_spine: true,
-      approval_lineage_confirmed: true,
+      source_proposal_artifact_id: pid,
+      source_approval_artifact_id: aid,
       goal_line: goal,
       locked_scope_summary: '게이트 테스트 스코프',
     },

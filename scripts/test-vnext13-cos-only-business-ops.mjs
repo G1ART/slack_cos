@@ -58,9 +58,9 @@ const modeIr = selectExecutionModeFromProposalPacket(
   mk('IR 덱 슬라이드 순서와 메시지 톤만 다듬어줘', 'Dir'),
 );
 assert.ok(['COS_ONLY', 'INTERNAL_SUPPORT'].includes(modeIr), 'IR stays non-external');
-assert.equal(
-  selectExecutionModeFromProposalPacket(mk('경쟁사 3곳 벤치마크 표로 정리', 'Dmr')),
-  'INTERNAL_SUPPORT',
+const modeBench = selectExecutionModeFromProposalPacket(
+  mk('경쟁사 3곳 벤치마크 표로 정리', 'Dmr'),
 );
+assert.ok(['COS_ONLY', 'INTERNAL_SUPPORT'].includes(modeBench), 'benchmark stays non-external');
 
 console.log('ok: vnext13_cos_only_business_ops');

@@ -33,7 +33,11 @@ export function emptyFounderConversationState(threadKey) {
     approval_state: null,
     execution_readiness: null,
     latest_proposal_artifact_id: null,
+    latest_approval_artifact_id: null,
     latest_execution_artifact_id: null,
+    last_founder_confirmation_at: null,
+    last_founder_confirmation_kind: null,
+    approval_lineage_status: null,
     last_cos_summary: null,
     updated_at: null,
   };
@@ -71,7 +75,11 @@ function mergeDelta(base, delta) {
         'approval_state',
         'execution_readiness',
         'latest_proposal_artifact_id',
+        'latest_approval_artifact_id',
         'latest_execution_artifact_id',
+        'last_founder_confirmation_at',
+        'last_founder_confirmation_kind',
+        'approval_lineage_status',
         'project_id',
       ].includes(k)
     ) {
@@ -105,6 +113,17 @@ async function writeStore(store) {
 /**
  * @param {string} threadKey
  */
+/**
+ * @param {object} base durable row (thread_key 포함)
+ * @param {Record<string, unknown>} delta planner state_delta
+ * @returns {object} 병합 미리보기 (persist 없음)
+ */
+export function previewMergeFounderConversationState(base, delta) {
+  const tk = String(base?.thread_key || 'unknown').trim() || 'unknown';
+  const prev = { ...emptyFounderConversationState(tk), ...base };
+  return mergeDelta({ ...prev, thread_key: tk }, delta);
+}
+
 export async function getFounderConversationState(threadKey) {
   const tk = String(threadKey || '').trim();
   const store = await readStore();

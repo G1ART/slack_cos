@@ -5,14 +5,18 @@
 - 창업자-facing 표면은 단일 자연어. 업무/계획 등록 문법·council·command router는 실행 원리로 노출하지 않음.
 - 맥락은 **트랜스크립트·스레드 런/스페이스 인테이크**에서만 로드하고, 발화를 워크 오브젝트로 강제 해석하지 않음 (`founderMinimalWorkContext`).
 
-## 4단계 (vNext.13 / 13.1)
+## 대화 파이프라인 (vNext.13.4 / 13.5 — 정본)
 
 구현 모듈: `src/founder/founderDirectKernel.js` → `runFounderDirectKernel`.
 
-1. **Context synthesis** — `synthesizeFounderContext`.
-2. 결정론 유틸 — `founderDeterministicUtilityResolver`; launch 신호 시 launch gate.
-3. Launch gate — `maybeHandleFounderLaunchGate` (`core/founderLaunchGate.js`). vNext.13.2+: 창업자 본문은 `founderLaunchFormatter.js` / `founderLaunchApprovalPacket.js`만 (`policyEngine`·`founderRenderer`의 실행 패킷 렌더 미사용). Launch 문구 예: `실행으로 넘어가` (`founderLaunchIntent.js`).
-4. **Proposal + (조건부) approval packet** — `buildProposalFromFounderInput` + `formatFullFounderProposalSurface`; `external_execution_tasks`가 있을 때만 `buildFounderApprovalPacket` 승인 섹션. 동일 턴 `callText`는 *대화형 보강*만. 내부 계약 필드: `proposal_execution_contract` (`COS_ONLY` / `APPROVAL_REQUIRED` / `EXECUTION_READY`), `proposal_contract_trace.reasons` (분류 근거). vNext.13.3: `maybeGovernanceAdvisoryForFounder`는 **`COS_GOVERNANCE_ADVISORY=1`이고** 제안·승인 등 **금지 서피스가 아닐 때만**(실제로는 프로덕션 제안 경로에서는 호출돼도 항상 금지되어 부록 없음); 부록 1개·본문보다 짧게·`founderDirectKernel`에서만 조건부.
+1. **Durable state + context** — `getFounderConversationState`, `synthesizeFounderContext` (transcript는 보조).
+2. **Planner 턴** — `planFounderConversationTurn` (structured LLM / mock / partner 폴백). sidecar에 `proposal_artifact` / `approval_artifact` / `execution_artifact` / `state_delta`.
+3. **Artifact-gated launch** — `tryArtifactGatedExecutionSpine`: `validateExecutionArtifactForSpine`가 **durable state lineage**(`source_*` id ↔ `latest_*`, `last_founder_confirmation_at`, `approval_lineage_status: confirmed`)를 대조 통과할 때만 `runFounderLaunchPipelineCore` 호출. **원문만으로 launch 불가.**
+4. **제안·승인 표면** — `buildProposalPacketFromSidecar` + `formatFullFounderProposalSurface`; 외부 실행 태스크가 있을 때만 승인 패킷 섹션. `proposal_execution_contract` / `proposal_contract_trace` 유지.
+
+**운영 메타 (SHA/Cursor/Supabase 등)**: `runFounderDirectKernel`에서 **`metadata.founder_explicit_meta_utility_path === true`일 때만** 결정론 유틸 숏서킷. 일반 대표 발화는 플래너 경로.
+
+**레거시 회귀 전용**: raw-text launch intent는 `src/legacy/founderLaunchIntentRawText.js` — 프로덕션 `src/core`·`src/founder`에서 import 금지.
 
 ## 비창업자
 

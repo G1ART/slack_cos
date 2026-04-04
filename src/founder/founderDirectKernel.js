@@ -28,12 +28,20 @@ import {
   founderStateToSnapshot,
 } from './founderConversationState.js';
 import { planFounderConversationTurn } from './founderConversationPlanner.js';
-import { tryArtifactGatedExecutionSpine } from './founderArtifactGate.js';
+import { tryArtifactGatedExecutionSpine, isFounderStagingModeEnabled } from './founderArtifactGate.js';
+import { mergeStateDeltaWithSidecarArtifactIds } from './founderArtifactSchemas.js';
 
 function stripFounderStructuredCommandPrefixes(t) {
   return String(t || '')
     .replace(/^(업무등록|계획등록|조회|결정)\s*[:：]\s*/i, '')
     .trim();
+}
+
+function founderPreflightTrace() {
+  return {
+    founder_staging_mode: isFounderStagingModeEnabled(),
+    founder_preflight_boundary: true,
+  };
 }
 
 function founderMinimalWorkContext(metadata, threadKey) {
@@ -83,16 +91,20 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
     mockPlannerRow: metadata.mockFounderPlannerRow ?? null,
   });
   const sidecar = plan.sidecar;
+  const mergedDelta = mergeStateDeltaWithSidecarArtifactIds(sidecar.state_delta || {}, sidecar);
+  const sidecarForGate = { ...sidecar, state_delta: mergedDelta };
 
   const launchFromArtifact = await tryArtifactGatedExecutionSpine({
     execution_artifact: sidecar.execution_artifact,
     threadKey,
     metadata,
     route_label,
+    convStateBeforeTurn: convState,
+    sidecar: sidecarForGate,
   });
 
   const space = getProjectSpaceByThread(threadKey);
-  await mergeFounderConversationState(threadKey, sidecar.state_delta || {}, {
+  await mergeFounderConversationState(threadKey, mergedDelta, {
     last_cos_summary: sidecar.natural_language_reply?.slice(0, 800) || null,
     project_id: space?.project_id ?? convState.project_id ?? null,
   });
@@ -102,6 +114,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       ...launchFromArtifact,
       trace: {
         ...launchFromArtifact.trace,
+        ...founderPreflightTrace(),
         founder_conversation_path: true,
         founder_planner_source: plan.source,
         founder_step: 'artifact_gated_launch',
@@ -155,7 +168,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.4',
+      pipeline_version: 'vNext.13.5',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,
@@ -181,6 +194,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       approval_packet_attached: ext,
       intake_session_id: workContext.intake_session_id ?? null,
       conversation_status: sidecar.conversation_status ?? null,
+      ...founderPreflightTrace(),
     },
   };
 }
@@ -194,43 +208,46 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
   const callText = typeof metadata.callText === 'function' ? metadata.callText : null;
   const callJSON = typeof metadata.callJSON === 'function' ? metadata.callJSON : null;
 
-  const routeLockEarly = classifyFounderRoutingLock(normalized);
-  const opProbeEarly = classifyFounderOperationalProbe(normalized);
-  const narrowOperationalMeta =
-    routeLockEarly?.kind === 'version' ||
-    opProbeEarly?.kind === 'runtime_sha' ||
-    opProbeEarly?.kind === 'provider_cursor' ||
-    opProbeEarly?.kind === 'provider_supabase';
-  if (narrowOperationalMeta) {
-    const util = tryResolveFounderDeterministicUtility({
-      normalized,
-      threadKey,
-      metadata: { ...metadata, founder_explicit_meta_utility_path: true },
-    });
-    if (util.handled) {
-      return {
-        text: util.text,
-        blocks: undefined,
-        surface_type: FounderSurfaceType.RUNTIME_META,
-        trace: {
+  if (metadata.founder_explicit_meta_utility_path === true) {
+    const routeLockEarly = classifyFounderRoutingLock(normalized);
+    const opProbeEarly = classifyFounderOperationalProbe(normalized);
+    const utilEligible =
+      routeLockEarly?.kind === 'version' ||
+      opProbeEarly?.kind === 'runtime_sha' ||
+      opProbeEarly?.kind === 'provider_cursor' ||
+      opProbeEarly?.kind === 'provider_supabase';
+    if (utilEligible) {
+      const util = tryResolveFounderDeterministicUtility({
+        normalized,
+        threadKey,
+        metadata: { ...metadata, founder_explicit_meta_utility_path: true },
+      });
+      if (util.handled) {
+        return {
+          text: util.text,
+          blocks: undefined,
           surface_type: FounderSurfaceType.RUNTIME_META,
-          route_label: route_label || null,
-          responder_kind: 'founder_kernel',
-          responder: 'founder_kernel',
-          founder_direct_kernel: true,
-          passed_pipeline: true,
-          passed_renderer: true,
-          legacy_router_used: false,
-          legacy_command_router_used: false,
-          legacy_ai_router_used: false,
-          founder_classifier_used: false,
-          founder_keyword_route_used: false,
-          founder_four_step: true,
-          founder_deterministic_utility: util.kind,
-          founder_conversation_path: false,
-          founder_operational_meta_short_circuit: true,
-        },
-      };
+          trace: {
+            surface_type: FounderSurfaceType.RUNTIME_META,
+            route_label: route_label || null,
+            responder_kind: 'founder_kernel',
+            responder: 'founder_kernel',
+            founder_direct_kernel: true,
+            passed_pipeline: true,
+            passed_renderer: true,
+            legacy_router_used: false,
+            legacy_command_router_used: false,
+            legacy_ai_router_used: false,
+            founder_classifier_used: false,
+            founder_keyword_route_used: false,
+            founder_four_step: true,
+            founder_deterministic_utility: util.kind,
+            founder_conversation_path: false,
+            founder_operational_meta_short_circuit: true,
+            ...founderPreflightTrace(),
+          },
+        };
+      }
     }
   }
 
@@ -261,6 +278,7 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
         founder_four_step: true,
         founder_direct_kernel: true,
         route_label: route_label || null,
+        ...founderPreflightTrace(),
       },
     };
   }

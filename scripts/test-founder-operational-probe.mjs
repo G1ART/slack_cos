@@ -45,6 +45,7 @@ const outSha = await runFounderDirectKernel({
     channel: 'DTEST',
     user: 'U_H',
     ts: '1',
+    founder_explicit_meta_utility_path: true,
     callText: async () => {
       llmCalled += 1;
       return 'should not run';
@@ -63,6 +64,7 @@ const outCur = await runFounderDirectKernel({
     channel: 'DTEST',
     user: 'U_H',
     ts: '2',
+    founder_explicit_meta_utility_path: true,
     callText: async () => {
       llmCalled += 1;
       return 'council spam';
@@ -81,6 +83,7 @@ const outSb = await runFounderDirectKernel({
     channel: 'DTEST',
     user: 'U_H',
     ts: '3',
+    founder_explicit_meta_utility_path: true,
     callText: async () => {
       llmCalled += 1;
       return 'council spam';

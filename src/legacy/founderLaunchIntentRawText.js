@@ -1,6 +1,6 @@
 /**
- * 결정론적 founder launch intent 감지 (LLM 이전 게이트).
- * 스레드에 프로덕트 맥락(인테이크·실행 소유·project space·run)이 있을 때만 true.
+ * LEGACY / REGRESSION ONLY — raw founder text → launch intent (regex).
+ * Production founder path must not import this module. vNext.13.5 seal.
  */
 
 import { isActiveProjectIntake, hasOpenExecutionOwnership } from '../features/projectIntakeSession.js';
@@ -13,7 +13,7 @@ import { getExecutionRunByThread } from '../features/executionRun.js';
  * @param {string} threadKey
  * @returns {{ detected: boolean, signal: string | null, reason?: string }}
  */
-export function detectFounderLaunchIntent(normalized, metadata, threadKey) {
+export function detectFounderLaunchIntentRawText(normalized, metadata, threadKey) {
   const t = String(normalized || '').trim();
   if (t.length < 2) return { detected: false, signal: null, reason: 'empty' };
 
@@ -27,7 +27,6 @@ export function detectFounderLaunchIntent(normalized, metadata, threadKey) {
     return { detected: false, signal: null, reason: 'no_thread_context' };
   }
 
-  // 짧은 탐색 질문만 있는 경우 제외
   if (/^(어떻게|왜|뭘|무엇을|언제|어디서)\s+/u.test(t) && t.length < 50) {
     return { detected: false, signal: null, reason: 'question_like' };
   }

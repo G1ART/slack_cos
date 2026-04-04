@@ -1,10 +1,9 @@
 /**
  * Founder launch → execution spine 연결.
- * vNext.13.4: 창업자 자연어 직접 경로는 `runFounderLaunchPipelineCore`를 **아티팩트 검증 후에만** 호출한다.
- * 레거시/테스트: `maybeHandleFounderLaunchGate` + `detectFounderLaunchIntent` (원문 기반) — founder kernel에서는 미사용.
+ * vNext.13.4+: 창업자 프로덕션 경로는 `tryArtifactGatedExecutionSpine` → 본 모듈의 `runFounderLaunchPipelineCore` 만.
+ * Raw-text launch 회귀는 `src/legacy/founderRawTextLaunchRegression.js` (프로덕션 import 금지).
  */
 
-import { detectFounderLaunchIntent } from './founderLaunchIntent.js';
 import { buildProviderTruthSnapshot } from './providerTruthSnapshot.js';
 import { evaluateLaunchReadiness } from './launchReadinessEvaluator.js';
 import {
@@ -160,12 +159,15 @@ export async function runFounderLaunchPipelineCore(args) {
   });
 
   const phaseProbe = { phase: 'launch_gate', phase_source: 'founder_launch_gate', confidence: 1 };
+  const legacyRaw = trace_tags.legacy_raw_text_launch === true;
   const intentResult = {
-    intent: artifactGated ? 'artifact_gated_launch' : 'launch_continue',
+    intent: artifactGated ? 'artifact_gated_launch' : legacyRaw ? 'legacy_raw_text_launch_regression' : 'launch_continue',
     confidence: 1,
     signals: artifactGated
       ? ['founder_artifact_gate']
-      : ['founder_launch_gate', trace_tags.launch_signal].filter(Boolean),
+      : legacyRaw
+        ? ['legacy_raw_text_launch_regression_only']
+        : ['founder_launch_gate', trace_tags.launch_signal].filter(Boolean),
   };
 
   const live_actions = (providerTruth.providers || [])
@@ -188,9 +190,10 @@ export async function runFounderLaunchPipelineCore(args) {
       route_label,
       {
         surface_type: FounderSurfaceType.LAUNCH_BLOCKED,
-        launch_intent_detected: !artifactGated,
-        launch_intent_signal: artifactGated ? null : trace_tags.launch_signal,
+        launch_intent_detected: !artifactGated && !legacyRaw,
+        launch_intent_signal: artifactGated || legacyRaw ? null : trace_tags.launch_signal,
         founder_artifact_gated_launch: artifactGated,
+        legacy_raw_text_launch_regression: legacyRaw,
         launch_readiness: readiness.readiness,
         provider_truth_snapshot: providerTruth,
         manual_bridge_actions,
@@ -241,7 +244,11 @@ export async function runFounderLaunchPipelineCore(args) {
       includes: ['모바일 반응형 웹 MVP', '외부 예약 request-first', '이메일 알림 우선'],
       excludes: ['결제 연동', 'MVP 외 필수 연동'],
       deferred_items: [],
-      approval_rules: artifactGated ? ['founder_execution_artifact_gate'] : ['founder_launch_gate'],
+      approval_rules: artifactGated
+        ? ['founder_execution_artifact_gate']
+        : legacyRaw
+          ? ['founder_launch_gate_legacy_regression']
+          : ['founder_launch_gate'],
       session_id: threadKey,
       requested_by: String(metadata.user || ''),
       project_id: space.project_id,
@@ -293,9 +300,10 @@ export async function runFounderLaunchPipelineCore(args) {
     route_label,
     {
       surface_type: FounderSurfaceType.EXECUTION_PACKET,
-      launch_intent_detected: !artifactGated,
-      launch_intent_signal: artifactGated ? null : trace_tags.launch_signal,
+      launch_intent_detected: !artifactGated && !legacyRaw,
+      launch_intent_signal: artifactGated || legacyRaw ? null : trace_tags.launch_signal,
       founder_artifact_gated_launch: artifactGated,
+      legacy_raw_text_launch_regression: legacyRaw,
       launch_readiness: readiness.readiness,
       provider_truth_snapshot: truthAfter,
       manual_bridge_actions: truthAfter.manual_bridge_actions,
@@ -307,24 +315,4 @@ export async function runFounderLaunchPipelineCore(args) {
       ...flattenSpaceResolutionForTrace(spaceResolution),
     },
   );
-}
-
-/**
- * 레거시·단위 테스트 전용: 원문 + launch intent 정규식.
- * @returns {Promise<null | { text: string, blocks?: object[], surface_type: string, trace: object }>}
- */
-export async function maybeHandleFounderLaunchGate(normalized, metadata, route_label, threadKey) {
-  const probe = detectFounderLaunchIntent(normalized, metadata, threadKey);
-  if (!probe.detected) return null;
-
-  const intake = getProjectIntakeSession(metadata);
-  const goalSrc = String(intake?.goalLine || normalized).slice(0, 500);
-  return runFounderLaunchPipelineCore({
-    threadKey,
-    metadata,
-    route_label,
-    goal_line_source: goalSrc,
-    locked_scope_summary_source: null,
-    trace_tags: { artifact_gated: false, launch_signal: probe.signal },
-  });
 }

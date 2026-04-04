@@ -17,7 +17,7 @@
 - `src/core/founderLaunchGate.js`
 - `src/founder/founderLaunchFormatter.js`
 - `src/founder/founderLaunchApprovalPacket.js`
-- `src/core/founderLaunchIntent.js` (phrase `실행으로 넘어가`)
+- `src/legacy/founderLaunchIntentRawText.js` (회귀 전용 phrase 감지; v13.5+ 프로덕션 import 금지)
 - `src/orchestration/harnessAgentCharters.js`, `harnessOverlapMap.js`, `harnessReviewMatrix.js`, `harnessEscalationPolicy.js`, `harnessSkillsRegistry.js`
 - `scripts/test-vnext13-2-*.mjs`
 
