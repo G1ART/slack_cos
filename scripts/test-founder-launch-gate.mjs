@@ -22,13 +22,33 @@ process.env.STORE_READ_PREFERENCE = 'json';
 process.env.FOUNDER_CONVERSATION_STATE_FILE = path.join(tmp, 'founder-conv.json');
 process.env.EXECUTION_RUNS_FILE = path.join(tmp, 'execution-runs.json');
 process.env.PROJECT_SPACES_FILE = path.join(tmp, 'project-spaces.json');
-await fs.writeFile(process.env.FOUNDER_CONVERSATION_STATE_FILE, '{"by_thread":{}}', 'utf8');
 await fs.writeFile(process.env.EXECUTION_RUNS_FILE, '[]', 'utf8');
 await fs.writeFile(process.env.PROJECT_SPACES_FILE, '[]', 'utf8');
 
+const launchPid = 'mock-proposal-launch';
+const launchAid = 'mock-approval-launch';
+const lineageRow = (tk) => ({
+  thread_key: tk,
+  latest_proposal_artifact_id: launchPid,
+  latest_approval_artifact_id: launchAid,
+  last_founder_confirmation_at: '2026-04-01T12:00:00.000Z',
+  last_founder_confirmation_kind: 'test_fixture',
+  approval_lineage_status: 'confirmed',
+});
+await fs.writeFile(
+  process.env.FOUNDER_CONVERSATION_STATE_FILE,
+  JSON.stringify({
+    by_thread: {
+      'im:Dlaunch1': lineageRow('im:Dlaunch1'),
+      'im:Drepeat1': lineageRow('im:Drepeat1'),
+    },
+  }),
+  'utf8',
+);
+
 function launchMockRow(goalLine, lockedScope) {
-  const pid = 'mock-proposal-launch';
-  const aid = 'mock-approval-launch';
+  const pid = launchPid;
+  const aid = launchAid;
   return {
     natural_language_reply: '구조화 실행 아티팩트에 따라 스파인을 연결합니다.',
     state_delta: {

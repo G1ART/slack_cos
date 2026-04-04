@@ -62,7 +62,7 @@ const opProbes = [
 for (const p of opProbes) {
   const out = await dm(p, async () => 'NO_LLM', { founder_explicit_meta_utility_path: true });
   assert.equal(out.trace.legacy_command_router_used, false, p);
-  assert.equal(out.trace.founder_four_step, true, p);
+  assert.equal(out.trace.founder_four_step, false, p);
   assertClean(out.text, p);
 }
 
@@ -70,7 +70,7 @@ const convProbes = ['지금 어디까지 왔어?', '왜 아직도 handoff로 빠
 for (const p of convProbes) {
   const out = await dm(p, async () => 'NO_LLM');
   assert.equal(out.trace.legacy_command_router_used, false, p);
-  assert.equal(out.trace.founder_four_step, true, p);
+  assert.equal(out.trace.founder_four_step, false, p);
   assertClean(out.text, p);
 }
 

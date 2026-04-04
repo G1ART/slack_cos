@@ -11,7 +11,7 @@
 
 1. **Durable state + context** — `getFounderConversationState`, `synthesizeFounderContext` (transcript는 보조).
 2. **Planner 턴** — `planFounderConversationTurn` (structured LLM / mock / partner 폴백). sidecar에 `proposal_artifact` / `approval_artifact` / `execution_artifact` / `state_delta`.
-3. **Artifact-gated launch** — `tryArtifactGatedExecutionSpine`: `validateExecutionArtifactForSpine`가 **durable state lineage**(`source_*` id ↔ `latest_*`, `last_founder_confirmation_at`, `approval_lineage_status: confirmed`)를 대조 통과할 때만 `runFounderLaunchPipelineCore` 호출. **원문만으로 launch 불가.**
+3. **Artifact-gated launch** — `tryArtifactGatedExecutionSpine`: `evaluateExecutionSpineEligibility`가 **턴 직전 persisted durable state**(`buildPersistedEligibleLineageView`)만으로 `validateExecutionArtifactForSpine` 통과할 때만 `runFounderLaunchPipelineCore` 호출. 같은 턴 merged sidecar lineage 로는 불가(vNext.13.5b). **원문만으로 launch 불가.**
 4. **제안·승인 표면** — `buildProposalPacketFromSidecar` + `formatFullFounderProposalSurface`; 외부 실행 태스크가 있을 때만 승인 패킷 섹션. `proposal_execution_contract` / `proposal_contract_trace` 유지.
 
 **운영 메타 (SHA/Cursor/Supabase 등)**: `runFounderDirectKernel`에서 **`metadata.founder_explicit_meta_utility_path === true`일 때만** 결정론 유틸 숏서킷. 일반 대표 발화는 플래너 경로.

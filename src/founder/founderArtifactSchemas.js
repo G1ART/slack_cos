@@ -1,6 +1,7 @@
 /**
  * vNext.13.4 — COS sidecar / execution artifact 스키마 (코드는 검증·경계만).
  * vNext.13.5 — lineage preview + state cross-check (boolean self-claim 금지).
+ * vNext.13.5b — execution spine eligibility = **pre-turn persisted durable state only** (same-turn sidecar 델타는 persist 용).
  */
 
 import { previewMergeFounderConversationState } from './founderConversationState.js';
@@ -106,8 +107,42 @@ export function buildFounderLineagePreview(convStateBeforeTurn, sidecar) {
 }
 
 /**
+ * 턴 시작 시점에 이미 디스크/스토어에 있던 durable 행만 반영한 lineage 뷰 (spine eligibility 전용).
+ * @param {object} convStateBeforeTurn getFounderConversationState 결과
+ */
+export function buildPersistedEligibleLineageView(convStateBeforeTurn) {
+  return previewMergeFounderConversationState(convStateBeforeTurn, {});
+}
+
+/**
+ * @param {unknown} execution_artifact
+ * @param {object} convStateBeforeTurn 턴 직전 durable state
+ * @param {object} sidecarResolved mergeStateDeltaWithSidecarArtifactIds 적용된 sidecar
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function evaluateExecutionSpineEligibility(execution_artifact, convStateBeforeTurn, sidecarResolved) {
+  const ea = execution_artifact;
+  if (!ea || typeof ea !== 'object' || ea.request_execution_spine !== true) return { ok: true };
+
+  const persisted = buildPersistedEligibleLineageView(convStateBeforeTurn);
+  const v = validateExecutionArtifactForSpine(ea, persisted);
+  if (v.ok) return { ok: true };
+
+  const mergedPreview = buildFounderLineagePreview(convStateBeforeTurn, sidecarResolved);
+  const vMerged = validateExecutionArtifactForSpine(ea, mergedPreview);
+  if (vMerged.ok) return { ok: false, reason: 'same_turn_lineage_not_eligible' };
+
+  const pConf = String(persisted.last_founder_confirmation_at || '').trim();
+  const mConf = String(mergedPreview.last_founder_confirmation_at || '').trim();
+  if (!pConf && mConf) return { ok: false, reason: 'lineage_only_in_sidecar_delta' };
+  if (!pConf) return { ok: false, reason: 'lineage_requires_persisted_confirmation' };
+
+  return { ok: false, reason: v.reason || 'not_eligible' };
+}
+
+/**
  * @param {unknown} a execution_artifact
- * @param {object | null | undefined} lineagePreview buildFounderLineagePreview(...)
+ * @param {object | null | undefined} lineagePreview **persisted pre-turn** lineage (`buildPersistedEligibleLineageView` 등). merged same-turn preview 금지.
  */
 export function validateExecutionArtifactForSpine(a, lineagePreview) {
   if (!a || typeof a !== 'object') return { ok: false, reason: 'not_object' };
