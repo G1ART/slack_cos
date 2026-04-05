@@ -10,15 +10,8 @@
 
 import { FOUNDER_SURFACE_VALUES, FounderSurfaceType, SAFE_FALLBACK_TEXT } from './founderContracts.js';
 
-/** vNext.13.7 — 창업자 기본 대화 표면에 나오면 안 되는 잔재 (회귀·아웃바운드 안전망) */
-export const FOUNDER_CONVERSATION_FORBIDDEN_MARKERS = [
-  '[COS 제안 패킷]',
-  '*[COS 제안 패킷]*',
-  'strategy_finance:',
-  'risk_review:',
-  '가장 강한 반대 논리',
-  '남아 있는 긴장 / 미해결 충돌',
-];
+/** vNext.13.8 — 최후 안전망만 (업스트림 단일 자연어 표면에 의존, 블랙리스트 최소화) */
+export const FOUNDER_CONVERSATION_FORBIDDEN_MARKERS = ['[COS 제안 패킷]', '*[COS 제안 패킷]*'];
 
 export function founderPlainTextHasForbiddenMarkers(text) {
   const s = String(text || '');

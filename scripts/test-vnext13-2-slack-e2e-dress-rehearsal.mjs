@@ -101,8 +101,12 @@ const o4 = await dm(
     throw new Error('no partner on external path');
   },
 );
-assert.equal(o4.surface_type, FounderSurfaceType.APPROVAL_PACKET);
-assert.ok(o4.text.includes('외부 실행 승인'));
+assert.equal(o4.surface_type, FounderSurfaceType.PARTNER_NATURAL);
+assert.ok(o4.trace?.approval_packet_attached === true || o4.trace?.external_dispatch_candidate === true);
+assert.ok(
+  o4.text.includes('외부 실행') || o4.text.includes('승인'),
+  'natural_language_reply carries intent without separate approval packet body',
+);
 
 const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'g1cos-e2e-'));
 process.env.STORAGE_MODE = 'json';

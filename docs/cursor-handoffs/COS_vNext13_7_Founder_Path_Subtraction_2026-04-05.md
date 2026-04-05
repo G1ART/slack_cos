@@ -8,7 +8,7 @@
 | 영역 | 파일 |
 |------|------|
 | 파일 시그니처·HTML 감지 | `src/features/slackFileIntake.js` — `peekPayloadNature`, `resolveEffectiveKindAfterDownload`, `buildConciseFileContextForPlanner`, `partitionFileIntakeForFounderTurn` |
-| DM/멘션 턴 조립 | `src/features/founderSlackFileTurn.js` — `founderIngestSlackFilesWithState`, `buildFounderPlannerInputAfterFileIngest` |
+| DM/멘션 턴 조립 | `src/features/founderSlackFileTurn.js` — `founderIngestSlackFilesWithState`, `buildFounderTurnTextAfterFileIngest` (vNext.13.8; 구 `buildFounderPlannerInputAfterFileIngest` 는 래퍼) |
 | Slack 핸들러 | `src/slack/registerHandlers.js` |
 | 커널 표면 | `src/founder/founderDirectKernel.js` — 자연어 기본, 승인 시만 `buildFounderApprovalPacket` |
 | 아웃바운드 안전망 | `src/core/founderOutbound.js` — `FOUNDER_CONVERSATION_FORBIDDEN_MARKERS` |

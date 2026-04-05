@@ -1,10 +1,10 @@
-# Foundation reset — founder authority (vNext.13.5 / 13.5b)
+# Foundation reset — founder authority (vNext.13.8 / 13.5 / 13.5b)
 
 이 문서는 **창업자(COS 대표) 면**의 권한·기억·실행 연결을 한 페이지로 고정한다. `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` 하위 보조 정본이다.
 
 ## 1. 해석 주체
 
-- **창업자 자연어를 앱 코드(정규식·결정론 launch 문구 매칭)가 “의도”로 해석하지 않는다.**
+- **창업자 자연어를 앱 코드(정규식·결정론 launch 문구 매칭·운영 키워드 선행 분기)가 “의도”로 해석하지 않는다.** (vNext.13.8: 커널 기본 경로에서 모델 호출 **전** 접두 제거·내용 분기 없음. 운영 메타는 `founder_explicit_meta_utility_path` 만.)
 - 맥락 해석은 **COS 플래너(sidecar)** 와 **durable conversation state** 가 담당한다.
 - **Transcript**는 보조 기억이며, **structured state**(`founder-conversation-state.json` 등)가 주 기억 축이다.
 
@@ -20,11 +20,11 @@
 ## 3. 운영 메타 숏서킷
 
 - SHA / Cursor / Supabase 등 운영 질의는 **`metadata.founder_explicit_meta_utility_path === true`** 일 때만 커널 입구에서 결정론 처리한다.
-- 그 외 일반 대화는 **conversation pipeline**(플래너·상태)으로 처리한다. **vNext.13.7**: 기본 창업자 **표면 출력**은 자연어(`partner_natural_surface`)이며, `[COS 제안 패킷]` 전개는 **외부 실행 승인이 실제로 필요할 때**만 승인 블록으로 제한된다.
+- 그 외 일반 대화는 **conversation pipeline**(플래너·상태)으로 처리한다. **vNext.13.8**: 기본 창업자 **Slack 표면**은 **항상** 자연어(`partner_natural_surface`) 한 겹이다. 외부 실행 후보는 **boundary/trace**(`approval_packet_attached`, `external_dispatch_candidate`)로만 노출하고, 승인 패킷 포맷을 본문에 붙이지 않는다.
 
-## 3b. 파일 인제스트와 플래너 입력 (vNext.13.7)
+## 3b. 파일 인제스트와 플래너 입력 (vNext.13.7 → 13.8)
 
-- Slack 첨부 **실패**(HTML 대신 받음, 시그니처 불일치 등)는 **플래너 `userText`에 실패 로그를 붙이지 않는다**. `latest_file_contexts`에는 실패 메타만 남기고, 사용자에게는 **한 겹의 짧은 자연어**로만 안내한다.
+- **vNext.13.8**: 파일 **실패·성공** 모두 `buildFounderTurnTextAfterFileIngest` 로 **같은** `handleUserText` / `runFounderDirectKernel` 경로로만 이어진다. 실패 안내는 **모델 입력**에 짧게 포함되며, 응답 끝에 **사후 덧붙임**하지 않는다.
 - **성공**한 추출만 요약 길이 상한을 두어 컨텍스트에 넣는다 (`buildConciseFileContextForPlanner`).
 - MIME/확장자 선언보다 **다운로드 바이트 시그니처**를 우선해 오판을 줄인다 (`peekPayloadNature`, `resolveEffectiveKindAfterDownload`).
 

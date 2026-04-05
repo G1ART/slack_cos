@@ -10,6 +10,5 @@ assert.ok(!founderPlainTextHasForbiddenMarkers(msg));
 
 const multi = formatFounderFileFailureOnlyMessage(['첫 오류입니다.', '둘째 오류입니다.']);
 assert.ok(!multi.includes('[COS 제안 패킷]'));
-assert.ok(!multi.includes('strategy_finance:'));
 
 console.log('ok: vnext13_7_founder_no_packet_surface_on_file_failure');
