@@ -1,7 +1,7 @@
 [
   {
-    "run_id": "RUN-mnjvg8vf-kphxu",
-    "packet_id": "EPK-mnjvg8ve-d8p1a",
+    "run_id": "RUN-mnlejfqy-hfgbc",
+    "packet_id": "EPK-mnlejfqx-sluo2",
     "session_id": "",
     "project_goal": "truth completion",
     "locked_mvp_summary": "t",
@@ -11,11 +11,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:V13:stc:1",
-    "created_at": "2026-04-04T05:08:07.275Z",
-    "updated_at": "2026-04-04T05:08:07.275Z",
+    "created_at": "2026-04-05T06:50:15.034Z",
+    "updated_at": "2026-04-05T06:50:15.034Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-g8vfd0e",
+        "lane_id": "LANE-research-jfqy4c6",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — truth completion",
         "inputs": [
@@ -43,7 +43,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-g8vf144",
+        "lane_id": "LANE-swe-jfqyehm",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — truth completion",
         "inputs": [
@@ -76,7 +76,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-g8vfla2",
+        "lane_id": "LANE-uiux-jfqyvzv",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — truth completion",
         "inputs": [
@@ -105,7 +105,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-g8vfkg5",
+        "lane_id": "LANE-qa-jfqyoi7",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — truth completion",
         "inputs": [
@@ -206,7 +206,7 @@
     "external_execution_authorization": {
       "state": "pending_approval",
       "reason": "founder_default_pending_approval",
-      "decided_at": "2026-04-04T05:08:07.275Z"
+      "decided_at": "2026-04-05T06:50:15.034Z"
     },
     "founder_origin_run": false,
     "approved_proposal_snapshot": null,
@@ -214,8 +214,8 @@
     "internal_planner_capability_source": null
   },
   {
-    "run_id": "RUN-mnjvgboa-rxgne",
-    "packet_id": "EPK-mnjvgboa-s7u3z",
+    "run_id": "RUN-mnlejkqc-wspd4",
+    "packet_id": "EPK-mnlejkqc-uxl6a",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -225,11 +225,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-04-04T05:08:10.906Z",
-    "updated_at": "2026-04-04T05:08:10.910Z",
+    "created_at": "2026-04-05T06:50:21.492Z",
+    "updated_at": "2026-04-05T06:50:21.495Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-gboafyw",
+        "lane_id": "LANE-research-jkqcpfk",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -257,7 +257,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-gboast7",
+        "lane_id": "LANE-swe-jkqczti",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -288,12 +288,12 @@
           "outbound_provider": "github",
           "outbound_status": "drafted",
           "outbound_ref_ids": [],
-          "last_outbound_at": "2026-04-04T05:08:10.910Z",
+          "last_outbound_at": "2026-04-05T06:50:21.495Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-gboa4sq",
+        "lane_id": "LANE-uiux-jkqcvc1",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -322,7 +322,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-gboavdy",
+        "lane_id": "LANE-qa-jkqcnb1",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -382,14 +382,14 @@
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnjvgboa-rxgne`\n**packet_id**: `EPK-mnjvgboa-s7u3z`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlejkqc-wspd4`\n**packet_id**: `EPK-mnlejkqc-uxl6a`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mnjvgboa-rxgne",
-          "packet_id": "EPK-mnjvgboa-s7u3z"
+          "run_id": "RUN-mnlejkqc-wspd4",
+          "packet_id": "EPK-mnlejkqc-uxl6a"
         }
       },
       "spec_refine": {
@@ -411,14 +411,14 @@
         "smoke_test_plan_path": null
       }
     },
-    "project_id": "PROJ-mnjvgbob-w54dt",
+    "project_id": "PROJ-mnlejkqd-fuczx",
     "project_label": null,
     "document_context_summary": null,
     "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-04-04T05:08:10.907Z",
+    "outbound_dispatched_at": "2026-04-05T06:50:21.493Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
@@ -552,7 +552,7 @@
           "fallback_rule": "fallback_to_draft_artifact"
         }
       ],
-      "planned_at": "2026-04-04T05:08:10.908Z",
+      "planned_at": "2026-04-05T06:50:21.494Z",
       "provider_truth_ref": {
         "summary": {
           "live_count": 0,
@@ -568,7 +568,7 @@
     "external_execution_authorization": {
       "state": "authorized",
       "reason": "explicit_operator_or_internal_bootstrap",
-      "decided_at": "2026-04-04T05:08:10.906Z"
+      "decided_at": "2026-04-05T06:50:21.492Z"
     },
     "founder_origin_run": false,
     "approved_proposal_snapshot": null,
@@ -576,8 +576,8 @@
     "internal_planner_capability_source": "locked_run_text"
   },
   {
-    "run_id": "RUN-mnjvgboa-rxgne",
-    "packet_id": "EPK-mnjvgboa-s7u3z",
+    "run_id": "RUN-mnlejkqc-wspd4",
+    "packet_id": "EPK-mnlejkqc-uxl6a",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -587,11 +587,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-04-04T05:08:10.906Z",
-    "updated_at": "2026-04-04T05:08:10.938Z",
+    "created_at": "2026-04-05T06:50:21.492Z",
+    "updated_at": "2026-04-05T06:50:21.513Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-gboafyw",
+        "lane_id": "LANE-research-jkqcpfk",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -619,7 +619,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-gboast7",
+        "lane_id": "LANE-swe-jkqczti",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -652,14 +652,14 @@
           "outbound_provider": "cursor",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md"
+            "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md"
           ],
-          "last_outbound_at": "2026-04-04T05:08:10.938Z",
+          "last_outbound_at": "2026-04-05T06:50:21.513Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-gboa4sq",
+        "lane_id": "LANE-uiux-jkqcvc1",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -688,7 +688,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-gboavdy",
+        "lane_id": "LANE-qa-jkqcnb1",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -724,18 +724,18 @@
       "pr_id": null,
       "commit_shas": [],
       "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
       "supabase_migration_ids": []
     },
     "cursor_trace": [
       {
-        "created_at": "2026-04-04T05:08:10.938Z",
+        "created_at": "2026-04-05T06:50:21.513Z",
         "dispatch_mode": "manual_bridge",
         "cursor_execution_mode": "manual_bridge",
         "cursor_run_ref": null,
         "cursor_conversation_url": null,
         "cursor_fallback_used": false,
-        "handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
         "status": "created"
       }
     ],
@@ -751,7 +751,7 @@
         "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
         "pr_id": null,
         "pr_url": null,
-        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
         "cursor_cloud_run_ref": null,
         "supabase_schema_draft_path": null,
         "supabase_migration_file_path": null,
@@ -759,14 +759,14 @@
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnjvgboa-rxgne`\n**packet_id**: `EPK-mnjvgboa-s7u3z`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlejkqc-wspd4`\n**packet_id**: `EPK-mnlejkqc-uxl6a`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mnjvgboa-rxgne",
-          "packet_id": "EPK-mnjvgboa-s7u3z"
+          "run_id": "RUN-mnlejkqc-wspd4",
+          "packet_id": "EPK-mnlejkqc-uxl6a"
         },
         "cursor_execution_mode": "manual_bridge"
       },
@@ -789,14 +789,14 @@
         "smoke_test_plan_path": null
       }
     },
-    "project_id": "PROJ-mnjvgbob-w54dt",
+    "project_id": "PROJ-mnlejkqd-fuczx",
     "project_label": null,
     "document_context_summary": null,
     "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "in_progress",
-    "outbound_dispatched_at": "2026-04-04T05:08:10.907Z",
+    "outbound_dispatched_at": "2026-04-05T06:50:21.493Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
@@ -930,7 +930,7 @@
           "fallback_rule": "fallback_to_draft_artifact"
         }
       ],
-      "planned_at": "2026-04-04T05:08:10.908Z",
+      "planned_at": "2026-04-05T06:50:21.494Z",
       "provider_truth_ref": {
         "summary": {
           "live_count": 0,
@@ -946,7 +946,7 @@
     "external_execution_authorization": {
       "state": "authorized",
       "reason": "explicit_operator_or_internal_bootstrap",
-      "decided_at": "2026-04-04T05:08:10.906Z"
+      "decided_at": "2026-04-05T06:50:21.492Z"
     },
     "founder_origin_run": false,
     "approved_proposal_snapshot": null,
@@ -954,8 +954,8 @@
     "internal_planner_capability_source": "locked_run_text"
   },
   {
-    "run_id": "RUN-mnjvgboa-rxgne",
-    "packet_id": "EPK-mnjvgboa-s7u3z",
+    "run_id": "RUN-mnlejkqc-wspd4",
+    "packet_id": "EPK-mnlejkqc-uxl6a",
     "session_id": "",
     "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
     "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
@@ -965,11 +965,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
-    "created_at": "2026-04-04T05:08:10.906Z",
-    "updated_at": "2026-04-04T05:08:10.946Z",
+    "created_at": "2026-04-05T06:50:21.492Z",
+    "updated_at": "2026-04-05T06:50:21.529Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-gboafyw",
+        "lane_id": "LANE-research-jkqcpfk",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -997,7 +997,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-gboast7",
+        "lane_id": "LANE-swe-jkqczti",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1030,14 +1030,14 @@
           "outbound_provider": "cursor",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md"
+            "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md"
           ],
-          "last_outbound_at": "2026-04-04T05:08:10.938Z",
+          "last_outbound_at": "2026-04-05T06:50:21.513Z",
           "last_error": null
         }
       },
       {
-        "lane_id": "LANE-uiux-gboa4sq",
+        "lane_id": "LANE-uiux-jkqcvc1",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1066,7 +1066,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-gboavdy",
+        "lane_id": "LANE-qa-jkqcnb1",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
         "inputs": [
@@ -1094,11 +1094,11 @@
           "outbound_provider": "internal",
           "outbound_status": "drafted",
           "outbound_ref_ids": [
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_acceptance.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_regression.md",
-            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_smoke.md"
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_acceptance.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_regression.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_smoke.md"
           ],
-          "last_outbound_at": "2026-04-04T05:08:10.946Z",
+          "last_outbound_at": "2026-04-05T06:50:21.529Z",
           "last_error": null
         }
       }
@@ -1110,18 +1110,18 @@
       "pr_id": null,
       "commit_shas": [],
       "handoff_doc_path": null,
-      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
       "supabase_migration_ids": []
     },
     "cursor_trace": [
       {
-        "created_at": "2026-04-04T05:08:10.938Z",
+        "created_at": "2026-04-05T06:50:21.513Z",
         "dispatch_mode": "manual_bridge",
         "cursor_execution_mode": "manual_bridge",
         "cursor_run_ref": null,
         "cursor_conversation_url": null,
         "cursor_fallback_used": false,
-        "handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
         "status": "created"
       }
     ],
@@ -1137,7 +1137,7 @@
         "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
         "pr_id": null,
         "pr_url": null,
-        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
         "cursor_cloud_run_ref": null,
         "supabase_schema_draft_path": null,
         "supabase_migration_file_path": null,
@@ -1145,14 +1145,14 @@
         "github_draft_payload": {
           "kind": "github_issue_draft",
           "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
-          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnjvgboa-rxgne`\n**packet_id**: `EPK-mnjvgboa-s7u3z`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlejkqc-wspd4`\n**packet_id**: `EPK-mnlejkqc-uxl6a`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
           "labels": [
             "cos-execution",
             "task"
           ],
           "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
-          "run_id": "RUN-mnjvgboa-rxgne",
-          "packet_id": "EPK-mnjvgboa-s7u3z"
+          "run_id": "RUN-mnlejkqc-wspd4",
+          "packet_id": "EPK-mnlejkqc-uxl6a"
         },
         "cursor_execution_mode": "manual_bridge"
       },
@@ -1170,19 +1170,19 @@
         "component_checklist_path": null
       },
       "qa_qc": {
-        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_acceptance.md",
-        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_regression.md",
-        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_smoke.md"
+        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_smoke.md"
       }
     },
-    "project_id": "PROJ-mnjvgbob-w54dt",
+    "project_id": "PROJ-mnlejkqd-fuczx",
     "project_label": null,
     "document_context_summary": null,
     "document_sources": [],
     "originating_playbook_id": null,
     "originating_task_kind": null,
     "outbound_dispatch_state": "partial",
-    "outbound_dispatched_at": "2026-04-04T05:08:10.907Z",
+    "outbound_dispatched_at": "2026-04-05T06:50:21.493Z",
     "outbound_dispatch_attempts": 1,
     "outbound_last_error": null,
     "escalation_policy": "bounded",
@@ -1316,7 +1316,7 @@
           "fallback_rule": "fallback_to_draft_artifact"
         }
       ],
-      "planned_at": "2026-04-04T05:08:10.908Z",
+      "planned_at": "2026-04-05T06:50:21.494Z",
       "provider_truth_ref": {
         "summary": {
           "live_count": 0,
@@ -1345,7 +1345,7 @@
           "route_key": "fullstack_code::cursor_cloud",
           "attempted_action": "fullstack_code/cursor_cloud",
           "observed_tool_refs": {
-            "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+            "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
             "cursor_cloud_run_ref": null
           },
           "reconciled_status": "draft_only",
@@ -1355,14 +1355,14 @@
           "route_key": "qa_validation::internal_artifact",
           "attempted_action": "qa_validation/internal_artifact",
           "observed_tool_refs": {
-            "qa_acceptance": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_acceptance.md"
+            "qa_acceptance": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_acceptance.md"
           },
           "reconciled_status": "satisfied",
           "reconciliation_notes": ""
         }
       ],
       "overall": "draft_only",
-      "evaluated_at": "2026-04-04T05:08:10.946Z",
+      "evaluated_at": "2026-04-05T06:50:21.529Z",
       "dispatch_log": [
         {
           "route_key": "fullstack_code::github",
@@ -1381,7 +1381,7 @@
           "attempted_action": "fullstack_code/cursor_cloud",
           "reported_result": {
             "mode": "manual_bridge",
-            "handoff_path": "data/exec-handoffs/run_RUN-mnjvgboa-rxgne_handoff.md",
+            "handoff_path": "data/exec-handoffs/run_RUN-mnlejkqc-wspd4_handoff.md",
             "cursor_fallback_used": false
           }
         },
@@ -1393,9 +1393,9 @@
           "reported_result": {
             "mode": "created",
             "paths": [
-              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_acceptance.md",
-              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_regression.md",
-              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnjvgboa-rxgne_smoke.md"
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_acceptance.md",
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_regression.md",
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlejkqc-wspd4_smoke.md"
             ]
           }
         }
@@ -1404,7 +1404,7 @@
     "external_execution_authorization": {
       "state": "authorized",
       "reason": "explicit_operator_or_internal_bootstrap",
-      "decided_at": "2026-04-04T05:08:10.906Z"
+      "decided_at": "2026-04-05T06:50:21.492Z"
     },
     "founder_origin_run": false,
     "approved_proposal_snapshot": null,
@@ -1412,8 +1412,8 @@
     "internal_planner_capability_source": "locked_run_text"
   },
   {
-    "run_id": "RUN-mnjvgch9-9nmrr",
-    "packet_id": "EPK-mnjvgch9-l4jlz",
+    "run_id": "RUN-mnlejlhf-rmb3h",
+    "packet_id": "EPK-mnlejlhf-ywd0t",
     "session_id": "ch:C_TEST_GOLD:t:1700000000.200001",
     "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
     "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
@@ -1432,11 +1432,11 @@
     "current_stage": "execution_running",
     "status": "active",
     "owner_thread_key": "ch:C_TEST_GOLD:t:1700000000.200001",
-    "created_at": "2026-04-04T05:08:11.949Z",
-    "updated_at": "2026-04-04T05:08:11.949Z",
+    "created_at": "2026-04-05T06:50:22.467Z",
+    "updated_at": "2026-04-05T06:50:22.467Z",
     "workstreams": [
       {
-        "lane_id": "LANE-research-gch9lxx",
+        "lane_id": "LANE-research-jlhf7r8",
         "lane_type": "research_benchmark",
         "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
         "inputs": [
@@ -1464,7 +1464,7 @@
         }
       },
       {
-        "lane_id": "LANE-swe-gch9fdj",
+        "lane_id": "LANE-swe-jlhftrh",
         "lane_type": "fullstack_swe",
         "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
         "inputs": [
@@ -1497,7 +1497,7 @@
         }
       },
       {
-        "lane_id": "LANE-uiux-gch900g",
+        "lane_id": "LANE-uiux-jlhf3un",
         "lane_type": "uiux_design",
         "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
         "inputs": [
@@ -1526,7 +1526,7 @@
         }
       },
       {
-        "lane_id": "LANE-qa-gch9o18",
+        "lane_id": "LANE-qa-jlhf65u",
         "lane_type": "qa_qc",
         "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
         "inputs": [
@@ -1627,7 +1627,4296 @@
     "external_execution_authorization": {
       "state": "pending_approval",
       "reason": "founder_default_pending_approval",
-      "decided_at": "2026-04-04T05:08:11.949Z"
+      "decided_at": "2026-04-05T06:50:22.467Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": null
+  },
+  {
+    "run_id": "RUN-mnlelie5-2ks9s",
+    "packet_id": "EPK-mnlelie5-ncdee",
+    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mnlelie3",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
+    "created_at": "2026-04-05T06:51:51.773Z",
+    "updated_at": "2026-04-05T06:51:51.778Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lie5fid",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lie5lhb",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "github",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [],
+          "last_outbound_at": "2026-04-05T06:51:51.778Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lie5dr6",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lie5ebq",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelie5-2ks9s`\n**packet_id**: `EPK-mnlelie5-ncdee`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+          "run_id": "RUN-mnlelie5-2ks9s",
+          "packet_id": "EPK-mnlelie5-ncdee"
+        }
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelie6-yem9w",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:51:51.776Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:51.776Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:51.773Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelie5-2ks9s",
+    "packet_id": "EPK-mnlelie5-ncdee",
+    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mnlelie3",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
+    "created_at": "2026-04-05T06:51:51.773Z",
+    "updated_at": "2026-04-05T06:51:51.826Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lie5fid",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lie5lhb",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:51.826Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lie5dr6",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lie5ebq",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:51:51.826Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelie5-2ks9s`\n**packet_id**: `EPK-mnlelie5-ncdee`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+          "run_id": "RUN-mnlelie5-2ks9s",
+          "packet_id": "EPK-mnlelie5-ncdee"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelie6-yem9w",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:51:51.776Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:51.776Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:51.773Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelie5-2ks9s",
+    "packet_id": "EPK-mnlelie5-ncdee",
+    "session_id": "PSS-ch_CHENRY_t_1743000000_henry-mnlelie3",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY:t:1743000000.henry",
+    "created_at": "2026-04-05T06:51:51.773Z",
+    "updated_at": "2026-04-05T06:51:51.833Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lie5fid",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lie5lhb",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:51.826Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lie5dr6",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lie5ebq",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_acceptance.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_regression.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:51.832Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:51:51.826Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelie5-2ks9s`\n**packet_id**: `EPK-mnlelie5-ncdee`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버 스케줄 캘린더",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더",
+          "run_id": "RUN-mnlelie5-2ks9s",
+          "packet_id": "EPK-mnlelie5-ncdee"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_smoke.md"
+      }
+    },
+    "project_id": "PROJ-mnlelie6-yem9w",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "partial",
+    "outbound_dispatched_at": "2026-04-05T06:51:51.776Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:51.776Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": {
+      "entries": [
+        {
+          "route_key": "fullstack_code::github",
+          "attempted_action": "fullstack_code/github",
+          "observed_tool_refs": {
+            "github_issue_id": null,
+            "github_draft_payload": true,
+            "branch": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더"
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "github live issue id missing (draft only)"
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "observed_tool_refs": {
+            "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+            "cursor_cloud_run_ref": null
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "cursor handoff and live run ref both required for strict completion"
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "observed_tool_refs": {
+            "qa_acceptance": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_acceptance.md"
+          },
+          "reconciled_status": "satisfied",
+          "reconciliation_notes": ""
+        }
+      ],
+      "overall": "draft_only",
+      "evaluated_at": "2026-04-05T06:51:51.833Z",
+      "dispatch_log": [
+        {
+          "route_key": "fullstack_code::github",
+          "capability": "fullstack_code",
+          "selected_provider": "github",
+          "attempted_action": "fullstack_code/github",
+          "reported_result": {
+            "mode": "draft",
+            "branch_name": "feat/더그린-갤러리-아뜰리에-멤버-스케줄-캘린더"
+          }
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "capability": "fullstack_code",
+          "selected_provider": "cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "reported_result": {
+            "mode": "manual_bridge",
+            "handoff_path": "data/exec-handoffs/run_RUN-mnlelie5-2ks9s_handoff.md",
+            "cursor_fallback_used": false
+          }
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "capability": "qa_validation",
+          "selected_provider": "internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "reported_result": {
+            "mode": "created",
+            "paths": [
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_acceptance.md",
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_regression.md",
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버-스케줄-캘린더_RUN-mnlelie5-2ks9s_smoke.md"
+            ]
+          }
+        }
+      ]
+    },
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:51.773Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnleliss-y6c3x",
+    "packet_id": "EPK-mnleliss-xv2u1",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mnlelisq",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
+    "created_at": "2026-04-05T06:51:52.300Z",
+    "updated_at": "2026-04-05T06:51:52.304Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-liss6mg",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lissh7y",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "github",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [],
+          "last_outbound_at": "2026-04-05T06:51:52.304Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lissh8z",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-liss2cm",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnleliss-y6c3x`\n**packet_id**: `EPK-mnleliss-xv2u1`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnleliss-y6c3x",
+          "packet_id": "EPK-mnleliss-xv2u1"
+        }
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelist-x6vfh",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:51:52.303Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:52.303Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:52.300Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnleliss-y6c3x",
+    "packet_id": "EPK-mnleliss-xv2u1",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mnlelisq",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
+    "created_at": "2026-04-05T06:51:52.300Z",
+    "updated_at": "2026-04-05T06:51:52.332Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-liss6mg",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lissh7y",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:52.332Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lissh8z",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-liss2cm",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:51:52.332Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnleliss-y6c3x`\n**packet_id**: `EPK-mnleliss-xv2u1`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnleliss-y6c3x",
+          "packet_id": "EPK-mnleliss-xv2u1"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelist-x6vfh",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:51:52.303Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:52.303Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:52.300Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnleliss-y6c3x",
+    "packet_id": "EPK-mnleliss-xv2u1",
+    "session_id": "PSS-ch_CHENRY2_t_1743000000_t2-mnlelisq",
+    "project_goal": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [
+      "멤버·팀 일정 보기/등록(v1)",
+      "승인 규칙 반영(v1)"
+    ],
+    "excludes": [
+      "외부 공개 블랙아웃 링크(v2+)",
+      "가격/결제 안내 트리거(v2+)"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CHENRY2:t:1743000000.t2",
+    "created_at": "2026-04-05T06:51:52.300Z",
+    "updated_at": "2026-04-05T06:51:52.340Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-liss6mg",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lissh7y",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:52.332Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lissh8z",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-liss2cm",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_acceptance.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_regression.md",
+            "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:51:52.340Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:51:52.332Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnleliss-y6c3x`\n**packet_id**: `EPK-mnleliss-xv2u1`\n\n## Goal\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n- 멤버·팀 일정 보기/등록(v1)\n- 승인 규칙 반영(v1)\n\n## Excludes\n- 외부 공개 블랙아웃 링크(v2+)\n- 가격/결제 안내 트리거(v2+)\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnleliss-y6c3x",
+          "packet_id": "EPK-mnleliss-xv2u1"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_smoke.md"
+      }
+    },
+    "project_id": "PROJ-mnlelist-x6vfh",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "partial",
+    "outbound_dispatched_at": "2026-04-05T06:51:52.303Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:51:52.303Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": {
+      "entries": [
+        {
+          "route_key": "fullstack_code::github",
+          "attempted_action": "fullstack_code/github",
+          "observed_tool_refs": {
+            "github_issue_id": null,
+            "github_draft_payload": true,
+            "branch": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자"
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "github live issue id missing (draft only)"
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "observed_tool_refs": {
+            "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+            "cursor_cloud_run_ref": null
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "cursor handoff and live run ref both required for strict completion"
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "observed_tool_refs": {
+            "qa_acceptance": "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_acceptance.md"
+          },
+          "reconciled_status": "satisfied",
+          "reconciliation_notes": ""
+        }
+      ],
+      "overall": "draft_only",
+      "evaluated_at": "2026-04-05T06:51:52.340Z",
+      "dispatch_log": [
+        {
+          "route_key": "fullstack_code::github",
+          "capability": "fullstack_code",
+          "selected_provider": "github",
+          "attempted_action": "fullstack_code/github",
+          "reported_result": {
+            "mode": "draft",
+            "branch_name": "feat/더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자"
+          }
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "capability": "fullstack_code",
+          "selected_provider": "cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "reported_result": {
+            "mode": "manual_bridge",
+            "handoff_path": "data/exec-handoffs/run_RUN-mnleliss-y6c3x_handoff.md",
+            "cursor_fallback_used": false
+          }
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "capability": "qa_validation",
+          "selected_provider": "internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "reported_result": {
+            "mode": "created",
+            "paths": [
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_acceptance.md",
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_regression.md",
+              "docs/qa-specs/qa_더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnleliss-y6c3x_smoke.md"
+            ]
+          }
+        }
+      ]
+    },
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:51:52.300Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelsuq-cmoqj",
+    "packet_id": "EPK-mnlelsup-pbia4",
+    "session_id": "",
+    "project_goal": "문서 초안 작성",
+    "locked_mvp_summary": "문서",
+    "includes": [],
+    "excludes": [],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:V13:cap:1",
+    "created_at": "2026-04-05T06:52:05.330Z",
+    "updated_at": "2026-04-05T06:52:05.330Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lsuqfpc",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 문서 초안 작성",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lsuqno1",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 문서 초안 작성",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lsuquvi",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 문서 초안 작성",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lsuqs4i",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 문서 초안 작성",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U1",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": null,
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "pending_approval",
+      "reason": "founder_default_pending_approval",
+      "decided_at": "2026-04-05T06:52:05.330Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": {
+      "understood_request": "x",
+      "cos_only_tasks": [
+        "시장 조사 및 경쟁사 벤치마크 표"
+      ],
+      "internal_support_tasks": [],
+      "external_execution_tasks": [],
+      "proposed_roadmap": []
+    },
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": null
+  },
+  {
+    "run_id": "RUN-mnlelswn-q5wo7",
+    "packet_id": "EPK-mnlelswm-zebhr",
+    "session_id": "",
+    "project_goal": "truth completion",
+    "locked_mvp_summary": "t",
+    "includes": [],
+    "excludes": [],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:V13:stc:1",
+    "created_at": "2026-04-05T06:52:05.399Z",
+    "updated_at": "2026-04-05T06:52:05.399Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lswn519",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — truth completion",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lswn01c",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — truth completion",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lswn3dr",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — truth completion",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lswnywj",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — truth completion",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U1",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": null,
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "pending_approval",
+      "reason": "founder_default_pending_approval",
+      "decided_at": "2026-04-05T06:52:05.399Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": null
+  },
+  {
+    "run_id": "RUN-mnlelwrl-1w861",
+    "packet_id": "EPK-mnlelwrl-8j8ng",
+    "session_id": "",
+    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [],
+    "excludes": [],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
+    "created_at": "2026-04-05T06:52:10.401Z",
+    "updated_at": "2026-04-05T06:52:10.404Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lwrl462",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lwrl01g",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "github",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [],
+          "last_outbound_at": "2026-04-05T06:52:10.404Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lwrl7wz",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lwrlxza",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelwrl-1w861`\n**packet_id**: `EPK-mnlelwrl-8j8ng`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnlelwrl-1w861",
+          "packet_id": "EPK-mnlelwrl-8j8ng"
+        }
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelwrm-aghlm",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:52:10.402Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:52:10.403Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:52:10.401Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelwrl-1w861",
+    "packet_id": "EPK-mnlelwrl-8j8ng",
+    "session_id": "",
+    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [],
+    "excludes": [],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
+    "created_at": "2026-04-05T06:52:10.401Z",
+    "updated_at": "2026-04-05T06:52:10.439Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lwrl462",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lwrl01g",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:52:10.439Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lwrl7wz",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lwrlxza",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:52:10.439Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelwrl-1w861`\n**packet_id**: `EPK-mnlelwrl-8j8ng`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnlelwrl-1w861",
+          "packet_id": "EPK-mnlelwrl-8j8ng"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": "PROJ-mnlelwrm-aghlm",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "in_progress",
+    "outbound_dispatched_at": "2026-04-05T06:52:10.402Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:52:10.403Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:52:10.401Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelwrl-1w861",
+    "packet_id": "EPK-mnlelwrl-8j8ng",
+    "session_id": "",
+    "project_goal": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "locked_mvp_summary": "툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+    "includes": [],
+    "excludes": [],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:CFIX30:t:1743100000.000030",
+    "created_at": "2026-04-05T06:52:10.401Z",
+    "updated_at": "2026-04-05T06:52:10.450Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lwrl462",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lwrl01g",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [
+          "github_draft_payload",
+          "branch_name",
+          "cursor_handoff_path",
+          "cursor_execution_mode"
+        ],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": "cursor",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:52:10.439Z",
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lwrl7wz",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lwrlxza",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [
+          "acceptance_checklist_path",
+          "regression_case_list_path",
+          "smoke_test_plan_path"
+        ],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": "internal",
+          "outbound_status": "drafted",
+          "outbound_ref_ids": [
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_acceptance.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_regression.md",
+            "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_smoke.md"
+          ],
+          "last_outbound_at": "2026-04-05T06:52:10.450Z",
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [
+      {
+        "created_at": "2026-04-05T06:52:10.439Z",
+        "dispatch_mode": "manual_bridge",
+        "cursor_execution_mode": "manual_bridge",
+        "cursor_run_ref": null,
+        "cursor_conversation_url": null,
+        "cursor_fallback_used": false,
+        "handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+        "status": "created"
+      }
+    ],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null,
+        "github_draft_payload": {
+          "kind": "github_issue_draft",
+          "title": "[COS Run] 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "body": "## COS Execution Run\n\n**run_id**: `RUN-mnlelwrl-1w861`\n**packet_id**: `EPK-mnlelwrl-8j8ng`\n\n## Goal\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Locked MVP Summary\n툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n\n## Includes\n\n## Excludes\n\n## Deferred\n\n## Workstreams\n- **research_benchmark**: 기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **fullstack_swe**: app skeleton · route · data model · approval flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **uiux_design**: view model · permission surface · booking flow — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.\n- **qa_qc**: acceptance criteria · conflict detection · regression cases — 툴제작: 더그린 갤러리 & 아뜰리에 멤버들의 스케줄 관리 캘린더를 하나 만들자.",
+          "labels": [
+            "cos-execution",
+            "task"
+          ],
+          "suggested_branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자",
+          "run_id": "RUN-mnlelwrl-1w861",
+          "packet_id": "EPK-mnlelwrl-8j8ng"
+        },
+        "cursor_execution_mode": "manual_bridge"
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_acceptance.md",
+        "regression_case_list_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_regression.md",
+        "smoke_test_plan_path": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_smoke.md"
+      }
+    },
+    "project_id": "PROJ-mnlelwrm-aghlm",
+    "project_label": null,
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "partial",
+    "outbound_dispatched_at": "2026-04-05T06:52:10.402Z",
+    "outbound_dispatch_attempts": 1,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "",
+    "approved_by": "",
+    "latest_report": null,
+    "orchestration_plan": {
+      "capabilities": {
+        "research": false,
+        "spec_refine": false,
+        "fullstack_code": true,
+        "uiux_design": false,
+        "db_schema": false,
+        "deploy_preview": false,
+        "qa_validation": true,
+        "research_only": false,
+        "market_research": false,
+        "strategy_memo": false,
+        "document_write": false,
+        "document_review": false,
+        "budget_planning": false,
+        "financial_scenario": false,
+        "ir_deck": false,
+        "investor_research": false,
+        "outreach_copy": false
+      },
+      "route_decisions": [
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "github",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider github status=draft_only",
+          "produced_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.github_issue_id|github_draft_payload",
+            "git_trace.branch"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "github_issue_or_draft",
+            "branch_pr_seed"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "fullstack_code",
+          "selected_agent": "fullstack_swe",
+          "selected_provider": "cursor_cloud",
+          "preconditions_passed": true,
+          "fallback_used": true,
+          "rationale": "provider cursor_cloud status=unavailable",
+          "produced_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.fullstack_swe.cursor_handoff_path|cursor_cloud_run_ref"
+          ],
+          "owning_agent": "fullstack_swe",
+          "allowed_providers": [
+            "github",
+            "cursor_cloud"
+          ],
+          "forbidden_actions": [
+            "supabase_apply",
+            "vercel_deploy",
+            "railway_deploy"
+          ],
+          "expected_artifacts": [
+            "cursor_handoff_or_skip"
+          ],
+          "truth_source": "github_then_cursor_trace",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "observe_and_record"
+        },
+        {
+          "capability": "qa_validation",
+          "selected_agent": "qa_agent",
+          "selected_provider": "internal_artifact",
+          "preconditions_passed": true,
+          "fallback_used": false,
+          "rationale": "code/db/ui/deploy surface implies QA artifacts",
+          "produced_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "execution_mode": "draft",
+          "expected_refs": [
+            "artifacts.qa_qc.acceptance_checklist_path"
+          ],
+          "owning_agent": "qa_agent",
+          "allowed_providers": [
+            "internal_artifact"
+          ],
+          "forbidden_actions": [
+            "external_mutation"
+          ],
+          "expected_artifacts": [
+            "acceptance",
+            "regression",
+            "smoke"
+          ],
+          "truth_source": "internal_artifact",
+          "success_condition": "required_tool_refs_or_draft_fallback_recorded",
+          "failure_condition": "adapter_threw_or_missing_required_ref",
+          "fallback_rule": "fallback_to_draft_artifact"
+        }
+      ],
+      "planned_at": "2026-04-05T06:52:10.403Z",
+      "provider_truth_ref": {
+        "summary": {
+          "live_count": 0,
+          "live_ready_count": 0,
+          "manual_bridge_count": 0,
+          "draft_only_count": 2,
+          "unavailable_count": 1,
+          "not_configured_count": 2
+        }
+      }
+    },
+    "truth_reconciliation": {
+      "entries": [
+        {
+          "route_key": "fullstack_code::github",
+          "attempted_action": "fullstack_code/github",
+          "observed_tool_refs": {
+            "github_issue_id": null,
+            "github_draft_payload": true,
+            "branch": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자"
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "github live issue id missing (draft only)"
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "observed_tool_refs": {
+            "cursor_handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+            "cursor_cloud_run_ref": null
+          },
+          "reconciled_status": "draft_only",
+          "reconciliation_notes": "cursor handoff and live run ref both required for strict completion"
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "observed_tool_refs": {
+            "qa_acceptance": "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_acceptance.md"
+          },
+          "reconciled_status": "satisfied",
+          "reconciliation_notes": ""
+        }
+      ],
+      "overall": "draft_only",
+      "evaluated_at": "2026-04-05T06:52:10.450Z",
+      "dispatch_log": [
+        {
+          "route_key": "fullstack_code::github",
+          "capability": "fullstack_code",
+          "selected_provider": "github",
+          "attempted_action": "fullstack_code/github",
+          "reported_result": {
+            "mode": "draft",
+            "branch_name": "feat/툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자"
+          }
+        },
+        {
+          "route_key": "fullstack_code::cursor_cloud",
+          "capability": "fullstack_code",
+          "selected_provider": "cursor_cloud",
+          "attempted_action": "fullstack_code/cursor_cloud",
+          "reported_result": {
+            "mode": "manual_bridge",
+            "handoff_path": "data/exec-handoffs/run_RUN-mnlelwrl-1w861_handoff.md",
+            "cursor_fallback_used": false
+          }
+        },
+        {
+          "route_key": "qa_validation::internal_artifact",
+          "capability": "qa_validation",
+          "selected_provider": "internal_artifact",
+          "attempted_action": "qa_validation/internal_artifact",
+          "reported_result": {
+            "mode": "created",
+            "paths": [
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_acceptance.md",
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_regression.md",
+              "docs/qa-specs/qa_툴제작-더그린-갤러리-아뜰리에-멤버들의-스케줄-관리-캘린더를-하나-만들자_RUN-mnlelwrl-1w861_smoke.md"
+            ]
+          }
+        }
+      ]
+    },
+    "external_execution_authorization": {
+      "state": "authorized",
+      "reason": "explicit_operator_or_internal_bootstrap",
+      "decided_at": "2026-04-05T06:52:10.401Z"
+    },
+    "founder_origin_run": false,
+    "approved_proposal_snapshot": null,
+    "approved_proposal_capability_flags": null,
+    "internal_planner_capability_source": "locked_run_text"
+  },
+  {
+    "run_id": "RUN-mnlelxi5-1zza8",
+    "packet_id": "EPK-mnlelxi5-o1za8",
+    "session_id": "ch:C_TEST_GOLD:t:1700000000.200001",
+    "project_goal": "운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+    "locked_mvp_summary": "핵심 일정 등록/수정, 권한 기반 접근제어, 충돌 방지 룰, 알림/승인 로그",
+    "includes": [
+      "핵심 일정 등록/수정",
+      "권한 기반 접근제어",
+      "충돌 방지 룰",
+      "알림/승인 로그"
+    ],
+    "excludes": [
+      "결제/정산",
+      "고급 BI 분석",
+      "복수 외부 플랫폼 동시 연동"
+    ],
+    "deferred_items": [],
+    "current_stage": "execution_running",
+    "status": "active",
+    "owner_thread_key": "ch:C_TEST_GOLD:t:1700000000.200001",
+    "created_at": "2026-04-05T06:52:11.357Z",
+    "updated_at": "2026-04-05T06:52:11.357Z",
+    "workstreams": [
+      {
+        "lane_id": "LANE-research-lxi5bq3",
+        "lane_type": "research_benchmark",
+        "objective": "기존 유사 패턴·UX baseline·SaaS benchmark 조사 — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "market_context"
+        ],
+        "outputs": [
+          "research_note_artifact"
+        ],
+        "dependencies": [],
+        "owner_agent": "deep_research",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "web_search",
+          "competitor_analysis"
+        ],
+        "done_criteria": "research note delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-swe-lxi5yhi",
+        "lane_type": "fullstack_swe",
+        "objective": "app skeleton · route · data model · approval flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "github_issue",
+          "branch_pr_seed",
+          "cursor_handoff"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "fullstack_swe",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [
+          "cursor",
+          "github",
+          "supabase"
+        ],
+        "done_criteria": "PR seed + schema draft ready",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-uiux-lxi5lod",
+        "lane_type": "uiux_design",
+        "objective": "view model · permission surface · booking flow — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "research_note"
+        ],
+        "outputs": [
+          "ui_spec_delta",
+          "wireframe_note",
+          "component_checklist"
+        ],
+        "dependencies": [
+          "research_benchmark"
+        ],
+        "owner_agent": "uiux_design",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "UI spec + component checklist delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      },
+      {
+        "lane_id": "LANE-qa-lxi589t",
+        "lane_type": "qa_qc",
+        "objective": "acceptance criteria · conflict detection · regression cases — 운영 혼선을 줄이기 위해 일정/권한/승인 흐름을 일관되게 통합 관리한다.",
+        "inputs": [
+          "locked_scope",
+          "swe_output"
+        ],
+        "outputs": [
+          "test_checklist",
+          "smoke_cases",
+          "regression_additions"
+        ],
+        "dependencies": [
+          "fullstack_swe"
+        ],
+        "owner_agent": "qa_qc",
+        "status": "pending",
+        "git_artifacts": [],
+        "external_tools_needed": [],
+        "done_criteria": "test checklist + smoke cases delivered",
+        "outbound": {
+          "outbound_provider": null,
+          "outbound_status": "pending",
+          "outbound_ref_ids": [],
+          "last_outbound_at": null,
+          "last_error": null
+        }
+      }
+    ],
+    "git_trace": {
+      "repo": null,
+      "branch": null,
+      "issue_id": null,
+      "pr_id": null,
+      "commit_shas": [],
+      "handoff_doc_path": null,
+      "generated_cursor_handoff_path": null,
+      "supabase_migration_ids": []
+    },
+    "cursor_trace": [],
+    "supabase_trace": [],
+    "artifacts": {
+      "research_benchmark": {
+        "research_note_id": null,
+        "research_note_path": null
+      },
+      "fullstack_swe": {
+        "github_issue_id": null,
+        "github_issue_url": null,
+        "branch_name": null,
+        "pr_id": null,
+        "pr_url": null,
+        "cursor_handoff_path": null,
+        "cursor_cloud_run_ref": null,
+        "supabase_schema_draft_path": null,
+        "supabase_migration_file_path": null,
+        "supabase_live_apply_ref": null
+      },
+      "spec_refine": {
+        "outline_path": null
+      },
+      "deploy_preview": {
+        "vercel_packet_path": null,
+        "railway_packet_path": null,
+        "observe_summary_path": null
+      },
+      "uiux_design": {
+        "ui_spec_delta_path": null,
+        "wireframe_note_path": null,
+        "component_checklist_path": null
+      },
+      "qa_qc": {
+        "acceptance_checklist_path": null,
+        "regression_case_list_path": null,
+        "smoke_test_plan_path": null
+      }
+    },
+    "project_id": null,
+    "project_label": "Founder Project MVP",
+    "document_context_summary": null,
+    "document_sources": [],
+    "originating_playbook_id": null,
+    "originating_task_kind": null,
+    "outbound_dispatch_state": "not_started",
+    "outbound_dispatched_at": null,
+    "outbound_dispatch_attempts": 0,
+    "outbound_last_error": null,
+    "escalation_policy": "bounded",
+    "deploy_readiness": "not_ready",
+    "deploy_provider": null,
+    "deploy_status": "none",
+    "deploy_url": null,
+    "deploy_error": null,
+    "requested_by": "U_FOUNDER",
+    "approved_by": "U_FOUNDER",
+    "latest_report": null,
+    "orchestration_plan": null,
+    "truth_reconciliation": null,
+    "external_execution_authorization": {
+      "state": "pending_approval",
+      "reason": "founder_default_pending_approval",
+      "decided_at": "2026-04-05T06:52:11.357Z"
     },
     "founder_origin_run": false,
     "approved_proposal_snapshot": null,

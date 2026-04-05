@@ -14,6 +14,8 @@
 
 **Partner natural sanitize (2026-04-04)**: `scripts/test-partner-natural-sanitize.mjs` — `planFounderConversationTurn` 파트너 폴백에서 **`sanitizePartnerNaturalLlmOutput`**·trace `partner_output_sanitized`(`npm test` 포함).
 
+**Founder DM 파일 인테이크 (2026-04-01, vNext.13.6)**: `scripts/test-vnext13-6-*.mjs` — `slackFileIntake`·`latest_file_contexts` 병합·스냅샷·합성기. 실슬랙 파일 fetch 없음(`extractMvpFileFromBuffer`·`pdf-parse` 샘플 PDF 사용).
+
 ---
 
 ## 1. 추가된 fixture 목록
