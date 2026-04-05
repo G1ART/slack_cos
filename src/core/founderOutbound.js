@@ -10,6 +10,21 @@
 
 import { FOUNDER_SURFACE_VALUES, FounderSurfaceType, SAFE_FALLBACK_TEXT } from './founderContracts.js';
 
+/** vNext.13.7 — 창업자 기본 대화 표면에 나오면 안 되는 잔재 (회귀·아웃바운드 안전망) */
+export const FOUNDER_CONVERSATION_FORBIDDEN_MARKERS = [
+  '[COS 제안 패킷]',
+  '*[COS 제안 패킷]*',
+  'strategy_finance:',
+  'risk_review:',
+  '가장 강한 반대 논리',
+  '남아 있는 긴장 / 미해결 충돌',
+];
+
+export function founderPlainTextHasForbiddenMarkers(text) {
+  const s = String(text || '');
+  return FOUNDER_CONVERSATION_FORBIDDEN_MARKERS.some((m) => s.includes(m));
+}
+
 function emitTrace(fields) {
   try {
     console.info(JSON.stringify({
@@ -91,6 +106,23 @@ export async function sendFounderResponse(opts) {
       blocks_count: rendered_blocks.length,
       ...trace,
     });
+  }
+
+  const puritySurfaces = new Set([
+    FounderSurfaceType.PARTNER_NATURAL,
+    FounderSurfaceType.SAFE_FALLBACK,
+  ]);
+  if (puritySurfaces.has(surface_type) && founderPlainTextHasForbiddenMarkers(text)) {
+    emitTrace({
+      intent,
+      surface_type,
+      responder_kind,
+      error: 'founder_conversation_purity_downgrade',
+      ...trace,
+    });
+    text =
+      '형식이 섞인 답변이 감지되어 보내지 않았습니다. 같은 요청을 조금 더 짧게 다시 부탁드립니다.';
+    hardFailReason = hardFailReason || 'purity_downgrade';
   }
 
   try {

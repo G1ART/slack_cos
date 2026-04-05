@@ -57,7 +57,7 @@ async function dm(channel, text, callText) {
     };
   } else {
     meta.mockFounderPlannerRow = {
-      natural_language_reply: '',
+      natural_language_reply: '요청 반영해 짧게 답합니다. (E2E dress mock)',
       state_delta: {},
       conversation_status: 'exploring',
       proposal_artifact: {
@@ -80,20 +80,18 @@ const o1 = await dm(
   'IR deck narrative 다시 짜줘. 미국 VC / 전략적 투자자 / 아트섹터 투자자별로 톤도 나눠.',
   async () => '',
 );
-assert.equal(o1.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
-assert.ok(o1.text.includes('[COS 제안 패킷]'));
+assert.equal(o1.surface_type, FounderSurfaceType.PARTNER_NATURAL);
+assert.ok(!o1.text.includes('[COS 제안 패킷]'));
 assert.ok(!o1.text.includes('*외부 실행 승인 요약'));
 
 /* E2 competitor */
 const o2 = await dm('De2eco', '경쟁사 5곳 벤치마킹해서 차별화 전략 메모로 정리해줘.', async () => '');
-assert.equal(o2.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
+assert.equal(o2.surface_type, FounderSurfaceType.PARTNER_NATURAL);
 
 /* E3 budget */
 const o3 = await dm('De2ebud', '이번 분기 예산 시나리오 3개 짜줘. 공격/중립/보수.', async () => '');
-assert.ok(
-  o3.surface_type === FounderSurfaceType.PROPOSAL_PACKET ||
-    (o3.text.includes('[COS 제안 패킷]') && !o3.text.includes('*외부 실행 승인 요약')),
-);
+assert.equal(o3.surface_type, FounderSurfaceType.PARTNER_NATURAL);
+assert.ok(!o3.text.includes('[COS 제안 패킷]') && !o3.text.includes('*외부 실행 승인 요약'));
 
 /* E4 external build → approval packet */
 const o4 = await dm(
@@ -157,7 +155,7 @@ const o6 = await dm(
   '이제 투자자별 맞춤 아웃리치까지 자동화하고 싶은데, 지금 구조로 충분한가?',
   async () => '',
 );
-assert.equal(o6.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
+assert.equal(o6.surface_type, FounderSurfaceType.PARTNER_NATURAL);
 assert.equal(o6.trace.cos_governance_advisory, false);
 assert.ok(!o6.text.includes('COS 운영 조언'));
 

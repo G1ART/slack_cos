@@ -1,4 +1,4 @@
-# Release lock — vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
+# Release lock — vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
 
 기능 추가가 아니라 **창업자 면 preflight** 와 **launch 권한**에 대한 회귀 방지 계약이다. 상위 서사: `docs/FOUNDATION_RESET.md`.
 
@@ -13,6 +13,7 @@
 
 - 주 기억: `founderConversationState` 필드(`latest_proposal_artifact_id`, `latest_approval_artifact_id`, `last_founder_confirmation_at`, `approval_lineage_status` 등).
 - **vNext.13.6**: Slack 첨부 인테이크 요약·상태는 `latest_file_contexts[]`(캡 `COS_FOUNDER_FILE_CONTEXT_CAP`)에 append; 스냅샷·플래너 컨텍스트의 `recent_file_contexts`로 노출. **파일 인테이크는 실행·승인 lineage와 별도**이며, 첨부만으로 spine/승인을 열지 않는다.
+- **vNext.13.7**: 파일 인제스트 **실패**는 플래너 입력(`handleUserText`의 combined 실패 blob)으로 **재주입 금지**. 창업자 기본 응답은 **자연어 표면**; `[COS 제안 패킷]` 강제 렌더는 **외부 실행 승인 경로**에서만.
 - Transcript는 보조. **Spine eligibility** 은 “이번 턴 sidecar 가 방금 제안한 lineage”가 아니라 **이미 저장된 pre-turn 행**만 신뢰한다 (same-turn self-authorization 금지).
 
 ## 3. Artifact-gated launch

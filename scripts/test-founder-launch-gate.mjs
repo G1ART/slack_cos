@@ -185,11 +185,11 @@ try {
     metadata: metaNat,
     route_label: 'dm_ai_router',
   });
-  assert.ok(outNat?.text?.includes('[COS 제안 패킷]'), 'proposal packet first');
+  assert.ok(!outNat?.text?.includes('[COS 제안 패킷]'), 'vNext.13.7: natural surface without packet');
   assert.ok(outNat?.text?.includes('COS 파트너'), 'callText used in 보강');
   assert.notEqual(outNat.trace.launch_gate_taken, true);
-  assert.equal(outNat.surface_type, FounderSurfaceType.PROPOSAL_PACKET);
-  ok('non-launch uses proposal_packet + optional partner 보강');
+  assert.equal(outNat.surface_type, FounderSurfaceType.PARTNER_NATURAL);
+  ok('non-launch uses partner_natural + optional partner 보강');
 } catch (e) {
   fail('non-launch path', e);
 }

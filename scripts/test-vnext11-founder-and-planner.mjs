@@ -61,17 +61,20 @@ async function founderDm(text, callText) {
 }
 
 /* Founder outputs */
-const outSha = await founderDm('현재 SHA 버전이 뭔지 출력해줘.', async () => 'NOPE');
-assert.ok(outSha.text.includes('SHA'), 'sha response');
+const outSha = await founderDm(
+  '현재 SHA 버전이 뭔지 출력해줘.',
+  async () => '현재 커밋 SHA는 테스트용 abc123def 입니다.',
+);
+assert.ok(outSha.text.includes('SHA') || outSha.text.includes('abc123'), 'sha response');
 assertFounderClean(outSha.text, 'sha');
 
-const outCur = await founderDm('Cursor 상태는 어때?', async () => 'NOPE');
+const outCur = await founderDm('Cursor 상태는 어때?', async () => 'Cursor 쪽은 테스트 응답입니다.');
 assertFounderClean(outCur.text, 'cursor');
 
-const outSb = await founderDm('Supabase 연결 상태는 어때?', async () => 'NOPE');
+const outSb = await founderDm('Supabase 연결 상태는 어때?', async () => 'Supabase는 테스트 응답입니다.');
 assertFounderClean(outSb.text, 'supabase');
 
-const outHand = await founderDm('왜 아직도 handoff로 빠져?', async () => 'NOPE');
+const outHand = await founderDm('왜 아직도 handoff로 빠져?', async () => '핸드오프는 테스트 응답으로 설명합니다.');
 assertFounderClean(outHand.text, 'handoff explainer');
 
 const outVague = await founderDm('그냥 궁금한 게 있는데요.', async () => '짧게 되물을게요. 어떤 제품 맥락인가요?');

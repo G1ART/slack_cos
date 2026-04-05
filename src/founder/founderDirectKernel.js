@@ -16,6 +16,7 @@ import {
   buildProposalPacketFromSidecar,
   formatFullFounderProposalSurface,
 } from './founderProposalKernel.js';
+import { buildFounderApprovalPacket } from './founderApprovalPacket.js';
 import { selectExecutionModeFromProposalPacket } from './executionModeFromProposalPacket.js';
 import { getProjectIntakeSession } from '../features/projectIntakeSession.js';
 import { getExecutionRunByThread } from '../features/executionRun.js';
@@ -144,15 +145,23 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
   const proposal = buildProposalPacketFromSidecar(sidecar, contextAfter, brainText, { source: plan.source });
   const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
 
+  const ext = proposal.external_execution_tasks?.length > 0;
   let body = String(sidecar.natural_language_reply || '').trim();
-  const packetBlock = formatFullFounderProposalSurface(proposal);
-  body = body ? `${body}\n\n${packetBlock}` : packetBlock;
+  if (ext) {
+    const { visible_section } = buildFounderApprovalPacket(proposal);
+    const vs = String(visible_section || '').trim();
+    if (vs) {
+      body = body ? `${body}\n\n${vs}` : vs;
+    }
+  }
+  if (!body.trim()) {
+    body = '지금 턴 답변을 정리하지 못했습니다. 한 문장만 다시 알려주실 수 있을까요?';
+  }
 
-  const ext0 = proposal.external_execution_tasks?.length > 0;
   const gov = maybeGovernanceAdvisoryForFounder({
     rawText: brainText,
     contextFrame: contextAfter,
-    founderSurface: ext0 ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
+    founderSurface: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
   });
   if (gov?.text && gov.text.length < body.length) {
     body += `\n\n${gov.text}`;
@@ -162,11 +171,10 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
     plan.source === 'partner_fallback_no_sidecar' && plan.partner_output_sanitized === true;
 
   const workContext = founderMinimalWorkContext(metadata, threadKey);
-  const ext = proposal.external_execution_tasks?.length > 0;
   return {
-    text: body || formatFullFounderProposalSurface(proposal),
+    text: body,
     blocks: undefined,
-    surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
+    surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
     trace: {
       work_object: {
         type: workContext.primary_type,
@@ -174,10 +182,10 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       },
       work_phase: 'founder_conversation',
       phase_source: 'founder_conversation_pipeline',
-      surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PROPOSAL_PACKET,
+      surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.6',
+      pipeline_version: 'vNext.13.7',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,

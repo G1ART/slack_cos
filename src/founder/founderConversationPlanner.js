@@ -1,6 +1,7 @@
 /**
  * vNext.13.4 — COS 대화 턴: 자연어 응답 + 기계-readable sidecar (regex로 의미 분류하지 않음).
  * vNext.13.6 — durable_state.latest_file_contexts 는 Slack 파일 인테이크 전용(실행·승인과 분리).
+ * vNext.13.7 — natural_language_reply 는 창업자에게 보일 **평문만** (내부 필드명·패킷 목차 금지).
  */
 
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
@@ -16,7 +17,7 @@ const PLANNER_INSTRUCTIONS = `
 반드시 스키마에 맞는 JSON 한 객체만 출력한다 (추가 텍스트 없음).
 
 규칙:
-- natural_language_reply: 대표에게 보일 한국어 평문(비서실장 톤, 간결).
+- natural_language_reply: 대표에게 보일 한국어 평문(비서실장 톤, 간결). **내부 JSON 필드명·durable_state·「COS 제안 패킷」류 목차·페르소나 라벨을 본문에 쓰지 말 것.**
 - conversation_status: 대화 단계를 정직하게 표시한다.
 - proposal_artifact: 제안·범위 정리에 쓸 구조화 힌트(없으면 빈 객체).
 - approval_artifact: 외부 툴 실행이 필요하면 requires_external_dispatch 등을 채운다. 불필요하면 빈 객체.
