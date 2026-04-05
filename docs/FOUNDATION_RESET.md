@@ -20,7 +20,13 @@
 ## 3. 운영 메타 숏서킷
 
 - SHA / Cursor / Supabase 등 운영 질의는 **`metadata.founder_explicit_meta_utility_path === true`** 일 때만 커널 입구에서 결정론 처리한다.
-- 그 외 일반 대화는 **conversation pipeline**(플래너·상태·제안 패킷)으로만 처리한다.
+- 그 외 일반 대화는 **conversation pipeline**(플래너·상태)으로 처리한다. **vNext.13.7**: 기본 창업자 **표면 출력**은 자연어(`partner_natural_surface`)이며, `[COS 제안 패킷]` 전개는 **외부 실행 승인이 실제로 필요할 때**만 승인 블록으로 제한된다.
+
+## 3b. 파일 인제스트와 플래너 입력 (vNext.13.7)
+
+- Slack 첨부 **실패**(HTML 대신 받음, 시그니처 불일치 등)는 **플래너 `userText`에 실패 로그를 붙이지 않는다**. `latest_file_contexts`에는 실패 메타만 남기고, 사용자에게는 **한 겹의 짧은 자연어**로만 안내한다.
+- **성공**한 추출만 요약 길이 상한을 두어 컨텍스트에 넣는다 (`buildConciseFileContextForPlanner`).
+- MIME/확장자 선언보다 **다운로드 바이트 시그니처**를 우선해 오판을 줄인다 (`peekPayloadNature`, `resolveEffectiveKindAfterDownload`).
 
 ## 4. Preflight / staging 경계
 

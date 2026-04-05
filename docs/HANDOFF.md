@@ -2,6 +2,14 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
+## vNext.13.7 (2026-04-05) — Founder path subtraction / 대화 순도
+
+**목적**: 규칙 추가가 아니라 **중간층 제거**. 창업자 면은 슬랙 안 **자연어 GPT 수준**을 목표로, 파일 실패·일반 대화가 패킷/페르소나 구조로 샐 때를 끊는다.
+
+**핵심**: (1) 파일 인제스트 **실패**는 `combinedText`로 플래너에 넣지 않고 **짧은 실패 응답만**(`founderSlackFileTurn`, `partner_natural_surface`). (2) **성공** 파일만 `buildConciseFileContextForPlanner`로 요약 주입(전문 덤프 금지). (3) `slackFileIntake`: 다운로드 후 **`peekPayloadNature` / `resolveEffectiveKindAfterDownload`** 로 PDF·PNG·DOCX 시그니처 우선(HTML 미리보기·MIME 오판 완화). (4) `founderDirectKernel`: 기본 응답은 **`natural_language_reply`만**; **외부 실행 후보가 있을 때만** 승인 블록(`buildFounderApprovalPacket`). (5) `sendFounderResponse`: `partner_natural_surface` 등에 **금지 마커** 스캔(최후 안전망).
+
+**회귀**: `scripts/test-vnext13-7-*.mjs` (6종, `npm test` 포함). **상세**: `docs/cursor-handoffs/COS_vNext13_7_Founder_Path_Subtraction_2026-04-05.md`.
+
 ## vNext.13.6 (2026-04-01) — Slack 파일 인테이크 (Founder DM/멘션 수직 슬라이스)
 
 **목적**: 창업자 DM·멘션에서 **DOCX / PDF(text) / PNG(vision)** 첨부를 다운로드·추출하고, 실행·승인과 분리된 **`durable_state.latest_file_contexts[]`** 에 누적한다.

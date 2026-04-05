@@ -2,15 +2,14 @@ import { shouldSkipEvent } from './eventDedup.js';
 import { sendFounderResponse } from '../core/founderOutbound.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
-import {
-  extractFilesFromEvent,
-  ingestSlackFile,
-  formatFileIngestError,
-} from '../features/slackFileIntake.js';
+import { extractFilesFromEvent } from '../features/slackFileIntake.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
-import { buildFounderFileContextEntry } from '../founder/founderFileContextRecord.js';
-import { mergeFounderConversationState } from '../founder/founderConversationState.js';
-import { addDocumentToThread } from '../features/slackDocumentContext.js';
+import {
+  founderIngestSlackFilesWithState,
+  buildFounderPlannerInputAfterFileIngest,
+  formatFounderFileFailureOnlyMessage,
+  FOUNDER_FILE_FAILURE_SURFACE,
+} from '../features/founderSlackFileTurn.js';
 import {
   updateApprovalStatus,
   formatApprovalUpdate,
@@ -26,9 +25,6 @@ import { logRouterEvent } from '../features/topLevelRouter.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
-
-const FOUNDER_FILE_INTAKE_PREAMBLE =
-  '[파일 인테이크] Slack 첨부를 읽어 durable_state.latest_file_contexts에 기록했습니다. 아래 추출 본문은 자동 인제스트이며 실행·승인 결정과는 별도입니다.\n\n';
 
 /**
  * @param {string|{ text: string, blocks?: object[], surface_type?: string, trace?: Record<string, unknown> }} answer
@@ -57,41 +53,31 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const userText = getInboundCommandText(event) || '';
 
       const files = extractFilesFromEvent(event);
-      let fileContext = '';
-      if (files.length) {
-        const tk = buildSlackThreadKey({
-          channel: event.channel,
-          ts: event.ts,
-          thread_ts: event.thread_ts,
-        });
-        for (const file of files) {
-          const result = await ingestSlackFile({ file, client, summarizePng: summarizePngBufferForFounderDm });
-          try {
-            await mergeFounderConversationState(tk, {
-              latest_file_contexts: [buildFounderFileContextEntry(tk, result)],
-            });
-          } catch (e) {
-            console.warn('[registerHandlers] mergeFounderConversationState(file):', e?.message || e);
-          }
-          if (result.ok) {
-            addDocumentToThread(tk, result);
-            fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
-          } else {
-            fileContext += `\n\n[파일 인제스트 실패: ${result.filename}] ${formatFileIngestError(result)}`;
-          }
+      const tk = buildSlackThreadKey({
+        channel: event.channel,
+        ts: event.ts,
+        thread_ts: event.thread_ts,
+      });
+      const ingestResults = files.length
+        ? await founderIngestSlackFilesWithState({
+            files,
+            client,
+            threadKey: tk,
+            summarizePng: summarizePngBufferForFounderDm,
+          })
+        : [];
+      for (const result of ingestResults) {
+        if (result.ok) {
+          console.info(JSON.stringify({ event: 'slack_file_ingested', file_id: result.file_id, filename: result.filename }));
+        } else {
+          console.warn(JSON.stringify({ event: 'slack_file_ingest_failed', file_id: result.file_id, errorCode: result.errorCode }));
         }
       }
 
-      const combinedText = (files.length ? FOUNDER_FILE_INTAKE_PREAMBLE : '') + (userText + fileContext).trim();
-      if (!combinedText) {
-        await sendFounderResponse({
-          say,
-          thread_ts: event.ts,
-          rendered_text: '지시 내용을 함께 적어주세요.',
-          surface_type: 'safe_fallback_surface',
-        });
-        return;
-      }
+      const { combinedTextForPlanner, failureNotes, skipPlanner } = buildFounderPlannerInputAfterFileIngest(
+        ingestResults,
+        userText,
+      );
 
       const meta = {
         source_type: 'channel_mention',
@@ -104,15 +90,46 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_files: files.length > 0,
         file_count: files.length,
       };
+
+      if (files.length && skipPlanner) {
+        const msg = formatFounderFileFailureOnlyMessage(failureNotes);
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: msg,
+          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
+          trace: { route_label: 'mention_ai_router', founder_file_intake_failure_only: true },
+        });
+        recordInboundSlackExchange(meta, userText || '[첨부]', { text: msg, surface_type: FOUNDER_FILE_FAILURE_SURFACE });
+        return;
+      }
+
+      const combinedText = combinedTextForPlanner;
+      if (!combinedText) {
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: '지시 내용을 함께 적어주세요.',
+          surface_type: 'safe_fallback_surface',
+        });
+        return;
+      }
+
       const answer = await handleUserText(combinedText, {
         ...meta,
         callText,
         has_active_intake: isActiveProjectIntake(meta),
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      recordInboundSlackExchange(meta, combinedText, answer);
+      let payload = resolvePostPayload(answer);
+      if (failureNotes.length) {
+        payload = {
+          ...payload,
+          text: `${payload.text}\n\n(참고) ${failureNotes.join(' ')}`,
+        };
+      }
+      recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
 
-      const payload = resolvePostPayload(answer);
       await sendFounderResponse({
         say,
         thread_ts: event.ts,
@@ -142,34 +159,32 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const dmText = getInboundCommandText(event) || '';
 
       const files = extractFilesFromEvent(event);
-      let fileContext = '';
       const threadKey = buildSlackThreadKey({
         channel: event.channel,
         ts: event.ts,
         thread_ts: event.thread_ts,
       });
 
-      for (const file of files) {
-        const result = await ingestSlackFile({ file, client, summarizePng: summarizePngBufferForFounderDm });
-        try {
-          await mergeFounderConversationState(threadKey, {
-            latest_file_contexts: [buildFounderFileContextEntry(threadKey, result)],
-          });
-        } catch (e) {
-          console.warn('[registerHandlers] mergeFounderConversationState(file dm):', e?.message || e);
-        }
+      const ingestResults = files.length
+        ? await founderIngestSlackFilesWithState({
+            files,
+            client,
+            threadKey,
+            summarizePng: summarizePngBufferForFounderDm,
+          })
+        : [];
+      for (const result of ingestResults) {
         if (result.ok) {
-          addDocumentToThread(threadKey, result);
-          fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
           console.info(JSON.stringify({ event: 'slack_file_ingested', file_id: result.file_id, filename: result.filename, chars: result.char_count }));
         } else {
-          fileContext += `\n\n[파일 인제스트 실패: ${result.filename}] ${formatFileIngestError(result)}`;
           console.warn(JSON.stringify({ event: 'slack_file_ingest_failed', file_id: result.file_id, filename: result.filename, errorCode: result.errorCode }));
         }
       }
 
-      const combinedText = (files.length ? FOUNDER_FILE_INTAKE_PREAMBLE : '') + (dmText + fileContext).trim();
-      if (!combinedText) return;
+      const { combinedTextForPlanner, failureNotes, skipPlanner } = buildFounderPlannerInputAfterFileIngest(
+        ingestResults,
+        dmText,
+      );
 
       const meta = {
         source_type: 'direct_message',
@@ -182,15 +197,38 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_files: files.length > 0,
         file_count: files.length,
       };
+
+      if (files.length && skipPlanner) {
+        const msg = formatFounderFileFailureOnlyMessage(failureNotes);
+        await sendFounderResponse({
+          client,
+          channel: event.channel,
+          rendered_text: msg,
+          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
+          trace: { route_label: 'dm_ai_router', founder_file_intake_failure_only: true },
+        });
+        recordInboundSlackExchange(meta, dmText || '[첨부]', { text: msg, surface_type: FOUNDER_FILE_FAILURE_SURFACE });
+        return;
+      }
+
+      const combinedText = combinedTextForPlanner;
+      if (!combinedText) return;
+
       const answer = await handleUserText(combinedText, {
         ...meta,
         callText,
         has_active_intake: isActiveProjectIntake(meta),
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      recordInboundSlackExchange(meta, combinedText, answer);
+      let payload = resolvePostPayload(answer);
+      if (failureNotes.length) {
+        payload = {
+          ...payload,
+          text: `${payload.text}\n\n(참고) ${failureNotes.join(' ')}`,
+        };
+      }
+      recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
 
-      const payload = resolvePostPayload(answer);
       await sendFounderResponse({
         client,
         channel: event.channel,

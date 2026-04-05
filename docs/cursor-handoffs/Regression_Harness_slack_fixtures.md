@@ -16,6 +16,8 @@
 
 **Founder DM 파일 인테이크 (2026-04-01, vNext.13.6)**: `scripts/test-vnext13-6-*.mjs` — `slackFileIntake`·`latest_file_contexts` 병합·스냅샷·합성기. 실슬랙 파일 fetch 없음(`extractMvpFileFromBuffer`·`pdf-parse` 샘플 PDF 사용).
 
+**Founder subtraction / 파일 실패 순도 (2026-04-05, vNext.13.7)**: `scripts/test-vnext13-7-*.mjs` — 실패→플래너 미주입·HTML 페이로드 감지·PDF 시그니처 우선·아웃바운드 금지 마커.
+
 ---
 
 ## 1. 추가된 fixture 목록

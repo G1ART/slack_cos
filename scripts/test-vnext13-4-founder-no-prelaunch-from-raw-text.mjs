@@ -47,7 +47,8 @@ const out = await runFounderDirectKernel({
 
 assert.notEqual(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(out.trace.founder_conversation_path, true);
-assert.ok(out.text.includes('[COS 제안 패킷]'));
+assert.ok(out.text.includes('Need scope line'), 'natural reply without proposal packet surface');
+assert.ok(!out.text.includes('[COS 제안 패킷]'));
 
 await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
 delete process.env.FOUNDER_CONVERSATION_STATE_FILE;

@@ -335,8 +335,14 @@ try {
   const handlersContent = await fs.readFile(new URL('../src/slack/registerHandlers.js', import.meta.url), 'utf8');
   assert.ok(handlersContent.includes("subtype !== 'file_share'"), 'DM allows file_share subtype');
   assert.ok(handlersContent.includes('extractFilesFromEvent'), 'uses extractFilesFromEvent');
-  assert.ok(handlersContent.includes('ingestSlackFile'), 'uses ingestSlackFile');
-  assert.ok(handlersContent.includes('addDocumentToThread'), 'uses addDocumentToThread');
+  assert.ok(
+    handlersContent.includes('founderIngestSlackFilesWithState') || handlersContent.includes('ingestSlackFile'),
+    'uses founder file ingest path',
+  );
+  assert.ok(
+    handlersContent.includes('founderIngestSlackFilesWithState') || handlersContent.includes('addDocumentToThread'),
+    'uses founder file turn (document thread)',
+  );
 
   ok('DM file_share + app_mention intake verified');
 } catch (e) { fail('file intake paths', e); }
