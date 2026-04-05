@@ -1,6 +1,7 @@
 /**
  * vNext.13 — 창업자 면: COS 내부용 맥락 프레임(제안 패킷 입력).
  * vNext.13.4 — durable conversation state 스냅샷을 주 컨텍스트로 병합 (transcript는 보조).
+ * vNext.13.6 — recent_file_contexts (첨부 파일 인테이크 스냅샷).
  */
 
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
@@ -41,6 +42,13 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata, conversati
 
   const snap = conversationStateSnapshot && typeof conversationStateSnapshot === 'object' ? conversationStateSnapshot : {};
   const ss = snap.state_snapshot && typeof snap.state_snapshot === 'object' ? snap.state_snapshot : {};
+  const recent_file_contexts = Array.isArray(snap.recent_file_contexts) ? snap.recent_file_contexts : [];
+  if (recent_file_contexts.length > 0) {
+    const last = recent_file_contexts[recent_file_contexts.length - 1];
+    const fn = last?.filename ? String(last.filename) : '첨부';
+    const st = last?.extract_status ? String(last.extract_status) : '';
+    constraints.push(`최근 Slack 파일 인테이크: ${fn}${st ? ` (${st})` : ''}`);
+  }
 
   let north_star_hint = goal_line_hint;
   if (ss.north_star && String(ss.north_star).trim()) {
@@ -65,5 +73,6 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata, conversati
     scope_lock_status: snap.scope_lock_status || null,
     proposal_history_summary: snap.proposal_history_summary || null,
     execution_boundary_status: snap.execution_boundary_status || null,
+    recent_file_contexts,
   };
 }

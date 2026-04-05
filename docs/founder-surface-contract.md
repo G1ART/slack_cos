@@ -9,7 +9,7 @@
 
 구현 모듈: `src/founder/founderDirectKernel.js` → `runFounderDirectKernel`.
 
-1. **Durable state + context** — `getFounderConversationState`, `synthesizeFounderContext` (transcript는 보조).
+1. **Durable state + context** — `getFounderConversationState`, `synthesizeFounderContext` (transcript는 보조). **vNext.13.6**: Slack 첨부(DOCX/PDF/PNG)는 `ingestSlackFile` 후 `latest_file_contexts`에 기록되고 `recent_file_contexts`·플래너 입력에 반영; 실행·승인과 혼동하지 않음.
 2. **Planner 턴** — `planFounderConversationTurn` (structured LLM / mock / partner 폴백). sidecar에 `proposal_artifact` / `approval_artifact` / `execution_artifact` / `state_delta`.
 3. **Artifact-gated launch** — `tryArtifactGatedExecutionSpine`: `evaluateExecutionSpineEligibility`가 **턴 직전 persisted durable state**(`buildPersistedEligibleLineageView`)만으로 `validateExecutionArtifactForSpine` 통과할 때만 `runFounderLaunchPipelineCore` 호출. 같은 턴 merged sidecar lineage 로는 불가(vNext.13.5b). **원문만으로 launch 불가.**
 4. **제안·승인 표면** — `buildProposalPacketFromSidecar` + `formatFullFounderProposalSurface`; 외부 실행 태스크가 있을 때만 승인 패킷 섹션. `proposal_execution_contract` / `proposal_contract_trace` 유지.

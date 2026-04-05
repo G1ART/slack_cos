@@ -1,5 +1,6 @@
 /**
  * vNext.13.4 — 창업자 스레드별 durable 대화 상태 (transcript와 별도 정본).
+ * vNext.13.6 — latest_file_contexts (Slack 파일 인테이크 요약·상태).
  */
 
 import path from 'path';
@@ -39,6 +40,7 @@ export function emptyFounderConversationState(threadKey) {
     last_founder_confirmation_kind: null,
     approval_lineage_status: null,
     last_cos_summary: null,
+    latest_file_contexts: [],
     updated_at: null,
   };
 }
@@ -62,6 +64,16 @@ function mergeDelta(base, delta) {
       out.benchmarks = [...(out.benchmarks || []), ...v.map((x) => String(x))];
     } else if (k === 'pending_confirmations' && Array.isArray(v)) {
       out.pending_confirmations = [...(out.pending_confirmations || []), ...v.map((x) => String(x))];
+    } else if (k === 'latest_file_contexts' && Array.isArray(v)) {
+      const cap = Number(process.env.COS_FOUNDER_FILE_CONTEXT_CAP || 10) || 10;
+      const cur = Array.isArray(out.latest_file_contexts) ? out.latest_file_contexts : [];
+      const appended = [...cur];
+      for (const item of v) {
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          appended.push({ ...item });
+        }
+      }
+      out.latest_file_contexts = appended.slice(-cap);
     } else if (typeof v === 'object' && v !== null && !Array.isArray(v) && k === 'state_delta_nested') {
       /* reserved */
     } else if (
@@ -157,6 +169,7 @@ export async function mergeFounderConversationState(threadKey, delta, hints = {}
  */
 export function founderStateToSnapshot(state) {
   const s = state || {};
+  const lfc = Array.isArray(s.latest_file_contexts) ? s.latest_file_contexts : [];
   return {
     state_snapshot: {
       north_star: s.north_star,
@@ -168,6 +181,11 @@ export function founderStateToSnapshot(state) {
     },
     recent_decisions: (s.decisions || []).slice(-12),
     pending_confirmations: s.pending_confirmations || [],
+    recent_file_contexts: lfc.slice(-5).map((x) => ({
+      filename: x?.filename ?? null,
+      summary: String(x?.summary || '').slice(0, 500),
+      extract_status: x?.extract_status ?? null,
+    })),
     scope_lock_status: s.locked_scope ? 'locked' : s.current_scope_summary ? 'draft' : 'open',
     proposal_history_summary: s.latest_proposal_artifact_id ? `last_proposal:${s.latest_proposal_artifact_id}` : null,
     execution_boundary_status: s.execution_readiness || 'unknown',

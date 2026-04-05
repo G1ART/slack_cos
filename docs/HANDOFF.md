@@ -2,6 +2,14 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
+## vNext.13.6 (2026-04-01) — Slack 파일 인테이크 (Founder DM/멘션 수직 슬라이스)
+
+**목적**: 창업자 DM·멘션에서 **DOCX / PDF(text) / PNG(vision)** 첨부를 다운로드·추출하고, 실행·승인과 분리된 **`durable_state.latest_file_contexts[]`** 에 누적한다.
+
+**핵심**: `ingestSlackFile` + `extractMvpFileFromBuffer`(회귀용); PNG는 `summarizePngBufferForFounderDm`(`COS_FOUNDER_IMAGE_MODEL`, `OPENAI_API_KEY`); 용량 `COS_FOUNDER_FILE_MAX_BYTES`(기본 15MB); 보관 상한 `COS_FOUNDER_FILE_CONTEXT_CAP`(기본 10). 실패 시 `formatFileIngestError` 한국어 안내. 인제스트 직후 `mergeFounderConversationState`; 컨텍스트에 파일 프리앰블 + 추출 본문을 붙여 `handleUserText`로 전달(파일만 올린 DM도 응답 가능).
+
+**회귀**: `scripts/test-vnext13-6-*.mjs` (6종, `npm test` 포함). **상세**: `docs/cursor-handoffs/COS_vNext13_6_Slack_File_Intake_Founder_DM_2026-04-01.md`.
+
 ## vNext.13.5 (2026-04-04) — Preflight hardening / staging gate lock
 
 **목적**: founder DM **실전형 staging** 직전 하드닝 (새 기능 아님).

@@ -1,5 +1,6 @@
 /**
  * vNext.13.4 — COS 대화 턴: 자연어 응답 + 기계-readable sidecar (regex로 의미 분류하지 않음).
+ * vNext.13.6 — durable_state.latest_file_contexts 는 Slack 파일 인테이크 전용(실행·승인과 분리).
  */
 
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
@@ -25,6 +26,7 @@ const PLANNER_INSTRUCTIONS = `
   - source_proposal_artifact_id / source_approval_artifact_id 는 반드시 아래 state·아티팩트의 _cos_artifact_id 와 동일한 문자열이어야 한다 (자기주장 불충분).
 - proposal_artifact / approval_artifact 에 안정 id가 필요하면 _cos_artifact_id 에 짧은 고유 문자열을 둔다.
 - state_delta: durable state — 실행 요청 시 최소 포함 후보: latest_proposal_artifact_id, latest_approval_artifact_id, last_founder_confirmation_at (ISO), last_founder_confirmation_kind, approval_lineage_status(확정 시 confirmed).
+- durable_state.latest_file_contexts / contextFrame.recent_file_contexts: Slack 첨부(DOCX/PDF/PNG 등) 자동 인테이크 기록. **실행·승인 아티팩트와 혼동하지 말 것.** 파일만으로는 제안/승인 확정을 추정하지 말 것.
 - follow_up_questions: 필요 시 되물음.
 `.trim();
 

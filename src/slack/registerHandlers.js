@@ -2,7 +2,14 @@ import { shouldSkipEvent } from './eventDedup.js';
 import { sendFounderResponse } from '../core/founderOutbound.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
-import { extractFilesFromEvent, ingestSlackFile, formatFileIngestError } from '../features/slackFileIntake.js';
+import {
+  extractFilesFromEvent,
+  ingestSlackFile,
+  formatFileIngestError,
+} from '../features/slackFileIntake.js';
+import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
+import { buildFounderFileContextEntry } from '../founder/founderFileContextRecord.js';
+import { mergeFounderConversationState } from '../founder/founderConversationState.js';
 import { addDocumentToThread } from '../features/slackDocumentContext.js';
 import {
   updateApprovalStatus,
@@ -19,6 +26,9 @@ import { logRouterEvent } from '../features/topLevelRouter.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
+
+const FOUNDER_FILE_INTAKE_PREAMBLE =
+  '[파일 인테이크] Slack 첨부를 읽어 durable_state.latest_file_contexts에 기록했습니다. 아래 추출 본문은 자동 인제스트이며 실행·승인 결정과는 별도입니다.\n\n';
 
 /**
  * @param {string|{ text: string, blocks?: object[], surface_type?: string, trace?: Record<string, unknown> }} answer
@@ -55,7 +65,14 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
           thread_ts: event.thread_ts,
         });
         for (const file of files) {
-          const result = await ingestSlackFile({ file, client });
+          const result = await ingestSlackFile({ file, client, summarizePng: summarizePngBufferForFounderDm });
+          try {
+            await mergeFounderConversationState(tk, {
+              latest_file_contexts: [buildFounderFileContextEntry(tk, result)],
+            });
+          } catch (e) {
+            console.warn('[registerHandlers] mergeFounderConversationState(file):', e?.message || e);
+          }
           if (result.ok) {
             addDocumentToThread(tk, result);
             fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
@@ -65,7 +82,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const combinedText = (userText + fileContext).trim();
+      const combinedText = (files.length ? FOUNDER_FILE_INTAKE_PREAMBLE : '') + (userText + fileContext).trim();
       if (!combinedText) {
         await sendFounderResponse({
           say,
@@ -133,7 +150,14 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       });
 
       for (const file of files) {
-        const result = await ingestSlackFile({ file, client });
+        const result = await ingestSlackFile({ file, client, summarizePng: summarizePngBufferForFounderDm });
+        try {
+          await mergeFounderConversationState(threadKey, {
+            latest_file_contexts: [buildFounderFileContextEntry(threadKey, result)],
+          });
+        } catch (e) {
+          console.warn('[registerHandlers] mergeFounderConversationState(file dm):', e?.message || e);
+        }
         if (result.ok) {
           addDocumentToThread(threadKey, result);
           fileContext += `\n\n[첨부 파일: ${result.filename}]\n${result.text}`;
@@ -144,7 +168,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const combinedText = (dmText + fileContext).trim();
+      const combinedText = (files.length ? FOUNDER_FILE_INTAKE_PREAMBLE : '') + (dmText + fileContext).trim();
       if (!combinedText) return;
 
       const meta = {
