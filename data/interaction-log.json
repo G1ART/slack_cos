@@ -19171,5 +19171,274 @@
     ],
     "matrix_reasons": [],
     "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775376848808-m0o3za",
+    "created_at": "2026-04-05T08:14:08.808Z",
+    "user_text": "이 문서를 읽고 (1) 3-5개 bullet point 요약, (2) 그 아래에 2-3문단으로 필요 내용 추출 요약 해줘.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMVN76FLH",
+      "user": "U0AN9S75CRW",
+      "ts": "1775376837.381129",
+      "event_id": "Ev0ARB0C983B"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "summary",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "medium",
+      "reason": "문서를 읽고 bullet 요약과 문단형 추출 요약을 요청한 전형적인 요약/정리 작업이므로 summary로 분류. 별도 전략·예산·대외발신 판단 요청이 없어 risk는 낮음."
+    },
+    "primary": {
+      "one_line_summary": "문서 원문이 없어 요약을 진행할 수 없습니다.",
+      "recommendation": "요약할 문서 전문이나 링크, 또는 핵심 내용이 담긴 텍스트를 보내주면 3~5개 bullet 요약과 2~3문단 추출 요약으로 바로 정리하겠습니다.",
+      "strongest_objection": "원문 없이 요약을 만들면 정확도와 신뢰도가 낮아져 의사결정에 오히려 비용이 생깁니다.",
+      "key_risks": [
+        "원문 부재로 핵심 논점 누락 가능",
+        "잘못된 해석으로 우선순위 왜곡 가능",
+        "대표 검토 시간만 추가로 소모될 가능성",
+        "핵심 맥락 누락으로 잘못된 요약 생성",
+        "중요 수치·조건·예외의 왜곡",
+        "불완전한 정보 기반의 후속 의사결정 오류"
+      ],
+      "next_actions": [
+        "문서 전문을 붙여넣기",
+        "파일 또는 링크 공유",
+        "특히 보고 싶은 관점(예: 사업성, 재무, 실행계획) 지정",
+        "문서 전문을 붙여 넣어라.",
+        "길면 요약이 필요한 범위나 페이지를 지정하라.",
+        "원하면 bullet 수와 문단 길이 기준을 함께 알려라."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "원문 없이 요약을 만들면 정확도와 신뢰도가 낮아져 의사결정에 오히려 비용이 생깁니다.",
+      "hidden_risks": [
+        "원문 부재로 핵심 논점 누락 가능",
+        "잘못된 해석으로 우선순위 왜곡 가능",
+        "대표 검토 시간만 추가로 소모될 가능성",
+        "핵심 맥락 누락으로 잘못된 요약 생성",
+        "중요 수치·조건·예외의 왜곡",
+        "불완전한 정보 기반의 후속 의사결정 오류"
+      ],
+      "reconsider_triggers": [
+        "빠른 요약 필요성과 정확도 확보의 충돌",
+        "간결한 요약 요구와 정확성 확보 사이의 충돌"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775376870237-ytvypb",
+    "created_at": "2026-04-05T08:14:30.237Z",
+    "user_text": "이 이미지를 보고 어떤 내용인지 유추해서 3-5문장으로 서술해줘.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMVN76FLH",
+      "user": "U0AN9S75CRW",
+      "ts": "1775376860.608299",
+      "event_id": "Ev0AQULR0R7X"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "사용자는 이미지 내용을 유추해 3-5문장으로 설명해달라고 요청했다. 이는 전략, 운영, 제품, 엔지니어링, 요약 분류보다 일반적 멀티모달 해석 요청에 가깝고, 리스크가 낮으며 긴급하지 않다."
+    },
+    "primary": {
+      "one_line_summary": "이미지가 제공되지 않아 내용을 유추할 수 없습니다.",
+      "recommendation": "이미지를 다시 업로드하거나 핵심 요소(인물, 배경, 텍스트, 물체)를 함께 보내주면 3~5문장으로 바로 요약하겠습니다.",
+      "strongest_objection": "현재 입력에는 이미지가 없어 추론 자체가 불가능합니다.",
+      "key_risks": [
+        "없는 이미지를 전제로 설명하면 오인 가능성이 큽니다.",
+        "잘못된 추론은 후속 의사결정의 품질을 떨어뜨립니다.",
+        "존재하지 않는 시각 정보를 임의로 보완할 가능성",
+        "사용자 의도와 다른 설명으로 오해를 키울 가능성",
+        "잘못된 묘사를 사실처럼 전달할 가능성"
+      ],
+      "next_actions": [
+        "이미지를 다시 첨부한다.",
+        "이미지 속 주요 요소를 3개 이상 텍스트로 설명한다.",
+        "원하면 분위기·주제·의도 중심으로 추정 서술을 요청한다.",
+        "이미지를 다시 첨부해 달라.",
+        "원하면 보이는 인물·배경·텍스트 여부를 함께 알려 달라.",
+        "이미지 확인 후 3~5문장으로 바로 요약해 드리겠다."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "현재 입력에는 이미지가 없어 추론 자체가 불가능합니다.",
+      "hidden_risks": [
+        "없는 이미지를 전제로 설명하면 오인 가능성이 큽니다.",
+        "잘못된 추론은 후속 의사결정의 품질을 떨어뜨립니다.",
+        "존재하지 않는 시각 정보를 임의로 보완할 가능성",
+        "사용자 의도와 다른 설명으로 오해를 키울 가능성",
+        "잘못된 묘사를 사실처럼 전달할 가능성"
+      ],
+      "reconsider_triggers": [
+        "빠른 응답 요구와 정확성 확보가 충돌합니다.",
+        "빠른 응답 요구와 정확성 유지가 충돌한다."
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775376931794-5tp2x9",
+    "created_at": "2026-04-05T08:15:31.794Z",
+    "user_text": "이 이미지를 보고 어떤 내용인지 유추해서 3-5문장으로 서술해줘.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMVN76FLH",
+      "user": "U0AN9S75CRW",
+      "ts": "1775376923.365929",
+      "event_id": "Ev0AQRMHSXGT"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "general",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "low",
+      "reason": "이미지 내용을 추정해 짧게 서술해달라는 일반 요청으로, 전략·운영·제품·기술·요약 특화 분류에 직접 해당하지 않으며 위험도가 낮습니다."
+    },
+    "primary": {
+      "one_line_summary": "이미지가 제공되지 않아 내용을 유추할 수 없습니다.",
+      "recommendation": "이미지를 다시 업로드하거나 핵심 요소를 설명해 주시면 3~5문장으로 바로 요약하겠습니다.",
+      "strongest_objection": "현재는 실제 이미지가 없어서 추정 자체가 부정확하며, 잘못된 설명을 제공할 가능성이 큽니다.",
+      "key_risks": [
+        "없는 이미지를 바탕으로 허위 추론을 할 위험",
+        "사용자 의도와 다른 설명을 제공할 위험",
+        "근거 없는 추측으로 잘못된 이미지 설명 생성",
+        "사용자 의도와 다른 대상이나 맥락을 임의로 상정",
+        "허위 정보처럼 보이는 자연스러운 문장 출력"
+      ],
+      "next_actions": [
+        "이미지를 다시 첨부한다.",
+        "이미지에 보이는 인물·배경·텍스트를 한두 줄로 설명한다.",
+        "원하면 분위기 중심 또는 사실 중심 중 원하는 서술 방식도 지정한다.",
+        "이미지를 첨부한다.",
+        "필요하면 인물·배경·분위기 중 무엇을 중점 설명할지 지정한다.",
+        "이미지 확인 후 3~5문장으로 요약을 요청한다."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "현재는 실제 이미지가 없어서 추정 자체가 부정확하며, 잘못된 설명을 제공할 가능성이 큽니다.",
+      "hidden_risks": [
+        "없는 이미지를 바탕으로 허위 추론을 할 위험",
+        "사용자 의도와 다른 설명을 제공할 위험",
+        "근거 없는 추측으로 잘못된 이미지 설명 생성",
+        "사용자 의도와 다른 대상이나 맥락을 임의로 상정",
+        "허위 정보처럼 보이는 자연스러운 문장 출력"
+      ],
+      "reconsider_triggers": [
+        "이미지 부재로 정확성과 속도 사이에서 정확성을 우선해야 함",
+        "추측을 원해도 근거 부족 상태에서는 정확성과 유용성이 충돌한다."
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
+  },
+  {
+    "id": "INT-1775376956461-f4o7mr",
+    "created_at": "2026-04-05T08:15:56.461Z",
+    "user_text": "이 문서를 읽고 (1) 3-5개 bullet point 요약, (2) 그 아래에 2-3문단으로 필요 내용 추출 요약 해줘.",
+    "source": {
+      "source_type": "channel_mention",
+      "channel": "C0AMVN76FLH",
+      "user": "U0AN9S75CRW",
+      "ts": "1775376947.426159",
+      "event_id": "Ev0AQRMJNHAP"
+    },
+    "channel_context": null,
+    "route": {
+      "task_type": "summary",
+      "primary_agent": "general_cos",
+      "include_risk": false,
+      "urgency": "medium",
+      "reason": "문서 내용을 읽고 핵심 bullet과 2-3문단 추출 요약을 요청한 전형적인 요약/정리 작업이다. 전략·예산·대외발신 판단 없이 문서 정리가 목적이므로 summary로 분류하고 위험도는 낮다."
+    },
+    "primary": {
+      "one_line_summary": "문서 원문이 없어 요약을 수행할 수 없습니다.",
+      "recommendation": "요약할 문서 전문이나 핵심 부분을 붙여 주시면 3~5개 bullet 요약과 2~3문단 추출 요약으로 바로 정리하겠습니다.",
+      "strongest_objection": "원문 없이 요약하면 정확도와 의사결정 가치가 낮아져 시간 대비 효율이 떨어집니다.",
+      "key_risks": [
+        "핵심 맥락 누락",
+        "중요 수치·우선순위 오해",
+        "잘못된 요약으로 인한 후속 판단 오류",
+        "핵심 주장과 근거의 오독",
+        "중요한 조건·예외·한계 누락",
+        "문체는 자연스럽지만 사실과 다른 요약 생성",
+        "사용자 의사결정에 잘못된 신호 제공"
+      ],
+      "next_actions": [
+        "문서 전문 또는 요약 대상 부분을 붙여 주세요.",
+        "원하면 함께 원하는 초점(예: 전략, 재무, 실행계획, 리스크)을 지정해 주세요.",
+        "분량이 길면 나눠 보내 주세요.",
+        "문서 원문을 붙여 넣거나 파일을 업로드하라.",
+        "원하면 요약 길이와 초점(예: 경영진용, 기술용, 리스크 중심)을 함께 지정하라.",
+        "문서를 받으면 3~5개 bullet 요약과 2~3문단 추출 요약으로 바로 정리하겠다."
+      ],
+      "ceo_decision_needed": false,
+      "ceo_decision_question": "현재는 조건부 실행 후 점검으로 진행 가능합니다."
+    },
+    "risk": {
+      "strongest_objection": "원문 없이 요약하면 정확도와 의사결정 가치가 낮아져 시간 대비 효율이 떨어집니다.",
+      "hidden_risks": [
+        "핵심 맥락 누락",
+        "중요 수치·우선순위 오해",
+        "잘못된 요약으로 인한 후속 판단 오류",
+        "핵심 주장과 근거의 오독",
+        "중요한 조건·예외·한계 누락",
+        "문체는 자연스럽지만 사실과 다른 요약 생성",
+        "사용자 의사결정에 잘못된 신호 제공"
+      ],
+      "reconsider_triggers": [
+        "짧은 요약과 핵심 맥락 보존 사이의 균형"
+      ],
+      "decision_should_pause": false
+    },
+    "approval_id": null,
+    "decision_needed": false,
+    "orchestration_mode": "council",
+    "selected_personas": [
+      "strategy_finance",
+      "risk_review"
+    ],
+    "matrix_reasons": [],
+    "institutional_memory_hints": []
   }
 ]

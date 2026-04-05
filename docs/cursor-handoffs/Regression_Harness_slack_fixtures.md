@@ -18,6 +18,8 @@
 
 **Founder subtraction / 파일 실패 순도 (2026-04-05, vNext.13.7)**: `scripts/test-vnext13-7-*.mjs` — 실패→플래너 미주입·HTML 페이로드 감지·PDF 시그니처 우선·아웃바운드 금지 마커.
 
+**Founder zero-heuristic / 단일 표면 (2026-04-01, vNext.13.8)**: `scripts/test-vnext13-8-*.mjs` — 커널 전 접두 제거·승인 패킷 본문 병합 없음·`PARTNER_NATURAL` 고정·파일 실패도 동일 파이프라인·프롬프트 Council 노출 완화.
+
 ---
 
 ## 1. 추가된 fixture 목록

@@ -1832,6 +1832,7 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **(2026-04-03) vNext.13 Proposal kernel**: 창업자 기본 표면 `proposal_packet_surface` — `founderProposalKernel`·승인 게이트(`external_execution_authorization`)·completion은 `truth_reconciliation`만(레인 레거시 폴백 제거). 상세: `docs/cursor-handoffs/COS_vNext13_Founder_Proposal_Kernel_Approval_Orchestrated_Execution_2026-04-03.md`.
 - **(2026-04-01) vNext.13.6 Founder DM 파일 인테이크**: `registerHandlers` DM/멘션에서 `ingestSlackFile`로 DOCX·PDF(text)·PNG(vision) 추출 후 `mergeFounderConversationState`의 `latest_file_contexts`에 기록; `founderStateToSnapshot`·`synthesizeFounderContext`의 `recent_file_contexts`·플래너 지시문과 연동. 구현: `slackFileIntake.js`, `founderDmImageSummary.js`, `founderFileContextRecord.js`. 회귀: `scripts/test-vnext13-6-*.mjs`.
 - **(2026-04-05) vNext.13.7 Founder subtraction**: 파일 실패는 플래너 입력에 재주입하지 않음(`founderSlackFileTurn`); 페이로드 시그니처 우선(`peekPayloadNature`); 기본 표면 `partner_natural_surface`, 패킷은 외부 실행 승인 시만; `founderOutbound` 금지 마커 안전망. 회귀: `scripts/test-vnext13-7-*.mjs`.
+- **(2026-04-01) vNext.13.8 Founder zero-heuristic reset**: `founderDirectKernel` 모델 전 접두 제거·승인 패킷 본문 병합 없음·대화 턴 `surface_type` `PARTNER_NATURAL` 고정·파일 실·성공 동일 `handleUserText` 경로(`buildFounderTurnTextAfterFileIngest`); 외부 실행 후보는 trace만. 상세: `docs/cursor-handoffs/COS_vNext13_8_Founder_Zero_Heuristic_2026-04-01.md`. 회귀: `scripts/test-vnext13-8-*.mjs`.
 
 ---
 

@@ -6,9 +6,7 @@ import { extractFilesFromEvent } from '../features/slackFileIntake.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
 import {
   founderIngestSlackFilesWithState,
-  buildFounderPlannerInputAfterFileIngest,
-  formatFounderFileFailureOnlyMessage,
-  FOUNDER_FILE_FAILURE_SURFACE,
+  buildFounderTurnTextAfterFileIngest,
 } from '../features/founderSlackFileTurn.js';
 import {
   updateApprovalStatus,
@@ -74,10 +72,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const { combinedTextForPlanner, failureNotes, skipPlanner } = buildFounderPlannerInputAfterFileIngest(
-        ingestResults,
-        userText,
-      );
+      const { combinedTextForPlanner } = buildFounderTurnTextAfterFileIngest(ingestResults, userText);
 
       const meta = {
         source_type: 'channel_mention',
@@ -90,19 +85,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_files: files.length > 0,
         file_count: files.length,
       };
-
-      if (files.length && skipPlanner) {
-        const msg = formatFounderFileFailureOnlyMessage(failureNotes);
-        await sendFounderResponse({
-          say,
-          thread_ts: event.ts,
-          rendered_text: msg,
-          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
-          trace: { route_label: 'mention_ai_router', founder_file_intake_failure_only: true },
-        });
-        recordInboundSlackExchange(meta, userText || '[첨부]', { text: msg, surface_type: FOUNDER_FILE_FAILURE_SURFACE });
-        return;
-      }
 
       const combinedText = combinedTextForPlanner;
       if (!combinedText) {
@@ -121,13 +103,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_active_intake: isActiveProjectIntake(meta),
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      let payload = resolvePostPayload(answer);
-      if (failureNotes.length) {
-        payload = {
-          ...payload,
-          text: `${payload.text}\n\n(참고) ${failureNotes.join(' ')}`,
-        };
-      }
+      const payload = resolvePostPayload(answer);
       recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
 
       await sendFounderResponse({
@@ -181,10 +157,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const { combinedTextForPlanner, failureNotes, skipPlanner } = buildFounderPlannerInputAfterFileIngest(
-        ingestResults,
-        dmText,
-      );
+      const { combinedTextForPlanner } = buildFounderTurnTextAfterFileIngest(ingestResults, dmText);
 
       const meta = {
         source_type: 'direct_message',
@@ -198,19 +171,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         file_count: files.length,
       };
 
-      if (files.length && skipPlanner) {
-        const msg = formatFounderFileFailureOnlyMessage(failureNotes);
-        await sendFounderResponse({
-          client,
-          channel: event.channel,
-          rendered_text: msg,
-          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
-          trace: { route_label: 'dm_ai_router', founder_file_intake_failure_only: true },
-        });
-        recordInboundSlackExchange(meta, dmText || '[첨부]', { text: msg, surface_type: FOUNDER_FILE_FAILURE_SURFACE });
-        return;
-      }
-
       const combinedText = combinedTextForPlanner;
       if (!combinedText) return;
 
@@ -220,13 +180,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         has_active_intake: isActiveProjectIntake(meta),
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
-      let payload = resolvePostPayload(answer);
-      if (failureNotes.length) {
-        payload = {
-          ...payload,
-          text: `${payload.text}\n\n(참고) ${failureNotes.join(' ')}`,
-        };
-      }
+      const payload = resolvePostPayload(answer);
       recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
 
       await sendFounderResponse({

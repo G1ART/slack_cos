@@ -1,9 +1,10 @@
 /**
  * vNext.13.1 — 창업자–COS 단일 커널.
  * vNext.13.4 — pre-reasoning gate 제거: context hydrate → COS planner 턴 → state persist → artifact gate → render.
+ * vNext.13.8 — 모델 호출 전 내용 해석(접두 제거·패킷 표면 병합·hard_recover 패킷) 제거. 표면은 natural_language_reply 단일.
  */
 
-import { FounderSurfaceType } from '../core/founderContracts.js';
+import { FounderSurfaceType, SAFE_FALLBACK_TEXT } from '../core/founderContracts.js';
 import {
   normalizeFounderMetaCommandLine,
   classifyFounderRoutingLock,
@@ -11,18 +12,12 @@ import {
 } from '../features/inboundFounderRoutingLock.js';
 import { tryResolveFounderDeterministicUtility } from './founderDeterministicUtilityResolver.js';
 import { synthesizeFounderContext } from './founderContextSynthesizer.js';
-import {
-  buildProposalFromFounderInput,
-  buildProposalPacketFromSidecar,
-  formatFullFounderProposalSurface,
-} from './founderProposalKernel.js';
-import { buildFounderApprovalPacket } from './founderApprovalPacket.js';
+import { buildProposalPacketFromSidecar } from './founderProposalKernel.js';
 import { selectExecutionModeFromProposalPacket } from './executionModeFromProposalPacket.js';
 import { getProjectIntakeSession } from '../features/projectIntakeSession.js';
 import { getExecutionRunByThread } from '../features/executionRun.js';
 import { getProjectSpaceByThread } from '../features/projectSpaceRegistry.js';
 import { buildSlackThreadKey, getConversationTranscript } from '../features/slackConversationBuffer.js';
-import { maybeGovernanceAdvisoryForFounder } from '../orchestration/cosGovernanceAdvisory.js';
 import {
   getFounderConversationState,
   mergeFounderConversationState,
@@ -31,12 +26,6 @@ import {
 import { planFounderConversationTurn } from './founderConversationPlanner.js';
 import { tryArtifactGatedExecutionSpine, isFounderStagingModeEnabled } from './founderArtifactGate.js';
 import { mergeStateDeltaWithSidecarArtifactIds } from './founderArtifactSchemas.js';
-
-function stripFounderStructuredCommandPrefixes(t) {
-  return String(t || '')
-    .replace(/^(업무등록|계획등록|조회|결정)\s*[:：]\s*/i, '')
-    .trim();
-}
 
 function founderPreflightTrace() {
   return {
@@ -147,24 +136,8 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
 
   const ext = proposal.external_execution_tasks?.length > 0;
   let body = String(sidecar.natural_language_reply || '').trim();
-  if (ext) {
-    const { visible_section } = buildFounderApprovalPacket(proposal);
-    const vs = String(visible_section || '').trim();
-    if (vs) {
-      body = body ? `${body}\n\n${vs}` : vs;
-    }
-  }
   if (!body.trim()) {
     body = '지금 턴 답변을 정리하지 못했습니다. 한 문장만 다시 알려주실 수 있을까요?';
-  }
-
-  const gov = maybeGovernanceAdvisoryForFounder({
-    rawText: brainText,
-    contextFrame: contextAfter,
-    founderSurface: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
-  });
-  if (gov?.text && gov.text.length < body.length) {
-    body += `\n\n${gov.text}`;
   }
 
   const partner_output_sanitized =
@@ -174,7 +147,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
   return {
     text: body,
     blocks: undefined,
-    surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
+    surface_type: FounderSurfaceType.PARTNER_NATURAL,
     trace: {
       work_object: {
         type: workContext.primary_type,
@@ -182,10 +155,10 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       },
       work_phase: 'founder_conversation',
       phase_source: 'founder_conversation_pipeline',
-      surface_type: ext ? FounderSurfaceType.APPROVAL_PACKET : FounderSurfaceType.PARTNER_NATURAL,
+      surface_type: FounderSurfaceType.PARTNER_NATURAL,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.7',
+      pipeline_version: 'vNext.13.8',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,
@@ -201,14 +174,15 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       founder_step: 'conversation_turn',
       transcript_ready,
       execution_mode_selected,
-      cos_governance_advisory: Boolean(gov?.text),
-      governance_advisory_topics: gov?.topics || [],
+      cos_governance_advisory: false,
+      governance_advisory_topics: [],
       proposal_execution_contract: proposal.proposal_execution_contract ?? null,
       proposal_contract_trace: proposal.proposal_contract_trace ?? null,
       partner_natural: plan.source === 'partner_fallback_no_sidecar' && typeof callText === 'function',
       partner_output_sanitized,
       approval_required: proposal.approval_required === true || ext,
       approval_packet_attached: ext,
+      external_dispatch_candidate: ext,
       intake_session_id: workContext.intake_session_id ?? null,
       conversation_status: sidecar.conversation_status ?? null,
       ...spineRejectTrace,
@@ -270,20 +244,12 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
   }
 
   if (metadata.founder_hard_recover === true) {
-    const convState = await getFounderConversationState(threadKey);
-    const ctx0 = synthesizeFounderContext({
-      threadKey,
-      metadata,
-      conversationStateSnapshot: founderStateToSnapshot(convState),
-    });
-    const prop0 = buildProposalFromFounderInput({ rawText: normalized, contextFrame: ctx0 });
-    const body0 = formatFullFounderProposalSurface(prop0);
     return {
-      text: body0,
+      text: SAFE_FALLBACK_TEXT,
       blocks: undefined,
-      surface_type: FounderSurfaceType.PROPOSAL_PACKET,
+      surface_type: FounderSurfaceType.PARTNER_NATURAL,
       trace: {
-        surface_type: FounderSurfaceType.PROPOSAL_PACKET,
+        surface_type: FounderSurfaceType.PARTNER_NATURAL,
         responder_kind: 'founder_kernel',
         passed_pipeline: true,
         passed_renderer: true,
@@ -291,6 +257,7 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
         legacy_command_router_used: false,
         legacy_ai_router_used: false,
         founder_hard_recover: true,
+        founder_hard_recover_mode: 'natural_fallback',
         founder_classifier_used: false,
         founder_keyword_route_used: false,
         founder_four_step: false,
@@ -301,6 +268,5 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
     };
   }
 
-  const brainText = stripFounderStructuredCommandPrefixes(normalized);
-  return runFounderConversationPipeline(brainText, metadata, route_label, threadKey, callText, callJSON);
+  return runFounderConversationPipeline(normalized, metadata, route_label, threadKey, callText, callJSON);
 }

@@ -2,6 +2,14 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
+## vNext.13.8 (2026-04-01) — Founder zero-heuristic reset / 단일 자연어 표면
+
+**목적**: 앞단 **내용 해석·패킷 표면 병합·파일 실패 조기 분기**를 걷어내고, 창업자 경로를 **transport + boundary + 단일 COS 턴**에 가깝게 고정한다.
+
+**핵심**: (1) `runFounderDirectKernel` 기본 경로는 **정규화된 원문 그대로** 플래너에 전달(접두 제거 없음). (2) **표면은 항상** `partner_natural_surface` 텍스트(`natural_language_reply`); 승인 패킷 본문 병합(`buildFounderApprovalPacket`) **제거** — 외부 실행 후보는 `trace.approval_packet_attached` / `external_dispatch_candidate` 로만 표시. (3) `founder_hard_recover` 는 제안 패킷 대신 **짧은 안전 폴백**. (4) Slack 파일 **실패·성공 모두** `buildFounderTurnTextAfterFileIngest` 로 **동일** `handleUserText` 경로( `skipPlanner` 조기 반환 제거). (5) `founderOutbound` 금지 마커는 **`[COS 제안 패킷]`** 계열만 최소 유지. (6) 운영 메타 숏서킷은 여전히 **`founder_explicit_meta_utility_path` 전용**.
+
+**회귀**: `scripts/test-vnext13-8-*.mjs` (6종, `npm test` 포함). **상세**: `docs/cursor-handoffs/COS_vNext13_8_Founder_Zero_Heuristic_2026-04-01.md`.
+
 ## vNext.13.7 (2026-04-05) — Founder path subtraction / 대화 순도
 
 **목적**: 규칙 추가가 아니라 **중간층 제거**. 창업자 면은 슬랙 안 **자연어 GPT 수준**을 목표로, 파일 실패·일반 대화가 패킷/페르소나 구조로 샐 때를 끊는다.

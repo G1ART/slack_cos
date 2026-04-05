@@ -43,30 +43,39 @@ export async function founderIngestSlackFilesWithState(ctx) {
 }
 
 /**
+ * vNext.13.8 — 파일 성공/실패 모두 동일 founder 모델 경로 입력으로만 조립 (라우팅 분기 없음).
  * @param {object[]} results
  * @param {string} userText
- * @returns {{ combinedTextForPlanner: string, failureNotes: string[], skipPlanner: boolean }}
+ * @returns {{ combinedTextForPlanner: string, failureNotes: string[] }}
  */
-export function buildFounderPlannerInputAfterFileIngest(results, userText) {
+export function buildFounderTurnTextAfterFileIngest(results, userText) {
   const part = partitionFileIntakeForFounderTurn(results, userText);
   const ut = String(userText || '').trim();
   const concise = buildConciseFileContextForPlanner(part.successes);
   const failureNotes = part.failures.map((f) => formatFounderFacingFileFailure(f));
+  const failureBlock = failureNotes.length
+    ? `\n\n(첨부 처리 안내 — 참고)\n${failureNotes.join('\n')}`
+    : '';
 
-  if (part.skipPlannerEntirely) {
+  if (!ut && !concise.trim() && failureNotes.length) {
     return {
-      combinedTextForPlanner: '',
+      combinedTextForPlanner: `(첨부만 전송됨)${failureBlock}\n\n대표 본문이 비어 있어 첨부 처리 결과만 전달합니다. 원하시는 내용을 한 줄이라도 적어 주시면 이어서 도와드리겠습니다.`,
       failureNotes,
-      skipPlanner: true,
     };
   }
 
-  const combinedTextForPlanner = (ut + concise).trim();
   return {
-    combinedTextForPlanner,
+    combinedTextForPlanner: (ut + concise + failureBlock).trim(),
     failureNotes,
-    skipPlanner: false,
   };
+}
+
+/**
+ * @deprecated Prefer `buildFounderTurnTextAfterFileIngest`. `skipPlanner`는 항상 false (vNext.13.8).
+ */
+export function buildFounderPlannerInputAfterFileIngest(results, userText) {
+  const r = buildFounderTurnTextAfterFileIngest(results, userText);
+  return { ...r, skipPlanner: false };
 }
 
 /**
