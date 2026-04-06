@@ -336,11 +336,15 @@ try {
   assert.ok(handlersContent.includes("subtype !== 'file_share'"), 'DM allows file_share subtype');
   assert.ok(handlersContent.includes('extractFilesFromEvent'), 'uses extractFilesFromEvent');
   assert.ok(
-    handlersContent.includes('founderIngestSlackFilesWithState') || handlersContent.includes('ingestSlackFile'),
+    handlersContent.includes('founderIngestSlackFilesWithState') ||
+      handlersContent.includes('ingestSlackFile') ||
+      handlersContent.includes('handleFounderSlackTurn'),
     'uses founder file ingest path',
   );
   assert.ok(
-    handlersContent.includes('founderIngestSlackFilesWithState') || handlersContent.includes('addDocumentToThread'),
+    handlersContent.includes('founderIngestSlackFilesWithState') ||
+      handlersContent.includes('addDocumentToThread') ||
+      handlersContent.includes('handleFounderSlackTurn'),
     'uses founder file turn (document thread)',
   );
 

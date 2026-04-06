@@ -3,12 +3,7 @@ import { sendFounderResponse } from '../core/founderOutbound.js';
 import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
 import { extractFilesFromEvent } from '../features/slackFileIntake.js';
-import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
-import {
-  founderIngestSlackFilesWithState,
-  buildFounderTurnAfterFileIngest,
-  buildCurrentAttachmentMetaFromIngest,
-} from '../features/founderSlackFileTurn.js';
+import { handleFounderSlackTurn } from '../founder/founderSlackController.js';
 import {
   updateApprovalStatus,
   formatApprovalUpdate,
@@ -24,6 +19,17 @@ import { logRouterEvent } from '../features/topLevelRouter.js';
 import { isActiveProjectIntake, getProjectIntakeSession } from '../features/projectIntakeSession.js';
 
 // FOUNDERRAWOUTBOUND_FORBIDDEN — all founder-facing sends go through sendFounderResponse
+
+/** vNext.13.14 — founder_route `sendFounderResponse` 계약 메타 */
+function founderEgressMetadata(trace, egressCaller) {
+  const t = trace && typeof trace === 'object' ? trace : {};
+  return {
+    founder_route: true,
+    founder_surface_source: String(t.founder_surface_source || 'direct_cos_chat').trim() || 'direct_cos_chat',
+    pipeline_version: String(t.pipeline_version || 'vNext.13.14.founder_spine').trim(),
+    egress_caller: egressCaller,
+  };
+}
 
 /**
  * @param {string|{ text: string, blocks?: object[], surface_type?: string, trace?: Record<string, unknown> }} answer
@@ -45,7 +51,7 @@ function recordInboundSlackExchange(metadata, userInboundText, answer) {
   }
 }
 
-export function registerHandlers(slackApp, { handleUserText, formatError, callText }) {
+export function registerHandlers(slackApp, { formatError, callText }) {
   slackApp.event('app_mention', async ({ body, event, say, client }) => {
     try {
       if (shouldSkipEvent(body, event)) {
@@ -53,37 +59,26 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       }
 
       const userText = getInboundCommandText(event) || '';
-
       const files = extractFilesFromEvent(event);
-      const tk = buildSlackThreadKey({
-        channel: event.channel,
-        ts: event.ts,
-        thread_ts: event.thread_ts,
-      });
-      const ingestResults = files.length
-        ? await founderIngestSlackFilesWithState({
-            files,
-            client,
-            threadKey: tk,
-            summarizePng: summarizePngBufferForFounderDm,
-            persistToFounderState: false,
-            persistToDocumentContext: false,
-          })
-        : [];
-      for (const result of ingestResults) {
-        if (result.ok) {
-          console.info(JSON.stringify({ event: 'slack_file_ingested', file_id: result.file_id, filename: result.filename }));
-        } else {
-          console.warn(JSON.stringify({ event: 'slack_file_ingest_failed', file_id: result.file_id, errorCode: result.errorCode }));
-        }
+
+      if (!userText.trim() && files.length === 0) {
+        const emptyTrace = {
+          route_label: 'mention_ai_router',
+          founder_surface_source: 'empty_prompt_guard',
+          pipeline_version: 'vNext.13.14.founder_spine',
+        };
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: '지시 내용을 함께 적어주세요.',
+          surface_type: 'safe_fallback_surface',
+          trace: emptyTrace,
+          metadata: founderEgressMetadata(emptyTrace, 'registerHandlers_mention_empty'),
+        });
+        return;
       }
 
-      const turn = buildFounderTurnAfterFileIngest(ingestResults, userText);
-      const successCount = ingestResults.filter((r) => r?.ok).length;
-      const failureCount = ingestResults.filter((r) => r && !r.ok).length;
-      const attachmentMeta = buildCurrentAttachmentMetaFromIngest(ingestResults);
-
-      const meta = {
+      const intakeMeta = {
         source_type: 'channel_mention',
         slack_route_label: 'mention_ai_router',
         founder_route: true,
@@ -91,55 +86,54 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         user: event.user,
         ts: event.ts,
         thread_ts: event.thread_ts || null,
-        event_id: body?.event_id || null,
-        has_files: files.length > 0,
-        file_count: files.length,
-        failure_notes: turn.failureNotes,
-        attachment_ingest_success_count: successCount,
-        attachment_ingest_failure_count: failureCount,
-        ...attachmentMeta,
       };
 
-      const combinedText = turn.modelUserText;
-      if (!combinedText.trim() && files.length === 0) {
-        await sendFounderResponse({
-          say,
-          thread_ts: event.ts,
-          rendered_text: '지시 내용을 함께 적어주세요.',
-          surface_type: 'safe_fallback_surface',
-        });
-        return;
-      }
-
-      const answer = await handleUserText(combinedText, {
-        ...meta,
+      const out = await handleFounderSlackTurn({
+        rawText: userText,
+        files,
+        client,
+        body,
+        event,
+        routeLabel: 'mention_ai_router',
         callText,
-        has_active_intake: isActiveProjectIntake(meta),
-        intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+        has_active_intake: isActiveProjectIntake(intakeMeta),
+        intake_session: isActiveProjectIntake(intakeMeta) ? getProjectIntakeSession(intakeMeta) : null,
       });
-      const payload = resolvePostPayload(answer);
-      recordInboundSlackExchange(meta, combinedText || userText, { ...answer, text: payload.text });
+
+      recordInboundSlackExchange(out.slackMetadata, out.inboundTextForBuffer || userText, {
+        text: out.text,
+        trace: out.trace,
+      });
 
       await sendFounderResponse({
         say,
         thread_ts: event.ts,
-        rendered_text: payload.text,
-        rendered_blocks: payload.blocks,
-        surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
+        rendered_text: out.text,
+        rendered_blocks: out.blocks,
+        surface_type: out.surface_type || out.trace?.surface_type || 'safe_fallback_surface',
         trace: {
           route_label: 'mention_ai_router',
-          attachment_ingest_success_count: successCount,
-          attachment_ingest_failure_count: failureCount,
-          ...(payload.trace || {}),
+          attachment_ingest_success_count: out.attachment_ingest_success_count,
+          attachment_ingest_failure_count: out.attachment_ingest_failure_count,
+          ...out.trace,
         },
+        metadata: founderEgressMetadata(out.trace, 'handleFounderSlackTurn'),
       });
     } catch (error) {
       console.error('APP_MENTION_ERROR:', error);
+      const exTrace = {
+        route_label: 'mention_ai_router',
+        founder_surface_source: 'exception_handler',
+        pipeline_version: 'vNext.13.14.founder_spine',
+        error_code: error?.code ?? null,
+      };
       await sendFounderResponse({
         say,
         thread_ts: event.ts,
         rendered_text: `에러가 발생했습니다.\n${formatError(error)}`,
         surface_type: 'exception_surface',
+        trace: exTrace,
+        metadata: founderEgressMetadata(exTrace, 'registerHandlers_mention_catch'),
       });
     }
   });
@@ -152,38 +146,11 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       if (shouldSkipEvent(body, event)) return;
 
       const dmText = getInboundCommandText(event) || '';
-
       const files = extractFilesFromEvent(event);
-      const threadKey = buildSlackThreadKey({
-        channel: event.channel,
-        ts: event.ts,
-        thread_ts: event.thread_ts,
-      });
 
-      const ingestResults = files.length
-        ? await founderIngestSlackFilesWithState({
-            files,
-            client,
-            threadKey,
-            summarizePng: summarizePngBufferForFounderDm,
-            persistToFounderState: false,
-            persistToDocumentContext: false,
-          })
-        : [];
-      for (const result of ingestResults) {
-        if (result.ok) {
-          console.info(JSON.stringify({ event: 'slack_file_ingested', file_id: result.file_id, filename: result.filename, chars: result.char_count }));
-        } else {
-          console.warn(JSON.stringify({ event: 'slack_file_ingest_failed', file_id: result.file_id, filename: result.filename, errorCode: result.errorCode }));
-        }
-      }
+      if (!dmText.trim() && files.length === 0) return;
 
-      const turn = buildFounderTurnAfterFileIngest(ingestResults, dmText);
-      const successCount = ingestResults.filter((r) => r?.ok).length;
-      const failureCount = ingestResults.filter((r) => r && !r.ok).length;
-      const attachmentMeta = buildCurrentAttachmentMetaFromIngest(ingestResults);
-
-      const meta = {
+      const intakeMeta = {
         source_type: 'direct_message',
         slack_route_label: 'dm_ai_router',
         founder_route: true,
@@ -191,49 +158,58 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         user: event.user,
         ts: event.ts,
         thread_ts: event.thread_ts || null,
-        event_id: body?.event_id || null,
-        has_files: files.length > 0,
-        file_count: files.length,
-        failure_notes: turn.failureNotes,
-        attachment_ingest_success_count: successCount,
-        attachment_ingest_failure_count: failureCount,
-        ...attachmentMeta,
       };
 
-      const combinedText = turn.modelUserText;
-      if (!combinedText.trim() && files.length === 0) return;
-
-      const answer = await handleUserText(combinedText, {
-        ...meta,
+      const out = await handleFounderSlackTurn({
+        rawText: dmText,
+        files,
+        client,
+        body,
+        event,
+        routeLabel: 'dm_ai_router',
         callText,
-        has_active_intake: isActiveProjectIntake(meta),
-        intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
+        has_active_intake: isActiveProjectIntake(intakeMeta),
+        intake_session: isActiveProjectIntake(intakeMeta) ? getProjectIntakeSession(intakeMeta) : null,
       });
-      const payload = resolvePostPayload(answer);
-      recordInboundSlackExchange(meta, combinedText || dmText, { ...answer, text: payload.text });
+
+      recordInboundSlackExchange(out.slackMetadata, out.inboundTextForBuffer || dmText, {
+        text: out.text,
+        trace: out.trace,
+      });
 
       await sendFounderResponse({
         client,
         channel: event.channel,
-        rendered_text: payload.text,
-        rendered_blocks: payload.blocks,
-        surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
+        thread_ts: event.thread_ts || undefined,
+        rendered_text: out.text,
+        rendered_blocks: out.blocks,
+        surface_type: out.surface_type || out.trace?.surface_type || 'safe_fallback_surface',
         trace: {
           route_label: 'dm_ai_router',
-          attachment_ingest_success_count: successCount,
-          attachment_ingest_failure_count: failureCount,
-          ...(payload.trace || {}),
+          attachment_ingest_success_count: out.attachment_ingest_success_count,
+          attachment_ingest_failure_count: out.attachment_ingest_failure_count,
+          ...out.trace,
         },
+        metadata: founderEgressMetadata(out.trace, 'handleFounderSlackTurn'),
       });
     } catch (error) {
       console.error('DM_ERROR:', error);
 
       if (event?.channel) {
+        const exTrace = {
+          route_label: 'dm_ai_router',
+          founder_surface_source: 'exception_handler',
+          pipeline_version: 'vNext.13.14.founder_spine',
+          error_code: error?.code ?? null,
+        };
         await sendFounderResponse({
           client,
           channel: event.channel,
+          thread_ts: event.thread_ts || undefined,
           rendered_text: `에러가 발생했습니다.\n${formatError(error)}`,
           surface_type: 'exception_surface',
+          trace: exTrace,
+          metadata: founderEgressMetadata(exTrace, 'registerHandlers_dm_catch'),
         });
       }
     }

@@ -144,7 +144,6 @@ import {
 import { runInboundAiRouter } from './src/features/runInboundAiRouter.js';
 import { runInboundCommandRouter } from './src/features/runInboundCommandRouter.js';
 import { founderRequestPipeline } from './src/core/founderRequestPipeline.js';
-import { runFounderDirectKernel } from './src/founder/founderDirectKernel.js';
 import {
   resolveFounderRouteDecision,
   traceFounderRouteInvariant,
@@ -736,6 +735,12 @@ function parseBlockedRun(text) {
 }
 
 async function handleUserText(userText, metadata = {}) {
+  if (metadata?.founder_route === true) {
+    const err = new Error('founder_route_must_not_use_handleUserText');
+    err.code = 'founder_route_must_not_use_handleUserText';
+    throw err;
+  }
+
   const inputNorm = normalizeSlackUserPayload(String(userText ?? '').trim());
   const _bi = getBuildInfo();
   const _threadKey = buildSlackThreadKey(metadata);
@@ -775,70 +780,8 @@ async function handleUserText(userText, metadata = {}) {
       setInboundTurnSlackRouteLabel(metadata.slack_route_label);
     }
 
-    // Founder Front Door — single generation pipeline only.
-    // No command-router / AI-router fallback for founder natural-language path.
-    if (founderRoute) {
-      try {
-        const founderOnly = await runFounderDirectKernel({
-          text: inputNorm,
-          metadata: {
-            ...metadata,
-            has_active_intake: _intakeActive,
-            intake_session: _intakeSess,
-            callText: ct,
-          },
-          route_label: metadata.slack_route_label,
-        });
-        if (founderOnly) {
-          mergeInboundAudit({
-            routing_exit: 'founder_kernel_single_path',
-            ...traceFounderRouteInvariant(metadata),
-            passed_pipeline: true,
-            legacy_command_router_used: false,
-            legacy_ai_router_used: false,
-            founder_classifier_used: false,
-            founder_keyword_route_used: false,
-          });
-          return {
-            text: founderOnly.text,
-            blocks: founderOnly.blocks,
-            surface_type: founderOnly.surface_type || founderOnly.trace?.surface_type || 'dialogue_surface',
-            trace: {
-              ...(founderOnly.trace || {}),
-              passed_outbound_validation: true,
-              single_founder_kernel_path: true,
-            },
-          };
-        }
-      } catch (pipelineErr) {
-        console.error('[FOUNDER_KERNEL_SINGLE_PATH_ERROR]', pipelineErr);
-      }
-
-      mergeInboundAudit({
-        routing_exit: 'founder_kernel_hard_fail',
-        ...traceFounderRouteInvariant(metadata),
-        passed_pipeline: false,
-        legacy_command_router_used: false,
-        legacy_ai_router_used: false,
-        founder_classifier_used: false,
-        founder_keyword_route_used: false,
-        hard_fail_reason: 'invariant_breach',
-      });
-      return {
-        text: '[COS] founder 단일 생성 경로에서 계약 위반이 감지되어 차단했습니다. 입력을 운영 문제 정의 문장으로 정렬해 다시 진행하겠습니다.',
-        surface_type: 'safe_fallback_surface',
-        trace: {
-          hard_fail_reason: 'invariant_breach',
-          passed_pipeline: false,
-          passed_renderer: true,
-          passed_outbound_validation: false,
-          legacy_router_used: false,
-          single_founder_kernel_path: true,
-        },
-      };
-    }
-
-    // Operator / channel only — 창업자 면은 위 블록에서 항상 return (command·AI 라우터 미도달).
+    // vNext.13.14 — 창업자 멘션/DM은 `founderSlackController` → `runFounderDirectKernel` → `sendFounderResponse` 만 사용.
+    // Operator / channel only — 창업자 면은 `handleUserText` 미진입.
     try {
       const pipelineResult = await founderRequestPipeline({
         text: inputNorm,
@@ -982,7 +925,7 @@ async function handleUserText(userText, metadata = {}) {
   });
 }
 
-registerHandlers(slackApp, { handleUserText, formatError, callText });
+registerHandlers(slackApp, { formatError, callText });
 registerG1CosSlashCommand(slackApp);
 
 (async () => {

@@ -1,11 +1,11 @@
-# Release lock — vNext.13.12 (Root surgery / ChatGPT in Slack) / vNext.13.11 (Chat-first / structured planner opt-in) / vNext.13.10 (Natural surface / planner NL not shown) / vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
+# Release lock — vNext.13.14 (Founder bypass handleUserText / single egress) / vNext.13.12 (Root surgery / ChatGPT in Slack) / vNext.13.11 (Chat-first / structured planner opt-in) / vNext.13.10 (Natural surface / planner NL not shown) / vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
 
 기능 추가가 아니라 **창업자 면 preflight** 와 **launch 권한**에 대한 회귀 방지 계약이다. 상위 서사: `docs/FOUNDATION_RESET.md`.
 
 ## 1. Founder authority chain (현행)
 
-1. `app.js` `handleUserText`: `founder_route === true` 이면 **`runFounderDirectKernel` 만** (command / AI 라우터 미도달). 커널 메타에 **`callJSON` 미전달**.
-2. **창업자 Slack 기본 경로** (`vNext.13.10` + `vNext.13.12`): **`runFounderNaturalChatOnly`** — `normalizeFounderMetaCommandLine` + **원문 + 현재 턴 첨부 성공/실패**(`metadata.current_attachment_*`) → **`runCosNaturalPartner` 1회**; **`priorTranscript` 비움**, **durable `founderConversationState` 읽기/쓰기 없음**, **`planFounderConversationTurn`·구조화 sidecar·게이트 없음**. **`registerHandlers`**: `founder_route` 시 **assistant 를 대화 버퍼에 기록하지 않음**. 최종 문자열은 **`thinFounderSlackSurface`** (`sanitizeFounderOutput` salvage-first).
+1. **`vNext.13.14`**: 창업자 **멘션/DM** 은 `app.js` **`handleUserText` 미진입** (`founder_route === true` 이면 즉시 throw). **`founderSlackController.handleFounderSlackTurn`** → **`runFounderDirectKernel`** → **`sendFounderResponse`** 만. 커널 메타에 **`callJSON` 미전달**.
+2. **창업자 Slack 기본 경로** (`vNext.13.10` + `vNext.13.12` + `vNext.13.14`): **`runFounderNaturalChatOnly`** — `normalizeFounderMetaCommandLine` + **원문 + 현재 턴 첨부 성공/실패**(`metadata.current_attachment_*`) → **`runCosNaturalPartner` 1회**; **`priorTranscript` 비움**, **durable `founderConversationState` 읽기/쓰기 없음**, **`planFounderConversationTurn`·구조화 sidecar·게이트 없음**. **`registerHandlers`**: `founder_route` 시 **assistant 를 대화 버퍼에 기록하지 않음**. 최종 문자열은 **`thinFounderSlackSurface`**. **`sendFounderResponse`**: `founder_route` 송신 시 계약 메타 + 송신 직전 **`founder_output_trace` strict** + Council류 **`FOUNDER_EGRESS_BLOCK_MARKERS`** 차단.
 3. **회귀·하네스 전용**: **`runFounderArtifactConversationPipeline`** (`founderArtifactConversationPipeline.js`) — `planFounderConversationTurn`(`useStructuredPlanner: true`, mock / `callJSON` / 파트너 폴백) · state merge · **`tryArtifactGatedExecutionSpine`** 등 (`npm test` launch·lineage·E2E dress). 파트너가 빈 응답이면 **mock `natural_language_reply`** 가 표면을 채울 수 있음(회귀 전용).
 4. **원문 regex / raw-text launch** 는 프로덕션 경로에 **없음**. 레거시는 `src/legacy/` + `scripts` 회귀만.
 5. 오퍼레이터·채널: `founderRequestPipeline` — 창업자 생성 경로와 분리.

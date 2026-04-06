@@ -2,6 +2,7 @@
  * vNext.13.10 — Founder natural surface subtraction.
  * vNext.13.12 — Root surgery: no transcript/state poisoning on 기본 경로; 현재 턴 첨부만.
  * vNext.13.13 — 첨부 실패는 failure_notes(사람 문장) 우선; internal errorCode 비노출.
+ * vNext.13.14 — Slack 멘션/DM은 `handleUserText` 미경유; trace에 legacy bypass 플래그.
  * 회귀 전용: `runFounderArtifactConversationPipeline`.
  */
 
@@ -90,6 +91,11 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
         founder_step: 'no_callText',
         transcript_ready: false,
         founder_transcript_injected: false,
+        pipeline_version: 'vNext.13.14.founder_spine',
+        founder_surface_source: 'direct_cos_chat',
+        founder_legacy_world_bypassed: true,
+        handle_user_text_bypassed: true,
+        egress_contract_required: true,
         ...founderPreflightTrace(),
       },
     };
@@ -133,7 +139,7 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
       responder: 'founder_kernel',
-      pipeline_version: 'vNext.13.13.attachment_naturalization',
+      pipeline_version: 'vNext.13.14.founder_spine',
       founder_direct_kernel: true,
       founder_conversation_path: true,
       founder_path: 'natural_chat_only',
@@ -143,6 +149,9 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
       partner_natural: true,
       partner_output_sanitized: String(raw || '').trim() !== body.trim(),
       founder_surface_source: 'direct_cos_chat',
+      founder_legacy_world_bypassed: true,
+      handle_user_text_bypassed: true,
+      egress_contract_required: true,
       attachment_context_count: attachmentLines.length,
       attachment_failure_note_count: Array.isArray(metadata.failure_notes) ? metadata.failure_notes.length : 0,
       attachment_failure_humanized: true,
@@ -209,6 +218,11 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
             founder_deterministic_utility: util.kind,
             founder_conversation_path: false,
             founder_operational_meta_short_circuit: true,
+            pipeline_version: 'vNext.13.14.founder_spine',
+            founder_surface_source: 'deterministic_utility',
+            founder_legacy_world_bypassed: true,
+            handle_user_text_bypassed: true,
+            egress_contract_required: true,
             ...founderPreflightTrace(),
           },
         };
@@ -236,6 +250,11 @@ export async function runFounderDirectKernel({ text, metadata = {}, route_label 
         founder_four_step: false,
         founder_direct_kernel: true,
         route_label: route_label || null,
+        pipeline_version: 'vNext.13.14.founder_spine',
+        founder_surface_source: 'hard_recover_fallback',
+        founder_legacy_world_bypassed: true,
+        handle_user_text_bypassed: true,
+        egress_contract_required: true,
         ...founderPreflightTrace(),
       },
     };

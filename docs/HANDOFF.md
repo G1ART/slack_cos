@@ -2,6 +2,10 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
+## vNext.13.14 (2026-04-06) — Founder route bypass / `handleUserText` excision / single egress
+
+**목적**: 창업자 **멘션·DM** 은 **`founderSlackController`** → **`runFounderDirectKernel`** → **`sendFounderResponse`** 만. **`handleUserText`에 `founder_route`가 들어오면 런타임 throw** (`founder_route_must_not_use_handleUserText`). **`sendFounderResponse`**: `founder_route` 송신 시 **`founder_surface_source`·`pipeline_version`·`egress_caller`** 필수, 송신 직전 **`emitFounderOutputTraceStrict`**, Council류 **`FOUNDER_EGRESS_BLOCK_MARKERS`** 는 thin 전·후 검사로 차단. 회귀: `scripts/test-vnext13-14-*.mjs`. 상세: `docs/cursor-handoffs/COS_vNext13_14_Founder_Route_Bypass_HandleUserText_Excision.md`.
+
 ## vNext.13.12 (2026-04-06) — Root surgery: ChatGPT in Slack
 
 **목적**: 창업자 기본 경로에서 **transcript 재주입·durable state 읽기/쓰기 제거**; **`priorTranscript` 빈 문자열** 고정. **현재 턴** 첨부만 `metadata.current_attachment_contexts` / `current_attachment_failures` 로 프롬프트에 포함 (`registerHandlers` + `buildCurrentAttachmentMeta`). **founder DM/멘션**은 `founder_route: true` 이고 **`recordInboundSlackExchange`가 assistant 턴을 버퍼에 넣지 않음**. **`thinFounderSlackSurface`**: veto 즉시 폴백 대신 **`sanitizeFounderOutput` salvage-first**. **`resolveFounderConversationStatePath`**: 기본 **`$TMPDIR/g1cos-runtime`** (`COS_RUNTIME_STATE_DIR` / `FOUNDER_CONVERSATION_STATE_FILE` 오버라이드). 파트너 `route: null` 프롬프트 ChatGPT형으로 단순화. 배포 전 로컬 오염 파일 삭제 권장. 상세: `docs/cursor-handoffs/COS_vNext13_12_Root_Surgery_ChatGPT_In_Slack_2026-04-06.md`.
