@@ -1835,6 +1835,7 @@ Plan·work는 **항상** `plans.json` / `work_items`에 먼저 저장된 뒤 APR
 - **(2026-04-01) vNext.13.8 Founder zero-heuristic reset**: `founderDirectKernel` 모델 전 접두 제거·승인 패킷 본문 병합 없음·대화 턴 `surface_type` `PARTNER_NATURAL` 고정·파일 실·성공 동일 `handleUserText` 경로(`buildFounderTurnTextAfterFileIngest`); 외부 실행 후보는 trace만. 상세: `docs/cursor-handoffs/COS_vNext13_8_Founder_Zero_Heuristic_2026-04-01.md`. 회귀: `scripts/test-vnext13-8-*.mjs`.
 - **(2026-04-01) vNext.13.9 Attachment truth + founder purity**: `buildFounderTurnAfterFileIngest`·`failure_notes` sidecar·첨부 전부 실패 short-circuit; `ingestSlackFile` acquisition trace + HTML 헤더 조기 실패; structured planner sanitize; `app.js` 창업자 `version` 암시 shortcut 제거; `sendFounderResponse` purity pass. 상세: `docs/cursor-handoffs/COS_vNext13_9_Attachment_Truth_Founder_Purity_2026-04-01.md`. 회귀: `scripts/test-vnext13-9-*.mjs`.
 - **(2026-04-06) vNext.13.10 Founder natural surface subtraction**: 슬랙 본문은 **`runCosNaturalPartner`만**; structured planner `natural_language_reply` 는 sidecar·게이트용만. 상세: `docs/cursor-handoffs/COS_vNext13_10_Founder_Natural_Surface_Subtraction_2026-04-06.md`. 회귀: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs`.
+- **(2026-04-01) vNext.13.11 Founder chat-first**: 구조화 플래너 `callJSON` 은 **`COS_FOUNDER_STRUCTURED_PLANNER=1` opt-in**; 기본은 **`founder_chat_only`** 로 표면 LLM 1회. `runCosNaturalPartner(..., route: null)` 는 짧은 COS 프롬프트. 상세: `docs/cursor-handoffs/COS_vNext13_11_Founder_Chat_First_Planner_Opt_In_2026-04-01.md`.
 
 ---
 

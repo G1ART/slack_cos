@@ -5,7 +5,8 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 
@@ -55,11 +56,15 @@ const meta = {
 };
 openProjectIntakeSession(meta, { goalLine: goal });
 
-const out = await runFounderDirectKernel({
-  text: 'connect execution now',
-  metadata: meta,
-  route_label: 'dm_ai_router',
-});
+const tk = buildSlackThreadKey(meta);
+const out = await runFounderArtifactConversationPipeline(
+  'connect execution now',
+  meta,
+  'dm_ai_router',
+  tk,
+  null,
+  null,
+);
 
 assert.notEqual(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(out.trace.founder_spine_eligibility_failed, true);

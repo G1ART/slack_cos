@@ -1,6 +1,6 @@
 /**
  * COS — 창업자 면 Slack 전송 단일 출구.
- * vNext.13.9 — `partner_natural_surface` / `safe_fallback_surface` 에 대해 **최종** `sanitizeFounderOutput` thin pass(내부 헤더·페르소나 라인).
+ * vNext.13.10 — `partner_natural_surface` / `safe_fallback_surface` 에 대해 **`thinFounderSlackSurface`** 만 (작업지시서 D2 veto + JSON blob).
  * 금지 마커(`[COS 제안 패킷]` 등) 스캔·치환은 기존과 동일.
  * @see docs/architecture/COS_CONSTITUTION_v1.md §7
  */
@@ -9,7 +9,7 @@
 // FOUNDERRAWOUTBOUND_FORBIDDEN — grep marker for migration enforcement
 
 import { FOUNDER_SURFACE_VALUES, FounderSurfaceType, SAFE_FALLBACK_TEXT } from './founderContracts.js';
-import { sanitizeFounderOutput } from '../features/founderSurfaceGuard.js';
+import { thinFounderSlackSurface } from '../features/founderSurfaceGuard.js';
 
 /** vNext.13.8 — 최후 안전망만 (업스트림 단일 자연어 표면에 의존, 블랙리스트 최소화) */
 export const FOUNDER_CONVERSATION_FORBIDDEN_MARKERS = ['[COS 제안 패킷]', '*[COS 제안 패킷]*'];
@@ -121,7 +121,7 @@ export async function sendFounderResponse(opts) {
 
   if (puritySurfaces.has(surface_type) && hardFailReason == null) {
     const beforePurity = text;
-    text = sanitizeFounderOutput(beforePurity, { responder: 'partner_natural_surface' }).trim();
+    text = thinFounderSlackSurface(beforePurity);
     if (text !== beforePurity) {
       trace = { ...trace, founder_outbound_purity_adjusted: true };
     }

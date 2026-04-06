@@ -4,12 +4,7 @@ import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
 import { extractFilesFromEvent } from '../features/slackFileIntake.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
-import {
-  founderIngestSlackFilesWithState,
-  buildFounderTurnAfterFileIngest,
-  formatFounderFileFailureOnlyMessage,
-  FOUNDER_FILE_FAILURE_SURFACE,
-} from '../features/founderSlackFileTurn.js';
+import { founderIngestSlackFilesWithState, buildFounderTurnAfterFileIngest } from '../features/founderSlackFileTurn.js';
 import {
   updateApprovalStatus,
   formatApprovalUpdate,
@@ -92,23 +87,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         attachment_ingest_success_count: successCount,
         attachment_ingest_failure_count: failureCount,
       };
-
-      if (turn.canShortCircuitFailure) {
-        const msg = formatFounderFileFailureOnlyMessage(turn.failureNotes);
-        await sendFounderResponse({
-          say,
-          thread_ts: event.ts,
-          rendered_text: msg,
-          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
-          trace: {
-            route_label: 'mention_ai_router',
-            attachment_short_circuit_failure: true,
-            attachment_ingest_success_count: successCount,
-            attachment_ingest_failure_count: failureCount,
-          },
-        });
-        return;
-      }
 
       const combinedText = turn.modelUserText;
       if (!combinedText.trim() && files.length === 0) {
@@ -204,23 +182,6 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         attachment_ingest_success_count: successCount,
         attachment_ingest_failure_count: failureCount,
       };
-
-      if (turn.canShortCircuitFailure) {
-        const msg = formatFounderFileFailureOnlyMessage(turn.failureNotes);
-        await sendFounderResponse({
-          client,
-          channel: event.channel,
-          rendered_text: msg,
-          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
-          trace: {
-            route_label: 'dm_ai_router',
-            attachment_short_circuit_failure: true,
-            attachment_ingest_success_count: successCount,
-            attachment_ingest_failure_count: failureCount,
-          },
-        });
-        return;
-      }
 
       const combinedText = turn.modelUserText;
       if (!combinedText.trim() && files.length === 0) return;

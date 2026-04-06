@@ -2,9 +2,13 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
-## vNext.13.10 (2026-04-06) — Founder natural surface subtraction (no planner body)
+## vNext.13.11 (2026-04-01) — Founder chat-first / structured planner opt-in
 
-**목적**: 슬랙 창업자 표면에서 **planner JSON의 `natural_language_reply`를 완전히 배제**하고, **항상 `runCosNaturalPartner`(단일 COS 대화)** 만이 본문을 쓴다. structured planner는 sidecar·실행 게이트·trace만. Council/섹션형 응답은 모델이 플래너에서 생성해도 **사용자에게는 절대 노출되지 않음**. 테스트: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs`. 상세: `docs/cursor-handoffs/COS_vNext13_10_Founder_Natural_Surface_Subtraction_2026-04-06.md`.
+**목적**: 기본 창업자 턴에서 **`callJSON` 구조화 플래너를 호출하지 않음**(`founder_chat_only`). 슬랙 본문은 **`runCosNaturalPartner` 1회**만. 구조화 sidecar·아티팩트 게이트가 필요하면 **`COS_FOUNDER_STRUCTURED_PLANNER=1`**. 파트너는 `route: null` 일 때 **짧은 ChatGPT형 COS** 프롬프트. `data/*.json` 은 `.gitignore` 로 로컬 상태 커밋 방지. 상세: `docs/cursor-handoffs/COS_vNext13_11_Founder_Chat_First_Planner_Opt_In_2026-04-01.md`.
+
+## vNext.13.10 (2026-04-06) — Founder natural surface subtraction (single COS default)
+
+**목적**: **운영** 창업자 턴은 **`runFounderNaturalChatOnly`** — 플래너·`callJSON`·패킷 조립 없이 **원문·첨부·transcript → `runCosNaturalPartner` 1회**; 최종 thin **`thinFounderSlackSurface`**. 구조화 플래너·아티팩트 게이트·sidecar 표면은 **`runFounderArtifactConversationPipeline`** (`npm test`·mock·E2E dress 전용). 회귀 파이프에서 파트너 응답이 비면 **mock `natural_language_reply`** 가 본문을 채운다. 테스트: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs`. 상세: `docs/cursor-handoffs/COS_vNext13_10_Founder_Natural_Surface_Subtraction_2026-04-06.md`.
 
 ## vNext.13.9 (2026-04-01) — Attachment truth pass / founder surface purity closure
 

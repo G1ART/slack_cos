@@ -29,6 +29,7 @@ const councilSpam = [
   '',
   '페르소나별 핵심 관점',
   '- strategy_finance: 시장 이야기 / 권고: 관찰',
+  '**ops_grants**: 운영 부담을 먼저 본다',
   '',
   '내부 처리 정보',
   '- 협의 모드: council',

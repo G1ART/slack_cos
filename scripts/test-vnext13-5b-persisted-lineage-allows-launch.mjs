@@ -5,7 +5,8 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 
@@ -30,9 +31,10 @@ const baseMeta = {
 };
 openProjectIntakeSession({ ...baseMeta, ts: '0.0' }, { goalLine: goal });
 
-const turn1 = await runFounderDirectKernel({
-  text: '승인 확정 반영',
-  metadata: {
+const tkTwo = buildSlackThreadKey({ ...baseMeta, ts: '1.0' });
+const turn1 = await runFounderArtifactConversationPipeline(
+  '승인 확정 반영',
+  {
     ...baseMeta,
     ts: '1.0',
     mockFounderPlannerRow: {
@@ -52,13 +54,16 @@ const turn1 = await runFounderDirectKernel({
       requires_founder_confirmation: false,
     },
   },
-  route_label: 'dm_ai_router',
-});
+  'dm_ai_router',
+  tkTwo,
+  null,
+  null,
+);
 assert.notEqual(turn1.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 
-const turn2 = await runFounderDirectKernel({
-  text: '실행 스파인 연결',
-  metadata: {
+const turn2 = await runFounderArtifactConversationPipeline(
+  '실행 스파인 연결',
+  {
     ...baseMeta,
     ts: '2.0',
     mockFounderPlannerRow: {
@@ -78,8 +83,11 @@ const turn2 = await runFounderDirectKernel({
       requires_founder_confirmation: false,
     },
   },
-  route_label: 'dm_ai_router',
-});
+  'dm_ai_router',
+  tkTwo,
+  null,
+  null,
+);
 
 assert.equal(turn2.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(turn2.trace.founder_artifact_gated_launch, true);

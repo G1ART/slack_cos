@@ -11,7 +11,7 @@ import path from 'path';
 import { detectFounderLaunchIntentRawText } from '../src/legacy/founderLaunchIntentRawText.js';
 import { evaluateLaunchReadiness } from '../src/core/launchReadinessEvaluator.js';
 import { buildProviderTruthSnapshot } from '../src/core/providerTruthSnapshot.js';
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderDirectKernel, runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
@@ -148,11 +148,15 @@ try {
   };
   openProjectIntakeSession(meta, { goalLine });
 
-  const out = await runFounderDirectKernel({
-    text: '좋아. 진행하자.',
-    metadata: meta,
-    route_label: 'dm_ai_router',
-  });
+  const tkLaunch = buildSlackThreadKey(meta);
+  const out = await runFounderArtifactConversationPipeline(
+    '좋아. 진행하자.',
+    meta,
+    'dm_ai_router',
+    tkLaunch,
+    meta.callText,
+    null,
+  );
 
   assert.ok(out, 'pipeline returns');
   assert.equal(out.trace.launch_gate_taken, true);
@@ -208,16 +212,23 @@ try {
     },
   };
   openProjectIntakeSession(metaR, { goalLine: goalR });
-  const o1 = await runFounderDirectKernel({
-    text: '좋아. 진행하자.',
-    metadata: metaR,
-    route_label: 'dm_ai_router',
-  });
-  const o2 = await runFounderDirectKernel({
-    text: '진행하자',
-    metadata: metaR,
-    route_label: 'dm_ai_router',
-  });
+  const tkRep = buildSlackThreadKey(metaR);
+  const o1 = await runFounderArtifactConversationPipeline(
+    '좋아. 진행하자.',
+    metaR,
+    'dm_ai_router',
+    tkRep,
+    metaR.callText,
+    null,
+  );
+  const o2 = await runFounderArtifactConversationPipeline(
+    '진행하자',
+    metaR,
+    'dm_ai_router',
+    tkRep,
+    metaR.callText,
+    null,
+  );
   assert.equal(o1.surface_type, FounderSurfaceType.EXECUTION_PACKET);
   assert.equal(o2.surface_type, FounderSurfaceType.EXECUTION_PACKET);
   assert.equal(o1.trace.launch_packet_id, o2.trace.launch_packet_id);

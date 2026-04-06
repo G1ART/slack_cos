@@ -5,7 +5,8 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 
@@ -65,11 +66,15 @@ const meta = {
 };
 openProjectIntakeSession(meta, { goalLine: goal });
 
-const out = await runFounderDirectKernel({
-  text: '실행 연결해줘',
-  metadata: meta,
-  route_label: 'dm_ai_router',
-});
+const tk = buildSlackThreadKey(meta);
+const out = await runFounderArtifactConversationPipeline(
+  '실행 연결해줘',
+  meta,
+  'dm_ai_router',
+  tk,
+  null,
+  null,
+);
 
 assert.equal(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(out.trace.founder_artifact_gated_launch, true);
