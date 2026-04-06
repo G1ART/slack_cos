@@ -4,7 +4,11 @@ import { getInboundCommandText } from './inboundText.js';
 import { buildSlackThreadKey, recordConversationTurn } from '../features/slackConversationBuffer.js';
 import { extractFilesFromEvent } from '../features/slackFileIntake.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
-import { founderIngestSlackFilesWithState, buildFounderTurnAfterFileIngest } from '../features/founderSlackFileTurn.js';
+import {
+  founderIngestSlackFilesWithState,
+  buildFounderTurnAfterFileIngest,
+  buildCurrentAttachmentMetaFromIngest,
+} from '../features/founderSlackFileTurn.js';
 import {
   updateApprovalStatus,
   formatApprovalUpdate,
@@ -28,33 +32,6 @@ import { isActiveProjectIntake, getProjectIntakeSession } from '../features/proj
 function resolvePostPayload(answer) {
   if (typeof answer === 'string') return { text: answer };
   return { text: answer?.text || '', blocks: answer?.blocks, surface_type: answer?.surface_type, trace: answer?.trace };
-}
-
-/**
- * @param {Array<Record<string, unknown>>} ingestResults
- */
-function buildCurrentAttachmentMeta(ingestResults = []) {
-  const current_attachment_contexts = [];
-  const current_attachment_failures = [];
-
-  for (const r of ingestResults) {
-    if (r?.ok) {
-      const summary = String(r?.summary || r?.text || r?.extracted_text || '')
-        .trim()
-        .slice(0, 2000);
-      current_attachment_contexts.push({
-        filename: r?.filename || null,
-        summary,
-      });
-    } else {
-      current_attachment_failures.push({
-        filename: r?.filename || null,
-        reason: r?.errorCode || 'read_failed',
-      });
-    }
-  }
-
-  return { current_attachment_contexts, current_attachment_failures };
 }
 
 function recordInboundSlackExchange(metadata, userInboundText, answer) {
@@ -89,6 +66,8 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
             client,
             threadKey: tk,
             summarizePng: summarizePngBufferForFounderDm,
+            persistToFounderState: false,
+            persistToDocumentContext: false,
           })
         : [];
       for (const result of ingestResults) {
@@ -102,7 +81,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const turn = buildFounderTurnAfterFileIngest(ingestResults, userText);
       const successCount = ingestResults.filter((r) => r?.ok).length;
       const failureCount = ingestResults.filter((r) => r && !r.ok).length;
-      const attachmentMeta = buildCurrentAttachmentMeta(ingestResults);
+      const attachmentMeta = buildCurrentAttachmentMetaFromIngest(ingestResults);
 
       const meta = {
         source_type: 'channel_mention',
@@ -187,6 +166,8 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
             client,
             threadKey,
             summarizePng: summarizePngBufferForFounderDm,
+            persistToFounderState: false,
+            persistToDocumentContext: false,
           })
         : [];
       for (const result of ingestResults) {
@@ -200,7 +181,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const turn = buildFounderTurnAfterFileIngest(ingestResults, dmText);
       const successCount = ingestResults.filter((r) => r?.ok).length;
       const failureCount = ingestResults.filter((r) => r && !r.ok).length;
-      const attachmentMeta = buildCurrentAttachmentMeta(ingestResults);
+      const attachmentMeta = buildCurrentAttachmentMetaFromIngest(ingestResults);
 
       const meta = {
         source_type: 'direct_message',

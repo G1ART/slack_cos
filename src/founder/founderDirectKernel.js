@@ -1,6 +1,7 @@
 /**
  * vNext.13.10 — Founder natural surface subtraction.
  * vNext.13.12 — Root surgery: no transcript/state poisoning on 기본 경로; 현재 턴 첨부만.
+ * vNext.13.13 — 첨부 실패는 failure_notes(사람 문장) 우선; internal errorCode 비노출.
  * 회귀 전용: `runFounderArtifactConversationPipeline`.
  */
 
@@ -41,9 +42,12 @@ function founderMinimalWorkContext(metadata, threadKey) {
   };
 }
 
-function buildCurrentAttachmentContext(metadata = {}) {
+/** @param {Record<string, unknown>} metadata */
+export function buildFounderAttachmentPromptLines(metadata = {}) {
   const ok = Array.isArray(metadata.current_attachment_contexts) ? metadata.current_attachment_contexts : [];
   const failed = Array.isArray(metadata.current_attachment_failures) ? metadata.current_attachment_failures : [];
+  const failureNotes = Array.isArray(metadata.failure_notes) ? metadata.failure_notes : [];
+
   const lines = [];
 
   for (const x of ok) {
@@ -52,10 +56,18 @@ function buildCurrentAttachmentContext(metadata = {}) {
     if (summary) lines.push(`- ${name}: ${summary.slice(0, 1600)}`);
   }
 
+  if (failureNotes.length) {
+    for (const note of failureNotes) {
+      const t = String(note || '').trim();
+      if (t) lines.push(`- 첨부 실패: ${t.slice(0, 300)}`);
+    }
+    return lines;
+  }
+
   for (const x of failed) {
     const name = String(x?.filename || '첨부').trim();
-    const reason = String(x?.reason || '열지 못함').trim();
-    lines.push(`- ${name}: 읽지 못함 (${reason})`);
+    const reason = String(x?.reason || '첨부를 읽지 못했습니다.').trim();
+    lines.push(`- ${name}: ${reason.slice(0, 300)}`);
   }
 
   return lines;
@@ -83,7 +95,7 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
     };
   }
 
-  const attachmentLines = buildCurrentAttachmentContext(metadata);
+  const attachmentLines = buildFounderAttachmentPromptLines(metadata);
 
   let userPayload = String(brainText || '').trim();
   if (attachmentLines.length) {
@@ -121,7 +133,7 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
       responder: 'founder_kernel',
-      pipeline_version: 'vNext.13.12.root_surgery',
+      pipeline_version: 'vNext.13.13.attachment_naturalization',
       founder_direct_kernel: true,
       founder_conversation_path: true,
       founder_path: 'natural_chat_only',
@@ -132,6 +144,8 @@ async function runFounderNaturalChatOnly(brainText, metadata, route_label, threa
       partner_output_sanitized: String(raw || '').trim() !== body.trim(),
       founder_surface_source: 'direct_cos_chat',
       attachment_context_count: attachmentLines.length,
+      attachment_failure_note_count: Array.isArray(metadata.failure_notes) ? metadata.failure_notes.length : 0,
+      attachment_failure_humanized: true,
       intake_session_id: workContext.intake_session_id ?? null,
       cos_governance_advisory: false,
       governance_advisory_topics: [],
