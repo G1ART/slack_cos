@@ -9,6 +9,54 @@ export { runHarnessOrchestration, invokeExternalTool };
 
 const MAX_TOOL_ROUNDS = 8;
 
+const ALLOWED_EXTERNAL_TOOLS = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
+const ALLOWED_EXTERNAL_ACTIONS = new Set([
+  'plan',
+  'create_spec',
+  'emit_patch',
+  'create_issue',
+  'open_pr',
+  'apply_sql',
+  'deploy',
+  'inspect_logs',
+]);
+
+/**
+ * 최소 execution boundary (모델 tool-call 시에만 검사).
+ * @param {string} callName
+ * @param {Record<string, unknown>} args
+ * @param {{ role: string }[]} recentTurns
+ * @returns {{ blocked: boolean, reason?: string }}
+ */
+export function evaluateToolExecutionBoundary(callName, args, recentTurns) {
+  const rt = Array.isArray(recentTurns) ? recentTurns : [];
+  const hadAssistant = rt.some((t) => t && t.role === 'assistant');
+  if (!hadAssistant) {
+    return { blocked: true, reason: 'scope_not_locked' };
+  }
+
+  if (callName === 'delegate_harness_team') {
+    const objective = String(args?.objective || '').trim();
+    if (!objective) return { blocked: true, reason: 'objective_required' };
+    return { blocked: false };
+  }
+
+  if (callName === 'invoke_external_tool') {
+    const tool = args?.tool;
+    const action = String(args?.action || '').trim();
+    const payload = args?.payload;
+    if (!ALLOWED_EXTERNAL_TOOLS.has(tool)) return { blocked: true, reason: 'unsupported_tool' };
+    if (!ALLOWED_EXTERNAL_ACTIONS.has(action)) return { blocked: true, reason: 'unsupported_action' };
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return { blocked: true, reason: 'payload_required' };
+    }
+    if (Object.keys(payload).length === 0) return { blocked: true, reason: 'empty_payload' };
+    return { blocked: false };
+  }
+
+  return { blocked: false };
+}
+
 const COS_TOOLS = [
   {
     type: 'function',
@@ -50,14 +98,27 @@ const COS_TOOLS = [
           enum: ['cursor', 'github', 'supabase', 'vercel', 'railway'],
           description: '호출할 외부 도구',
         },
-        action: { type: 'string', description: '수행할 액션 식별자' },
+        action: {
+          type: 'string',
+          enum: [
+            'plan',
+            'create_spec',
+            'emit_patch',
+            'create_issue',
+            'open_pr',
+            'apply_sql',
+            'deploy',
+            'inspect_logs',
+          ],
+          description: '수행할 액션',
+        },
         payload: {
           type: 'object',
           additionalProperties: true,
           description: '도구별 인자',
         },
       },
-      required: ['tool', 'action'],
+      required: ['tool', 'action', 'payload'],
       additionalProperties: false,
     },
   },
@@ -132,7 +193,11 @@ export function buildFounderConversationInput(p) {
  * @param {string} instructions
  * @param {string} initialInput
  */
-async function runToolLoop(openai, model, instructions, initialInput) {
+/**
+ * @param {{ role: string }[]} recentTurns
+ */
+async function runToolLoop(openai, model, instructions, initialInput, recentTurns) {
+  const rt = Array.isArray(recentTurns) ? recentTurns : [];
   let previousResponseId = null;
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
@@ -173,7 +238,10 @@ async function runToolLoop(openai, model, instructions, initialInput) {
         args = {};
       }
       let result;
-      if (call.name === 'delegate_harness_team') {
+      const boundary = evaluateToolExecutionBoundary(call.name, args, rt);
+      if (boundary.blocked) {
+        result = { ok: false, blocked: true, reason: boundary.reason };
+      } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args);
       } else if (call.name === 'invoke_external_tool') {
         result = await invokeExternalTool(args);
@@ -219,7 +287,13 @@ export async function runFounderDirectConversation(ctx) {
     metadata: ctx.metadata || {},
   });
 
-  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput);
+  const { text } = await runToolLoop(
+    ctx.openai,
+    ctx.model,
+    instructions,
+    initialInput,
+    ctx.recentTurns || [],
+  );
 
   console.info(
     JSON.stringify({

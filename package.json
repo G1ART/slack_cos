@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "test": "node scripts/test-founder-spine.mjs && node scripts/test-founder-forbidden-output.mjs && node scripts/test-founder-attachments.mjs && node scripts/test-constitution-loading.mjs && node scripts/test-founder-memory-and-tools.mjs",
+    "test": "node scripts/test-founder-spine.mjs && node scripts/test-founder-forbidden-output.mjs && node scripts/test-founder-attachments.mjs && node scripts/test-constitution-loading.mjs && node scripts/test-founder-memory-and-tools.mjs && node scripts/test-attachment-transport-truth.mjs && node scripts/test-execution-boundary-and-bridges.mjs",
     "test:founder": "npm test"
   },
   "dependencies": {

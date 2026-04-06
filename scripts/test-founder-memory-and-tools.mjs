@@ -50,15 +50,19 @@ const h = await runHarnessOrchestration({
 });
 assert.equal(h.ok, true);
 assert.equal(h.mode, 'harness_dispatch');
+assert.equal(h.status, 'accepted');
+assert.ok(h.dispatch_id && String(h.dispatch_id).startsWith('harness_'));
 assert.deepEqual(h.personas, ['research', 'engineering']);
-assert.ok(!String(JSON.stringify(h)).includes('stub_not_configured'));
+assert.ok(Array.isArray(h.team_plan) && h.team_plan.length >= 1);
+assert.equal(h.next_step, 'cursor_spec_emit');
 
 const t = await invokeExternalTool({ tool: 'github', action: 'open_pr', payload: { x: 1 } });
 assert.equal(t.ok, true);
 assert.equal(t.mode, 'external_tool_invocation');
 assert.equal(t.tool, 'github');
-assert.equal(t.requires_followup, true);
-assert.ok(!String(JSON.stringify(t)).includes('stub_not_configured'));
+assert.equal(t.accepted, true);
+assert.ok(t.invocation_id && String(t.invocation_id).startsWith('tool_'));
+assert.equal(t.next_required_input, null);
 
 await clearThread(key);
 

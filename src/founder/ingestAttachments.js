@@ -1,10 +1,79 @@
 /**
  * 현재 턴 Slack 첨부만 읽어 요약 텍스트로 만든다. 상태 병합·영속화 없음.
+ * HTTP 200 + HTML(미리보기/로그인) 은 바이너리로 처리하지 않는다.
  */
 
 import mammoth from 'mammoth';
 
 const IMAGE_EXT = /\.(png|jpe?g|webp)$/i;
+
+const HTML_FAILURE_REASON = '파일 대신 HTML 미리보기/로그인 페이지가 내려와 읽지 못했습니다.';
+
+/**
+ * @param {Buffer} buf
+ */
+function bufferLooksLikeHtml(buf) {
+  const n = Math.min(4096, buf.length);
+  if (n === 0) return false;
+  let s;
+  try {
+    s = buf.slice(0, n).toString('utf8').replace(/^\ufeff/, '').trimStart().toLowerCase();
+  } catch {
+    return false;
+  }
+  if (s.startsWith('<!doctype html') || s.startsWith('<html')) return true;
+  if (s.includes('<html') && s.length < 800) return true;
+  if (buf.length < 512) {
+    const low = s.slice(0, 256);
+    if (low.includes('<!doctype') || low.includes('<html') || low.includes('<head')) return true;
+  }
+  return false;
+}
+
+/**
+ * @param {{ token?: string }} client
+ * @param {string} url
+ * @returns {Promise<
+ *   | { ok: true, buffer: Buffer, contentType: string, finalUrl: string }
+ *   | { ok: false, reason: string, code: string }
+ * >}
+ */
+export async function downloadPrivateUrl(client, url) {
+  const token = client?.token || process.env.SLACK_BOT_TOKEN;
+  let res;
+  try {
+    res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    return { ok: false, reason: '네트워크 오류로 다운로드하지 못했습니다.', code: 'fetch_error' };
+  }
+
+  const finalUrl = res.url || url;
+  if (!res.ok) {
+    return { ok: false, reason: `다운로드 실패 (HTTP ${res.status})`, code: 'http_error' };
+  }
+
+  const rawCt = res.headers.get('content-type') || '';
+  const contentType = rawCt.toLowerCase().split(';')[0].trim();
+
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  if (contentType === 'text/html' || contentType.endsWith('/html') || rawCt.toLowerCase().includes('text/html')) {
+    return { ok: false, reason: HTML_FAILURE_REASON, code: 'html_instead_of_binary' };
+  }
+
+  if (bufferLooksLikeHtml(buf)) {
+    return { ok: false, reason: HTML_FAILURE_REASON, code: 'html_instead_of_binary' };
+  }
+
+  return {
+    ok: true,
+    buffer: buf,
+    contentType: contentType || 'application/octet-stream',
+    finalUrl,
+  };
+}
 
 /**
  * @param {Buffer} buffer
@@ -52,22 +121,6 @@ export async function summarizeImageBuffer(openai, visionModel, buffer, mime) {
 }
 
 /**
- * @param {{ token?: string }} client Slack WebClient (Bolt)
- * @param {string} url
- */
-async function downloadPrivateUrl(client, url) {
-  const token = client?.token || process.env.SLACK_BOT_TOKEN;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    return { ok: false, reason: `다운로드 실패 (HTTP ${res.status})` };
-  }
-  const buf = Buffer.from(await res.arrayBuffer());
-  return { ok: true, buffer: buf };
-}
-
-/**
  * @param {{
  *   client: import('@slack/web-api').WebClient,
  *   files: object[],
@@ -100,13 +153,13 @@ export async function ingestCurrentTurnAttachments(ctx) {
     }
 
     const file = info?.file;
-    const url = file?.url_private_download || file?.url_private;
-    if (!url) {
+    const fileUrl = file?.url_private_download || file?.url_private;
+    if (!fileUrl) {
       out.push({ filename: name, ok: false, reason: '비공개 다운로드 URL이 없어 읽지 못했습니다.' });
       continue;
     }
 
-    const dl = await downloadPrivateUrl(client, url);
+    const dl = await downloadPrivateUrl(client, fileUrl);
     if (!dl.ok) {
       out.push({ filename: name, ok: false, reason: dl.reason || '다운로드에 실패했습니다.' });
       continue;
