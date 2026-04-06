@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.1 — Memory spine + model-native tools
+## Version 2.2 — Thin shell: model locks scope, tests enforce norms
 
 ---
 
@@ -40,8 +40,11 @@ External tools (Cursor, GitHub, Supabase, Vercel, Railway 등)
 금지:
 - 키워드·의도 분류·커맨드 라우터·플래너·Council·승인·패킷·대화 버퍼 재주입
 - founder 발화를 앱이 “해석”하는 것
+- 앱이 대화의 성숙도·의도·표현을 보고 tool-call 허용 여부를 정하는 것
+- 런타임에서 founder/COS 응답 본문을 금지어·패턴으로 감시하는 것
 
-**무슨 말인지는 COS가 이해한다. 앱은 옮긴다.**
+**무슨 말인지는 COS가 이해한다. 앱은 옮긴다.**  
+**scope 락인은 COS(모델)가 대화 속에서 수행한다. 앱 코드는 판단하지 않는다.**
 
 ---
 
@@ -80,11 +83,13 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 
 ---
 
-# 6. founder 경로 금지 문자열 (코드가 이 절에서 목록을 파싱한다)
+# 6. founder 경로 금지 문자열 (모델·테스트로 강제)
 
 ## 6.1 founder 경로에서 금지되는 것
 
-아래 문자열·패턴은 **출력에 포함되면 안 된다** (앱은 생성 금지 검사를 한다; 치환·살리지 않는다).
+아래 문자열·패턴은 **COS가 founder에게 출력해서는 안 된다**.  
+규범 준수는 **시스템 instruction과 `npm test`(헌법 파생 검사)** 로 강제한다.  
+**프로덕션 런타임은 응답 본문을 금지어로 검사하지 않는다** (pass-through 송신).
 
 - handleUserText
 - AI router
@@ -136,7 +141,8 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 
 # 9. Model-native orchestration
 
-- scope가 충분히 락인된 뒤, COS는 Responses API **tool-call**로 `delegate_harness_team` · `invoke_external_tool` 을 직접 선택할 수 있다.
-- 이 선택은 앱 코드의 실행 분기가 아니라 **모델의 선택**이어야 한다.
-- 앱은 tool-call을 중개·실행하고 결과를 모델에 되돌려 줄 뿐이다.
+- **언제** tool-call을 할지는 COS가 스스로 판단한다 (질문으로 scope를 잡을지, 락인 후 호출할지).
+- 앱은 허용 tool 이름·action enum·payload 타입 같은 **기계적 스키마 검증**만 하고, 대화가 “충분한지”는 판단하지 않는다.
+- COS는 Responses API **tool-call**로 `delegate_harness_team` · `invoke_external_tool` 을 선택할 수 있다.
+- 앱은 tool-call을 실행하고 결과를 모델에 되돌려 줄 뿐이다.
 - founder에게 내부 tool 이름·원시 페이로드를 그대로 노출하지 않는다.

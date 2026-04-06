@@ -1,12 +1,7 @@
 import assert from 'node:assert';
 import { runHarnessOrchestration } from '../src/founder/harnessBridge.js';
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
-import { evaluateToolExecutionBoundary } from '../src/founder/runFounderDirectConversation.js';
-
-const recentWithAssistant = [
-  { role: 'user', text: 'a' },
-  { role: 'assistant', text: 'b' },
-];
+import { validateToolCallArgs } from '../src/founder/runFounderDirectConversation.js';
 
 const h = await runHarnessOrchestration({
   objective: '스펙 정리',
@@ -34,44 +29,43 @@ assert.equal(t.mode, 'external_tool_invocation');
 assert.ok(/^tool_\d+_[a-f0-9]+$/.test(t.invocation_id));
 assert.equal(t.next_required_input, null);
 
-const bScope = evaluateToolExecutionBoundary(
-  'delegate_harness_team',
-  { objective: '목표' },
-  [{ role: 'user', text: 'only user' }],
-);
-assert.equal(bScope.blocked, true);
-assert.equal(bScope.reason, 'scope_not_locked');
+// 스키마만: assistant 턴 여부와 무관하게 허용
+const okHarness = validateToolCallArgs('delegate_harness_team', { objective: '목표' });
+assert.equal(okHarness.blocked, false);
 
-const bObj = evaluateToolExecutionBoundary(
-  'delegate_harness_team',
-  { objective: '   ' },
-  recentWithAssistant,
-);
+const bObj = validateToolCallArgs('delegate_harness_team', { objective: '   ' });
 assert.equal(bObj.blocked, true);
-assert.equal(bObj.reason, 'objective_required');
+assert.equal(bObj.reason, 'invalid_payload');
 
-const bEmptyPayload = evaluateToolExecutionBoundary(
-  'invoke_external_tool',
-  { tool: 'github', action: 'open_pr', payload: {} },
-  recentWithAssistant,
-);
-assert.equal(bEmptyPayload.blocked, true);
-assert.equal(bEmptyPayload.reason, 'empty_payload');
+const okEmptyPayload = validateToolCallArgs('invoke_external_tool', {
+  tool: 'github',
+  action: 'open_pr',
+  payload: {},
+});
+assert.equal(okEmptyPayload.blocked, false);
 
-const bBadTool = evaluateToolExecutionBoundary(
-  'invoke_external_tool',
-  { tool: 'slack', action: 'plan', payload: { x: 1 } },
-  recentWithAssistant,
-);
+const bBadTool = validateToolCallArgs('invoke_external_tool', {
+  tool: 'slack',
+  action: 'plan',
+  payload: { x: 1 },
+});
 assert.equal(bBadTool.blocked, true);
 assert.equal(bBadTool.reason, 'unsupported_tool');
 
-const bBadAction = evaluateToolExecutionBoundary(
-  'invoke_external_tool',
-  { tool: 'cursor', action: 'nope', payload: { x: 1 } },
-  recentWithAssistant,
-);
+const bBadAction = validateToolCallArgs('invoke_external_tool', {
+  tool: 'cursor',
+  action: 'nope',
+  payload: { x: 1 },
+});
 assert.equal(bBadAction.blocked, true);
 assert.equal(bBadAction.reason, 'unsupported_action');
+
+const bInvalidPayload = validateToolCallArgs('invoke_external_tool', {
+  tool: 'cursor',
+  action: 'plan',
+  payload: null,
+});
+assert.equal(bInvalidPayload.blocked, true);
+assert.equal(bInvalidPayload.reason, 'invalid_payload');
 
 console.log('test-execution-boundary-and-bridges: ok');

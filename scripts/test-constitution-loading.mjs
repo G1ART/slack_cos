@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { parseForbiddenPhrasesFromConstitution } from '../src/founder/sendFounderResponse.js';
+import { parseForbiddenPhrasesFromConstitution } from './lib/forbiddenConstitutionTest.mjs';
 import { buildSystemInstructions } from '../src/founder/runFounderDirectConversation.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

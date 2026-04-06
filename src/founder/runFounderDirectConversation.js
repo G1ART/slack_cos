@@ -22,35 +22,31 @@ const ALLOWED_EXTERNAL_ACTIONS = new Set([
 ]);
 
 /**
- * 최소 execution boundary (모델 tool-call 시에만 검사).
+ * Tool-call 인자의 기계적 스키마 검증만 (대화 성숙도·의도는 검사하지 않음).
  * @param {string} callName
  * @param {Record<string, unknown>} args
- * @param {{ role: string }[]} recentTurns
  * @returns {{ blocked: boolean, reason?: string }}
  */
-export function evaluateToolExecutionBoundary(callName, args, recentTurns) {
-  const rt = Array.isArray(recentTurns) ? recentTurns : [];
-  const hadAssistant = rt.some((t) => t && t.role === 'assistant');
-  if (!hadAssistant) {
-    return { blocked: true, reason: 'scope_not_locked' };
-  }
+export function validateToolCallArgs(callName, args) {
+  const a = args && typeof args === 'object' ? args : {};
 
   if (callName === 'delegate_harness_team') {
-    const objective = String(args?.objective || '').trim();
-    if (!objective) return { blocked: true, reason: 'objective_required' };
+    const objective = a.objective;
+    if (typeof objective !== 'string' || !objective.trim()) {
+      return { blocked: true, reason: 'invalid_payload' };
+    }
     return { blocked: false };
   }
 
   if (callName === 'invoke_external_tool') {
-    const tool = args?.tool;
-    const action = String(args?.action || '').trim();
-    const payload = args?.payload;
+    const tool = a.tool;
+    const action = String(a.action || '').trim();
+    const payload = a.payload;
     if (!ALLOWED_EXTERNAL_TOOLS.has(tool)) return { blocked: true, reason: 'unsupported_tool' };
     if (!ALLOWED_EXTERNAL_ACTIONS.has(action)) return { blocked: true, reason: 'unsupported_action' };
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-      return { blocked: true, reason: 'payload_required' };
+      return { blocked: true, reason: 'invalid_payload' };
     }
-    if (Object.keys(payload).length === 0) return { blocked: true, reason: 'empty_payload' };
     return { blocked: false };
   }
 
@@ -62,7 +58,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      'Scope가 충분히 구체화·락인된 뒤에만 호출한다. 내부 multi-persona harness team에 작업을 분배한다. 요구사항이 아직 모호하면 호출하지 말고 질문한다.',
+      '내부 multi-persona harness team에 작업을 분배한다. founder와 대화하며 scope를 네가 스스로 구체화·락인한 뒤, 필요하다고 판단할 때만 호출한다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -88,7 +84,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'invoke_external_tool',
     description:
-      'Cursor, GitHub, Supabase, Vercel, Railway 등 외부 도구 호출이 필요하고 scope가 충분히 락인된 경우에만 호출한다. founder에게 tool 이름·내부 페이로드를 그대로 노출하지 않는다.',
+      'Cursor, GitHub, Supabase, Vercel, Railway 등 외부 도구가 필요하고, 네가 scope를 충분히 락인했다고 판단할 때만 호출한다. founder에게 tool 이름·내부 페이로드를 그대로 노출하지 않는다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -115,7 +111,7 @@ const COS_TOOLS = [
         payload: {
           type: 'object',
           additionalProperties: true,
-          description: '도구별 인자',
+          description: '도구별 인자 (빈 객체도 허용)',
         },
       },
       required: ['tool', 'action', 'payload'],
@@ -131,9 +127,10 @@ export function buildSystemInstructions(constitutionMarkdown) {
   return [
     '당신은 G1 COS다. Slack의 founder와 직접 대화하는 단일 어시스턴트다.',
     '아래 헌법 전문을 반드시 준수하라. 헌법에 나온 금지 문자열·레거시 표면을 founder에게 출력하지 마라.',
-    '한국어 자연어로 답하라. 필요하면 짧게 되물며 scope를 대화 속에서 자연스럽게 좁혀라.',
-    'founder가 아직 요구사항을 구체화하는 중이면 delegate_harness_team / invoke_external_tool 을 호출하지 말고 질문으로 scope를 잡아라.',
-    '충분히 락인된 뒤에만 도구를 호출한다. 도구 호출 내용·원시 JSON을 founder에게 그대로 보여주지 말고, 자연어로 결과만 요약한다.',
+    '한국어 자연어로 답하라. founder와 대화하며 scope를 스스로 구체화하라. 더 필요한 정보가 있으면 질문하라.',
+    '충분히 락인됐다고 네가 판단하기 전에는 delegate_harness_team / invoke_external_tool 을 호출하지 마라.',
+    '충분히 락인되면 필요한 tool-call을 스스로 선택하라. 락인 여부는 오직 네 판단이며 앱 코드는 관여하지 않는다.',
+    '도구 호출 내용·원시 JSON·내부 메커니즘을 founder에게 설명하거나 그대로 보여주지 말고, 자연어로 결과만 요약한다.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -193,11 +190,7 @@ export function buildFounderConversationInput(p) {
  * @param {string} instructions
  * @param {string} initialInput
  */
-/**
- * @param {{ role: string }[]} recentTurns
- */
-async function runToolLoop(openai, model, instructions, initialInput, recentTurns) {
-  const rt = Array.isArray(recentTurns) ? recentTurns : [];
+async function runToolLoop(openai, model, instructions, initialInput) {
   let previousResponseId = null;
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
@@ -238,9 +231,9 @@ async function runToolLoop(openai, model, instructions, initialInput, recentTurn
         args = {};
       }
       let result;
-      const boundary = evaluateToolExecutionBoundary(call.name, args, rt);
-      if (boundary.blocked) {
-        result = { ok: false, blocked: true, reason: boundary.reason };
+      const schema = validateToolCallArgs(call.name, args);
+      if (schema.blocked) {
+        result = { ok: false, blocked: true, reason: schema.reason };
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args);
       } else if (call.name === 'invoke_external_tool') {
@@ -287,13 +280,7 @@ export async function runFounderDirectConversation(ctx) {
     metadata: ctx.metadata || {},
   });
 
-  const { text } = await runToolLoop(
-    ctx.openai,
-    ctx.model,
-    instructions,
-    initialInput,
-    ctx.recentTurns || [],
-  );
+  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput);
 
   console.info(
     JSON.stringify({

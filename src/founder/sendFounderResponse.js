@@ -1,24 +1,8 @@
 /**
- * Founder 응답을 Slack으로만 보낸다. 금지어는 정규화 후 검사.
+ * Founder 응답: transport blob 제거 후 Slack 송신 + 해시 로그만. 대화 본문은 검사하지 않는다.
  */
 
 import crypto from 'node:crypto';
-
-/** @param {string} md */
-export function parseForbiddenPhrasesFromConstitution(md) {
-  const anchor = '## 6.1 founder 경로에서 금지되는 것';
-  const start = md.indexOf(anchor);
-  if (start === -1) return [];
-  const rest = md.slice(start);
-  const next = rest.indexOf('\n## ', anchor.length);
-  const section = next === -1 ? rest : rest.slice(0, next);
-  const out = [];
-  for (const line of section.split('\n')) {
-    const m = line.match(/^\s*-\s+(.+)$/);
-    if (m) out.push(m[1].trim());
-  }
-  return out.filter(Boolean);
-}
 
 function stripTransportJsonBlobs(s) {
   return String(s || '')
@@ -31,43 +15,6 @@ function sha256(s) {
   return crypto.createHash('sha256').update(String(s || ''), 'utf8').digest('hex');
 }
 
-/** 공백·대소문자·구두점 완화 후 비교용 */
-export function normalizeTextForForbiddenScan(s) {
-  let t = String(s || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[\s]*[.,:;!?'"()[\]{}—–-]+[\s]*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return t;
-}
-
-/** 한글·라틴 공백 제거 버전 */
-export function compactForForbiddenScan(s) {
-  return normalizeTextForForbiddenScan(s).replace(/\s/g, '');
-}
-
-/**
- * @param {string} text
- * @param {string[]} forbidden
- * @returns {string|null} matched phrase or null
- */
-export function findForbiddenInText(text, forbidden) {
-  const raw = String(text || '');
-  const t1 = normalizeTextForForbiddenScan(raw);
-  const t2 = compactForForbiddenScan(raw);
-  for (const f of forbidden) {
-    if (!f) continue;
-    if (raw.includes(f)) return f;
-    const n1 = normalizeTextForForbiddenScan(f);
-    const n2 = compactForForbiddenScan(f);
-    if (n1 && t1.includes(n1)) return f;
-    if (n2 && t2.includes(n2)) return f;
-  }
-  return null;
-}
-
 /**
  * @param {{
  *   say?: import('@slack/bolt').SayFn,
@@ -76,8 +23,6 @@ export function findForbiddenInText(text, forbidden) {
  *   thread_ts?: string,
  *   text: string,
  *   constitutionSha256: string,
- *   forbiddenPhrases: string[],
- *   skipForbiddenCheck?: boolean,
  * }} opts
  */
 export async function sendFounderResponse(opts) {
@@ -86,16 +31,6 @@ export async function sendFounderResponse(opts) {
     const err = new Error('founder_empty_response_after_transport_strip');
     err.code = 'founder_empty_response';
     throw err;
-  }
-
-  if (!opts.skipForbiddenCheck) {
-    const hit = findForbiddenInText(text, opts.forbiddenPhrases || []);
-    if (hit) {
-      const err = new Error(`founder_forbidden_substring: ${hit}`);
-      err.code = 'founder_forbidden_substring';
-      err.forbidden = hit;
-      throw err;
-    }
   }
 
   console.info(
