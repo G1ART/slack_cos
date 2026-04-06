@@ -1,0 +1,5 @@
+-- COS auto-generated migration stub (comments only; no DDL executed by COS).
+-- run_id: RUN-mnngleei-qwvmt
+-- packet_id: EPK-mnngleei-fgra5
+-- schema_draft_json: data/supabase-drafts/supabase_draft_task_RUN-mnngleei-qwvmt.json
+-- Replace with real DDL; apply via Supabase CLI to staging before production.
