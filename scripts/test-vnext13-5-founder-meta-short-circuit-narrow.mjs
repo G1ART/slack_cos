@@ -40,7 +40,8 @@ const out = await runFounderDirectKernel({
   route_label: 'dm_ai_router',
 });
 
-assert.equal(llmCalls, 0);
+/** vNext.13.10: 창업자 표면은 항상 callText(파트너) 1회 — 플래너 JSON은 mock 이면 callJSON 미호출 */
+assert.equal(llmCalls, 1);
 assert.notEqual(out.surface_type, FounderSurfaceType.RUNTIME_META);
 assert.notEqual(out.trace?.founder_operational_meta_short_circuit, true);
 assert.equal(out.trace?.founder_conversation_path, true);

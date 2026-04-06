@@ -20,7 +20,9 @@
 
 **Founder zero-heuristic / 단일 표면 (2026-04-01, vNext.13.8)**: `scripts/test-vnext13-8-*.mjs` — 커널 전 접두 제거·승인 패킷 본문 병합 없음·`PARTNER_NATURAL` 고정·프롬프트 Council 노출 완화.
 
-**Attachment truth / founder purity (2026-04-01, vNext.13.9)**: `scripts/test-vnext13-9-*.mjs` — 실패 재주입 금지·short-circuit·`SLACK_FILE_ACQUIRE_TRACE`·structured sanitize·창업자 SHA 암시 shortcut 제거·아웃바운드 purity.
+**Attachment truth / founder purity (2026-04-01, vNext.13.9)**: `scripts/test-vnext13-9-*.mjs` — 실패 재주입 금지·short-circuit·`SLACK_FILE_ACQUIRE_TRACE`·창업자 SHA 암시 shortcut 제거·아웃바운드 purity.
+
+**Natural surface subtraction (2026-04-06, vNext.13.10)**: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs` — planner NL 은 슬랙에 미노출·단일 `runCosNaturalPartner` 표면.
 
 ---
 

@@ -17,7 +17,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "말씀은 받았습니다. 보고서·위원회 포맷 말고, **평문 한두 문장**으로만 이어가 주시면 그에 맞춰 답하겠습니다.",
-      "updated_at": "2026-04-06T00:08:42.537Z"
+      "updated_at": "2026-04-06T00:39:48.120Z"
     },
     "im:Dv11": {
       "thread_key": "im:Dv11",
@@ -36,7 +36,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "짧게 되물을게요. 어떤 제품 맥락인가요?",
-      "updated_at": "2026-04-06T00:08:58.249Z"
+      "updated_at": "2026-04-06T00:40:05.095Z"
     },
     "im:Dv12": {
       "thread_key": "im:Dv12",
@@ -55,7 +55,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "어떤 맥락인지 한 줄만 더 알려주세요.",
-      "updated_at": "2026-04-06T00:08:58.805Z"
+      "updated_at": "2026-04-06T00:40:05.769Z"
     },
     "im:DmetaNarrow": {
       "thread_key": "im:DmetaNarrow",
@@ -77,8 +77,8 @@
       "last_founder_confirmation_at": null,
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
-      "last_cos_summary": "planner path reply",
-      "updated_at": "2026-04-06T00:09:04.410Z"
+      "last_cos_summary": "fallback",
+      "updated_at": "2026-04-06T00:40:10.415Z"
     },
     "im:Dv13nr": {
       "thread_key": "im:Dv13nr",
@@ -100,8 +100,8 @@
       "last_founder_confirmation_at": null,
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
-      "last_cos_summary": null,
-      "updated_at": "2026-04-06T00:08:59.807Z"
+      "last_cos_summary": "[COS] 요청을 처리하는 중 내부 오류가 발생했습니다. 같은 질문을 한 번 더 보내 주세요.",
+      "updated_at": "2026-04-06T00:40:06.623Z"
     },
     "im:C_TEST": {
       "thread_key": "im:C_TEST",
@@ -123,8 +123,8 @@
       "last_founder_confirmation_at": null,
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
-      "last_cos_summary": "COS 응답 경로가 구성되지 않았습니다. 운영 환경에서 대화 모델 연결을 확인해 주세요.",
-      "updated_at": "2026-04-06T00:09:09.043Z"
+      "last_cos_summary": "[COS] 요청을 처리하는 중 내부 오류가 발생했습니다. 같은 질문을 한 번 더 보내 주세요.",
+      "updated_at": "2026-04-06T00:40:14.870Z"
     },
     "im:Dtest99": {
       "thread_key": "im:Dtest99",
@@ -148,7 +148,7 @@
       "approval_lineage_status": null,
       "last_cos_summary": "테스트용 자연어 응답입니다.",
       "latest_file_contexts": [],
-      "updated_at": "2026-04-06T00:09:07.061Z"
+      "updated_at": "2026-04-06T00:40:12.365Z"
     }
   }
 }

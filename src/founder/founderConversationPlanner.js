@@ -18,7 +18,7 @@ const PLANNER_INSTRUCTIONS = `
 반드시 스키마에 맞는 JSON 한 객체만 출력한다 (추가 텍스트 없음).
 
 규칙:
-- natural_language_reply: 대표에게 보일 한국어 평문(비서실장 톤, 간결). **내부 JSON 필드명·durable_state·「COS 제안 패킷」류 목차·페르소나 라벨을 본문에 쓰지 말 것.**
+- natural_language_reply: **슬랙 표면에는 쓰이지 않음**(내부 sidecar·검증용). 짧은 한국어 한 줄이면 충분. 목차·페르소나·Council 형식 금지.
 - conversation_status: 대화 단계를 정직하게 표시한다.
 - proposal_artifact: 제안·범위 정리에 쓸 구조화 힌트(없으면 빈 객체).
 - approval_artifact: 외부 툴 실행이 필요하면 requires_external_dispatch 등을 채운다. 불필요하면 빈 객체.
@@ -29,19 +29,9 @@ const PLANNER_INSTRUCTIONS = `
 - proposal_artifact / approval_artifact 에 안정 id가 필요하면 _cos_artifact_id 에 짧은 고유 문자열을 둔다.
 - state_delta: durable state — 실행 요청 시 최소 포함 후보: latest_proposal_artifact_id, latest_approval_artifact_id, last_founder_confirmation_at (ISO), last_founder_confirmation_kind, approval_lineage_status(확정 시 confirmed).
 - durable_state.latest_file_contexts / contextFrame.recent_file_contexts: Slack 첨부(DOCX/PDF/PNG 등) 자동 인테이크 기록. **실행·승인 아티팩트와 혼동하지 말 것.** 파일만으로는 제안/승인 확정을 추정하지 말 것.
-- contextFrame.slack_attachment_failure_notes: 첨부 **실패** 요약(한국어). user_message 에는 넣지 말고, 답변 시 기술 덤프·HTML/내부 코드를 그대로 반복하지 말 것.
+- contextFrame.slack_attachment_failure_notes: 첨부 **실패** 요약(한국어). user_message 에는 넣지 말 것. **natural_language_reply 는 내부 기록용**이며 대표 슬랙 표면에는 다른 경로(단일 COS 대화 모델)가 쓴다.
 - follow_up_questions: 필요 시 되물음.
 `.trim();
-
-function sanitizeStructuredPlannerSidecar(sidecar) {
-  const raw = String(sidecar?.natural_language_reply || '').trim();
-  const { text: sanitized, stripped_to_empty } = sanitizePartnerNaturalLlmOutput(raw);
-  const out = sanitized || SAFE_FALLBACK_TEXT;
-  return {
-    sidecar: { ...sidecar, natural_language_reply: out },
-    structured_output_sanitized: raw !== out || stripped_to_empty,
-  };
-}
 
 /**
  * @param {{
@@ -59,11 +49,10 @@ export async function planFounderConversationTurn(args) {
   if (mockPlannerRow && typeof mockPlannerRow === 'object') {
     const n = normalizePlannerRow(mockPlannerRow);
     if (n.ok && n.sidecar) {
-      const s = sanitizeStructuredPlannerSidecar(n.sidecar);
       return {
-        sidecar: s.sidecar,
+        sidecar: n.sidecar,
         source: 'mock',
-        structured_output_sanitized: s.structured_output_sanitized,
+        structured_output_sanitized: false,
       };
     }
   }
@@ -82,11 +71,10 @@ export async function planFounderConversationTurn(args) {
       });
       const n = normalizePlannerRow(row);
       if (n.ok && n.sidecar) {
-        const s = sanitizeStructuredPlannerSidecar(n.sidecar);
         return {
-          sidecar: s.sidecar,
+          sidecar: n.sidecar,
           source: 'structured_llm',
-          structured_output_sanitized: s.structured_output_sanitized,
+          structured_output_sanitized: false,
         };
       }
     } catch (e) {
