@@ -1,5 +1,0 @@
--- COS auto-generated migration stub (comments only; no DDL executed by COS).
--- run_id: RUN-mnmgr7c1-1szcp
--- packet_id: EPK-mnmgr7c1-irsc7
--- schema_draft_json: data/supabase-drafts/supabase_draft_calendar-tool_RUN-mnmgr7c1-1szcp.json
--- Replace with real DDL; apply via Supabase CLI to staging before production.

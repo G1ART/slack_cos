@@ -3,3 +3,9 @@
 node_modules/
 *.log
 .DS_Store
+
+.cursor/
+.vscode/
+supabase/
+.runtime/
+tmp/

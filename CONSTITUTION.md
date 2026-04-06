@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.0 — Founder / Harness / Tools Spine
+## Version 2.1 — Memory spine + model-native tools
 
 ---
 
@@ -123,3 +123,20 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 첨부는 **현재 턴** 맥락만이다. 라우팅 트리거·영구 document context·플래너 재주입을 하지 않는다.
 
 지원 범위 (코드): PNG, JPG, JPEG, WEBP, DOCX, 텍스트 레이어가 있는 PDF.
+
+---
+
+# 8. 멀티턴 연속성
+
+- founder와 COS는 여러 턴에 걸쳐 scope를 좁혀가고 락인할 수 있어야 한다.
+- thread 단위 **raw transcript memory**(user/assistant 원문·첨부 요약)만 사용할 수 있다.
+- intent label, routing label, planner artifact, council memo 등 **semantic routing state**는 저장하지 않는다.
+
+---
+
+# 9. Model-native orchestration
+
+- scope가 충분히 락인된 뒤, COS는 Responses API **tool-call**로 `delegate_harness_team` · `invoke_external_tool` 을 직접 선택할 수 있다.
+- 이 선택은 앱 코드의 실행 분기가 아니라 **모델의 선택**이어야 한다.
+- 앱은 tool-call을 중개·실행하고 결과를 모델에 되돌려 줄 뿐이다.
+- founder에게 내부 tool 이름·원시 페이로드를 그대로 노출하지 않는다.

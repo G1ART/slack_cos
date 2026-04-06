@@ -1,10 +1,17 @@
 /**
- * COS 뒤의 Harness(multi-persona) 오케스트레이션 최소 브리지.
- * Founder 경로에 직접 끼어들지 않는다.
+ * COS 뒤 Harness 분배 envelope. founder에게 직접 노출하지 않는다.
  *
- * @param {Record<string, unknown>} _payload
- * @returns {Promise<{ ok: boolean, detail: string }>}
+ * @param {Record<string, unknown>} payload
  */
-export async function runHarnessOrchestration(_payload) {
-  return { ok: false, detail: 'harnessBridge_stub_not_configured' };
+export async function runHarnessOrchestration(payload) {
+  const p = payload && typeof payload === 'object' ? payload : {};
+  return {
+    ok: true,
+    mode: 'harness_dispatch',
+    personas: Array.isArray(p.personas) ? p.personas : [],
+    objective: String(p.objective || ''),
+    tasks: Array.isArray(p.tasks) ? p.tasks : [],
+    deliverables: Array.isArray(p.deliverables) ? p.deliverables : [],
+    constraints: Array.isArray(p.constraints) ? p.constraints : [],
+  };
 }

@@ -1,10 +1,16 @@
 /**
- * Cursor / GitHub / Supabase / Vercel / Railway 등 외부 툴 호출 브리지.
- * permission / lineage / truth boundary는 여기서만 처리한다 (향후 구현).
+ * 외부 툴 호출 envelope (실 API 연동 전 단계).
  *
- * @param {Record<string, unknown>} _spec
- * @returns {Promise<{ ok: boolean, detail: string }>}
+ * @param {Record<string, unknown>} spec
  */
-export async function invokeExternalTool(_spec) {
-  return { ok: false, detail: 'toolsBridge_stub_not_configured' };
+export async function invokeExternalTool(spec) {
+  const s = spec && typeof spec === 'object' ? spec : {};
+  return {
+    ok: true,
+    mode: 'external_tool_invocation',
+    tool: s.tool,
+    action: String(s.action || ''),
+    payload: s.payload && typeof s.payload === 'object' ? s.payload : {},
+    requires_followup: true,
+  };
 }

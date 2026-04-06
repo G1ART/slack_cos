@@ -1,5 +1,5 @@
 /**
- * Founder 응답을 Slack으로만 보낸다. 생성·치환·포맷터 없음. 위반이면 throw.
+ * Founder 응답을 Slack으로만 보낸다. 금지어는 정규화 후 검사.
  */
 
 import crypto from 'node:crypto';
@@ -31,15 +31,39 @@ function sha256(s) {
   return crypto.createHash('sha256').update(String(s || ''), 'utf8').digest('hex');
 }
 
+/** 공백·대소문자·구두점 완화 후 비교용 */
+export function normalizeTextForForbiddenScan(s) {
+  let t = String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[\s]*[.,:;!?'"()[\]{}—–-]+[\s]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t;
+}
+
+/** 한글·라틴 공백 제거 버전 */
+export function compactForForbiddenScan(s) {
+  return normalizeTextForForbiddenScan(s).replace(/\s/g, '');
+}
+
 /**
  * @param {string} text
  * @param {string[]} forbidden
- * @returns {string|null}
+ * @returns {string|null} matched phrase or null
  */
 export function findForbiddenInText(text, forbidden) {
-  const t = String(text || '');
+  const raw = String(text || '');
+  const t1 = normalizeTextForForbiddenScan(raw);
+  const t2 = compactForForbiddenScan(raw);
   for (const f of forbidden) {
-    if (f && t.includes(f)) return f;
+    if (!f) continue;
+    if (raw.includes(f)) return f;
+    const n1 = normalizeTextForForbiddenScan(f);
+    const n2 = compactForForbiddenScan(f);
+    if (n1 && t1.includes(n1)) return f;
+    if (n2 && t2.includes(n2)) return f;
   }
   return null;
 }
