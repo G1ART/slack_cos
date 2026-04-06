@@ -21,7 +21,6 @@ import {
   logPlannerFc,
 } from './plannerRoute.js';
 import { finalizeSlackResponse, logRouterEvent } from './topLevelRouter.js';
-import { runFounderDirectKernel } from '../founder/founderDirectKernel.js';
 import { resolveFounderRouteDecision } from '../founder/founderRouteInvariant.js';
 import { parseCouncilCommand, routeTask } from '../agents/index.js';
 import { appendJsonRecord } from '../storage/jsonStore.js';
@@ -280,34 +279,14 @@ export async function runInboundAiRouter(ctx) {
   // Absolute founder guard: even if caller misroutes,
   // founder-facing turns are forced through founder kernel only.
   if (founderRoute) {
-    const kernel = await runFounderDirectKernel({
-      text: trimmed,
-      metadata: {
-        ...metadata,
-        callText,
-        ...(typeof callJSON === 'function' ? { callJSON } : {}),
-      },
-      route_label: metadata?.slack_route_label,
-    });
-    if (kernel?.text) {
-      return finalizeSlackResponse({
-        responder: 'executive_surface',
-        text: kernel.text,
-        raw_text: routerCtx?.raw_text ?? trimmed,
-        normalized_text: routerCtx?.normalized_text ?? trimmed,
-        command_name: 'founder_kernel_hard_guard',
-        council_blocked: true,
-        response_type: 'founder_kernel_hard_guard',
-      });
-    }
     return finalizeSlackResponse({
       responder: 'error',
-      text: '[COS] founder 단일 경로 보호 가드가 활성화되었습니다. 입력을 다시 보내 주세요.',
+      text: '[COS] founder 면은 registerFounderHandlers 스파인에서만 처리됩니다. 레거시 AI 라우터에 founder_route가 전달되지 않아야 합니다.',
       raw_text: routerCtx?.raw_text ?? trimmed,
       normalized_text: routerCtx?.normalized_text ?? trimmed,
-      command_name: 'founder_kernel_hard_guard_fallback',
+      command_name: 'founder_spine_only_vnext16',
       council_blocked: true,
-      response_type: 'founder_kernel_hard_guard_fallback',
+      response_type: 'founder_spine_misroute',
     });
   }
 

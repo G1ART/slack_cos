@@ -1,6 +1,6 @@
 /**
  * vNext.13.1 — 오퍼레이터/채널 constitutional spine 전용.
- * 창업자 면은 `src/founder/founderDirectKernel.js` → `runFounderDirectKernel` 만 사용 (app.js / AI 라우터 가드).
+ * 창업자 면은 vNext.13.16 기준 `registerFounderHandlers` → `handleFounderSlackTurn` → `runFounderDirectConversation` 스파인만 사용.
  */
 
 // GREP_COS_CONSTITUTION_PIPELINE

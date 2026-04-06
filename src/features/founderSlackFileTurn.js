@@ -12,7 +12,7 @@ import {
 import { buildFounderFileContextEntry } from '../founder/founderFileContextRecord.js';
 import { mergeFounderConversationState } from '../founder/founderConversationState.js';
 import { addDocumentToThread } from './slackDocumentContext.js';
-import { FounderSurfaceType } from '../core/founderContracts.js';
+import { FounderSurfaceType } from '../core/founderSurfacesMinimal.js';
 
 /**
  * Slack 핸들러 → founder 커널 메타: 성공 요약 + 실패 시 사람 문장 reason (vNext.13.13).
