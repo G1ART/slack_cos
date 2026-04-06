@@ -1,7 +1,7 @@
 /**
  * COS — 창업자 면 Slack 전송 단일 출구.
- * 텍스트는 **이 게이트에서** Council 키워드 스캔·치환 없이 그대로 전달한다.
- * `PARTNER_NATURAL` 등 일부 표면은 `founderRequestPipeline`에서 이미 `sanitizeFounderOutput`을 통과할 수 있다.
+ * vNext.13.9 — `partner_natural_surface` / `safe_fallback_surface` 에 대해 **최종** `sanitizeFounderOutput` thin pass(내부 헤더·페르소나 라인).
+ * 금지 마커(`[COS 제안 패킷]` 등) 스캔·치환은 기존과 동일.
  * @see docs/architecture/COS_CONSTITUTION_v1.md §7
  */
 
@@ -9,6 +9,7 @@
 // FOUNDERRAWOUTBOUND_FORBIDDEN — grep marker for migration enforcement
 
 import { FOUNDER_SURFACE_VALUES, FounderSurfaceType, SAFE_FALLBACK_TEXT } from './founderContracts.js';
+import { sanitizeFounderOutput } from '../features/founderSurfaceGuard.js';
 
 /** vNext.13.8 — 최후 안전망만 (업스트림 단일 자연어 표면에 의존, 블랙리스트 최소화) */
 export const FOUNDER_CONVERSATION_FORBIDDEN_MARKERS = ['[COS 제안 패킷]', '*[COS 제안 패킷]*'];
@@ -55,8 +56,8 @@ export async function sendFounderResponse(opts) {
     surface_type,
     responder_kind = 'founder_kernel',
     intent,
-    trace = {},
   } = opts;
+  let trace = opts.trace && typeof opts.trace === 'object' ? { ...opts.trace } : {};
 
   let text = String(rendered_text || '');
   let hardFailReason = null;
@@ -116,6 +117,14 @@ export async function sendFounderResponse(opts) {
     text =
       '형식이 섞인 답변이 감지되어 보내지 않았습니다. 같은 요청을 조금 더 짧게 다시 부탁드립니다.';
     hardFailReason = hardFailReason || 'purity_downgrade';
+  }
+
+  if (puritySurfaces.has(surface_type) && hardFailReason == null) {
+    const beforePurity = text;
+    text = sanitizeFounderOutput(beforePurity, { responder: 'partner_natural_surface' }).trim();
+    if (text !== beforePurity) {
+      trace = { ...trace, founder_outbound_purity_adjusted: true };
+    }
   }
 
   try {

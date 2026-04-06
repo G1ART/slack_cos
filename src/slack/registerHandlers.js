@@ -6,7 +6,9 @@ import { extractFilesFromEvent } from '../features/slackFileIntake.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
 import {
   founderIngestSlackFilesWithState,
-  buildFounderTurnTextAfterFileIngest,
+  buildFounderTurnAfterFileIngest,
+  formatFounderFileFailureOnlyMessage,
+  FOUNDER_FILE_FAILURE_SURFACE,
 } from '../features/founderSlackFileTurn.js';
 import {
   updateApprovalStatus,
@@ -72,7 +74,9 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const { combinedTextForPlanner } = buildFounderTurnTextAfterFileIngest(ingestResults, userText);
+      const turn = buildFounderTurnAfterFileIngest(ingestResults, userText);
+      const successCount = ingestResults.filter((r) => r?.ok).length;
+      const failureCount = ingestResults.filter((r) => r && !r.ok).length;
 
       const meta = {
         source_type: 'channel_mention',
@@ -84,10 +88,30 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         event_id: body?.event_id || null,
         has_files: files.length > 0,
         file_count: files.length,
+        failure_notes: turn.failureNotes,
+        attachment_ingest_success_count: successCount,
+        attachment_ingest_failure_count: failureCount,
       };
 
-      const combinedText = combinedTextForPlanner;
-      if (!combinedText) {
+      if (turn.canShortCircuitFailure) {
+        const msg = formatFounderFileFailureOnlyMessage(turn.failureNotes);
+        await sendFounderResponse({
+          say,
+          thread_ts: event.ts,
+          rendered_text: msg,
+          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
+          trace: {
+            route_label: 'mention_ai_router',
+            attachment_short_circuit_failure: true,
+            attachment_ingest_success_count: successCount,
+            attachment_ingest_failure_count: failureCount,
+          },
+        });
+        return;
+      }
+
+      const combinedText = turn.modelUserText;
+      if (!combinedText.trim() && files.length === 0) {
         await sendFounderResponse({
           say,
           thread_ts: event.ts,
@@ -104,7 +128,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
       const payload = resolvePostPayload(answer);
-      recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
+      recordInboundSlackExchange(meta, combinedText || userText, { ...answer, text: payload.text });
 
       await sendFounderResponse({
         say,
@@ -112,7 +136,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
         surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
-        trace: { route_label: 'mention_ai_router', ...(payload.trace || {}) },
+        trace: {
+          route_label: 'mention_ai_router',
+          attachment_ingest_success_count: successCount,
+          attachment_ingest_failure_count: failureCount,
+          ...(payload.trace || {}),
+        },
       });
     } catch (error) {
       console.error('APP_MENTION_ERROR:', error);
@@ -157,7 +186,9 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         }
       }
 
-      const { combinedTextForPlanner } = buildFounderTurnTextAfterFileIngest(ingestResults, dmText);
+      const turn = buildFounderTurnAfterFileIngest(ingestResults, dmText);
+      const successCount = ingestResults.filter((r) => r?.ok).length;
+      const failureCount = ingestResults.filter((r) => r && !r.ok).length;
 
       const meta = {
         source_type: 'direct_message',
@@ -169,10 +200,30 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         event_id: body?.event_id || null,
         has_files: files.length > 0,
         file_count: files.length,
+        failure_notes: turn.failureNotes,
+        attachment_ingest_success_count: successCount,
+        attachment_ingest_failure_count: failureCount,
       };
 
-      const combinedText = combinedTextForPlanner;
-      if (!combinedText) return;
+      if (turn.canShortCircuitFailure) {
+        const msg = formatFounderFileFailureOnlyMessage(turn.failureNotes);
+        await sendFounderResponse({
+          client,
+          channel: event.channel,
+          rendered_text: msg,
+          surface_type: FOUNDER_FILE_FAILURE_SURFACE,
+          trace: {
+            route_label: 'dm_ai_router',
+            attachment_short_circuit_failure: true,
+            attachment_ingest_success_count: successCount,
+            attachment_ingest_failure_count: failureCount,
+          },
+        });
+        return;
+      }
+
+      const combinedText = turn.modelUserText;
+      if (!combinedText.trim() && files.length === 0) return;
 
       const answer = await handleUserText(combinedText, {
         ...meta,
@@ -181,7 +232,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         intake_session: isActiveProjectIntake(meta) ? getProjectIntakeSession(meta) : null,
       });
       const payload = resolvePostPayload(answer);
-      recordInboundSlackExchange(meta, combinedText, { ...answer, text: payload.text });
+      recordInboundSlackExchange(meta, combinedText || dmText, { ...answer, text: payload.text });
 
       await sendFounderResponse({
         client,
@@ -189,7 +240,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         rendered_text: payload.text,
         rendered_blocks: payload.blocks,
         surface_type: payload.surface_type || payload.trace?.surface_type || 'safe_fallback_surface',
-        trace: { route_label: 'dm_ai_router', ...(payload.trace || {}) },
+        trace: {
+          route_label: 'dm_ai_router',
+          attachment_ingest_success_count: successCount,
+          attachment_ingest_failure_count: failureCount,
+          ...(payload.trace || {}),
+        },
       });
     } catch (error) {
       console.error('DM_ERROR:', error);

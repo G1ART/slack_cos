@@ -1,10 +1,10 @@
 /**
  * vNext.13.7 — 창업자 DM/멘션: 파일 인제스트와 planner 입력 분리 (실패 재주입 금지).
+ * vNext.13.9 — 모델 userText 는 대표 원문만; 실패는 failure_notes·컨텍스트 sidecar만.
  */
 
 import {
   ingestSlackFile,
-  buildConciseFileContextForPlanner,
   partitionFileIntakeForFounderTurn,
   formatFounderFacingFileFailure,
 } from './slackFileIntake.js';
@@ -26,7 +26,7 @@ export async function founderIngestSlackFilesWithState(ctx) {
   const { files, client, threadKey, summarizePng } = ctx;
   const results = [];
   for (const file of files) {
-    const result = await ingestSlackFile({ file, client, summarizePng });
+    const result = await ingestSlackFile({ file, client, summarizePng, threadKey });
     try {
       await mergeFounderConversationState(threadKey, {
         latest_file_contexts: [buildFounderFileContextEntry(threadKey, result)],
@@ -43,39 +43,59 @@ export async function founderIngestSlackFilesWithState(ctx) {
 }
 
 /**
- * vNext.13.8 — 파일 성공/실패 모두 동일 founder 모델 경로 입력으로만 조립 (라우팅 분기 없음).
+ * vNext.13.9 — 대표 원문만 `modelUserText`; 성공 파일은 sidecar(`latest_file_contexts` 등)로만;
+ * 실패는 `failureNotes`(메타) + short-circuit 시 LLM 없음.
  * @param {object[]} results
  * @param {string} userText
- * @returns {{ combinedTextForPlanner: string, failureNotes: string[] }}
+ * @returns {{
+ *   modelUserText: string,
+ *   fileContextEntries: object[],
+ *   failureNotes: string[],
+ *   canShortCircuitFailure: boolean,
+ * }}
  */
-export function buildFounderTurnTextAfterFileIngest(results, userText) {
+export function buildFounderTurnAfterFileIngest(results, userText) {
   const part = partitionFileIntakeForFounderTurn(results, userText);
   const ut = String(userText || '').trim();
-  const concise = buildConciseFileContextForPlanner(part.successes);
   const failureNotes = part.failures.map((f) => formatFounderFacingFileFailure(f));
-  const failureBlock = failureNotes.length
-    ? `\n\n(첨부 처리 안내 — 참고)\n${failureNotes.join('\n')}`
-    : '';
-
-  if (!ut && !concise.trim() && failureNotes.length) {
-    return {
-      combinedTextForPlanner: `(첨부만 전송됨)${failureBlock}\n\n대표 본문이 비어 있어 첨부 처리 결과만 전달합니다. 원하시는 내용을 한 줄이라도 적어 주시면 이어서 도와드리겠습니다.`,
-      failureNotes,
-    };
-  }
-
+  const successes = part.successes;
+  const fileContextEntries = successes.map((s) => ({
+    file_id: s.file_id ?? null,
+    filename: s.filename ?? 'unknown',
+    mime_type: s.mimetype ?? null,
+    summary: String(s.summary ?? s.text ?? '').trim().slice(0, 4000),
+    extract_status: s.truncated ? 'partial' : 'ok',
+  }));
+  const canShortCircuitFailure = !ut && successes.length === 0 && failureNotes.length > 0;
   return {
-    combinedTextForPlanner: (ut + concise + failureBlock).trim(),
+    modelUserText: ut,
+    fileContextEntries,
     failureNotes,
+    canShortCircuitFailure,
   };
 }
 
 /**
- * @deprecated Prefer `buildFounderTurnTextAfterFileIngest`. `skipPlanner`는 항상 false (vNext.13.8).
+ * @deprecated vNext.13.9 — `buildFounderTurnAfterFileIngest` 사용. 본 필드는 `modelUserText`와 동일 의미만 유지.
+ */
+export function buildFounderTurnTextAfterFileIngest(results, userText) {
+  const t = buildFounderTurnAfterFileIngest(results, userText);
+  return {
+    combinedTextForPlanner: t.modelUserText,
+    failureNotes: t.failureNotes,
+  };
+}
+
+/**
+ * @deprecated `skipPlanner`는 항상 false; short-circuit 은 `canShortCircuitFailure` + 핸들러에서 처리.
  */
 export function buildFounderPlannerInputAfterFileIngest(results, userText) {
-  const r = buildFounderTurnTextAfterFileIngest(results, userText);
-  return { ...r, skipPlanner: false };
+  const r = buildFounderTurnAfterFileIngest(results, userText);
+  return {
+    combinedTextForPlanner: r.modelUserText,
+    failureNotes: r.failureNotes,
+    skipPlanner: false,
+  };
 }
 
 /**

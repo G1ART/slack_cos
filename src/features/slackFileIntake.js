@@ -4,6 +4,7 @@
  *
  * vNext.13.6 — Founder DM MVP: txt/md/csv/json/html/docx + PDF(text layer) + PNG(vision 요약 주입)
  * vNext.13.7 — 다운로드 페이로드 시그니처 우선(MIME/확장자 오판 감소), 플래너용 요약 컨텍스트 분리 API
+ * vNext.13.9 — acquisition truth: resolve→fetch→mime→bytes→extract 단계·`[SLACK_FILE_ACQUIRE_TRACE]` 로그
  */
 
 import { createRequire } from 'module';
@@ -92,6 +93,68 @@ export function resolveMvpFileKind(filename, mimetype) {
 
 /** 플래너 입력에 넣을 첨부 요약 최대 길이(본문 전체 덤프 방지) */
 export const MAX_PLANNER_FILE_CONTEXT_CHARS = 6000;
+
+/**
+ * @param {string | undefined} errorCode ingest / extract errorCode
+ * @returns {string} acquire failure_code 계열
+ */
+export function mapIngestErrorToAcquireFailureCode(errorCode) {
+  const c = String(errorCode || '');
+  const m = {
+    downloaded_html_instead_of_file: 'html_instead_of_binary',
+    downloaded_preview_not_binary: 'html_instead_of_binary',
+    missing_download_bytes: 'empty_bytes',
+    mime_ext_mismatch: 'mime_mismatch',
+    declared_type_conflict: 'mime_mismatch',
+    unsupported_payload_signature: 'unsupported',
+    unsupported_type: 'unsupported',
+    pdf_no_text_layer: 'extract_failed',
+    pdf_parse_error: 'extract_failed',
+    extract_error: 'extract_failed',
+    empty_content: 'extract_failed',
+    png_vision_failed: 'extract_failed',
+    png_summarizer_missing: 'unsupported',
+    fetch_failed: 'unknown',
+    scope_missing: 'auth_failed',
+    permission_or_token_fetch_failure: 'auth_failed',
+    no_url: 'unknown',
+    no_download_url: 'unknown',
+    no_token: 'unknown',
+    oversized: 'unknown',
+    ingest_error: 'unknown',
+    no_file: 'unknown',
+  };
+  return m[c] || 'unknown';
+}
+
+/**
+ * @param {Record<string, unknown>} fields
+ */
+export function logSlackFileAcquireTrace(fields) {
+  try {
+    console.info(
+      JSON.stringify({
+        event: 'SLACK_FILE_ACQUIRE_TRACE',
+        ts: new Date().toISOString(),
+        thread_key: fields.thread_key ?? null,
+        file_id: fields.slack_file_id ?? fields.file_id ?? null,
+        filename: fields.filename ?? null,
+        stage: fields.stage ?? null,
+        source_url_kind: fields.source_url_kind ?? null,
+        http_status: fields.fetched_http_status ?? null,
+        content_type: fields.fetched_content_type ?? null,
+        bytes_len: fields.bytes_len ?? null,
+        extractor: fields.extractor ?? null,
+        extractor_ok: fields.extractor_ok ?? null,
+        failure_code: fields.failure_code ?? null,
+        failure_detail: fields.failure_detail ?? null,
+        ok: Boolean(fields.ok),
+      }),
+    );
+  } catch {
+    /* */
+  }
+}
 
 /**
  * 성공한 인제스트만 짧은 블록으로 합친다 (founder planner userText 보강용).
@@ -493,11 +556,23 @@ export async function extractMvpFileFromBuffer(ctx) {
 
 /**
  * Fetch and extract text from a Slack file.
- * @param {{ file: object, client: object, summarizePng?: function, maxBytes?: number }} ctx
- * @returns {Promise<{ ok: boolean, text?: string, summary?: string, error?: string, errorCode?: string, file_id?: string, filename?: string, mimetype?: string }>}
+ * @param {{ file: object, client: object, summarizePng?: function, maxBytes?: number, threadKey?: string | null }} ctx
+ * @returns {Promise<{ ok: boolean, text?: string, summary?: string, error?: string, errorCode?: string, file_id?: string, filename?: string, mimetype?: string, acquire_trace?: object }>}
  */
-export async function ingestSlackFile({ file, client, summarizePng, maxBytes } = {}) {
+export async function ingestSlackFile({ file, client, summarizePng, maxBytes, threadKey = null } = {}) {
+  const tk = threadKey ?? null;
+
   if (!file) {
+    logSlackFileAcquireTrace({
+      thread_key: tk,
+      filename: null,
+      slack_file_id: null,
+      stage: 'resolve',
+      source_url_kind: 'unknown',
+      failure_code: 'unknown',
+      failure_detail: 'no_file',
+      ok: false,
+    });
     return { ok: false, error: '파일 정보가 없습니다', errorCode: 'no_file' };
   }
 
@@ -507,6 +582,16 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
   const ext = filename.split('.').pop()?.toLowerCase() || '';
 
   if (!canAttemptSlackFileIntake(filename, mimetype)) {
+    logSlackFileAcquireTrace({
+      thread_key: tk,
+      filename,
+      slack_file_id: fileId,
+      stage: 'resolve',
+      source_url_kind: 'unknown',
+      failure_code: 'unsupported',
+      failure_detail: 'unsupported_type',
+      ok: false,
+    });
     return {
       ok: false,
       error: `파일 형식 (${mimetype || ext})은 현재 파서가 지원하지 않습니다`,
@@ -520,6 +605,15 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
   const declaredSize = Number(file.size);
   const limit = maxBytes ?? founderFileMaxBytes();
   if (Number.isFinite(declaredSize) && declaredSize > limit) {
+    logSlackFileAcquireTrace({
+      thread_key: tk,
+      filename,
+      slack_file_id: fileId,
+      stage: 'resolve',
+      failure_code: 'unknown',
+      failure_detail: 'oversized',
+      ok: false,
+    });
     return {
       ok: false,
       error: `파일이 용량 한도(${limit} bytes)를 초과합니다`,
@@ -531,6 +625,16 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
   }
 
   if (!file.url_private && !file.url_private_download) {
+    logSlackFileAcquireTrace({
+      thread_key: tk,
+      filename,
+      slack_file_id: fileId,
+      stage: 'resolve',
+      source_url_kind: 'unknown',
+      failure_code: 'unknown',
+      failure_detail: 'no_url',
+      ok: false,
+    });
     return {
       ok: false,
       error: '파일 URL이 없습니다. Slack Connect 제한 또는 파일 삭제 가능성',
@@ -552,7 +656,23 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
     }
 
     const fetchUrl = fileInfo.url_private_download || fileInfo.url_private;
+    const sourceUrlKind = fileInfo.url_private_download
+      ? 'url_private_download'
+      : fileInfo.url_private
+        ? 'url_private'
+        : 'unknown';
+
     if (!fetchUrl) {
+      logSlackFileAcquireTrace({
+        thread_key: tk,
+        filename,
+        slack_file_id: fileId,
+        stage: 'resolve',
+        source_url_kind: sourceUrlKind,
+        failure_code: 'unknown',
+        failure_detail: 'no_download_url',
+        ok: false,
+      });
       return {
         ok: false,
         error: '파일 다운로드 URL을 확인할 수 없습니다',
@@ -564,6 +684,16 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
 
     const token = process.env.SLACK_BOT_TOKEN;
     if (!token) {
+      logSlackFileAcquireTrace({
+        thread_key: tk,
+        filename,
+        slack_file_id: fileId,
+        stage: 'resolve',
+        source_url_kind: sourceUrlKind,
+        failure_code: 'auth_failed',
+        failure_detail: 'no_token',
+        ok: false,
+      });
       return {
         ok: false,
         error: '앱에 files:read scope가 없어 파일 내용을 읽을 수 없습니다',
@@ -573,11 +703,43 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
       };
     }
 
+    /** @type {Record<string, unknown>} */
+    const trace = {
+      ok: false,
+      stage: 'fetch',
+      slack_file_id: fileId,
+      slack_mimetype: mimetype || null,
+      source_url_kind: sourceUrlKind,
+      fetched_http_status: null,
+      fetched_content_type: null,
+      bytes_len: null,
+      extractor: null,
+      extractor_ok: null,
+      failure_code: null,
+      failure_detail: null,
+    };
+
     const response = await fetch(fetchUrl, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
+    trace.fetched_http_status = response.status;
+    const contentTypeHdr = response.headers.get('content-type') || '';
+    trace.fetched_content_type = String(contentTypeHdr || '').split(';')[0].trim().toLowerCase();
+
     if (!response.ok) {
+      trace.stage = 'fetch';
+      if (response.status === 403 || response.status === 401) {
+        trace.failure_code = 'auth_failed';
+        trace.failure_detail = `HTTP ${response.status}`;
+      } else if (response.status === 404) {
+        trace.failure_code = 'not_found';
+        trace.failure_detail = 'HTTP 404';
+      } else {
+        trace.failure_code = 'unknown';
+        trace.failure_detail = `HTTP ${response.status}`;
+      }
+      logSlackFileAcquireTrace({ ...trace, thread_key: tk, filename });
       if (response.status === 403 || response.status === 401) {
         return {
           ok: false,
@@ -585,6 +747,7 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
           errorCode: 'scope_missing',
           file_id: fileId,
           filename,
+          acquire_trace: trace,
           file_ingest_trace: { http_status: response.status, trace_category: 'permission_or_token_fetch_failure' },
         };
       }
@@ -594,17 +757,42 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
         errorCode: 'fetch_failed',
         file_id: fileId,
         filename,
+        acquire_trace: trace,
         file_ingest_trace: { http_status: response.status },
       };
     }
 
-    const contentType = response.headers.get('content-type') || '';
+    const ctPlain = trace.fetched_content_type;
+    if (ctPlain === 'text/html' || ctPlain.endsWith('/html')) {
+      const buffer = await response.arrayBuffer();
+      const buf = Buffer.from(buffer);
+      trace.bytes_len = buf.length;
+      trace.stage = 'mime';
+      trace.failure_code = 'html_instead_of_binary';
+      trace.failure_detail = 'Content-Type text/html';
+      logSlackFileAcquireTrace({ ...trace, thread_key: tk, filename });
+      return {
+        ok: false,
+        error: formatFileIngestError({ errorCode: 'downloaded_html_instead_of_file' }),
+        errorCode: 'downloaded_html_instead_of_file',
+        file_id: fileId,
+        filename,
+        mimetype: ctPlain || mimetype,
+        acquire_trace: trace,
+      };
+    }
+
     const buffer = await response.arrayBuffer();
     const buf = Buffer.from(buffer);
-    const ctPlain = String(contentType || '').split(';')[0].trim().toLowerCase();
+    trace.bytes_len = buf.length;
+    trace.stage = 'bytes';
 
     const analysis = resolveEffectiveKindAfterDownload(buf, filename, mimetype, ctPlain);
     if (analysis.errorCode) {
+      trace.stage = 'bytes';
+      trace.failure_code = mapIngestErrorToAcquireFailureCode(analysis.errorCode);
+      trace.failure_detail = analysis.errorCode;
+      logSlackFileAcquireTrace({ ...trace, thread_key: tk, filename });
       return {
         ok: false,
         error: formatFileIngestError({ errorCode: analysis.errorCode }),
@@ -613,10 +801,14 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
         filename,
         mimetype: ctPlain || mimetype,
         file_ingest_trace: analysis.trace,
+        acquire_trace: trace,
       };
     }
 
-    return extractMvpFileFromBuffer({
+    trace.extractor = analysis.effectiveKind;
+    trace.stage = 'extract';
+
+    const extracted = await extractMvpFileFromBuffer({
       buffer: buf,
       filename,
       mimetype: ctPlain || mimetype,
@@ -625,7 +817,33 @@ export async function ingestSlackFile({ file, client, summarizePng, maxBytes } =
       file_id: fileId,
       maxBytes: limit,
     });
+
+    if (!extracted.ok) {
+      trace.extractor_ok = false;
+      trace.failure_code = mapIngestErrorToAcquireFailureCode(extracted.errorCode);
+      trace.failure_detail = extracted.errorCode;
+      logSlackFileAcquireTrace({ ...trace, thread_key: tk, filename });
+      return { ...extracted, acquire_trace: trace };
+    }
+
+    trace.ok = true;
+    trace.stage = 'done';
+    trace.extractor_ok = true;
+    trace.failure_code = null;
+    trace.failure_detail = null;
+    logSlackFileAcquireTrace({ ...trace, thread_key: tk, filename });
+    return { ...extracted, acquire_trace: trace };
   } catch (err) {
+    logSlackFileAcquireTrace({
+      thread_key: tk,
+      filename,
+      slack_file_id: fileId,
+      stage: 'fetch',
+      source_url_kind: 'unknown',
+      failure_code: 'unknown',
+      failure_detail: String(err?.message || err),
+      ok: false,
+    });
     return {
       ok: false,
       error: `파일 인제스트 중 오류: ${err?.message || String(err)}`,
