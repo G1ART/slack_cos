@@ -1,5 +1,0 @@
--- COS auto-generated migration stub (comments only; no DDL executed by COS).
--- run_id: RUN-mnngmm4c-l6jeu
--- packet_id: EPK-mnngmm4c-7t6q2
--- schema_draft_json: data/supabase-drafts/supabase_draft_task_RUN-mnngmm4c-l6jeu.json
--- Replace with real DDL; apply via Supabase CLI to staging before production.

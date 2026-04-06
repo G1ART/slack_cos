@@ -1,5 +1,0 @@
--- COS auto-generated migration stub (comments only; no DDL executed by COS).
--- run_id: RUN-mnleamzc-4dhgz
--- packet_id: EPK-mnleamzc-slvag
--- schema_draft_json: data/supabase-drafts/supabase_draft_task_RUN-mnleamzc-4dhgz.json
--- Replace with real DDL; apply via Supabase CLI to staging before production.

@@ -20,6 +20,7 @@ const spineFiles = [
   'src/founder/runFounderDirectConversation.js',
   'src/founder/sendFounderResponse.js',
   'src/founder/ingestAttachments.js',
+  'src/founder/threadMemory.js',
 ];
 
 for (const rel of spineFiles) {

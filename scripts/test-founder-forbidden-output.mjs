@@ -5,6 +5,8 @@ const forbidden = ['한 줄 요약', '종합 추천안', 'strategy_finance', '�
 
 assert.equal(findForbiddenInText('정상 답변입니다.', forbidden), null);
 assert.equal(findForbiddenInText('여기 한 줄 요약', forbidden), '한 줄 요약');
+assert.equal(findForbiddenInText('한  줄   요약:', forbidden), '한 줄 요약');
+assert.equal(findForbiddenInText('한줄요약', forbidden), '한 줄 요약');
 
 let threw = false;
 try {

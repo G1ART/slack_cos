@@ -1,5 +1,0 @@
--- COS auto-generated migration stub (comments only; no DDL executed by COS).
--- run_id: RUN-mnjmpjom-cefoi
--- packet_id: EPK-mnjmpjom-qg4be
--- schema_draft_json: data/supabase-drafts/supabase_draft_calendar-tool_RUN-mnjmpjom-cefoi.json
--- Replace with real DDL; apply via Supabase CLI to staging before production.
