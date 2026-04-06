@@ -25,12 +25,11 @@ for (const f of scanFiles) {
 }
 
 const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-const fb = appSrc.indexOf('if (founderRoute) {');
-const fe = appSrc.indexOf('// Operator / channel only');
-assert.ok(fb !== -1 && fe > fb);
-const founderSlice = appSrc.slice(fb, fe);
-assert.ok(founderSlice.includes('runFounderDirectKernel({'));
-assert.ok(!founderSlice.includes('founderRequestPipeline({'));
+assert.ok(appSrc.includes('founder_route_must_not_use_handleUserText'));
+assert.ok(!appSrc.includes('await runFounderDirectKernel'));
+const ctrlSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'founder', 'founderSlackController.js'), 'utf8');
+assert.ok(ctrlSrc.includes('runFounderDirectKernel'));
+assert.ok(!ctrlSrc.includes('founderRequestPipeline'));
 
 import { isExternalMutationAuthorized } from '../src/orchestration/approvalGate.js';
 

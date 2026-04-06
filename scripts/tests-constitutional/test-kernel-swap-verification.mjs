@@ -20,19 +20,14 @@ function assert(label, condition) {
   else { failed++; console.error(`FAIL: ${label}`); }
 }
 
-// --- 1. app.js wiring ---
+// --- 1. app.js wiring (vNext.13.14: founder Slack bypasses handleUserText) ---
 {
   const appContent = await fs.readFile(appPath, 'utf8');
   assert('app_imports_operator_pipeline', appContent.includes("import { founderRequestPipeline } from './src/core/founderRequestPipeline.js'"));
-  assert('app_imports_founder_direct_kernel', appContent.includes("import { runFounderDirectKernel } from './src/founder/founderDirectKernel.js'"));
-  assert('app_founder_block_calls_direct_kernel', appContent.includes('await runFounderDirectKernel({'));
+  assert('app_no_import_runFounderDirectKernel', !appContent.includes("import { runFounderDirectKernel }"));
+  assert('app_founder_route_guard_handleUserText', appContent.includes('founder_route_must_not_use_handleUserText'));
   assert('app_operator_calls_pipeline', appContent.includes('await founderRequestPipeline({'));
-  assert('app_founder_kernel_before_command_router', (() => {
-    const founderBlk = appContent.indexOf('if (founderRoute) {');
-    const dk = appContent.indexOf('await runFounderDirectKernel({');
-    const commandIdx = appContent.indexOf('runInboundCommandRouter({');
-    return founderBlk > 0 && dk > founderBlk && commandIdx > dk;
-  })());
+  assert('app_no_handleUserText_founder_kernel_block', !appContent.includes('await runFounderDirectKernel({'));
   assert(
     'app_returns_surface_type',
     appContent.includes('surface_type: pipelineResult.surface_type || pipelineResult.trace?.surface_type') ||
@@ -61,6 +56,7 @@ function assert(label, condition) {
 // --- 4. registerHandlers uses sendFounderResponse ---
 {
   const handlersContent = await fs.readFile(path.join(srcRoot, 'slack/registerHandlers.js'), 'utf8');
+  assert('handlers_imports_founder_slack_controller', handlersContent.includes('founderSlackController.js'));
   assert('handlers_imports_sendFounderResponse', handlersContent.includes("import { sendFounderResponse }"));
   assert('handlers_no_replyInThread_import', !handlersContent.includes("import { replyInThread }"));
   assert('handlers_no_founderOutboundGate_import', !handlersContent.includes("from './founderOutboundGate.js'"));
