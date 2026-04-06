@@ -786,13 +786,6 @@ async function handleUserText(userText, metadata = {}) {
             has_active_intake: _intakeActive,
             intake_session: _intakeSess,
             callText: ct,
-            callJSON: async (opts) =>
-              callJSON({
-                instructions: opts.instructions,
-                input: opts.input,
-                schemaName: opts.schemaName,
-                schema: opts.schema,
-              }),
           },
           route_label: metadata.slack_route_label,
         });

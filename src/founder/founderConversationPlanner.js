@@ -2,6 +2,8 @@
  * vNext.13.4 — COS 대화 턴: 자연어 응답 + 기계-readable sidecar (regex로 의미 분류하지 않음).
  * vNext.13.6 — durable_state.latest_file_contexts 는 Slack 파일 인테이크 전용(실행·승인과 분리).
  * vNext.13.7 — natural_language_reply 는 창업자에게 보일 **평문만** (내부 필드명·패킷 목차 금지).
+ * vNext.13.11 — 구조화 플래너(callJSON)는 COS_FOUNDER_STRUCTURED_PLANNER=1 또는 metadata.enableFounderStructuredPlanner 일 때만.
+ *   그 외는 sidecar 비움(founder_chat_only) → 슬랙 표면은 커널에서 COS 단일 대화 1회만.
  */
 
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
@@ -41,10 +43,19 @@ const PLANNER_INSTRUCTIONS = `
  *   callText?: ((a: { instructions: string, input: string }) => Promise<string>) | null,
  *   callJSON?: ((a: { instructions: string, input: string, schemaName: string, schema: object }) => Promise<unknown>) | null,
  *   mockPlannerRow?: Record<string, unknown> | null,
+ *   useStructuredPlanner?: boolean,
  * }} args
  */
 export async function planFounderConversationTurn(args) {
-  const { userText, contextJson, priorTranscript = '', callText, callJSON, mockPlannerRow } = args;
+  const {
+    userText,
+    contextJson,
+    priorTranscript = '',
+    callText,
+    callJSON,
+    mockPlannerRow,
+    useStructuredPlanner = false,
+  } = args;
 
   if (mockPlannerRow && typeof mockPlannerRow === 'object') {
     const n = normalizePlannerRow(mockPlannerRow);
@@ -55,6 +66,14 @@ export async function planFounderConversationTurn(args) {
         structured_output_sanitized: false,
       };
     }
+  }
+
+  if (!useStructuredPlanner) {
+    return {
+      sidecar: emptySidecarFromPartner(''),
+      source: 'founder_chat_only',
+      structured_output_sanitized: false,
+    };
   }
 
   if (typeof callJSON === 'function') {
@@ -87,7 +106,7 @@ export async function planFounderConversationTurn(args) {
       callText,
       userText,
       channelContext: null,
-      route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+      route: null,
       priorTranscript,
     });
     const raw = String(natural || '').trim();

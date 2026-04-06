@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 
@@ -39,11 +40,15 @@ const meta = {
 };
 openProjectIntakeSession(meta, { goalLine: 'no-prelaunch raw only' });
 
-const out = await runFounderDirectKernel({
-  text: 'OK proceed.',
-  metadata: meta,
-  route_label: 'dm_ai_router',
-});
+const tkNpl = buildSlackThreadKey(meta);
+const out = await runFounderArtifactConversationPipeline(
+  'OK proceed.',
+  meta,
+  'dm_ai_router',
+  tkNpl,
+  meta.callText,
+  null,
+);
 
 assert.notEqual(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(out.trace.founder_conversation_path, true);

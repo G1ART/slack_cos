@@ -9,8 +9,9 @@ node_modules/
 *.log
 .DS_Store
 
-# Runtime / local data (adjust if you intentionally version fixtures)
-# data/*.json
+# Runtime / local data — 로컬 실행 시 변하는 JSON 은 커밋하지 않음 (이미 추적 중인 파일은 git rm --cached 로 인덱스에서 제거)
+data/*.json
+data/*.jsonl
 
 # 실행 런 자동 생성 핸드오프 (executionOutboundOrchestrator)
 data/exec-handoffs/

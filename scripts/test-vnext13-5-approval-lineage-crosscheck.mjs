@@ -11,7 +11,8 @@ import {
   evaluateExecutionSpineEligibility,
   mergeStateDeltaWithSidecarArtifactIds,
 } from '../src/founder/founderArtifactSchemas.js';
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 
@@ -132,11 +133,15 @@ const meta = {
 };
 openProjectIntakeSession(meta, { goalLine: eaBase.goal_line });
 
-const out = await runFounderDirectKernel({
-  text: 'execute link',
-  metadata: meta,
-  route_label: 'dm_ai_router',
-});
+const tkLc = buildSlackThreadKey(meta);
+const out = await runFounderArtifactConversationPipeline(
+  'execute link',
+  meta,
+  'dm_ai_router',
+  tkLc,
+  null,
+  null,
+);
 assert.notEqual(out.surface_type, FounderSurfaceType.EXECUTION_PACKET);
 assert.equal(out.trace.founder_spine_eligibility_failed, true);
 assert.equal(out.trace.founder_spine_eligibility_reason, 'same_turn_lineage_not_eligible');

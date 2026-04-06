@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * vNext.13.10 — 슬랙 표면은 planner NL 이 아니라 단일 COS 대화 모델만.
+ * vNext.13.10 작업지시서 F1/F2 — 창업자 표면은 단일 자연어; directive D2 마커 0개.
+ * (구조화 플래너 없음 — `runFounderDirectKernel` 단일 COS 턴만 검증.)
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -35,18 +36,6 @@ function assertPlainSurface(text, label) {
   }
 }
 
-const sidecarRow = (nl) => ({
-  natural_language_reply: nl,
-  state_delta: {},
-  conversation_status: 'exploring',
-  proposal_artifact: {},
-  approval_artifact: {},
-  execution_artifact: {},
-  follow_up_questions: [],
-  requires_founder_confirmation: false,
-});
-
-/* structured_llm 가 Council 형 NL 을 줘도 슬랙 본문은 callText 만 */
 openProjectIntakeSession(
   {
     source_type: 'direct_message',
@@ -57,10 +46,6 @@ openProjectIntakeSession(
     failure_notes: ['파일 대신 HTML이 내려왔습니다.'],
     callText: async () =>
       '지금은 이미지 파일을 제대로 열어보지 못했어요. 다시 올려 주시거나, 화면에 보이는 내용을 짧게 글로 적어 주시면 그걸로 도와드릴게요.',
-    callJSON: async () =>
-      sidecarRow(
-        '한 줄 요약\n페르소나별 핵심 관점\nstrategy_finance: 나쁨\n종합 추천안\n핵심 리스크: 큼',
-      ),
   },
   { goalLine: 'v1310 harness' },
 );
@@ -76,10 +61,6 @@ const o1 = await runFounderDirectKernel({
     failure_notes: ['파일 대신 HTML이 내려왔습니다.'],
     callText: async () =>
       '지금은 이미지 파일을 제대로 열어보지 못했어요. 다시 올려 주시거나, 화면에 보이는 내용을 짧게 글로 적어 주시면 그걸로 도와드릴게요.',
-    callJSON: async () =>
-      sidecarRow(
-        '한 줄 요약\n페르소나별 핵심 관점\nstrategy_finance: 나쁨\n종합 추천안\n핵심 리스크: 큼',
-      ),
   },
   route_label: 'dm_ai_router',
 });
@@ -87,7 +68,6 @@ const o1 = await runFounderDirectKernel({
 assert.ok(o1.text.includes('열어보지 못했'), 'F1 stub surface');
 assertPlainSurface(o1.text, 'F1');
 
-/* F2: planner NL 에 JSON blob — 슬랙에 노출 금지 */
 openProjectIntakeSession(
   {
     source_type: 'direct_message',
@@ -98,7 +78,6 @@ openProjectIntakeSession(
     failure_notes: ['수신 실패'],
     callText: async () =>
       '문서 본문을 여기서 열지는 못했어요. 파일을 다시 보내 주시거나 본문을 붙여 주시면 요약해 드릴게요.',
-    callJSON: async () => sidecarRow('{"detail":"Not found."}'),
   },
   { goalLine: 'v1310 docx' },
 );
@@ -114,12 +93,14 @@ const o2 = await runFounderDirectKernel({
     failure_notes: ['수신 실패'],
     callText: async () =>
       '문서 본문을 여기서 열지는 못했어요. 파일을 다시 보내 주시거나 본문을 붙여 주시면 요약해 드릴게요.',
-    callJSON: async () => sidecarRow('{"detail":"Not found."}'),
   },
   route_label: 'dm_ai_router',
 });
 
 assert.ok(!o2.text.includes('"detail"'), 'F2 no raw JSON');
 assertPlainSurface(o2.text, 'F2');
+
+await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
+delete process.env.FOUNDER_CONVERSATION_STATE_FILE;
 
 console.log('ok: vnext13_10_founder_natural_surface_harness');

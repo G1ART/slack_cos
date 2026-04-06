@@ -2,9 +2,8 @@ import { buildChannelHint } from '../agents/hints.js';
 import { getExecutiveHonorificPromptBlock } from '../runtime/executiveAddressing.js';
 
 /**
- * COS 기본 경로: Council이 아닌 **대표 ↔ 비서실장(COS) 자연어 대화**.
- * 슬랙 내 다른 AI 에이전트는 R&R·페르소나가 분리되어 있으며(예: Council·실행 어댑터),
- * 이 경로의 COS는 **단일 창구의 비서실장**으로 정렬·되묻기·실행 경로 안내에 집중한다.
+ * COS 기본 경로: Council이 아닌 **단일 COS ↔ 대표** 자연어 (ChatGPT형 한 덩어리).
+ * 슬랙 창업자 면에서는 내부 라우터·페르소나·위원회 메타를 주입하지 않는다.
  *
  * @param {{
  *   callText: (args: { instructions: string, input: string }) => Promise<string>,
@@ -22,20 +21,22 @@ export async function runCosNaturalPartner({
   priorTranscript = '',
 }) {
   const hint = buildChannelHint(channelContext);
-  const routeBits = route
-    ? [
-        `primary_agent: ${String(route.primary_agent ?? '')}`,
-        `include_risk: ${String(route.include_risk ?? '')}`,
-        `urgency: ${String(route.urgency ?? '')}`,
-      ].join(', ')
-    : '라우터 결과 없음';
+  const routeInject =
+    route && typeof route === 'object'
+      ? [
+          `primary_agent: ${String(route.primary_agent ?? '')}`,
+          `include_risk: ${String(route.include_risk ?? '')}`,
+          `urgency: ${String(route.urgency ?? '')}`,
+        ].join(', ')
+      : null;
 
   const priorBlock =
     String(priorTranscript || '').trim()
       ? `\n\n**이 스레드/DM 이전 대화 (참고, 요약하지 말고 맥락으로만 활용)**:\n${String(priorTranscript).trim().slice(0, 6000)}\n`
       : '';
 
-  const instructions = `
+  const instructions = routeInject
+    ? `
 당신은 G1.ART의 **COS** — 대표와 말하는 **비서실장형 조언자**다. 톤은 존중·간결.
 **당신은 다중 페르소나 합의체가 아니다.** 한 사람의 DM 답변만 쓴다. 내부 오케스트레이션·다른 에이전트를 연출하지 않는다.
 
@@ -71,7 +72,17 @@ ${getExecutiveHonorificPromptBlock()}
 응답은 한국어. 내부적으로 기록·검색·실행이 필요하면 **스스로** 정리하고, 대표에게는 평문으로만 안내한다.
 
 채널 힌트: ${hint}
-라우터(참고, 절대 고정 답 아님): ${routeBits}
+라우터(참고, 절대 고정 답 아님): ${routeInject}
+${priorBlock}
+`.trim()
+    : `
+당신은 G1.ART의 COS입니다. 한국어로 평범한 대화형 어시스턴트처럼 답합니다.
+
+${getExecutiveHonorificPromptBlock()}
+
+다음은 쓰지 마세요: 위원회·페르소나 라벨·보고서 목차(예: 한 줄 요약, 종합 추천안, 페르소나별 핵심 관점). API JSON 원문(예: {"detail":…}) 인용.
+
+채널: ${hint}
 ${priorBlock}
 `.trim();
 

@@ -5,9 +5,11 @@
  * 최종 outbound Slack 텍스트를 sanitize.
  *
  * vNext.10 — old Council memo headings + persona literal bullets + 승인 대기열 raw 하드 블록.
+ * vNext.13.10 — `thinFounderSlackSurface`: 작업지시서 D2 고정 소수 veto + JSON blob 제거만 (블랙리스트 확장 금지).
  */
 
 import { getPersonaRegistryKeys } from '../agents/personas.js';
+import { SAFE_FALLBACK_TEXT } from '../core/founderContracts.js';
 
 const BLOCKED_PATTERNS = [
   /(?:^|\n)\s*한\s*줄\s*요약\s*(?=\n|$)/g,
@@ -72,9 +74,24 @@ const OLD_COUNCIL_MARKER_SUBSTRINGS = [
   '대표 결정 필요 여부',
   '내부 처리 정보',
   'strategy_finance:',
+  'ops_grants:',
   'risk_review:',
+  'product_ux:',
+  'engineering:',
   '참여 페르소나:',
 ];
+
+/** `- key:` / `**key**:` / `*key*:` 등 레지스트리 페르소나 라벨 줄 제거 */
+function stripPersonaColonLabelLines(text) {
+  const keys = getPersonaRegistryKeys().sort((a, b) => b.length - a.length);
+  if (!keys.length) return String(text || '');
+  const alt = keys.join('|');
+  const re = new RegExp(
+    `^\\s*(?:[-*•]\\s*)?(?:\\*{1,2})?(${alt})(?:\\*{1,2})?\\s*:\\s*.*$`,
+    'gim',
+  );
+  return String(text || '').replace(re, '');
+}
 
 let _personaBulletRe = null;
 function getPersonaBulletLineRe() {
@@ -231,22 +248,37 @@ export const FOUNDER_HARD_BLOCK_FALLBACK =
  * @returns {{ text: string, stripped_to_empty: boolean }}
  */
 /** Slack/API 미리보기 등에서 보이는 JSON 오류 덩어리 — 답변에서 제거 (vNext.13.10) */
-function stripTransportJsonErrorBlobs(s) {
+export function stripTransportJsonErrorBlobs(s) {
   return String(s || '')
     .replace(/\{\s*"detail"\s*:\s*"[^"]*"\s*\}/g, '')
     .replace(/\{\s*"detail"\s*:\s*'[^']*'\s*\}/g, '')
     .replace(/\{\s*"detail"\s*:\s*[^}]+\}/g, '');
 }
 
-export function sanitizePartnerNaturalLlmOutput(text) {
+/** 작업지시서 D2 — 이 패턴만 veto (항목 추가 시 문서·릴리스 락 동반) */
+const LEGACY_COUNCIL_SURFACE_VETO =
+  /한\s*줄\s*요약|종합\s*추천안|페르소나별\s*핵심\s*관점|가장\s*강한\s*반대\s*논리|남아\s*있는\s*긴장|미해결\s*충돌|핵심\s*리스크|다음\s*행동|내부\s*처리\s*정보|\[COS\s*제안\s*패킷\]|협의\s*모드\s*:\s*council|참여\s*페르소나|strategy_finance\s*:|risk_review\s*:|ops_grants\s*:|product_ux\s*:|engineering\s*:|knowledge_steward\s*:/i;
+
+/**
+ * Slack 창업자 자연어 표면 — 최종 thin pass (블랙리스트 확장 금지).
+ * @param {string} text
+ * @returns {string}
+ */
+export function thinFounderSlackSurface(text) {
   const raw = stripTransportJsonErrorBlobs(String(text || '').trim());
-  if (!raw.trim()) return { text: '', stripped_to_empty: false };
-  const cleaned = sanitizeFounderOutput(raw, { responder: 'partner_natural_surface' }).trim();
-  if (cleaned) return { text: cleaned, stripped_to_empty: false };
-  return {
-    text: '말씀은 받았습니다. 보고서·위원회 포맷 말고, **평문 한두 문장**으로만 이어가 주시면 그에 맞춰 답하겠습니다.',
-    stripped_to_empty: true,
-  };
+  if (!raw) return SAFE_FALLBACK_TEXT;
+  if (LEGACY_COUNCIL_SURFACE_VETO.test(raw)) return SAFE_FALLBACK_TEXT;
+  return raw;
+}
+
+export function sanitizePartnerNaturalLlmOutput(text) {
+  const before = String(text || '').trim();
+  const cleaned = stripTransportJsonErrorBlobs(before);
+  if (!cleaned.trim()) return { text: SAFE_FALLBACK_TEXT, stripped_to_empty: true };
+  if (LEGACY_COUNCIL_SURFACE_VETO.test(cleaned)) {
+    return { text: SAFE_FALLBACK_TEXT, stripped_to_empty: false };
+  }
+  return { text: cleaned, stripped_to_empty: false };
 }
 
 export function sanitizeFounderOutput(text, opts = {}) {
@@ -261,6 +293,7 @@ export function sanitizeFounderOutput(text, opts = {}) {
   let out = String(text);
 
   out = stripAllBlockedSections(out);
+  out = stripPersonaColonLabelLines(out);
 
   const pRe = getPersonaBulletLineRe();
   pRe.lastIndex = 0;

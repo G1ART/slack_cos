@@ -1,13 +1,14 @@
-# Release lock — vNext.13.10 (Natural surface / planner NL not shown) / vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
+# Release lock — vNext.13.11 (Chat-first / structured planner opt-in) / vNext.13.10 (Natural surface / planner NL not shown) / vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
 
 기능 추가가 아니라 **창업자 면 preflight** 와 **launch 권한**에 대한 회귀 방지 계약이다. 상위 서사: `docs/FOUNDATION_RESET.md`.
 
 ## 1. Founder authority chain (현행)
 
-1. `app.js` `handleUserText`: `founder_route === true` 이면 **`runFounderDirectKernel` 만** (command / AI 라우터 미도달).
-2. **대화 파이프라인**: 턴 직전 durable state 로드 → `planFounderConversationTurn`(sidecar·게이트용 structured; **슬랙 본문 아님**) → `mergeStateDeltaWithSidecarArtifactIds` → `tryArtifactGatedExecutionSpine` … → **슬랙 자연어 표면**은 **`runCosNaturalPartner` 단일 경로**만 (`vNext.13.10`).
-3. **원문 regex / raw-text launch** 는 프로덕션 경로에 **없음**. 레거시는 `src/legacy/` + `scripts` 회귀만.
-4. 오퍼레이터·채널: `founderRequestPipeline` — 창업자 생성 경로와 분리.
+1. `app.js` `handleUserText`: `founder_route === true` 이면 **`runFounderDirectKernel` 만** (command / AI 라우터 미도달). 커널 메타에 **`callJSON` 미전달**.
+2. **창업자 Slack 기본 경로** (`vNext.13.10`): **`runFounderNaturalChatOnly`** — `normalizeFounderMetaCommandLine` 만 적용한 **원문 + 성공 첨부 요약 + transcript** → **`runCosNaturalPartner` 1회**; **`planFounderConversationTurn`·구조화 sidecar·게이트 없음**. 최종 문자열은 **`thinFounderSlackSurface`**.
+3. **회귀·하네스 전용**: **`runFounderArtifactConversationPipeline`** (`founderArtifactConversationPipeline.js`) — `planFounderConversationTurn`(`useStructuredPlanner: true`, mock / `callJSON` / 파트너 폴백) · state merge · **`tryArtifactGatedExecutionSpine`** 등 (`npm test` launch·lineage·E2E dress). 파트너가 빈 응답이면 **mock `natural_language_reply`** 가 표면을 채울 수 있음(회귀 전용).
+4. **원문 regex / raw-text launch** 는 프로덕션 경로에 **없음**. 레거시는 `src/legacy/` + `scripts` 회귀만.
+5. 오퍼레이터·채널: `founderRequestPipeline` — 창업자 생성 경로와 분리.
 
 ## 2. Conversation-state memory
 
@@ -49,9 +50,10 @@
 - lineage cross-check 우회, **same-turn sidecar merged preview 로 spine 열기**, 또는 raw-text 로 production launch 복구.
 - `founder_explicit_meta_utility_path` 없이 운영 메타 자동 매칭 복구.
 - 창업자 `user_message` 에 파일 **실패** 문구·`(첨부 처리 안내)` 재주입, 또는 **`app.js` 창업자 경로 `version` 암시 shortcut** 복구.
-- 창업자 슬랙 본문을 **`planFounderConversationTurn` 의 `natural_language_reply`(structured/mock)** 로 다시 조립하는 복귀.
+- **운영** 창업자 슬랙 본문을 **`planFounderConversationTurn` 의 `natural_language_reply`(structured/mock)** 로 조립하는 복귀(회귀 파이프라인 전용 계약 제외).
+- 기본 창업자 턴에서 **`callJSON` 구조화 플래너를 `app.js` 경로로 항상 호출**하는 복귀.
 - 승인 게이트 완화.
 
 ## 9. 구버전 서술 폐기
 
-- `founderDirectInboundFourStep`, “결정론 유틸 → launch gate → 제안” 을 **현행 정본**처럼 쓰지 않는다. 현행은 위 1~3절.
+- `founderDirectInboundFourStep`, “결정론 유틸 → launch gate → 제안” 을 **현행 정본**처럼 쓰지 않는다. 현행은 위 1~5절.

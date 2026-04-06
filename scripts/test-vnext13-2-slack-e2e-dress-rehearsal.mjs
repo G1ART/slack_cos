@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 
-import { runFounderDirectKernel } from '../src/founder/founderDirectKernel.js';
+import { runFounderArtifactConversationPipeline } from '../src/founder/founderDirectKernel.js';
+import { buildSlackThreadKey } from '../src/features/slackConversationBuffer.js';
 import { openProjectIntakeSession } from '../src/features/projectIntakeSession.js';
 import { FounderSurfaceType } from '../src/core/founderContracts.js';
 import {
@@ -71,7 +72,8 @@ async function dm(channel, text, callText) {
     };
   }
   openProjectIntakeSession(meta, { goalLine: `E2E dress ${channel}` });
-  return runFounderDirectKernel({ text, metadata: meta, route_label: 'dm_ai_router' });
+  const tk = buildSlackThreadKey(meta);
+  return runFounderArtifactConversationPipeline(text, meta, 'dm_ai_router', tk, callText, null);
 }
 
 /* E1 IR deck */

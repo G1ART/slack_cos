@@ -12,7 +12,7 @@
 
 **Founder operational probe (2026-04-04, v13.4)**: `scripts/test-founder-operational-probe.mjs` — SHA·Cursor/Supabase 질문이 **`runFounderDirectKernel` 입구 운영 메타 숏서킷**으로 처리되어 `callText`/`callJSON`이 호출되지 않음(`npm test` 포함).
 
-**Partner natural sanitize (2026-04-04)**: `scripts/test-partner-natural-sanitize.mjs` — `planFounderConversationTurn` 파트너 폴백에서 **`sanitizePartnerNaturalLlmOutput`**·trace `partner_output_sanitized`(`npm test` 포함).
+**Partner natural sanitize (2026-04-04)**: `scripts/test-partner-natural-sanitize.mjs` — 아티팩트 회귀 경로의 `planFounderConversationTurn` 파트너 폴백에서 **`sanitizePartnerNaturalLlmOutput`**·trace `partner_output_sanitized`(`npm test` 포함).
 
 **Founder DM 파일 인테이크 (2026-04-01, vNext.13.6)**: `scripts/test-vnext13-6-*.mjs` — `slackFileIntake`·`latest_file_contexts` 병합·스냅샷·합성기. 실슬랙 파일 fetch 없음(`extractMvpFileFromBuffer`·`pdf-parse` 샘플 PDF 사용).
 
@@ -22,7 +22,8 @@
 
 **Attachment truth / founder purity (2026-04-01, vNext.13.9)**: `scripts/test-vnext13-9-*.mjs` — 실패 재주입 금지·short-circuit·`SLACK_FILE_ACQUIRE_TRACE`·창업자 SHA 암시 shortcut 제거·아웃바운드 purity.
 
-**Natural surface subtraction (2026-04-06, vNext.13.10)**: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs` — planner NL 은 슬랙에 미노출·단일 `runCosNaturalPartner` 표면.
+**Natural surface subtraction (2026-04-06, vNext.13.10)**: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs` — **운영 커널**은 플래너 없이 단일 `runCosNaturalPartner`; launch·lineage·E2E dress 등은 **`runFounderArtifactConversationPipeline`** (`test-vnext13-2-slack-e2e-dress-rehearsal.mjs` 등). harness 파일 내 `COS_FOUNDER_STRUCTURED_PLANNER=1` 로 structured 분기만 검증.
+**Chat-first / planner opt-in (2026-04-01, vNext.13.11)**: `planFounderConversationTurn` 기본 `founder_chat_only`·`COS_FOUNDER_STRUCTURED_PLANNER` 는 **구조화 플래너 호출부**(아티팩트 회귀·옵트인) 정합; 앱 창업자 기본 경로는 vNext.13.10 단일 COS. `data/*.json` gitignore. 상세 `COS_vNext13_11_Founder_Chat_First_Planner_Opt_In_2026-04-01.md`.
 
 ---
 
