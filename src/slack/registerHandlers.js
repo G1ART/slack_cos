@@ -30,12 +30,42 @@ function resolvePostPayload(answer) {
   return { text: answer?.text || '', blocks: answer?.blocks, surface_type: answer?.surface_type, trace: answer?.trace };
 }
 
+/**
+ * @param {Array<Record<string, unknown>>} ingestResults
+ */
+function buildCurrentAttachmentMeta(ingestResults = []) {
+  const current_attachment_contexts = [];
+  const current_attachment_failures = [];
+
+  for (const r of ingestResults) {
+    if (r?.ok) {
+      const summary = String(r?.summary || r?.text || r?.extracted_text || '')
+        .trim()
+        .slice(0, 2000);
+      current_attachment_contexts.push({
+        filename: r?.filename || null,
+        summary,
+      });
+    } else {
+      current_attachment_failures.push({
+        filename: r?.filename || null,
+        reason: r?.errorCode || 'read_failed',
+      });
+    }
+  }
+
+  return { current_attachment_contexts, current_attachment_failures };
+}
+
 function recordInboundSlackExchange(metadata, userInboundText, answer) {
   const key = buildSlackThreadKey(metadata);
   const u = String(userInboundText || '').trim();
   const plain = resolvePostPayload(answer).text?.trim() || '';
   if (u) recordConversationTurn(key, 'user', u);
-  if (plain) recordConversationTurn(key, 'assistant', plain);
+  // founder 기본 경로는 assistant transcript를 버퍼에 넣지 않음 (vNext.13.12 — 과거 답변 스타일 재주입 방지)
+  if (!metadata?.founder_route && plain) {
+    recordConversationTurn(key, 'assistant', plain);
+  }
 }
 
 export function registerHandlers(slackApp, { handleUserText, formatError, callText }) {
@@ -72,10 +102,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const turn = buildFounderTurnAfterFileIngest(ingestResults, userText);
       const successCount = ingestResults.filter((r) => r?.ok).length;
       const failureCount = ingestResults.filter((r) => r && !r.ok).length;
+      const attachmentMeta = buildCurrentAttachmentMeta(ingestResults);
 
       const meta = {
         source_type: 'channel_mention',
         slack_route_label: 'mention_ai_router',
+        founder_route: true,
         channel: event.channel,
         user: event.user,
         ts: event.ts,
@@ -86,6 +118,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         failure_notes: turn.failureNotes,
         attachment_ingest_success_count: successCount,
         attachment_ingest_failure_count: failureCount,
+        ...attachmentMeta,
       };
 
       const combinedText = turn.modelUserText;
@@ -167,10 +200,12 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
       const turn = buildFounderTurnAfterFileIngest(ingestResults, dmText);
       const successCount = ingestResults.filter((r) => r?.ok).length;
       const failureCount = ingestResults.filter((r) => r && !r.ok).length;
+      const attachmentMeta = buildCurrentAttachmentMeta(ingestResults);
 
       const meta = {
         source_type: 'direct_message',
         slack_route_label: 'dm_ai_router',
+        founder_route: true,
         channel: event.channel,
         user: event.user,
         ts: event.ts,
@@ -181,6 +216,7 @@ export function registerHandlers(slackApp, { handleUserText, formatError, callTe
         failure_notes: turn.failureNotes,
         attachment_ingest_success_count: successCount,
         attachment_ingest_failure_count: failureCount,
+        ...attachmentMeta,
       };
 
       const combinedText = turn.modelUserText;

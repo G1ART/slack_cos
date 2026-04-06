@@ -4,16 +4,27 @@
  */
 
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
+function resolveRuntimeRoot() {
+  const explicitDir = String(process.env.COS_RUNTIME_STATE_DIR || '').trim();
+  if (explicitDir) {
+    return path.isAbsolute(explicitDir) ? explicitDir : path.resolve(PROJECT_ROOT, explicitDir);
+  }
+  return path.join(os.tmpdir(), 'g1cos-runtime');
+}
+
 export function resolveFounderConversationStatePath() {
-  const v = process.env.FOUNDER_CONVERSATION_STATE_FILE;
-  if (v && String(v).trim()) return path.isAbsolute(v) ? v : path.join(PROJECT_ROOT, v);
-  return path.join(PROJECT_ROOT, 'data', 'founder-conversation-state.json');
+  const explicitFile = String(process.env.FOUNDER_CONVERSATION_STATE_FILE || '').trim();
+  if (explicitFile) {
+    return path.isAbsolute(explicitFile) ? explicitFile : path.resolve(PROJECT_ROOT, explicitFile);
+  }
+  return path.join(resolveRuntimeRoot(), 'founder-conversation-state.json');
 }
 
 /** @returns {object} */
