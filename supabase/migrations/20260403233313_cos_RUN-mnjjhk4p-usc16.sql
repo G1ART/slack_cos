@@ -1,0 +1,5 @@
+-- COS auto-generated migration stub (comments only; no DDL executed by COS).
+-- run_id: RUN-mnjjhk4p-usc16
+-- packet_id: EPK-mnjjhk4p-u8kib
+-- schema_draft_json: data/supabase-drafts/supabase_draft_calendar-tool_RUN-mnjjhk4p-usc16.json
+-- Replace with real DDL; apply via Supabase CLI to staging before production.

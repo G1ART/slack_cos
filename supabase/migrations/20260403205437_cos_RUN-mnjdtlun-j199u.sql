@@ -1,0 +1,5 @@
+-- COS auto-generated migration stub (comments only; no DDL executed by COS).
+-- run_id: RUN-mnjdtlun-j199u
+-- packet_id: EPK-mnjdtlun-puvuq
+-- schema_draft_json: data/supabase-drafts/supabase_draft_calendar-tool_RUN-mnjdtlun-j199u.json
+-- Replace with real DDL; apply via Supabase CLI to staging before production.

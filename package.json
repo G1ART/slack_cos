@@ -1,26 +1,17 @@
 {
   "name": "g1-cos-slack",
-  "version": "1.0.0",
-  "description": "G1.ART Chief of Staff Slack bot",
+  "version": "2.0.0",
+  "description": "G1 COS — Founder ↔ Slack ↔ OpenAI (minimal spine)",
   "main": "app.js",
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "test": "node scripts/test-vnext16-1-constitution.mjs && node scripts/test-vnext16-2-app-spine.mjs && node scripts/test-vnext16-3-outbound.mjs && node scripts/test-vnext16-4-founder-controller.mjs && node scripts/test-vnext16-5-register-handlers.mjs && node scripts/test-vnext16-6-forbidden-egress.mjs && node scripts/test-vnext16-7-package-json.mjs",
-    "test:router": "node scripts/test-router-lockdown.mjs && node scripts/replay-slack-fixtures.mjs",
-    "test:fixtures": "node scripts/replay-slack-fixtures.mjs",
-    "test:legacy-launch-regression": "node scripts/test-founder-launch-gate.mjs",
-    "test:slash": "node scripts/test-slash-g1cos.mjs",
-    "test:vnext13-3:founder-single-entry-invariant": "node scripts/test-vnext13-3-founder-single-entry-invariant.mjs",
-    "test:vnext13-3:founder-ambiguous-intent": "node scripts/test-vnext13-3-founder-ambiguous-intent.mjs",
-    "test:vnext13-3:founder-advisory-budget": "node scripts/test-vnext13-3-founder-advisory-budget.mjs",
-    "test:vnext13-3:founder-status-closure-contract": "node scripts/test-vnext13-3-founder-status-closure-contract.mjs"
+    "test": "node scripts/test-founder-spine.mjs && node scripts/test-founder-forbidden-output.mjs && node scripts/test-founder-attachments.mjs && node scripts/test-constitution-loading.mjs",
+    "test:founder": "npm test"
   },
   "dependencies": {
-    "@octokit/app": "^16.1.2",
-    "@octokit/rest": "^22.0.1",
     "@slack/bolt": "^4.6.0",
-    "dotenv": "^16.0.0",
+    "dotenv": "^16.4.5",
     "mammoth": "^1.12.0",
     "openai": "^5.0.0",
     "pdf-parse": "^1.1.1"
