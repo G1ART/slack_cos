@@ -79,7 +79,7 @@ export async function runStartupChecks({ model, logger = console }) {
   const hostedSt = validateHostedStorageEnv();
   if (!hostedSt.skipped && !hostedSt.ok) {
     throw new Error(
-      `Hosted runtime requires Supabase env: ${hostedSt.missing.join(', ')} (see docs/cursor-handoffs/Phase_4_Hosted_Supabase_Promotion_handoff.md)`
+      `Hosted runtime requires Supabase env: ${hostedSt.missing.join(', ')} (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)`
     );
   }
   if (!hostedSt.skipped && hostedSt.ok) {

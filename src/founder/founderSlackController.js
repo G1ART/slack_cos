@@ -1,6 +1,5 @@
 /**
- * vNext.13.14 — 창업자 Slack 멘션/DM 전용 컨트롤러.
- * 레거시 앱 텍스트 진입점·라우터를 거치지 않고 `runFounderDirectKernel`만 호출한다.
+ * vNext.13.16 — 창업자 Slack 멘션/DM: 현재 턴 텍스트·첨부만 운반, 의미 분류 없음.
  */
 
 import {
@@ -10,12 +9,12 @@ import {
   formatFounderFileFailureOnlyMessage,
 } from '../features/founderSlackFileTurn.js';
 import { summarizePngBufferForFounderDm } from '../features/founderDmImageSummary.js';
-import { runFounderDirectKernel } from './founderDirectKernel.js';
+import { runFounderDirectConversation } from './founderDirectConversation.js';
 import { buildSlackThreadKey } from '../features/slackConversationBuffer.js';
-import { FounderSurfaceType } from '../core/founderContracts.js';
+import { FounderSurfaceType } from '../core/founderSurfacesMinimal.js';
 import { isFounderStagingModeEnabled } from './founderArtifactGate.js';
 
-const PIPELINE_VERSION = 'vNext.13.14.founder_spine';
+const PIPELINE_VERSION = 'vNext.13.16.constitution_only';
 
 function founderPreflightTrace() {
   return {
@@ -32,20 +31,9 @@ function founderPreflightTrace() {
  *   event: Record<string, unknown>,
  *   body?: Record<string, unknown>,
  *   routeLabel: string,
- *   callText?: Function,
- *   has_active_intake?: boolean,
- *   intake_session?: unknown,
+ *   callText: Function,
+ *   constitutionMarkdown: string,
  * }} ctx
- * @returns {Promise<{
- *   text: string,
- *   blocks?: object[],
- *   surface_type: string,
- *   trace: Record<string, unknown>,
- *   slackMetadata: Record<string, unknown>,
- *   inboundTextForBuffer: string,
- *   attachment_ingest_success_count: number,
- *   attachment_ingest_failure_count: number,
- * }>}
  */
 export async function handleFounderSlackTurn({
   rawText,
@@ -55,8 +43,7 @@ export async function handleFounderSlackTurn({
   body,
   routeLabel,
   callText,
-  has_active_intake = false,
-  intake_session = null,
+  constitutionMarkdown,
 }) {
   const source_type = event.channel_type === 'im' ? 'direct_message' : 'channel_mention';
   const threadKey = buildSlackThreadKey({
@@ -127,9 +114,6 @@ export async function handleFounderSlackTurn({
     attachment_ingest_success_count: successCount,
     attachment_ingest_failure_count: failureCount,
     failure_notes: turn.failureNotes || [],
-    has_active_intake,
-    intake_session,
-    callText: typeof callText === 'function' ? callText : null,
     ...attachmentMeta,
   };
 
@@ -144,19 +128,14 @@ export async function handleFounderSlackTurn({
       trace: {
         surface_type: FounderSurfaceType.PARTNER_NATURAL,
         route_label: routeLabel || null,
-        responder_kind: 'founder_kernel',
-        responder: 'founder_kernel',
-        founder_direct_kernel: true,
-        founder_conversation_path: true,
-        founder_path: 'attachment_failure_short_circuit',
-        founder_step: 'no_llm_file_failure_only',
+        responder_kind: 'founder_cos',
+        founder_direct_conversation: false,
+        founder_step: 'attachment_failure_short_circuit',
         pipeline_version: PIPELINE_VERSION,
         founder_surface_source: 'attachment_failure_only',
         founder_legacy_world_bypassed: true,
         handle_user_text_bypassed: true,
         egress_contract_required: true,
-        transcript_ready: false,
-        founder_transcript_injected: false,
         ...founderPreflightTrace(),
       },
       slackMetadata,
@@ -166,17 +145,18 @@ export async function handleFounderSlackTurn({
     };
   }
 
-  const kernelAnswer = await runFounderDirectKernel({
-    text: turn.modelUserText || String(rawText || '').trim(),
+  const kernelAnswer = await runFounderDirectConversation({
+    callText,
+    constitutionMarkdown,
+    userText: turn.modelUserText || String(rawText || '').trim(),
     metadata: slackMetadata,
-    route_label: routeLabel || null,
   });
 
   return {
     text: kernelAnswer.text,
     blocks: kernelAnswer.blocks,
-    surface_type: kernelAnswer.surface_type || kernelAnswer.trace?.surface_type || FounderSurfaceType.PARTNER_NATURAL,
-    trace: kernelAnswer.trace && typeof kernelAnswer.trace === 'object' ? { ...kernelAnswer.trace } : {},
+    surface_type: kernelAnswer.surface_type || FounderSurfaceType.PARTNER_NATURAL,
+    trace: { ...kernelAnswer.trace, ...founderPreflightTrace(), route_label: routeLabel || null },
     slackMetadata,
     inboundTextForBuffer,
     attachment_ingest_success_count: successCount,
