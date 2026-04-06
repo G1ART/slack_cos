@@ -17,7 +17,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "말씀은 받았습니다. 보고서·위원회 포맷 말고, **평문 한두 문장**으로만 이어가 주시면 그에 맞춰 답하겠습니다.",
-      "updated_at": "2026-04-05T09:02:41.256Z"
+      "updated_at": "2026-04-06T00:08:42.537Z"
     },
     "im:Dv11": {
       "thread_key": "im:Dv11",
@@ -36,7 +36,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "짧게 되물을게요. 어떤 제품 맥락인가요?",
-      "updated_at": "2026-04-05T09:02:55.905Z"
+      "updated_at": "2026-04-06T00:08:58.249Z"
     },
     "im:Dv12": {
       "thread_key": "im:Dv12",
@@ -55,7 +55,7 @@
       "latest_proposal_artifact_id": null,
       "latest_execution_artifact_id": null,
       "last_cos_summary": "어떤 맥락인지 한 줄만 더 알려주세요.",
-      "updated_at": "2026-04-05T09:02:56.467Z"
+      "updated_at": "2026-04-06T00:08:58.805Z"
     },
     "im:DmetaNarrow": {
       "thread_key": "im:DmetaNarrow",
@@ -78,7 +78,7 @@
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
       "last_cos_summary": "planner path reply",
-      "updated_at": "2026-04-05T09:03:00.948Z"
+      "updated_at": "2026-04-06T00:09:04.410Z"
     },
     "im:Dv13nr": {
       "thread_key": "im:Dv13nr",
@@ -101,7 +101,7 @@
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
       "last_cos_summary": null,
-      "updated_at": "2026-04-05T09:02:57.276Z"
+      "updated_at": "2026-04-06T00:08:59.807Z"
     },
     "im:C_TEST": {
       "thread_key": "im:C_TEST",
@@ -124,7 +124,31 @@
       "last_founder_confirmation_kind": null,
       "approval_lineage_status": null,
       "last_cos_summary": "COS 응답 경로가 구성되지 않았습니다. 운영 환경에서 대화 모델 연결을 확인해 주세요.",
-      "updated_at": "2026-04-05T09:03:05.263Z"
+      "updated_at": "2026-04-06T00:09:09.043Z"
+    },
+    "im:Dtest99": {
+      "thread_key": "im:Dtest99",
+      "project_id": null,
+      "north_star": null,
+      "current_problem_statement": null,
+      "current_scope_summary": null,
+      "locked_scope": null,
+      "decisions": [],
+      "open_questions": [],
+      "constraints": [],
+      "benchmarks": [],
+      "pending_confirmations": [],
+      "approval_state": null,
+      "execution_readiness": null,
+      "latest_proposal_artifact_id": null,
+      "latest_approval_artifact_id": null,
+      "latest_execution_artifact_id": null,
+      "last_founder_confirmation_at": null,
+      "last_founder_confirmation_kind": null,
+      "approval_lineage_status": null,
+      "last_cos_summary": "테스트용 자연어 응답입니다.",
+      "latest_file_contexts": [],
+      "updated_at": "2026-04-06T00:09:07.061Z"
     }
   }
 }

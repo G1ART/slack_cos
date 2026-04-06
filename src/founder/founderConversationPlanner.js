@@ -6,6 +6,7 @@
 
 import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
 import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
+import { SAFE_FALLBACK_TEXT } from '../core/founderContracts.js';
 import {
   FOUNDER_CONVERSATION_PLANNER_SCHEMA,
   normalizePlannerRow,
@@ -28,8 +29,19 @@ const PLANNER_INSTRUCTIONS = `
 - proposal_artifact / approval_artifact 에 안정 id가 필요하면 _cos_artifact_id 에 짧은 고유 문자열을 둔다.
 - state_delta: durable state — 실행 요청 시 최소 포함 후보: latest_proposal_artifact_id, latest_approval_artifact_id, last_founder_confirmation_at (ISO), last_founder_confirmation_kind, approval_lineage_status(확정 시 confirmed).
 - durable_state.latest_file_contexts / contextFrame.recent_file_contexts: Slack 첨부(DOCX/PDF/PNG 등) 자동 인테이크 기록. **실행·승인 아티팩트와 혼동하지 말 것.** 파일만으로는 제안/승인 확정을 추정하지 말 것.
+- contextFrame.slack_attachment_failure_notes: 첨부 **실패** 요약(한국어). user_message 에는 넣지 말고, 답변 시 기술 덤프·HTML/내부 코드를 그대로 반복하지 말 것.
 - follow_up_questions: 필요 시 되물음.
 `.trim();
+
+function sanitizeStructuredPlannerSidecar(sidecar) {
+  const raw = String(sidecar?.natural_language_reply || '').trim();
+  const { text: sanitized, stripped_to_empty } = sanitizePartnerNaturalLlmOutput(raw);
+  const out = sanitized || SAFE_FALLBACK_TEXT;
+  return {
+    sidecar: { ...sidecar, natural_language_reply: out },
+    structured_output_sanitized: raw !== out || stripped_to_empty,
+  };
+}
 
 /**
  * @param {{
@@ -46,7 +58,14 @@ export async function planFounderConversationTurn(args) {
 
   if (mockPlannerRow && typeof mockPlannerRow === 'object') {
     const n = normalizePlannerRow(mockPlannerRow);
-    if (n.ok && n.sidecar) return { sidecar: n.sidecar, source: 'mock' };
+    if (n.ok && n.sidecar) {
+      const s = sanitizeStructuredPlannerSidecar(n.sidecar);
+      return {
+        sidecar: s.sidecar,
+        source: 'mock',
+        structured_output_sanitized: s.structured_output_sanitized,
+      };
+    }
   }
 
   if (typeof callJSON === 'function') {
@@ -62,7 +81,14 @@ export async function planFounderConversationTurn(args) {
         schema: FOUNDER_CONVERSATION_PLANNER_SCHEMA,
       });
       const n = normalizePlannerRow(row);
-      if (n.ok && n.sidecar) return { sidecar: n.sidecar, source: 'structured_llm' };
+      if (n.ok && n.sidecar) {
+        const s = sanitizeStructuredPlannerSidecar(n.sidecar);
+        return {
+          sidecar: s.sidecar,
+          source: 'structured_llm',
+          structured_output_sanitized: s.structured_output_sanitized,
+        };
+      }
     } catch (e) {
       console.error('[FOUNDER_CONVERSATION_PLANNER_JSON]', e?.message || e);
     }
@@ -82,6 +108,7 @@ export async function planFounderConversationTurn(args) {
       sidecar: emptySidecarFromPartner(sanitized),
       source: 'partner_fallback_no_sidecar',
       partner_output_sanitized: raw !== sanitized || stripped_to_empty,
+      structured_output_sanitized: false,
     };
   }
 
@@ -90,5 +117,6 @@ export async function planFounderConversationTurn(args) {
       'COS 응답 경로가 구성되지 않았습니다. 운영 환경에서 대화 모델 연결을 확인해 주세요.',
     ),
     source: 'empty',
+    structured_output_sanitized: false,
   };
 }

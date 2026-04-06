@@ -1,4 +1,4 @@
-# Release lock — vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
+# Release lock — vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
 
 기능 추가가 아니라 **창업자 면 preflight** 와 **launch 권한**에 대한 회귀 방지 계약이다. 상위 서사: `docs/FOUNDATION_RESET.md`.
 
@@ -13,8 +13,9 @@
 
 - 주 기억: `founderConversationState` 필드(`latest_proposal_artifact_id`, `latest_approval_artifact_id`, `last_founder_confirmation_at`, `approval_lineage_status` 등).
 - **vNext.13.6**: Slack 첨부 인테이크 요약·상태는 `latest_file_contexts[]`(캡 `COS_FOUNDER_FILE_CONTEXT_CAP`)에 append; 스냅샷·플래너 컨텍스트의 `recent_file_contexts`로 노출. **파일 인테이크는 실행·승인 lineage와 별도**이며, 첨부만으로 spine/승인을 열지 않는다.
-- **vNext.13.8**: 파일 실패도 **동일** combined 경로로 모델에 전달(조기 `skipPlanner` 반환 금지). 창업자 본문에는 **승인 패킷 섹션 병합 금지**; 외부 실행 후보는 trace 만.
-- **vNext.13.7 (역사)**: 실패 재주입 금지 → 13.8 에서는 **입력 쪽 짧은 안내만** 허용, 표면 사후 봉합 제거.
+- **vNext.13.9**: 플래너 `user_message` 에는 **대표 원문만**. 파일 성공 맥락은 `durable_state.latest_file_contexts` / 스냅샷; 실패는 `metadata.failure_notes` → `contextFrame.slack_attachment_failure_notes`. **첨부만·전부 실패** → `attachment_short_circuit_failure` 로 LLM 미호출. `ingestSlackFile`: `[SLACK_FILE_ACQUIRE_TRACE]` · `text/html` Content-Type 조기 실패 · 404 → `not_found`. **`app.js`**: 창업자 경로에서 `버전`/SHA **암시적** `runtime_meta` 선처리 **금지**.
+- **vNext.13.8 (역사)**: 단일 자연어 표면·패킷 병합 제거.
+- **vNext.13.7 (역사)**: 실패 재주입 금지 방향 — 13.9 에서 본문 재주입 완전 제거.
 - Transcript는 보조. **Spine eligibility** 은 “이번 턴 sidecar 가 방금 제안한 lineage”가 아니라 **이미 저장된 pre-turn 행**만 신뢰한다 (same-turn self-authorization 금지).
 
 ## 3. Artifact-gated launch
@@ -47,6 +48,7 @@
 - `src/core` 또는 `src/founder` 에서 `legacy/founder` 또는 삭제된 `founderLaunchIntent.js` 경로 import.
 - lineage cross-check 우회, **same-turn sidecar merged preview 로 spine 열기**, 또는 raw-text 로 production launch 복구.
 - `founder_explicit_meta_utility_path` 없이 운영 메타 자동 매칭 복구.
+- 창업자 `user_message` 에 파일 **실패** 문구·`(첨부 처리 안내)` 재주입, 또는 **`app.js` 창업자 경로 `version` 암시 shortcut** 복구.
 - 승인 게이트 완화.
 
 ## 9. 구버전 서술 폐기

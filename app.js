@@ -748,7 +748,8 @@ async function handleUserText(userText, metadata = {}) {
   return runInboundTurnTraceScope(metadata, inputNorm, async () => {
     const ct = typeof metadata.callText === 'function' ? metadata.callText : callText;
     const founderLock = classifyFounderRoutingLock(inputNorm);
-    if (founderLock?.kind === 'version') {
+    /** vNext.13.9 — 창업자 경로에서는 `버전`/SHA 락 선처리 제거(암시적 meta shortcut 금지). 비창업자만 즉시 runtime_meta. */
+    if (founderLock?.kind === 'version' && !founderRoute) {
       mergeInboundAudit({
         routing_exit: 'runtime_meta_lock',
         ...traceFounderRouteInvariant(metadata),

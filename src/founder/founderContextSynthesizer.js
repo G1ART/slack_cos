@@ -43,6 +43,9 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata, conversati
   const snap = conversationStateSnapshot && typeof conversationStateSnapshot === 'object' ? conversationStateSnapshot : {};
   const ss = snap.state_snapshot && typeof snap.state_snapshot === 'object' ? snap.state_snapshot : {};
   const recent_file_contexts = Array.isArray(snap.recent_file_contexts) ? snap.recent_file_contexts : [];
+  const slack_attachment_failure_notes = Array.isArray(metadata?.failure_notes)
+    ? metadata.failure_notes.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
   if (recent_file_contexts.length > 0) {
     const last = recent_file_contexts[recent_file_contexts.length - 1];
     const fn = last?.filename ? String(last.filename) : '첨부';
@@ -74,5 +77,7 @@ export function synthesizeFounderContext({ threadKey: tkIn, metadata, conversati
     proposal_history_summary: snap.proposal_history_summary || null,
     execution_boundary_status: snap.execution_boundary_status || null,
     recent_file_contexts,
+    /** vNext.13.9 — 첨부 실패 안내는 컨텍스트 JSON에만 (user_message 본문 아님) */
+    slack_attachment_failure_notes,
   };
 }

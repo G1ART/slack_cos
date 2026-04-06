@@ -142,6 +142,8 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
 
   const partner_output_sanitized =
     plan.source === 'partner_fallback_no_sidecar' && plan.partner_output_sanitized === true;
+  const structured_output_sanitized =
+    (plan.source === 'structured_llm' || plan.source === 'mock') && plan.structured_output_sanitized === true;
 
   const workContext = founderMinimalWorkContext(metadata, threadKey);
   return {
@@ -158,7 +160,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       surface_type: FounderSurfaceType.PARTNER_NATURAL,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.8',
+      pipeline_version: 'vNext.13.9',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,
@@ -180,6 +182,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       proposal_contract_trace: proposal.proposal_contract_trace ?? null,
       partner_natural: plan.source === 'partner_fallback_no_sidecar' && typeof callText === 'function',
       partner_output_sanitized,
+      structured_output_sanitized,
       approval_required: proposal.approval_required === true || ext,
       approval_packet_attached: ext,
       external_dispatch_candidate: ext,

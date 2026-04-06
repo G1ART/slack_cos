@@ -1,4 +1,4 @@
-# Foundation reset — founder authority (vNext.13.8 / 13.5 / 13.5b)
+# Foundation reset — founder authority (vNext.13.9 / 13.8 / 13.5 / 13.5b)
 
 이 문서는 **창업자(COS 대표) 면**의 권한·기억·실행 연결을 한 페이지로 고정한다. `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` 하위 보조 정본이다.
 
@@ -22,9 +22,10 @@
 - SHA / Cursor / Supabase 등 운영 질의는 **`metadata.founder_explicit_meta_utility_path === true`** 일 때만 커널 입구에서 결정론 처리한다.
 - 그 외 일반 대화는 **conversation pipeline**(플래너·상태)으로 처리한다. **vNext.13.8**: 기본 창업자 **Slack 표면**은 **항상** 자연어(`partner_natural_surface`) 한 겹이다. 외부 실행 후보는 **boundary/trace**(`approval_packet_attached`, `external_dispatch_candidate`)로만 노출하고, 승인 패킷 포맷을 본문에 붙이지 않는다.
 
-## 3b. 파일 인제스트와 플래너 입력 (vNext.13.7 → 13.8)
+## 3b. 파일 인제스트와 플래너 입력 (vNext.13.7 → 13.9)
 
-- **vNext.13.8**: 파일 **실패·성공** 모두 `buildFounderTurnTextAfterFileIngest` 로 **같은** `handleUserText` / `runFounderDirectKernel` 경로로만 이어진다. 실패 안내는 **모델 입력**에 짧게 포함되며, 응답 끝에 **사후 덧붙임**하지 않는다.
+- **vNext.13.9**: `buildFounderTurnAfterFileIngest` — **`modelUserText`** 는 대표 원문만; **실패 문구는 `failure_notes` / `slack_attachment_failure_notes` 만**. 첨부만·전부 실패 시 **short-circuit**(LLM 없음). 성공 파일 내용은 **이미 `mergeFounderConversationState` 된 `latest_file_contexts`** 로 플래너 JSON에만 반영.
+- **vNext.13.8 (역사)**: 동일 커널 경로 유지하되, 13.9 에서 본문 합성 제거.
 - **성공**한 추출만 요약 길이 상한을 두어 컨텍스트에 넣는다 (`buildConciseFileContextForPlanner`).
 - MIME/확장자 선언보다 **다운로드 바이트 시그니처**를 우선해 오판을 줄인다 (`peekPayloadNature`, `resolveEffectiveKindAfterDownload`).
 

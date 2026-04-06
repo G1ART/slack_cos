@@ -7,6 +7,8 @@ const r = buildFounderTurnTextAfterFileIngest(
   '이 파일 왜 안 열려?',
 );
 assert.ok(r.combinedTextForPlanner.includes('이 파일 왜 안 열려?'));
-assert.ok(r.combinedTextForPlanner.includes('첨부 처리 안내') || r.combinedTextForPlanner.includes('참고'));
+assert.ok(!r.combinedTextForPlanner.includes('첨부 처리 안내'));
+assert.ok(!r.combinedTextForPlanner.includes('참고'));
+assert.ok(r.failureNotes.length >= 1);
 
 console.log('ok: vnext13_8_founder_file_failure_stays_natural');

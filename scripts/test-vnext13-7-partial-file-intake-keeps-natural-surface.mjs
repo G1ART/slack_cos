@@ -13,7 +13,7 @@ assert.equal(part.skipPlannerEntirely, false);
 
 const planner = buildFounderPlannerInputAfterFileIngest(results, '둘 다 봐줘');
 assert.ok(planner.combinedTextForPlanner.includes('둘 다 봐줘'));
-assert.ok(planner.combinedTextForPlanner.includes('첨부 요약'));
+assert.ok(!planner.combinedTextForPlanner.includes('첨부 요약'), 'vNext.13.9: 파일 요약은 userText에 붙이지 않음');
 assert.equal(planner.skipPlanner, false);
 assert.ok(planner.failureNotes.length >= 1);
 
