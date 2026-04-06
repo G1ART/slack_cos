@@ -17,9 +17,14 @@ const PARSEABLE_EXTENSIONS = new Set([
   'docx',
   'pdf',
   'png',
+  'jpg',
+  'jpeg',
+  'webp',
 ]);
 
-const BINARY_EXTENSIONS = new Set(['docx', 'pdf', 'png']);
+const BINARY_EXTENSIONS = new Set(['docx', 'pdf', 'png', 'jpg', 'jpeg', 'webp']);
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp']);
 
 const SUMMARY_MAX = 2000;
 
@@ -35,7 +40,7 @@ function founderFileMaxBytes() {
 /**
  * @param {string} filename
  * @param {string} mimetype
- * @returns {{ ok: true, kind: 'docx'|'pdf'|'png'|'text' } | { ok: false, errorCode: string }}
+ * @returns {{ ok: true, kind: 'docx'|'pdf'|'image'|'text' } | { ok: false, errorCode: string }}
  */
 export function resolveMvpFileKind(filename, mimetype) {
   const ext = filename.split('.').pop()?.toLowerCase() || '';
@@ -47,19 +52,19 @@ export function resolveMvpFileKind(filename, mimetype) {
   const fromExt =
     ext === 'pdf'
       ? 'pdf'
-      : ext === 'png'
-        ? 'png'
+      : IMAGE_EXTENSIONS.has(ext)
+        ? 'image'
         : ext === 'docx'
           ? 'docx'
-          : PARSEABLE_EXTENSIONS.has(ext) && !['pdf', 'png', 'docx'].includes(ext)
+          : PARSEABLE_EXTENSIONS.has(ext) && !['pdf', ...IMAGE_EXTENSIONS, 'docx'].includes(ext)
             ? 'text'
             : null;
 
   const fromMime =
     m === 'application/pdf'
       ? 'pdf'
-      : m === 'image/png'
-        ? 'png'
+      : m === 'image/png' || m === 'image/jpeg' || m === 'image/jpg' || m === 'image/webp'
+        ? 'image'
         : m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
           ? 'docx'
           : m.startsWith('text/') || m === 'application/json'
@@ -70,8 +75,8 @@ export function resolveMvpFileKind(filename, mimetype) {
     const k =
       ext === 'pdf'
         ? 'pdf'
-        : ext === 'png'
-          ? 'png'
+        : IMAGE_EXTENSIONS.has(ext)
+          ? 'image'
           : ext === 'docx'
             ? 'docx'
             : PARSEABLE_EXTENSIONS.has(ext)
@@ -114,6 +119,8 @@ export function mapIngestErrorToAcquireFailureCode(errorCode) {
     empty_content: 'extract_failed',
     png_vision_failed: 'extract_failed',
     png_summarizer_missing: 'unsupported',
+    image_summarizer_missing: 'unsupported',
+    image_vision_failed: 'extract_failed',
     fetch_failed: 'unknown',
     scope_missing: 'auth_failed',
     permission_or_token_fetch_failure: 'auth_failed',
@@ -207,18 +214,26 @@ export function formatFounderFacingFileFailure(result) {
       '파일 대신 HTML(미리보기·로그인 페이지 등)이 내려와 본문을 읽지 못했습니다. 같은 파일을 다시 올리거나, 본문을 붙여 넣어 주세요.',
     downloaded_preview_not_binary:
       '바이너리 대신 텍스트/미리보기 응답만 받았습니다. 다시 업로드하거나 다른 형식으로 보내 주세요.',
-    unsupported_payload_signature: '받은 데이터가 알려진 PDF·PNG·DOCX·텍스트 형식으로 보이지 않습니다.',
+    unsupported_payload_signature: '받은 데이터가 알려진 PDF·이미지·DOCX·텍스트 형식으로 보이지 않습니다.',
     missing_download_bytes: '다운로드한 내용이 비어 있습니다. 권한·링크 만료를 확인해 주세요.',
     declared_type_conflict: 'Slack이 알려준 형식과 실제 파일 내용이 어긋납니다. 확장자가 맞는지 확인해 주세요.',
     permission_or_token_fetch_failure: '파일을 가져오는 단계에서 권한이 부족합니다. 앱 권한·파일 접근을 확인해 주세요.',
     mime_ext_mismatch:
       '표시된 형식 정보가 서로 어긋나 보입니다. 파일을 다시 올리거나, 내용을 텍스트로 붙여 주시면 됩니다.',
     oversized: '파일이 허용 용량을 넘습니다. 더 작은 파일이나 일부만 보내 주세요.',
-    pdf_no_text_layer: 'PDF에 선택 가능한 텍스트가 없어 읽지 못했습니다. 스캔본이면 OCR이 필요합니다.',
+    pdf_no_text_layer:
+      '이 PDF는 텍스트 레이어가 없어 바로 읽기 어렵습니다. 본문을 복사해 붙이거나, OCR된 PDF/이미지로 다시 보내 주세요.',
+    image_summarizer_missing:
+      '이미지 분석기가 준비되지 않아 첨부를 읽지 못했습니다. 같은 파일을 다시 올리거나, 핵심 내용을 텍스트로 보내 주세요.',
+    image_vision_failed:
+      '이미지 내용을 읽는 중 문제가 생겼습니다. 같은 파일을 다시 올리거나, JPG/PNG/WEBP 형식으로 다시 보내 주세요.',
+    png_summarizer_missing:
+      '이미지 분석기가 준비되지 않아 첨부를 읽지 못했습니다. 같은 파일을 다시 올리거나, 핵심 내용을 텍스트로 보내 주세요.',
+    png_vision_failed:
+      '이미지 내용을 읽는 중 문제가 생겼습니다. 같은 파일을 다시 올리거나, JPG/PNG/WEBP 형식으로 다시 보내 주세요.',
     scope_missing: '파일을 읽을 앱 권한(files:read)이 없습니다.',
     no_url: '이 대화에서는 파일 URL에 접근할 수 없습니다.',
     fetch_failed: '파일을 받아오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-    png_vision_failed: '이미지 내용을 요약하지 못했습니다. 잠시 후 다시 시도하거나 짧게 설명해 주세요.',
   };
   if (map[code]) return map[code];
   return formatFileIngestError(result);
@@ -250,7 +265,17 @@ export function peekPayloadNature(buf) {
     return { kind: 'html', detail: 'json_error_body' };
   }
   if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
-    return { kind: 'png' };
+    return { kind: 'image' };
+  }
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+    return { kind: 'image' };
+  }
+  if (
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buf.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return { kind: 'image' };
   }
   if (buf.length >= 4 && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) {
     return { kind: 'pdf' };
@@ -280,6 +305,9 @@ export function canAttemptSlackFileIntake(filename, mimetype) {
   if (
     m === 'application/pdf' ||
     m === 'image/png' ||
+    m === 'image/jpeg' ||
+    m === 'image/jpg' ||
+    m === 'image/webp' ||
     m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ) {
     return true;
@@ -312,12 +340,12 @@ export function resolveEffectiveKindAfterDownload(buf, filename, slackFileMime, 
 
   const ext = filename.split('.').pop()?.toLowerCase() || '';
 
-  if (nature.kind === 'png') {
+  if (nature.kind === 'image') {
     trace.kind_source = 'payload_signature';
-    if (ext && ext !== 'png') {
-      trace.declared_type_conflict = { extension: ext, signature: 'png' };
+    if (ext && !IMAGE_EXTENSIONS.has(ext)) {
+      trace.declared_type_conflict = { extension: ext, signature: 'image' };
     }
-    return { effectiveKind: 'png', trace };
+    return { effectiveKind: 'image', trace };
   }
   if (nature.kind === 'pdf') {
     trace.kind_source = 'payload_signature';
@@ -399,7 +427,7 @@ export function diagnoseFileReadiness(ctx = {}) {
     supported_types: [...PARSEABLE_EXTENSIONS],
     limitations: [
       'pdf: 텍스트 레이어만 추출 (스캔/이미지 PDF는 본문 없을 수 있음)',
-      'png: OpenAI vision 요약(키 필요). 실행·승인과 별도 인테이크 경로.',
+      '이미지(PNG·JPEG·WEBP): OpenAI vision 요약(키 필요). 실행·승인과 별도 인테이크 경로.',
       'xlsx/pptx: 현재 미지원 (향후 추가 예정)',
       'Slack Connect 대화에서 외부 조직 파일은 접근이 제한될 수 있음',
     ],
@@ -440,8 +468,8 @@ export async function extractMvpFileFromBuffer(ctx) {
   const fname = filename || 'unknown';
   const mime = mimetype || '';
   const resolved =
-    kindOverride && ['docx', 'pdf', 'png', 'text'].includes(kindOverride)
-      ? { ok: true, kind: kindOverride }
+    kindOverride && ['docx', 'pdf', 'png', 'image', 'text'].includes(kindOverride)
+      ? { ok: true, kind: kindOverride === 'png' ? 'image' : kindOverride }
       : resolveMvpFileKind(fname, mime);
   if (!resolved.ok) {
     return {
@@ -486,26 +514,27 @@ export async function extractMvpFileFromBuffer(ctx) {
           mimetype: mime || 'application/pdf',
         };
       }
-    } else if (kind === 'png') {
+    } else if (kind === 'image' || kind === 'png') {
+      // summarizePng: 바이너리 이미지 버퍼용 vision 요약 (PNG·JPEG·WEBP 공통)
       if (typeof summarizePng !== 'function') {
         return {
           ok: false,
-          error: 'PNG 요약기가 구성되지 않았습니다',
-          errorCode: 'png_summarizer_missing',
+          error: '이미지 요약기가 구성되지 않았습니다',
+          errorCode: 'image_summarizer_missing',
           file_id: fileId,
           filename: fname,
-          mimetype: mime || 'image/png',
+          mimetype: mime || 'application/octet-stream',
         };
       }
       const vis = await summarizePng(buf);
       if (!vis?.ok) {
         return {
           ok: false,
-          error: vis?.error || 'PNG vision 요약 실패',
-          errorCode: 'png_vision_failed',
+          error: vis?.error || '이미지 vision 요약 실패',
+          errorCode: 'image_vision_failed',
           file_id: fileId,
           filename: fname,
-          mimetype: mime || 'image/png',
+          mimetype: mime || 'application/octet-stream',
         };
       }
       text = String(vis.text || '').trim();
@@ -538,7 +567,7 @@ export async function extractMvpFileFromBuffer(ctx) {
   const truncated = text.length > MAX_TEXT_LENGTH;
   const extractedText = truncated ? `${text.slice(0, MAX_TEXT_LENGTH)}\n...(truncated)` : text;
   const summary =
-    kind === 'png'
+    kind === 'image' || kind === 'png'
       ? extractedText.slice(0, SUMMARY_MAX)
       : extractedText.slice(0, SUMMARY_MAX);
 
@@ -868,6 +897,8 @@ export function formatFileIngestError(result) {
     pdf_parse_error: 'PDF 파싱에 실패했습니다.',
     png_summarizer_missing: 'PNG 요약 경로가 설정되지 않았습니다.',
     png_vision_failed: '이미지 요약(vision)에 실패했습니다. 잠시 후 다시 시도하거나 텍스트로 설명해 주세요.',
+    image_summarizer_missing: '이미지 요약 경로가 설정되지 않았습니다.',
+    image_vision_failed: '이미지 요약(vision)에 실패했습니다. 잠시 후 다시 시도하거나 텍스트로 설명해 주세요.',
     no_download_url: '파일 다운로드 URL을 확인할 수 없습니다.',
     no_token: '앱에 files:read scope가 없어 파일 내용을 읽을 수 없습니다.',
     scope_missing: '앱에 files:read scope가 없어 파일 내용을 읽을 수 없습니다.',

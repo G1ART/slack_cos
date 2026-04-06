@@ -1,6 +1,7 @@
 /**
  * vNext.13.7 — 창업자 DM/멘션: 파일 인제스트와 planner 입력 분리 (실패 재주입 금지).
  * vNext.13.9 — 모델 userText 는 대표 원문만; 실패는 failure_notes·컨텍스트 sidecar만.
+ * vNext.13.13 — founder 기본 경로는 persist 옵션으로 durable state / document-context side effect 끔.
  */
 
 import {
@@ -14,29 +15,83 @@ import { addDocumentToThread } from './slackDocumentContext.js';
 import { FounderSurfaceType } from '../core/founderContracts.js';
 
 /**
+ * Slack 핸들러 → founder 커널 메타: 성공 요약 + 실패 시 사람 문장 reason (vNext.13.13).
+ * @param {Array<Record<string, unknown>>} ingestResults
+ */
+export function buildCurrentAttachmentMetaFromIngest(ingestResults = []) {
+  const current_attachment_contexts = [];
+  const current_attachment_failures = [];
+
+  for (const r of ingestResults) {
+    if (r?.ok) {
+      const summary = String(r?.summary || r?.text || r?.extracted_text || '')
+        .trim()
+        .slice(0, 2000);
+      current_attachment_contexts.push({
+        filename: r?.filename || null,
+        summary,
+      });
+    } else {
+      const humanReason = formatFounderFacingFileFailure(r);
+      current_attachment_failures.push({
+        filename: r?.filename || null,
+        reason: String(humanReason || '첨부를 읽지 못했습니다.').trim(),
+      });
+    }
+  }
+
+  return { current_attachment_contexts, current_attachment_failures };
+}
+
+/**
  * @param {{
  *   files: object[],
  *   client: object,
  *   threadKey: string,
  *   summarizePng: Function,
+ *   persistToFounderState?: boolean,
+ *   persistToDocumentContext?: boolean,
+ *   ingestSlackFileFn?: typeof ingestSlackFile,
+ *   _testPersistCounts?: { mergeAttempts?: number, docAttempts?: number },
  * }} ctx
  * @returns {Promise<object[]>}
  */
 export async function founderIngestSlackFilesWithState(ctx) {
-  const { files, client, threadKey, summarizePng } = ctx;
+  const {
+    files,
+    client,
+    threadKey,
+    summarizePng,
+    persistToFounderState = true,
+    persistToDocumentContext = true,
+    ingestSlackFileFn,
+    _testPersistCounts,
+  } = ctx;
+  const doIngest = typeof ingestSlackFileFn === 'function' ? ingestSlackFileFn : ingestSlackFile;
   const results = [];
   for (const file of files) {
-    const result = await ingestSlackFile({ file, client, summarizePng, threadKey });
-    try {
-      await mergeFounderConversationState(threadKey, {
-        latest_file_contexts: [buildFounderFileContextEntry(threadKey, result)],
-      });
-    } catch (e) {
-      console.warn('[founderSlackFileTurn] mergeFounderConversationState:', e?.message || e);
+    const result = await doIngest({ file, client, summarizePng, threadKey });
+
+    if (persistToFounderState) {
+      if (_testPersistCounts) {
+        _testPersistCounts.mergeAttempts = (_testPersistCounts.mergeAttempts || 0) + 1;
+      }
+      try {
+        await mergeFounderConversationState(threadKey, {
+          latest_file_contexts: [buildFounderFileContextEntry(threadKey, result)],
+        });
+      } catch (e) {
+        console.warn('[founderSlackFileTurn] mergeFounderConversationState:', e?.message || e);
+      }
     }
-    if (result.ok) {
+
+    if (persistToDocumentContext && result.ok) {
+      if (_testPersistCounts) {
+        _testPersistCounts.docAttempts = (_testPersistCounts.docAttempts || 0) + 1;
+      }
       addDocumentToThread(threadKey, result);
     }
+
     results.push(result);
   }
   return results;

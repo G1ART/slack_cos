@@ -1,10 +1,29 @@
 /**
- * vNext.13.6 — Founder DM PNG: vision 요약 (실행/승인과 분리된 인테이크).
+ * vNext.13.6+ — Founder DM 이미지(PNG/JPEG/WebP 등): vision 요약 (실행/승인과 분리된 인테이크).
  */
 
 import OpenAI from 'openai';
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
+
+/**
+ * @param {Buffer} buf
+ * @returns {string} data URL for OpenAI image_url
+ */
+function bufferToVisionDataUrl(buf) {
+  const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf || []);
+  if (b.length >= 2 && b[0] === 0xff && b[1] === 0xd8) {
+    return `data:image/jpeg;base64,${b.toString('base64')}`;
+  }
+  if (
+    b.length >= 12 &&
+    b.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    b.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return `data:image/webp;base64,${b.toString('base64')}`;
+  }
+  return `data:image/png;base64,${b.toString('base64')}`;
+}
 
 /**
  * @param {Buffer} buffer
@@ -17,8 +36,7 @@ export async function summarizePngBufferForFounderDm(buffer) {
   }
   const model = String(process.env.COS_FOUNDER_IMAGE_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
   const openai = new OpenAI({ apiKey: key });
-  const b64 = Buffer.from(buffer).toString('base64');
-  const url = `data:image/png;base64,${b64}`;
+  const url = bufferToVisionDataUrl(buffer);
   try {
     const resp = await openai.chat.completions.create({
       model,
