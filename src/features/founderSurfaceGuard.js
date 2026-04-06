@@ -230,9 +230,17 @@ export const FOUNDER_HARD_BLOCK_FALLBACK =
  * @param {string} text
  * @returns {{ text: string, stripped_to_empty: boolean }}
  */
+/** Slack/API 미리보기 등에서 보이는 JSON 오류 덩어리 — 답변에서 제거 (vNext.13.10) */
+function stripTransportJsonErrorBlobs(s) {
+  return String(s || '')
+    .replace(/\{\s*"detail"\s*:\s*"[^"]*"\s*\}/g, '')
+    .replace(/\{\s*"detail"\s*:\s*'[^']*'\s*\}/g, '')
+    .replace(/\{\s*"detail"\s*:\s*[^}]+\}/g, '');
+}
+
 export function sanitizePartnerNaturalLlmOutput(text) {
-  const raw = String(text || '').trim();
-  if (!raw) return { text: '', stripped_to_empty: false };
+  const raw = stripTransportJsonErrorBlobs(String(text || '').trim());
+  if (!raw.trim()) return { text: '', stripped_to_empty: false };
   const cleaned = sanitizeFounderOutput(raw, { responder: 'partner_natural_surface' }).trim();
   if (cleaned) return { text: cleaned, stripped_to_empty: false };
   return {

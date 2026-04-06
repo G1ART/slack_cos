@@ -2,6 +2,10 @@
 
 **정본 읽기 순서**: `docs/cursor-handoffs/00_Document_Authority_Read_Path.md` → `docs/FOUNDATION_RESET.md` → `docs/RELEASE_LOCK.md`
 
+## vNext.13.10 (2026-04-06) — Founder natural surface subtraction (no planner body)
+
+**목적**: 슬랙 창업자 표면에서 **planner JSON의 `natural_language_reply`를 완전히 배제**하고, **항상 `runCosNaturalPartner`(단일 COS 대화)** 만이 본문을 쓴다. structured planner는 sidecar·실행 게이트·trace만. Council/섹션형 응답은 모델이 플래너에서 생성해도 **사용자에게는 절대 노출되지 않음**. 테스트: `scripts/test-vnext13-10-founder-natural-surface-harness.mjs`. 상세: `docs/cursor-handoffs/COS_vNext13_10_Founder_Natural_Surface_Subtraction_2026-04-06.md`.
+
 ## vNext.13.9 (2026-04-01) — Attachment truth pass / founder surface purity closure
 
 **목적**: 첨부 **acquisition 단계 진실 기록**, 플래너 `user_message` 는 **대표 원문만**, 실패는 `failure_notes`·`contextFrame.slack_attachment_failure_notes` 만. **첨부만·전부 실패** → LLM 없이 one-shot 실패 응답. **structured_llm** 경로도 `sanitizePartnerNaturalLlmOutput` 동일 강도. **`app.js`** 창업자 경로에서 **`버전`/SHA 암시적 `runtime_meta` 선처리 제거**(비창업자만 즉시 메타). **`sendFounderResponse`**: `partner_natural_surface` 최종 thin sanitize + `founder_outbound_purity_adjusted` trace.

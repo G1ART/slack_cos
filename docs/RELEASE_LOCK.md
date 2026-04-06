@@ -1,11 +1,11 @@
-# Release lock — vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
+# Release lock — vNext.13.10 (Natural surface / planner NL not shown) / vNext.13.9 (Attachment truth + founder purity) / vNext.13.8 (Founder zero-heuristic) / vNext.13.7 (Founder subtraction) / vNext.13.6 (Slack file intake) / vNext.13.5b (Durable approval lineage hard lock)
 
 기능 추가가 아니라 **창업자 면 preflight** 와 **launch 권한**에 대한 회귀 방지 계약이다. 상위 서사: `docs/FOUNDATION_RESET.md`.
 
 ## 1. Founder authority chain (현행)
 
 1. `app.js` `handleUserText`: `founder_route === true` 이면 **`runFounderDirectKernel` 만** (command / AI 라우터 미도달).
-2. **대화 파이프라인**: 턴 직전 durable state 로드 → `planFounderConversationTurn` → `mergeStateDeltaWithSidecarArtifactIds` 로 **persist 후보만** 계산 → `tryArtifactGatedExecutionSpine` 은 **`evaluateExecutionSpineEligibility`(pre-turn persisted lineage 만)** 통과 시만 `runFounderLaunchPipelineCore` → 턴 끝에 state persist → **자연어 표면**(`partner_natural_surface`, vNext.13.8).
+2. **대화 파이프라인**: 턴 직전 durable state 로드 → `planFounderConversationTurn`(sidecar·게이트용 structured; **슬랙 본문 아님**) → `mergeStateDeltaWithSidecarArtifactIds` → `tryArtifactGatedExecutionSpine` … → **슬랙 자연어 표면**은 **`runCosNaturalPartner` 단일 경로**만 (`vNext.13.10`).
 3. **원문 regex / raw-text launch** 는 프로덕션 경로에 **없음**. 레거시는 `src/legacy/` + `scripts` 회귀만.
 4. 오퍼레이터·채널: `founderRequestPipeline` — 창업자 생성 경로와 분리.
 
@@ -49,6 +49,7 @@
 - lineage cross-check 우회, **same-turn sidecar merged preview 로 spine 열기**, 또는 raw-text 로 production launch 복구.
 - `founder_explicit_meta_utility_path` 없이 운영 메타 자동 매칭 복구.
 - 창업자 `user_message` 에 파일 **실패** 문구·`(첨부 처리 안내)` 재주입, 또는 **`app.js` 창업자 경로 `version` 암시 shortcut** 복구.
+- 창업자 슬랙 본문을 **`planFounderConversationTurn` 의 `natural_language_reply`(structured/mock)** 로 다시 조립하는 복귀.
 - 승인 게이트 완화.
 
 ## 9. 구버전 서술 폐기

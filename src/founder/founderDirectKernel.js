@@ -2,9 +2,12 @@
  * vNext.13.1 — 창업자–COS 단일 커널.
  * vNext.13.4 — pre-reasoning gate 제거: context hydrate → COS planner 턴 → state persist → artifact gate → render.
  * vNext.13.8 — 모델 호출 전 내용 해석(접두 제거·패킷 표면 병합·hard_recover 패킷) 제거. 표면은 natural_language_reply 단일.
+ * vNext.13.10 — 슬랙 표면은 structured planner NL 금지; 항상 단일 COS 대화 모델(`runCosNaturalPartner`)만.
  */
 
 import { FounderSurfaceType, SAFE_FALLBACK_TEXT } from '../core/founderContracts.js';
+import { runCosNaturalPartner } from '../features/cosNaturalPartner.js';
+import { sanitizePartnerNaturalLlmOutput } from '../features/founderSurfaceGuard.js';
 import {
   normalizeFounderMetaCommandLine,
   classifyFounderRoutingLock,
@@ -31,6 +34,88 @@ function founderPreflightTrace() {
   return {
     founder_staging_mode: isFounderStagingModeEnabled(),
     founder_preflight_boundary: true,
+  };
+}
+
+/**
+ * @param {{
+ *   brainText: string,
+ *   metadata: Record<string, unknown>,
+ *   threadKey: string,
+ *   callText: ((a: { instructions: string, input: string }) => Promise<string>) | null,
+ *   plan: { source: string },
+ *   sidecar: { natural_language_reply?: string },
+ * }} a
+ */
+async function resolveFounderSlackSurfaceText(a) {
+  const { brainText, metadata, threadKey, callText, plan, sidecar } = a;
+
+  if (plan.source === 'partner_fallback_no_sidecar') {
+    const t = String(sidecar?.natural_language_reply || '').trim();
+    const { text, stripped_to_empty } = sanitizePartnerNaturalLlmOutput(t);
+    const body = text || SAFE_FALLBACK_TEXT;
+    return {
+      body,
+      partner_natural: true,
+      partner_output_sanitized:
+        t !== body || stripped_to_empty || plan.partner_output_sanitized === true,
+    };
+  }
+
+  if (typeof callText !== 'function') {
+    return { body: SAFE_FALLBACK_TEXT, partner_natural: false, partner_output_sanitized: false };
+  }
+
+  const convStateMid = await getFounderConversationState(threadKey);
+  const snap = founderStateToSnapshot(convStateMid);
+  const metaNoFail = { ...metadata, failure_notes: [] };
+  const frame = synthesizeFounderContext({
+    threadKey,
+    metadata: metaNoFail,
+    conversationStateSnapshot: snap,
+  });
+  const fileLines = [];
+  for (const x of frame.recent_file_contexts || []) {
+    const sum = String(x?.summary || '').trim();
+    if (sum && x?.extract_status !== 'failed') {
+      fileLines.push(`- ${x.filename || '첨부'}: ${sum.slice(0, 2000)}`);
+    }
+  }
+  const hasFail = Array.isArray(metadata.failure_notes) && metadata.failure_notes.length > 0;
+  let partnerUser = String(brainText || '').trim();
+  if (hasFail) {
+    partnerUser += `\n\n참고: 이 턴에는 첨부 파일 내용을 시스템에서 열지 못했을 수 있다. JSON·API 원문은 답에 넣지 말고 짧은 평문 한국어로만 안내하라.`;
+  }
+  if (fileLines.length) {
+    partnerUser += `\n\n아래는 최근 첨부에서 읽은 요약이다. 필요하면 대화에 자연스럽게 반영하라.\n${fileLines.join('\n')}`;
+  }
+
+  let raw = '';
+  try {
+    raw = await runCosNaturalPartner({
+      callText,
+      userText: partnerUser,
+      channelContext: null,
+      route: { primary_agent: 'founder_kernel', include_risk: false, urgency: 'normal' },
+      priorTranscript: String(getConversationTranscript(threadKey) || ''),
+    });
+  } catch {
+    raw = '';
+  }
+
+  const sanitized = sanitizePartnerNaturalLlmOutput(String(raw || '').trim());
+  let body = sanitized.text || '';
+  const hasMock = metadata.mockFounderPlannerRow != null;
+  if (!body.trim() && hasMock) {
+    const fb = sanitizePartnerNaturalLlmOutput(String(sidecar?.natural_language_reply || ''));
+    body = fb.text || '';
+  }
+  if (!body.trim()) body = SAFE_FALLBACK_TEXT;
+
+  return {
+    body,
+    partner_natural: true,
+    partner_output_sanitized: String(raw || '').trim() !== body.trim(),
   };
 }
 
@@ -95,7 +180,6 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
 
   const space = getProjectSpaceByThread(threadKey);
   await mergeFounderConversationState(threadKey, mergedDelta, {
-    last_cos_summary: sidecar.natural_language_reply?.slice(0, 800) || null,
     project_id: space?.project_id ?? convState.project_id ?? null,
   });
 
@@ -135,15 +219,23 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
   const execution_mode_selected = selectExecutionModeFromProposalPacket(proposal);
 
   const ext = proposal.external_execution_tasks?.length > 0;
-  let body = String(sidecar.natural_language_reply || '').trim();
-  if (!body.trim()) {
-    body = '지금 턴 답변을 정리하지 못했습니다. 한 문장만 다시 알려주실 수 있을까요?';
-  }
+  const surface = await resolveFounderSlackSurfaceText({
+    brainText,
+    metadata,
+    threadKey,
+    callText,
+    plan,
+    sidecar,
+  });
+  const body = surface.body;
 
-  const partner_output_sanitized =
-    plan.source === 'partner_fallback_no_sidecar' && plan.partner_output_sanitized === true;
-  const structured_output_sanitized =
-    (plan.source === 'structured_llm' || plan.source === 'mock') && plan.structured_output_sanitized === true;
+  await mergeFounderConversationState(threadKey, {}, {
+    last_cos_summary: body.slice(0, 800),
+    project_id: space?.project_id ?? convState.project_id ?? null,
+  });
+
+  const partner_output_sanitized = surface.partner_output_sanitized === true;
+  const structured_output_sanitized = false;
 
   const workContext = founderMinimalWorkContext(metadata, threadKey);
   return {
@@ -160,7 +252,7 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       surface_type: FounderSurfaceType.PARTNER_NATURAL,
       route_label: route_label || null,
       responder_kind: 'founder_kernel',
-      pipeline_version: 'vNext.13.9',
+      pipeline_version: 'vNext.13.10',
       responder: 'founder_kernel',
       passed_pipeline: true,
       passed_renderer: true,
@@ -180,9 +272,10 @@ async function runFounderConversationPipeline(brainText, metadata, route_label, 
       governance_advisory_topics: [],
       proposal_execution_contract: proposal.proposal_execution_contract ?? null,
       proposal_contract_trace: proposal.proposal_contract_trace ?? null,
-      partner_natural: plan.source === 'partner_fallback_no_sidecar' && typeof callText === 'function',
+      partner_natural: surface.partner_natural === true,
       partner_output_sanitized,
       structured_output_sanitized,
+      founder_surface_source: 'cos_natural_partner_only',
       approval_required: proposal.approval_required === true || ext,
       approval_packet_attached: ext,
       external_dispatch_candidate: ext,
