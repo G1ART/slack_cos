@@ -81,10 +81,11 @@ console.info(
   }),
 );
 
+await startCosHttpServer({ env: process.env });
+console.log('[startup] public HTTP ingress (healthz / webhooks) listening.');
+
 await slackApp.start();
 console.log('[startup] COS founder spine running.');
-
-await startCosHttpServer({ env: process.env });
 
 if (String(process.env.COS_RUN_SUPERVISOR_DISABLED || '').trim() !== '1') {
   startRunSupervisorLoop({
