@@ -1,13 +1,26 @@
 /**
- * 외부 툴 TOOL_ADAPTERS — live는 실제 호출 가능할 때만, 그 외 artifact(파일 기록).
+ * 외부 툴 TOOL_ADAPTERS — live는 런타임에서 실제로 실행 가능할 때만, 그 외 artifact.
+ * Readiness: 호스트·env·바이너리 기준 진실 (추정 live 금지).
  */
 
 import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
+import { createClient } from '@supabase/supabase-js';
 import { appendExecutionArtifact, cosRuntimeBaseDir } from './executionLedger.js';
 
+const execFileAsync = promisify(execFile);
+
+/** 테스트 전용: Cursor live 경로의 execFile 대체 (@param {typeof execFileAsync | null} fn */
+export const __cursorExecFileForTests = { fn: /** @type {typeof execFileAsync | null} */ (null) };
+
 const TOOL_ENUM = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
+
+/** PostgREST RPC 이름 — DB에 함수가 있어야 apply_sql live 성공 */
+export const SUPABASE_APPLY_SQL_RPC = 'cos_apply_sql';
 
 /** @param {string} sub */
 async function artifactSubdir(sub) {
@@ -42,16 +55,317 @@ function parseGithubRepo(env) {
   return { owner: parts[0], repo: parts[1] };
 }
 
+/**
+ * @param {string} urlStr
+ */
+function isPlausibleSupabaseUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @param {Record<string, string | undefined>} env
+ * @returns {Promise<string | null>} absolute path to executable
+ */
+async function resolveCursorCliPath(env) {
+  const explicit = String(env.CURSOR_CLI_BIN || '').trim();
+  const candidates = explicit ? [explicit] : ['agent', 'cursor-agent'];
+  for (const c of candidates) {
+    const abs = path.isAbsolute(c) ? c : c;
+    if (path.isAbsolute(abs)) {
+      try {
+        await fs.access(abs, fsSync.constants.F_OK);
+        return abs;
+      } catch {
+        continue;
+      }
+    }
+    try {
+      const { stdout } = await execFileAsync('/bin/sh', ['-lc', `command -v ${JSON.stringify(c)}`], {
+        encoding: 'utf8',
+        maxBuffer: 4096,
+      });
+      const p = String(stdout || '').trim().split('\n')[0];
+      if (p) return p;
+    } catch {
+      /* PATH에 없음 */
+    }
+  }
+  return null;
+}
+
+/**
+ * @param {Record<string, string | undefined>} env
+ */
+function cursorProjectDir(env) {
+  const d = String(env.CURSOR_PROJECT_DIR || '').trim();
+  return d ? path.resolve(d) : process.cwd();
+}
+
+/**
+ * @param {string} dir
+ */
+async function isDir(dir) {
+  try {
+    const st = await fs.stat(dir);
+    return st.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @typedef {object} AdapterReadiness
+ * @property {string} tool
+ * @property {boolean} live_capable
+ * @property {boolean} configured
+ * @property {string} reason
+ * @property {string[]} missing
+ * @property {Record<string, unknown>} details
+ */
+
+/**
+ * @param {string} tool
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {Promise<AdapterReadiness>}
+ */
+export async function getAdapterReadiness(tool, env = process.env) {
+  const e = env || process.env;
+
+  if (tool === 'github') {
+    const token = String(e.GITHUB_TOKEN || '').trim();
+    const repoRaw = String(e.GITHUB_REPOSITORY || '').trim();
+    const repo = parseGithubRepo(e);
+    const missing = [];
+    if (!token) missing.push('GITHUB_TOKEN');
+    if (!repoRaw) missing.push('GITHUB_REPOSITORY');
+    else if (!repo) missing.push('GITHUB_REPOSITORY(parse: need owner/repo)');
+    const configured = !!token && !!repo;
+    const live_capable = configured;
+    const reason = live_capable
+      ? 'token+repo OK → REST live 가능'
+      : !token
+        ? '토큰 없음 → artifact'
+        : !repoRaw
+          ? 'GITHUB_REPOSITORY 없음 → artifact'
+          : 'GITHUB_REPOSITORY 형식 오류(owner/repo) → artifact';
+    return {
+      tool: 'github',
+      live_capable,
+      configured: !!token || !!repoRaw,
+      reason,
+      missing,
+      details: { has_token: !!token, repo_parse_ok: !!repo, repository: repoRaw || null },
+    };
+  }
+
+  if (tool === 'supabase') {
+    const url = String(e.SUPABASE_URL || '').trim();
+    const key = String(e.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+    const missing = [];
+    if (!url) missing.push('SUPABASE_URL');
+    if (!key) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    const urlOk = url && isPlausibleSupabaseUrl(url);
+    if (url && !urlOk) missing.push('SUPABASE_URL(invalid)');
+    const configured = !!url && !!key && urlOk;
+    const live_capable = configured;
+    const reason = live_capable
+      ? `service-role 클라이언트 + RPC ${SUPABASE_APPLY_SQL_RPC} 호출 시도 (DB에 함수 필요)`
+      : '자격·URL 부족 → artifact';
+    return {
+      tool: 'supabase',
+      live_capable,
+      configured: !!url || !!key,
+      reason,
+      missing,
+      details: {
+        url_present: !!url,
+        url_valid: urlOk,
+        service_role_present: !!key,
+        rpc: SUPABASE_APPLY_SQL_RPC,
+      },
+    };
+  }
+
+  if (tool === 'cursor') {
+    const cliPath = await resolveCursorCliPath(e);
+    const cwd = cursorProjectDir(e);
+    const cwdOk = await isDir(cwd);
+    const missing = [];
+    if (!cliPath) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
+    if (!cwdOk) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
+    const live_capable = !!cliPath && cwdOk;
+    const reason = live_capable
+      ? 'CLI+cwd OK → create_spec live 시도 가능 (emit_patch는 artifact-only)'
+      : !cliPath
+        ? 'Cursor CLI 없음 → artifact-only'
+        : '작업 디렉터리 없음 → artifact-only';
+    return {
+      tool: 'cursor',
+      live_capable,
+      configured: !!cliPath || !!String(e.CURSOR_CLI_BIN || '').trim(),
+      reason,
+      missing,
+      details: {
+        cli_path: cliPath,
+        cwd,
+        cwd_ok: cwdOk,
+        live_actions: ['create_spec'],
+        artifact_actions: ['emit_patch'],
+      },
+    };
+  }
+
+  if (tool === 'railway') {
+    const token = String(e.RAILWAY_TOKEN || '').trim();
+    const dep = String(e.RAILWAY_DEPLOYMENT_ID || '').trim();
+    const missing = [];
+    if (!token) missing.push('RAILWAY_TOKEN');
+    if (!dep) missing.push('RAILWAY_DEPLOYMENT_ID 또는 payload.deployment_id');
+    const inspectReady = !!token;
+    const inspectLiveCapable = !!token && !!dep;
+    const reason = `inspect_logs: ${inspectLiveCapable ? 'live 가능(deployment_id 있음)' : token ? 'deployment_id 필요' : '토큰 없음'}; deploy: 비활성`;
+    return {
+      tool: 'railway',
+      live_capable: inspectLiveCapable,
+      configured: !!token,
+      reason,
+      missing: token ? (dep ? [] : ['deployment_id']) : ['RAILWAY_TOKEN'],
+      details: {
+        has_token: !!token,
+        default_deployment_id: dep || null,
+        inspect_logs_live_capable: inspectLiveCapable,
+        deploy_live: false,
+        deploy_blocked_reason: '이 빌드에서 railway deploy live 미개방',
+      },
+    };
+  }
+
+  if (tool === 'vercel') {
+    return {
+      tool: 'vercel',
+      live_capable: false,
+      configured: false,
+      reason: 'vercel live 미구현 → 항상 artifact',
+      missing: [],
+      details: { deploy_live: false },
+    };
+  }
+
+  return {
+    tool: String(tool),
+    live_capable: false,
+    configured: false,
+    reason: 'unknown tool',
+    missing: [],
+    details: {},
+  };
+}
+
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {Promise<AdapterReadiness[]>}
+ */
+export async function getAllAdapterReadiness(env = process.env) {
+  const tools = ['github', 'supabase', 'cursor', 'railway', 'vercel'];
+  const out = [];
+  for (const t of tools) {
+    out.push(await getAdapterReadiness(t, env));
+  }
+  return out;
+}
+
+/**
+ * COS 시스템 입력용 1줄 요약 (최대 6줄 권장).
+ * @param {AdapterReadiness} r
+ */
+export function formatAdapterReadinessOneLine(r) {
+  if (r.tool === 'github') {
+    return `github: ${r.live_capable ? 'live-ready' : 'artifact'} — ${r.reason}`;
+  }
+  if (r.tool === 'supabase') {
+    return `supabase: ${r.live_capable ? 'live-ready(apply_sql→rpc)' : 'artifact'} — ${r.reason}`;
+  }
+  if (r.tool === 'cursor') {
+    return `cursor: ${r.live_capable ? 'create_spec live-ready' : 'artifact-only'} — ${r.reason}`;
+  }
+  if (r.tool === 'railway') {
+    const d = r.details;
+    const ins = d.inspect_logs_live_capable ? 'inspect_logs-ready' : 'inspect_logs-needs-deployment_id';
+    return `railway: ${ins} / deploy-disabled — ${r.reason}`;
+  }
+  if (r.tool === 'vercel') {
+    return `vercel: artifact-only — ${r.reason}`;
+  }
+  return `${r.tool}: ${r.live_capable ? 'live' : 'artifact'} — ${r.reason}`;
+}
+
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {number} [max]
+ * @returns {Promise<string[]>}
+ */
+export async function formatAdapterReadinessCompactLines(env = process.env, max = 6) {
+  const all = await getAllAdapterReadiness(env);
+  return all.map(formatAdapterReadinessOneLine).slice(0, max);
+}
+
 const TOOL_ADAPTERS = {
   cursor: {
-    /** @param {string} action @param {object} payload @param {NodeJS.ProcessEnv} env */
-    canExecuteLive(_action, _payload, _env) {
-      return false;
+    /** @param {string} action */
+    async canExecuteLive(action, _payload, env) {
+      if (action !== 'create_spec') return false;
+      const r = await getAdapterReadiness('cursor', env);
+      return r.live_capable;
     },
-    async executeLive() {
-      return { ok: false, result_summary: 'cursor is artifact-only', error_code: 'cursor_no_live' };
+    async executeLive(action, payload, env) {
+      const cli = await resolveCursorCliPath(env);
+      const cwd = cursorProjectDir(env);
+      if (!cli) return { ok: false, result_summary: 'Cursor CLI not found', error_code: 'cursor_no_cli' };
+      if (!(await isDir(cwd))) return { ok: false, result_summary: 'CURSOR_PROJECT_DIR invalid', error_code: 'cursor_bad_cwd' };
+
+      const title = String(payload.title || payload.name || 'spec').slice(0, 300);
+      const body = String(payload.body || payload.content || '').slice(0, 12000);
+      const extra = Array.isArray(payload.cli_args)
+        ? payload.cli_args.map((x) => String(x))
+        : String(env.CURSOR_CREATE_SPEC_ARGS || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+      const baseArgs =
+        extra.length > 0 ? extra : ['create_spec', title];
+      const execImpl = __cursorExecFileForTests.fn || execFileAsync;
+      try {
+        const { stdout, stderr } = await execImpl(cli, baseArgs, {
+          cwd,
+          timeout: Number(env.CURSOR_CLI_TIMEOUT_MS || 120_000),
+          maxBuffer: 2_000_000,
+          env: { ...process.env, COS_CURSOR_SPEC_BODY: body },
+        });
+        const out = String(stdout || '').slice(0, 8000);
+        const err = String(stderr || '').slice(0, 4000);
+        return {
+          ok: true,
+          result_summary: `live: cursor create_spec exit 0 (${out.length}b stdout)`,
+          data: { stdout: out, stderr: err, exit_code: 0, cli, cwd, argv: baseArgs },
+        };
+      } catch (e) {
+        const code = e && typeof e === 'object' && 'code' in e ? Number(e.code) : null;
+        const stdout = e && typeof e === 'object' && 'stdout' in e ? String(e.stdout || '').slice(0, 4000) : '';
+        const stderr = e && typeof e === 'object' && 'stderr' in e ? String(e.stderr || '').slice(0, 4000) : '';
+        return {
+          ok: false,
+          result_summary: `cursor CLI failed: ${String(e?.message || e).slice(0, 160)}`,
+          error_code: code != null && !Number.isNaN(code) ? `cursor_exit_${code}` : 'cursor_exec_error',
+          data: { stdout, stderr, exit_code: code, cli, cwd, argv: baseArgs },
+        };
+      }
     },
-    /** @param {string} action @param {object} payload @param {string} invocation_id */
     async buildArtifact(action, payload, invocation_id) {
       const dir = await artifactSubdir('cursor');
       const ext = action === 'emit_patch' ? 'patch' : 'spec';
@@ -155,11 +469,37 @@ const TOOL_ADAPTERS = {
   },
 
   supabase: {
-    canExecuteLive() {
-      return false;
+    canExecuteLive(action, _payload, env) {
+      if (action !== 'apply_sql') return false;
+      const url = String(env.SUPABASE_URL || '').trim();
+      const key = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+      return !!(url && key && isPlausibleSupabaseUrl(url));
     },
-    async executeLive() {
-      return { ok: false, result_summary: 'supabase live disabled (no service-role execution)', error_code: 'supabase_artifact_only' };
+    async executeLive(action, payload, env) {
+      const url = String(env.SUPABASE_URL || '').trim();
+      const key = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+      const sql = String(payload.sql || payload.query || '').trim();
+      if (!sql) return { ok: false, result_summary: 'apply_sql requires payload.sql', error_code: 'missing_sql' };
+      if (!isPlausibleSupabaseUrl(url)) {
+        return { ok: false, result_summary: 'SUPABASE_URL invalid', error_code: 'bad_supabase_url' };
+      }
+      const supabase = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data, error } = await supabase.rpc(SUPABASE_APPLY_SQL_RPC, { sql_text: sql });
+      if (error) {
+        return {
+          ok: false,
+          result_summary: `Supabase RPC ${SUPABASE_APPLY_SQL_RPC}: ${error.message}`.slice(0, 220),
+          error_code: 'supabase_rpc_error',
+          data: { hint: 'DB에 cos_apply_sql(sql_text) 함수 설치 필요 — supabase/migrations 참고' },
+        };
+      }
+      return {
+        ok: true,
+        result_summary: `live: ${SUPABASE_APPLY_SQL_RPC} ok`,
+        data: data ?? {},
+      };
     },
     async buildArtifact(action, payload, invocation_id) {
       const dir = await artifactSubdir('supabase');
@@ -289,7 +629,10 @@ export async function invokeExternalTool(spec, ctx = {}) {
   let next_required_input = null;
   let error_code = null;
 
-  const canLive = adapter.canExecuteLive(action, payload, env);
+  const canLive =
+    tool === 'cursor'
+      ? await adapter.canExecuteLive(action, payload, env)
+      : adapter.canExecuteLive(action, payload, env);
 
   if (canLive) {
     try {
@@ -304,7 +647,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         const ar = await adapter.buildArtifact(action, payload, invocation_id);
         execution_mode = 'artifact';
         status = 'completed';
-        result_summary = ar.result_summary;
+        result_summary = `${ar.result_summary} (live failed: ${lr.result_summary.slice(0, 120)})`;
         artifact_path = ar.artifact_path ?? null;
         next_required_input = ar.next_required_input ?? lr.next_required_input ?? null;
         error_code = lr.error_code ?? null;

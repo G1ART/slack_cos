@@ -6,6 +6,9 @@ node_modules/
 
 .cursor/
 .vscode/
-supabase/
+# 로컬 supabase CLI 산출물은 무시하되, 레포에 포함하는 마이그레이션만 추적
+supabase/*
+!supabase/migrations/
+!supabase/migrations/*.sql
 .runtime/
 tmp/
