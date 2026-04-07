@@ -1,9 +1,10 @@
 /**
- * Founder 대화: thread raw memory 주입 + Responses API tool loop (model-native orchestration).
+ * Founder 대화: thread raw memory + execution ledger + Responses API tool loop.
  */
 
 import { runHarnessOrchestration } from './harnessBridge.js';
 import { invokeExternalTool } from './toolsBridge.js';
+import { appendExecutionArtifact, readRecentExecutionArtifacts } from './executionLedger.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -11,7 +12,6 @@ const MAX_TOOL_ROUNDS = 8;
 
 const ALLOWED_EXTERNAL_TOOLS = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
 const ALLOWED_EXTERNAL_ACTIONS = new Set([
-  'plan',
   'create_spec',
   'emit_patch',
   'create_issue',
@@ -22,7 +22,7 @@ const ALLOWED_EXTERNAL_ACTIONS = new Set([
 ]);
 
 /**
- * Tool-call 인자의 기계적 스키마 검증만 (대화 성숙도·의도는 검사하지 않음).
+ * Tool-call 인자의 기계적 스키마 검증만.
  * @param {string} callName
  * @param {Record<string, unknown>} args
  * @returns {{ blocked: boolean, reason?: string }}
@@ -50,6 +50,20 @@ export function validateToolCallArgs(callName, args) {
     return { blocked: false };
   }
 
+  if (callName === 'record_execution_note') {
+    const note = a.note;
+    if (typeof note !== 'string' || !note.trim()) return { blocked: true, reason: 'invalid_payload' };
+    return { blocked: false };
+  }
+
+  if (callName === 'read_execution_context') {
+    const lim = a.limit;
+    if (lim !== undefined && lim !== null && (typeof lim !== 'number' || lim < 1 || lim > 20)) {
+      return { blocked: true, reason: 'invalid_payload' };
+    }
+    return { blocked: false };
+  }
+
   return { blocked: false };
 }
 
@@ -58,7 +72,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      '내부 multi-persona harness team에 작업을 분배한다. founder와 대화하며 scope를 네가 스스로 구체화·락인한 뒤, 필요하다고 판단할 때만 호출한다.',
+      'multi-persona harness 팀 조직·분배. Harness team shape와 태스크 분할은 네가 최적화한다. founder에게 artifact를 그대로 보이지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -75,6 +89,12 @@ const COS_TOOLS = [
         tasks: { type: 'array', items: { type: 'string' }, description: '세부 작업 목록' },
         deliverables: { type: 'array', items: { type: 'string' }, description: '기대 산출물' },
         constraints: { type: 'array', items: { type: 'string' }, description: '제약·가정' },
+        success_criteria: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '선택: 성공 기준 한 줄들',
+        },
+        risks: { type: 'array', items: { type: 'string' }, description: '선택: 리스크 한 줄들' },
       },
       required: ['objective'],
       additionalProperties: false,
@@ -84,7 +104,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'invoke_external_tool',
     description:
-      'Cursor, GitHub, Supabase, Vercel, Railway 등 외부 도구가 필요하고, 네가 scope를 충분히 락인했다고 판단할 때만 호출한다. founder에게 tool 이름·내부 페이로드를 그대로 노출하지 않는다.',
+      '외부 도구 실행. tool·action·payload는 네가 선택한다. founder 표면은 자연어 하나만 유지한다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -97,7 +117,6 @@ const COS_TOOLS = [
         action: {
           type: 'string',
           enum: [
-            'plan',
             'create_spec',
             'emit_patch',
             'create_issue',
@@ -118,6 +137,36 @@ const COS_TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    type: 'function',
+    name: 'record_execution_note',
+    description:
+      '내부 실행 메모를 ledger에 남긴다. founder에게 노출하지 않는다. orchestration 맥락 정리용.',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        note: { type: 'string', description: '한 줄 요약 (내부용)' },
+        detail: { type: 'object', additionalProperties: true, description: '선택: 구조화 디테일' },
+      },
+      required: ['note'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'read_execution_context',
+    description: '이 thread의 최근 harness/tool 실행 artifact를 다시 확인한다.',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: '최대 개수 (1–20), 생략 시 5' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /**
@@ -125,12 +174,12 @@ const COS_TOOLS = [
  */
 export function buildSystemInstructions(constitutionMarkdown) {
   return [
-    '당신은 G1 COS다. Slack의 founder와 직접 대화하는 단일 어시스턴트다.',
+    '당신은 G1 COS다. Slack의 founder와 직접 대화하는 단일 어시스턴트이자, scope 락 이후 Harness·Tools orchestration의 지휘자다.',
     '아래 헌법 전문을 반드시 준수하라. 헌법에 나온 금지 문자열·레거시 표면을 founder에게 출력하지 마라.',
     '한국어 자연어로 답하라. founder와 대화하며 scope를 스스로 구체화하라. 더 필요한 정보가 있으면 질문하라.',
-    '충분히 락인됐다고 네가 판단하기 전에는 delegate_harness_team / invoke_external_tool 을 호출하지 마라.',
-    '충분히 락인되면 필요한 tool-call을 스스로 선택하라. 락인 여부는 오직 네 판단이며 앱 코드는 관여하지 않는다.',
-    '도구 호출 내용·원시 JSON·내부 메커니즘을 founder에게 설명하거나 그대로 보여주지 말고, 자연어로 결과만 요약한다.',
+    '네가 충분히 락인됐다고 판단하면 Harness(delegate_harness_team)나 외부 도구(invoke_external_tool)를 호출하라. team shape와 tool 선택은 네가 최적화한다.',
+    'record_execution_note / read_execution_context 로 내부 실행 맥락을 정리·재확인할 수 있다.',
+    'founder에게 내부 실행 artifact·원시 JSON·도구 이름을 그대로 보여주지 말라. founder 표면은 자연어 하나만 유지하라.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -144,6 +193,7 @@ export function buildSystemInstructions(constitutionMarkdown) {
  *   userText: string,
  *   attachmentResults: { filename: string, ok: boolean, summary?: string, reason?: string }[],
  *   metadata: Record<string, unknown>,
+ *   executionArtifacts?: { ts: string, type: string, summary: string, payload?: object }[],
  * }} p
  */
 export function buildFounderConversationInput(p) {
@@ -171,6 +221,16 @@ export function buildFounderConversationInput(p) {
   }
   lines.push(attLines.length ? 'attachments:\n' + attLines.join('\n') : 'attachments: (없음)');
   lines.push('');
+  lines.push('[최근 실행 아티팩트]');
+  const arts = p.executionArtifacts || [];
+  if (!arts.length) lines.push('(없음)');
+  else {
+    for (const a of arts) {
+      lines.push(`- [${a.type}] ${String(a.summary || '').slice(0, 500)} @${a.ts}`);
+      lines.push(`  ${JSON.stringify(a.payload || {}).slice(0, 1500)}`);
+    }
+  }
+  lines.push('');
   lines.push('[최소 메타 — 앱은 의미 분류하지 않음]');
   lines.push(
     JSON.stringify({
@@ -185,12 +245,44 @@ export function buildFounderConversationInput(p) {
 }
 
 /**
+ * @param {Record<string, unknown>} args
+ * @param {string} threadKey
+ */
+async function handleRecordExecutionNote(args, threadKey) {
+  if (!threadKey) return { ok: false, blocked: true, reason: 'invalid_payload' };
+  const note = String(args?.note || '').trim();
+  if (!note) return { ok: false, blocked: true, reason: 'invalid_payload' };
+  const detail =
+    args?.detail && typeof args.detail === 'object' && !Array.isArray(args.detail) ? args.detail : {};
+  await appendExecutionArtifact(threadKey, {
+    type: 'execution_note',
+    summary: note.slice(0, 500),
+    payload: detail,
+  });
+  return { ok: true, recorded: true };
+}
+
+/**
+ * @param {Record<string, unknown>} args
+ * @param {string} threadKey
+ */
+async function handleReadExecutionContext(args, threadKey) {
+  const limRaw = args?.limit;
+  const limit =
+    typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
+  const list = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
+  return { ok: true, artifacts: list };
+}
+
+/**
  * @param {import('openai').default} openai
  * @param {string} model
  * @param {string} instructions
  * @param {string} initialInput
+ * @param {string} threadKey
  */
-async function runToolLoop(openai, model, instructions, initialInput) {
+async function runToolLoop(openai, model, instructions, initialInput, threadKey) {
+  const tk = String(threadKey || '');
   let previousResponseId = null;
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
@@ -235,9 +327,13 @@ async function runToolLoop(openai, model, instructions, initialInput) {
       if (schema.blocked) {
         result = { ok: false, blocked: true, reason: schema.reason };
       } else if (call.name === 'delegate_harness_team') {
-        result = await runHarnessOrchestration(args);
+        result = await runHarnessOrchestration(args, { threadKey: tk });
       } else if (call.name === 'invoke_external_tool') {
-        result = await invokeExternalTool(args);
+        result = await invokeExternalTool(args, { threadKey: tk });
+      } else if (call.name === 'record_execution_note') {
+        result = await handleRecordExecutionNote(args, tk);
+      } else if (call.name === 'read_execution_context') {
+        result = await handleReadExecutionContext(args, tk);
       } else {
         result = { ok: false, error: 'unknown_tool', name: call.name };
       }
@@ -269,18 +365,23 @@ async function runToolLoop(openai, model, instructions, initialInput) {
  *   attachmentResults: { filename: string, ok: boolean, summary?: string, reason?: string }[],
  *   metadata: Record<string, unknown>,
  *   recentTurns: { role: string, text: string, attachments?: object[], ts?: string }[],
+ *   threadKey: string,
  * }} ctx
  */
 export async function runFounderDirectConversation(ctx) {
+  const tk = String(ctx.threadKey || '');
+  const executionArtifacts = tk ? await readRecentExecutionArtifacts(tk, 5) : [];
+
   const instructions = buildSystemInstructions(ctx.constitutionMarkdown);
   const initialInput = buildFounderConversationInput({
     recentTurns: ctx.recentTurns || [],
     userText: ctx.userText,
     attachmentResults: ctx.attachmentResults || [],
     metadata: ctx.metadata || {},
+    executionArtifacts,
   });
 
-  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput);
+  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput, tk);
 
   console.info(
     JSON.stringify({

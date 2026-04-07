@@ -24,14 +24,15 @@ assert.equal(findForbiddenInText('한줄요약', forbidden), '한 줄 요약');
 
 // 런타임: 금지어가 있어도 송신 경로는 차단하지 않음 (pass-through)
 let said = null;
-await sendFounderResponse({
+const sendRes = await sendFounderResponse({
   say: async (payload) => {
     said = typeof payload === 'string' ? payload : payload?.text;
   },
   text: '종합 추천안을 제시합니다.',
   constitutionSha256: 'deadbeef',
 });
-assert.equal(said, '종합 추천안을 제시합니다.', 'runtime does not block forbidden substring');
+assert.equal(sendRes.ok, true);
+assert.equal(said, sendRes.text, 'runtime does not block forbidden substring');
 
 // instruction에 헌법 전문이 포함되어 모델 측 규범 전달 (금지 목록은 헌법 본문에 명시됨)
 const instr = buildSystemInstructions(constitutionMd);
