@@ -1,6 +1,5 @@
 /**
- * 단일 프로세스 내 interval tick — milestone founder callback (Slack proactive).
- * 다중 레플리카·공유 볼륨 없으면 파일 lease는 best-effort.
+ * Run supervisor: reconcile → advance packets → milestone Slack callbacks.
  */
 
 import fs from 'node:fs/promises';
@@ -8,6 +7,7 @@ import path from 'node:path';
 import { cosRuntimeBaseDir } from './executionLedger.js';
 import { readReviewQueue, readExecutionSummary } from './executionLedger.js';
 import { getActiveRunForThread, listRunThreadKeys, patchRun } from './executionRunStore.js';
+import { reconcileRunFromLedger, maybeAdvanceNextPacket } from './runProgressor.js';
 import { getSlackRouting } from './slackRoutingStore.js';
 import { sendFounderResponse } from './sendFounderResponse.js';
 import {
@@ -16,6 +16,7 @@ import {
   renderBlockedMilestone,
   renderCompletedMilestone,
   renderFailedMilestone,
+  renderEagerCombinedMilestone,
 } from './founderCallbackCopy.js';
 
 const LEASE_MS = 25_000;
@@ -48,7 +49,7 @@ async function tryAcquireSupervisorLease() {
 
 /**
  * @param {{ run: Record<string, unknown>, client: import('@slack/web-api').WebClient, constitutionSha256: string }} p
- * @returns {Promise<'started'|'review_required'|'blocked'|'completed'|'failed'|null>}
+ * @returns {Promise<string | null>}
  */
 export async function processRunMilestones(p) {
   const run = p.run;
@@ -62,6 +63,70 @@ export async function processRunMilestones(p) {
   const now = new Date().toISOString();
 
   if (kick && kick.executed && !run.founder_notified_started_at) {
+    if (status === 'completed' || status === 'blocked' || status === 'failed' || status === 'review_required') {
+      let text = '';
+      if (status === 'completed') {
+        const lines = await readExecutionSummary(threadKey, 4);
+        text = renderEagerCombinedMilestone({
+          objective,
+          tool: String(kick.tool || ''),
+          action: String(kick.action || ''),
+          terminal: 'completed',
+          summary_lines: lines,
+        });
+      } else if (status === 'blocked') {
+        const rq = await readReviewQueue(threadKey, 3);
+        const need =
+          rq.map((x) => x.next_required_input).find(Boolean) ||
+          rq.map((x) => x.blocked_reason).find(Boolean) ||
+          '';
+        text = renderEagerCombinedMilestone({
+          objective,
+          tool: String(kick.tool || ''),
+          action: String(kick.action || ''),
+          terminal: 'blocked',
+          need_line: String(need || ''),
+        });
+      } else if (status === 'review_required') {
+        const review = await readReviewQueue(threadKey, 5);
+        const lines = review
+          .filter((x) => x.needs_review || x.status === 'degraded')
+          .map((x) => x.result_summary || x.blocked_reason || '')
+          .filter(Boolean);
+        text = renderEagerCombinedMilestone({
+          objective,
+          tool: String(kick.tool || ''),
+          action: String(kick.action || ''),
+          terminal: 'review_required',
+          review_lines: lines,
+        });
+      } else {
+        text = renderEagerCombinedMilestone({
+          objective,
+          tool: String(kick.tool || ''),
+          action: String(kick.action || ''),
+          terminal: 'failed',
+        });
+      }
+      const r = await sendFounderResponse({
+        client: p.client,
+        channel: routing.channel,
+        thread_ts: routing.thread_ts || undefined,
+        text,
+        constitutionSha256: p.constitutionSha256,
+      });
+      if (r.ok) {
+        const patch = { founder_notified_started_at: now };
+        if (status === 'completed') patch.founder_notified_completed_at = now;
+        if (status === 'blocked') patch.founder_notified_blocked_at = now;
+        if (status === 'review_required') patch.founder_notified_review_at = now;
+        if (status === 'failed') patch.founder_notified_failed_at = now;
+        await patchRun(threadKey, patch);
+        return 'eager_combined';
+      }
+      return null;
+    }
+
     const text = renderStartedMilestone({
       objective,
       tool: String(kick.tool || ''),
@@ -160,6 +225,46 @@ export async function processRunMilestones(p) {
 }
 
 /**
+ * @param {string} threadKey
+ * @param {{
+ *   client: import('@slack/web-api').WebClient,
+ *   constitutionSha256: string,
+ *   skipLease?: boolean,
+ * }} ctx
+ */
+export async function tickRunSupervisorForThread(threadKey, ctx) {
+  const tk = String(threadKey || '');
+  if (!tk || !ctx.client?.chat?.postMessage) return { skipped: true, reason: 'no_client' };
+
+  if (!ctx.skipLease) {
+    const ok = await tryAcquireSupervisorLease();
+    if (!ok) return { skipped: true, reason: 'lease_held' };
+  }
+
+  let run = await getActiveRunForThread(tk);
+  if (!run?.run_id) return { skipped: true, reason: 'no_run' };
+  if (String(run.status) === 'canceled') return { skipped: true, reason: 'canceled' };
+
+  await reconcileRunFromLedger(tk);
+
+  for (let i = 0; i < 6; i += 1) {
+    const adv = await maybeAdvanceNextPacket(tk);
+    if (!adv.advanced) break;
+  }
+
+  run = await getActiveRunForThread(tk);
+  if (run) {
+    await processRunMilestones({
+      run,
+      client: ctx.client,
+      constitutionSha256: ctx.constitutionSha256,
+    });
+  }
+
+  return { skipped: false };
+}
+
+/**
  * @param {{
  *   client: import('@slack/web-api').WebClient,
  *   constitutionSha256: string,
@@ -170,22 +275,15 @@ export async function tickRunSupervisor(ctx) {
   if (!ok) return { skipped: true, reason: 'lease_held' };
 
   const keys = await listRunThreadKeys();
-  let processed = 0;
   for (const threadKey of keys) {
-    const run = await getActiveRunForThread(threadKey);
-    if (!run || !run.run_id) continue;
-    const st = String(run.status || '');
-    if (st === 'canceled') continue;
-
-    await processRunMilestones({
-      run,
+    await tickRunSupervisorForThread(threadKey, {
       client: ctx.client,
       constitutionSha256: ctx.constitutionSha256,
+      skipLease: true,
     });
-    processed += 1;
   }
 
-  return { skipped: false, processed };
+  return { skipped: false, processed: keys.length };
 }
 
 /**

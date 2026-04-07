@@ -5,6 +5,7 @@ import {
   renderBlockedMilestone,
   renderReviewMilestone,
   renderFailedMilestone,
+  renderEagerCombinedMilestone,
 } from '../src/founder/founderCallbackCopy.js';
 import { milestoneField } from '../src/founder/executionRunStore.js';
 
@@ -31,6 +32,15 @@ assert.ok(r.includes('확인이 필요'));
 
 const f = renderFailedMilestone({ objective: '테스트' });
 assert.ok(f.includes('오류'));
+
+const e = renderEagerCombinedMilestone({
+  objective: '통합',
+  tool: 't',
+  action: 'a',
+  terminal: 'completed',
+  summary_lines: ['s'],
+});
+assert.ok(e.includes('첫 실행을 시작했고'));
 
 assert.equal(milestoneField('started'), 'founder_notified_started_at');
 assert.equal(milestoneField('completed'), 'founder_notified_completed_at');

@@ -802,6 +802,7 @@ const TOOL_ADAPTERS = {
 export async function invokeExternalTool(spec, ctx = {}) {
   const s = spec && typeof spec === 'object' ? spec : {};
   const threadKey = ctx.threadKey ? String(ctx.threadKey) : '';
+  const runPacketId = ctx.packetId != null ? String(ctx.packetId).trim() : '';
   const tool = s.tool;
   const action = String(s.action || '').trim();
   const payload = s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload) ? s.payload : {};
@@ -860,6 +861,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       blocked_reason: block.blocked_reason,
       degraded_from: null,
       needs_review,
+      ...(runPacketId ? { run_packet_id: runPacketId } : {}),
     };
     const result = {
       ok: true,
@@ -1014,6 +1016,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     blocked_reason,
     degraded_from,
     needs_review,
+    ...(runPacketId ? { run_packet_id: runPacketId } : {}),
   };
 
   const result = {

@@ -6,6 +6,7 @@ import { ingestCurrentTurnAttachments } from './ingestAttachments.js';
 import { runFounderDirectConversation } from './runFounderDirectConversation.js';
 import { appendThreadTurn, readRecentThreadTurns } from './threadMemory.js';
 import { saveSlackRouting } from './slackRoutingStore.js';
+import { tickRunSupervisorForThread } from './runSupervisor.js';
 
 /**
  * @param {import('@slack/types').AppMentionEvent | import('@slack/types').MessageEvent} event
@@ -115,6 +116,16 @@ export async function handleFounderSlackTurn(ctx) {
     recentTurns: priorTurns,
     threadKey,
   });
+
+  try {
+    await tickRunSupervisorForThread(threadKey, {
+      client: ctx.client,
+      constitutionSha256: ctx.constitutionSha256,
+      skipLease: true,
+    });
+  } catch (e) {
+    console.error('[cos_eager_supervisor]', e);
+  }
 
   const assistantTurnCandidate = {
     role: /** @type {'assistant'} */ ('assistant'),

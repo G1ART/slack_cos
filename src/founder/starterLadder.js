@@ -1,8 +1,10 @@
 /**
- * delegate accepted 이후 동일 tool 라운드에서 첫 runnable packet → invoke_external_tool (기능 상태 트리거만).
+ * delegate accepted 이후 packet 단위 invoke_external_tool (기능 상태 트리거만).
  */
 
-import { invokeExternalTool, isValidToolAction } from './toolsBridge.js';
+import { invokeExternalTool, isValidToolAction, TOOL_OUTCOME_CODES } from './toolsBridge.js';
+
+/** @typedef {'queued'|'ready'|'running'|'review_required'|'blocked'|'completed'|'failed'|'skipped'} PacketState */
 
 /** @param {Record<string, unknown>} dispatch */
 export function orderPacketsByHandoff(dispatch) {
@@ -68,30 +70,87 @@ export function buildInvokePayloadForPacket(pkt) {
 }
 
 /**
- * @param {Record<string, unknown>} dispatch
- * @param {NodeJS.ProcessEnv} env
- * @param {string} threadKey
- * @returns {{ packet: object, tool: string, action: string, payload: Record<string, unknown> } | null}
+ * @param {object} pkt
+ * @returns {{ tool: string, action: string, payload: Record<string, unknown> } | null}
  */
-export function pickFirstStarterPacket(dispatch, _env, _threadKey) {
-  const ordered = orderPacketsByHandoff(dispatch);
-  for (const pkt of ordered) {
-    if (!pkt || typeof pkt !== 'object') continue;
-    const ps = pkt.packet_status;
-    if (ps === 'draft') continue;
-    const tool = pkt.preferred_tool;
-    const action = String(pkt.preferred_action || '').trim();
-    if (!tool || !action || !isValidToolAction(tool, action)) continue;
-    const payload = buildInvokePayloadForPacket(pkt);
-    return { packet: pkt, tool, action, payload };
+export function buildInvokeSpecForPacket(pkt) {
+  if (!pkt || typeof pkt !== 'object') return null;
+  const ps = pkt.packet_status;
+  if (ps === 'draft') return null;
+  const tool = pkt.preferred_tool;
+  const action = String(pkt.preferred_action || '').trim();
+  if (!tool || !action || !isValidToolAction(tool, action)) return null;
+  const payload = buildInvokePayloadForPacket(pkt);
+  return { tool, action, payload };
+}
+
+/**
+ * tool invoke outcome → packet graph state
+ * @param {Record<string, unknown>} outcome
+ * @returns {PacketState}
+ */
+export function derivePacketStateFromOutcome(outcome) {
+  if (!outcome || typeof outcome !== 'object') return 'failed';
+  const oc = String(outcome.outcome_code || '');
+  const st = String(outcome.status || '');
+  if (st === 'blocked' || oc === TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT) return 'blocked';
+  if (
+    st === 'failed' ||
+    oc === TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT ||
+    oc === TOOL_OUTCOME_CODES.FAILED_ARTIFACT_BUILD
+  ) {
+    return 'failed';
   }
-  return null;
+  if (st === 'degraded') return 'review_required';
+  if (
+    st === 'completed' ||
+    oc === TOOL_OUTCOME_CODES.LIVE_COMPLETED ||
+    oc === TOOL_OUTCOME_CODES.ARTIFACT_PREPARED
+  ) {
+    return 'completed';
+  }
+  return 'running';
 }
 
 export const __starterKickoffTestHooks = {
   /** @type {typeof invokeExternalTool | null} */
   invokeFn: null,
 };
+
+/**
+ * @param {object} packet
+ * @param {{ threadKey: string }} ctx
+ */
+export async function executePacketInvocation(packet, ctx) {
+  const threadKey = String(ctx.threadKey || '');
+  const spec = buildInvokeSpecForPacket(packet);
+  if (!spec) {
+    return { ok: false, blocked: true, reason: 'invalid_packet_spec' };
+  }
+  const pid = String(packet.packet_id || '').trim();
+  const inv = __starterKickoffTestHooks.invokeFn || invokeExternalTool;
+  return inv(
+    { tool: spec.tool, action: spec.action, payload: spec.payload },
+    { threadKey, packetId: pid || undefined },
+  );
+}
+
+/**
+ * @param {Record<string, unknown>} dispatch
+ * @param {NodeJS.ProcessEnv} _env
+ * @param {string} _threadKey
+ * @returns {{ packet: object, tool: string, action: string, payload: Record<string, unknown> } | null}
+ */
+export function pickFirstStarterPacket(dispatch, _env, _threadKey) {
+  const ordered = orderPacketsByHandoff(dispatch);
+  for (const pkt of ordered) {
+    if (!pkt || typeof pkt !== 'object') continue;
+    const spec = buildInvokeSpecForPacket(pkt);
+    if (!spec) continue;
+    return { packet: pkt, tool: spec.tool, action: spec.action, payload: spec.payload };
+  }
+  return null;
+}
 
 /**
  * @param {{
@@ -103,19 +162,16 @@ export const __starterKickoffTestHooks = {
 export async function executeStarterKickoffIfEligible(ctx) {
   const threadKey = String(ctx.threadKey || '');
   const dispatch = ctx.dispatch && typeof ctx.dispatch === 'object' ? ctx.dispatch : {};
-  const env = ctx.env || process.env;
 
   if (!threadKey) return null;
   if (!dispatch.ok || String(dispatch.status || '') !== 'accepted') return null;
 
-  const pick = pickFirstStarterPacket(dispatch, env, threadKey);
+  const pick = pickFirstStarterPacket(dispatch, ctx.env || process.env, threadKey);
   if (!pick) {
     return { executed: false, reason: 'no_runnable_packet' };
   }
 
-  const inv = __starterKickoffTestHooks.invokeFn || invokeExternalTool;
-  const spec = { tool: pick.tool, action: pick.action, payload: pick.payload };
-  const outcome = await inv(spec, { threadKey });
+  const outcome = await executePacketInvocation(pick.packet, { threadKey });
 
   return {
     executed: true,
