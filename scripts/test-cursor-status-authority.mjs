@@ -3,7 +3,7 @@ import {
   canonicalizeExternalRunStatus,
   resolveCursorPacketStateAuthority,
 } from '../src/founder/externalRunStatus.js';
-import { applyExternalCursorPacketProgress } from '../src/founder/canonicalExternalEvent.js';
+import { applyExternalCursorPacketProgressForRun } from '../src/founder/canonicalExternalEvent.js';
 import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 
@@ -74,7 +74,7 @@ await upsertExternalCorrelation({
   object_id: 'auth_run_1',
 });
 
-await applyExternalCursorPacketProgress(tk, 'p_sa', {
+await applyExternalCursorPacketProgressForRun(String(run.id), 'p_sa', {
   provider: 'cursor',
   event_type: 'x',
   external_id: 'cursor:cloud_run:auth_run_1',
@@ -89,7 +89,7 @@ await applyExternalCursorPacketProgress(tk, 'p_sa', {
 let r = await getActiveRunForThread(tk);
 assert.equal(r.packet_state_map.p_sa, 'completed');
 
-await applyExternalCursorPacketProgress(tk, 'p_sa', {
+await applyExternalCursorPacketProgressForRun(String(run.id), 'p_sa', {
   provider: 'cursor',
   event_type: 'x',
   external_id: 'cursor:cloud_run:auth_run_1',

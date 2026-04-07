@@ -90,7 +90,11 @@ export async function handleGithubWebhookIngress(p) {
 
   const canonical = buildCanonicalFromGithubNormalized(norm, ghEvent);
   const corr = await resolveCorrelationForCanonical(canonical);
-  const out = await processCanonicalExternalEvent(canonical, corr);
+  const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
+  const out = await processCanonicalExternalEvent(canonical, corr, {
+    matched_by: 'github_object',
+    payload_fingerprint_prefix: fp,
+  });
 
   return {
     ok: true,
@@ -143,12 +147,15 @@ export async function handleCursorWebhookIngress(p) {
     packet_id: canonical.packet_id_hint,
     thread_key: canonical.thread_key_hint,
   });
-  const out = await processCanonicalExternalEvent(canonical, corr);
+  const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
+  const out = await processCanonicalExternalEvent(canonical, corr, {
+    matched_by,
+    payload_fingerprint_prefix: fp,
+  });
 
   if (out.matched) {
     const extId = String(canonical.external_run_id || '');
     const external_run_id_tail = extId.length > 6 ? extId.slice(-6) : extId;
-    const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
     console.info(
       JSON.stringify({
         event: 'cos_cursor_callback_evidence',

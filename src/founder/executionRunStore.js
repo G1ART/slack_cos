@@ -17,7 +17,9 @@ import {
   supabaseCancelActiveRuns,
   supabaseInsertRun,
   supabasePatchLatestRun,
+  supabasePatchRunById,
   supabaseSelectLatestRun,
+  supabaseSelectRunById,
   supabaseListThreadKeys,
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
@@ -31,8 +33,54 @@ import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
 /** @type {Map<string, Record<string, unknown>>} */
 const memRuns = new Map();
 
+/** @type {Map<string, Record<string, unknown>>} — run uuid → row (same thread may have multiple over time) */
+const memRunsById = new Map();
+
 function runsDir() {
   return path.join(cosRuntimeBaseDir(), 'execution_runs');
+}
+
+function runsByIdDir() {
+  return path.join(runsDir(), 'by_id');
+}
+
+/**
+ * @param {string} runUuid
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+async function readRunFromDiskById(runUuid) {
+  const rid = String(runUuid || '').trim();
+  if (!rid) return null;
+  const bid = path.join(runsByIdDir(), `${rid}.json`);
+  try {
+    const raw = await fs.readFile(bid, 'utf8');
+    const j = JSON.parse(raw);
+    if (j && typeof j === 'object' && j.founder_notified_review_at && !j.founder_notified_review_required_at) {
+      j.founder_notified_review_required_at = j.founder_notified_review_at;
+    }
+    return j && typeof j === 'object' ? j : null;
+  } catch {
+    /* fall through: legacy thread-key-only files */
+  }
+  const dir = runsDir();
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return null;
+  }
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue;
+    const fp = path.join(dir, n);
+    try {
+      const raw = await fs.readFile(fp, 'utf8');
+      const j = JSON.parse(raw);
+      if (j && typeof j === 'object' && String(j.id || '') === rid) return j;
+    } catch {
+      /* skip */
+    }
+  }
+  return null;
 }
 
 /** @param {string} threadKey */
@@ -59,6 +107,7 @@ export function getCosRunStoreMode() {
 /** Test isolation */
 export function __resetCosRunMemoryStore() {
   memRuns.clear();
+  memRunsById.clear();
 }
 
 /**
@@ -271,7 +320,9 @@ export async function persistRunAfterDelegate(p) {
   let out = null;
 
   if (mode === 'memory') {
-    memRuns.set(threadKey, structuredClone(row));
+    const clone = structuredClone(row);
+    memRunsById.set(String(row.id), clone);
+    memRuns.set(threadKey, clone);
     out = memRuns.get(threadKey);
   } else if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
@@ -288,6 +339,8 @@ export async function persistRunAfterDelegate(p) {
   } else {
     const dir = runsDir();
     await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(runsByIdDir(), { recursive: true });
+    await fs.writeFile(path.join(runsByIdDir(), `${runUuid}.json`), JSON.stringify(row, null, 0), 'utf8');
     await fs.writeFile(path.join(dir, safeName(threadKey)), JSON.stringify(row, null, 0), 'utf8');
     out = row;
   }
@@ -344,6 +397,7 @@ export async function patchRun(threadKey, patch) {
     if (!cur) return null;
     const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
     memRuns.set(tk, next);
+    if (cur.id != null) memRunsById.set(String(cur.id), structuredClone(next));
     return structuredClone(next);
   }
   if (mode === 'supabase') {
@@ -355,7 +409,74 @@ export async function patchRun(threadKey, patch) {
   const cur = await getActiveRunForThread(tk);
   if (!cur) return null;
   const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
-  await fs.writeFile(path.join(runsDir(), safeName(tk)), JSON.stringify(next, null, 0), 'utf8');
+  const fp = path.join(runsDir(), safeName(tk));
+  await fs.writeFile(fp, JSON.stringify(next, null, 0), 'utf8');
+  if (next.id != null) {
+    await fs.mkdir(runsByIdDir(), { recursive: true });
+    await fs.writeFile(path.join(runsByIdDir(), `${String(next.id)}.json`), JSON.stringify(next, null, 0), 'utf8');
+  }
+  return next;
+}
+
+/**
+ * @param {string} runId
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function getRunById(runId) {
+  const rid = String(runId || '').trim();
+  if (!rid) return null;
+  const mode = storeMode();
+  if (mode === 'memory') {
+    const r = memRunsById.get(rid);
+    return r ? structuredClone(r) : null;
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    const raw = await supabaseSelectRunById(sb, rid);
+    return dbRowToAppRun(raw);
+  }
+  const disk = await readRunFromDiskById(rid);
+  return disk;
+}
+
+/**
+ * @param {string} runId
+ * @param {Record<string, unknown>} patch
+ */
+export async function patchRunById(runId, patch) {
+  const rid = String(runId || '').trim();
+  if (!rid) return null;
+  const normalized = normalizePatch(patch);
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    const cur = memRunsById.get(rid);
+    if (!cur) return null;
+    const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
+    memRunsById.set(rid, next);
+    const tk = String(cur.thread_key || '');
+    if (tk && String(memRuns.get(tk)?.id) === rid) {
+      memRuns.set(tk, structuredClone(next));
+    }
+    return structuredClone(next);
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    return supabasePatchRunById(sb, rid, normalized);
+  }
+
+  const cur = await readRunFromDiskById(rid);
+  if (!cur) return null;
+  const tk = String(cur.thread_key || '');
+  const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
+  await fs.mkdir(runsByIdDir(), { recursive: true });
+  await fs.writeFile(path.join(runsByIdDir(), `${rid}.json`), JSON.stringify(next, null, 0), 'utf8');
+  const latest = await getActiveRunForThread(tk);
+  if (latest && String(latest.id) === rid) {
+    await fs.writeFile(path.join(runsDir(), safeName(tk)), JSON.stringify(next, null, 0), 'utf8');
+  }
   return next;
 }
 
