@@ -3,12 +3,14 @@ import {
   tryAcquireSupervisorLease,
   __resetSupervisorLeaseMemory,
   __forceSupervisorLeaseMemoryExpiry,
+  __resetSupervisorLeaseDegradedStateForTests,
 } from '../src/founder/supervisorLease.js';
 
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 __resetSupervisorLeaseMemory();
+__resetSupervisorLeaseDegradedStateForTests();
 
 const a = await tryAcquireSupervisorLease('owner-a');
 assert.equal(a, true);

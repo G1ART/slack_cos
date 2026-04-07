@@ -14,6 +14,7 @@ import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFound
 import { startRunSupervisorLoop, tickRunSupervisorForThread } from './src/founder/runSupervisor.js';
 import { registerRunStateChangeListener } from './src/founder/supervisorDirectTrigger.js';
 import { startCosHttpServer } from './src/founder/httpExternalIngress.js';
+import { logCosRuntimeTruthBoot } from './src/founder/cosRuntimeTruth.js';
 
 const { App } = bolt;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,8 @@ console.info(
     deploy_git_sha: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_COMMIT_SHA || null,
   }),
 );
+
+logCosRuntimeTruthBoot(process.env);
 
 await startCosHttpServer({ env: process.env });
 console.log('[startup] public HTTP ingress (healthz / webhooks) listening.');

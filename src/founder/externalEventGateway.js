@@ -22,6 +22,7 @@ import {
   normalizeGithubWebhookPayload,
   githubRepoMatchesConfigured,
 } from './providerEventNormalizers.js';
+import { githubWebhookFollowOnFetch, GITHUB_WEBHOOK_DELIVERY_DEDUPE_EVENTS } from './githubWebhookFollowOn.js';
 
 /**
  * @param {string} threadKey
@@ -88,8 +89,13 @@ export async function handleGithubWebhookIngress(p) {
     return { ok: false, httpStatus: 400, body: 'invalid json' };
   }
 
+  const ghEvent = String(headers['x-github-event'] || '').trim();
+  if (ghEvent === 'ping') {
+    return { ok: true, httpStatus: 202, body: 'ping accepted', ignored: true };
+  }
+
   const delivery = String(headers['x-github-delivery'] || '').trim();
-  if (delivery) {
+  if (delivery && GITHUB_WEBHOOK_DELIVERY_DEDUPE_EVENTS.has(ghEvent)) {
     const fresh = await tryRecordGithubDelivery(delivery);
     if (!fresh) {
       return { ok: true, httpStatus: 200, body: 'duplicate delivery', duplicate: true };
@@ -103,6 +109,8 @@ export async function handleGithubWebhookIngress(p) {
   if (!githubRepoMatchesConfigured(repoName, env)) {
     return { ok: true, httpStatus: 202, body: 'repository scope mismatch', ignored: true };
   }
+
+  await githubWebhookFollowOnFetch(env, ghEvent);
 
   const canonical = normalizeGithubWebhookPayload(headers, body);
   if (!canonical) {

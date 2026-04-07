@@ -10,8 +10,34 @@ import { getCosRunStoreMode } from './executionRunStore.js';
 
 const memSeen = new Set();
 
+/** @type {number} test-only: invocations with non-empty delivery id */
+let __deliveryRecordCallCount = 0;
+
 function deliveriesPath() {
   return path.join(cosRuntimeBaseDir(), 'github_webhook_deliveries.json');
+}
+
+function supabaseHostFromEnv() {
+  const url = String(process.env.SUPABASE_URL || '').trim();
+  try {
+    return new URL(url).host || '(empty_host)';
+  } catch {
+    return '(malformed_url)';
+  }
+}
+
+/**
+ * @param {unknown} err
+ */
+function postgrestErrorFields(err) {
+  const e = err && typeof err === 'object' ? /** @type {any} */ (err) : {};
+  return {
+    error_name: 'PostgrestError',
+    error_message: String(e.message || err || ''),
+    code: e.code != null ? String(e.code) : null,
+    hint: e.hint != null ? String(e.hint) : null,
+    details: e.details != null ? String(e.details) : null,
+  };
 }
 
 /**
@@ -21,6 +47,7 @@ function deliveriesPath() {
 export async function tryRecordGithubDelivery(deliveryId) {
   const id = String(deliveryId || '').trim();
   if (!id) return true;
+  __deliveryRecordCallCount += 1;
 
   const mode = getCosRunStoreMode();
   if (mode === 'memory') {
@@ -30,12 +57,34 @@ export async function tryRecordGithubDelivery(deliveryId) {
   }
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
-    if (!sb) return true;
+    if (!sb) {
+      console.info(
+        JSON.stringify({
+          event: 'cos_github_webhook_deliveries',
+          outcome: 'skipped_insert',
+          mode: 'supabase',
+          target_url_host: supabaseHostFromEnv(),
+          reason: 'supabase_client_null',
+        }),
+      );
+      return true;
+    }
     const { error } = await sb.from('cos_github_webhook_deliveries').insert({ delivery_id: id });
     if (error) {
       const c = String(error.code || '');
       if (c === '23505' || String(error.message || '').toLowerCase().includes('duplicate')) return false;
-      console.error('[github_webhook_deliveries]', error.message);
+      const pf = postgrestErrorFields(error);
+      console.error(
+        JSON.stringify({
+          event: 'cos_github_webhook_deliveries',
+          outcome: 'insert_error',
+          mode: 'supabase',
+          target_url_host: supabaseHostFromEnv(),
+          response_status: null,
+          ...pf,
+          short_cause: { code: pf.code, hint: pf.hint },
+        }),
+      );
       return true;
     }
     return true;
@@ -60,4 +109,9 @@ export async function tryRecordGithubDelivery(deliveryId) {
 
 export function __resetGithubDeliveryMemoryForTests() {
   memSeen.clear();
+  __deliveryRecordCallCount = 0;
+}
+
+export function __getGithubDeliveryRecordCallCountForTests() {
+  return __deliveryRecordCallCount;
 }
