@@ -4,10 +4,10 @@
 
 import { handleFounderSlackTurn, extractSlackUserText } from './handleFounderSlackTurn.js';
 import { sendFounderResponse } from './sendFounderResponse.js';
+import { appendThreadTurn } from './threadMemory.js';
 
-function formatErr(e) {
-  return [e?.name, e?.code, e?.message].filter(Boolean).join(' | ') || String(e);
-}
+const FOUNDER_ERROR_USER_TEXT = `죄송합니다. 방금 응답을 보내는 중 문제가 생겼습니다.
+같은 메시지를 한 번 더 보내 주시면 바로 이어서 받겠습니다.`;
 
 /**
  * @param {import('@slack/bolt').App} app
@@ -26,7 +26,7 @@ export function registerFounderHandlers(app, core) {
       if (!extractSlackUserText(event) && files.length === 0) {
         await sendFounderResponse({
           say,
-          thread_ts: event.ts,
+          thread_ts: event.thread_ts || event.ts,
           text: '지시 내용을 함께 적어 주세요.',
           constitutionSha256: core.constitutionSha256,
         });
@@ -44,18 +44,26 @@ export function registerFounderHandlers(app, core) {
         constitutionSha256: core.constitutionSha256,
       });
 
-      await sendFounderResponse({
+      const mentionThreadTs = event.thread_ts || event.ts;
+      const sendRes = await sendFounderResponse({
         say,
-        thread_ts: event.ts,
-        text: out.text,
+        thread_ts: mentionThreadTs,
+        text: out.answer,
         constitutionSha256: core.constitutionSha256,
       });
+
+      if (sendRes.ok) {
+        await appendThreadTurn(out.threadKey, {
+          ...out.assistantTurnCandidate,
+          ts: new Date().toISOString(),
+        });
+      }
     } catch (e) {
       console.error('[app_mention]', e);
       await sendFounderResponse({
         say,
-        thread_ts: event.ts,
-        text: `처리 중 오류가 났습니다. 잠시 후 다시 시도해 주세요.\n(${formatErr(e)})`,
+        thread_ts: event.thread_ts || event.ts,
+        text: FOUNDER_ERROR_USER_TEXT,
         constitutionSha256: core.constitutionSha256,
       });
     }
@@ -81,21 +89,26 @@ export function registerFounderHandlers(app, core) {
         constitutionSha256: core.constitutionSha256,
       });
 
-      await sendFounderResponse({
+      const sendRes = await sendFounderResponse({
         client,
         channel: event.channel,
-        thread_ts: event.thread_ts || undefined,
-        text: out.text,
+        text: out.answer,
         constitutionSha256: core.constitutionSha256,
       });
+
+      if (sendRes.ok) {
+        await appendThreadTurn(out.threadKey, {
+          ...out.assistantTurnCandidate,
+          ts: new Date().toISOString(),
+        });
+      }
     } catch (e) {
       console.error('[dm]', e);
       if (event.channel) {
         await sendFounderResponse({
           client,
           channel: event.channel,
-          thread_ts: event.thread_ts || undefined,
-          text: `처리 중 오류가 났습니다. 잠시 후 다시 시도해 주세요.\n(${formatErr(e)})`,
+          text: FOUNDER_ERROR_USER_TEXT,
           constitutionSha256: core.constitutionSha256,
         });
       }

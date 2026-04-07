@@ -63,6 +63,8 @@ assert.equal(t.tool, 'github');
 assert.equal(t.accepted, true);
 assert.ok(t.invocation_id && String(t.invocation_id).startsWith('tool_'));
 assert.equal(t.next_required_input, null);
+assert.ok(t.execution_mode === 'live' || t.execution_mode === 'artifact');
+assert.ok(typeof t.result_summary === 'string');
 
 await clearThread(key);
 

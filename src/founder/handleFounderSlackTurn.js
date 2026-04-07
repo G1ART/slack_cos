@@ -1,5 +1,5 @@
 /**
- * 현재 턴 컨트롤러: thread raw memory 읽기·쓰기만. 의미 해석 없음.
+ * 현재 턴 컨트롤러: thread key·첨부·user memory 선행·COS 호출. assistant memory는 송신 성공 후 상위에서.
  */
 
 import { ingestCurrentTurnAttachments } from './ingestAttachments.js';
@@ -16,16 +16,18 @@ export function extractSlackUserText(event) {
 }
 
 /**
- * 멘션: channel + 스레드 루트 ts. DM: channel + thread_ts || ts
+ * DM: 채널 단일 연속 대화. mention: root thread 단일 연속 대화.
  * @param {import('@slack/types').AppMentionEvent | import('@slack/types').MessageEvent} event
  */
-export function computeThreadKey(event) {
-  const ch = String(event.channel || '');
+export function computeThreadKey(event = {}) {
+  const channel = String(event.channel || '').trim();
+
   if (event.channel_type === 'im') {
-    return `dm:${ch}:${event.thread_ts || event.ts}`;
+    return `dm:${channel}`;
   }
-  const root = event.thread_ts || event.ts;
-  return `mention:${ch}:${root}`;
+
+  const rootTs = String(event.thread_ts || event.ts || '').trim();
+  return `mention:${channel}:${rootTs}`;
 }
 
 /**
@@ -62,7 +64,23 @@ export async function handleFounderSlackTurn(ctx) {
     event_id: ctx.body?.event_id,
   };
 
-  const recentTurns = await readRecentThreadTurns(threadKey, 12);
+  const now = new Date().toISOString();
+  const userTurn = {
+    ts: now,
+    role: /** @type {'user'} */ ('user'),
+    text: rawText,
+    attachments: attachmentResults.map((r) => ({
+      filename: r.filename,
+      ok: r.ok,
+      summary: r.summary,
+      reason: r.reason,
+    })),
+  };
+
+  await appendThreadTurn(threadKey, userTurn);
+
+  const recent = await readRecentThreadTurns(threadKey, 13);
+  const priorTurns = recent.length > 0 && recent[recent.length - 1]?.role === 'user' ? recent.slice(0, -1) : recent;
 
   const out = await runFounderDirectConversation({
     openai: ctx.openai,
@@ -72,27 +90,20 @@ export async function handleFounderSlackTurn(ctx) {
     userText: rawText,
     attachmentResults,
     metadata,
-    recentTurns,
+    recentTurns: priorTurns,
+    threadKey,
   });
 
-  const now = new Date().toISOString();
-  await appendThreadTurn(threadKey, {
-    ts: now,
-    role: 'user',
-    text: rawText,
-    attachments: attachmentResults.map((r) => ({
-      filename: r.filename,
-      ok: r.ok,
-      summary: r.summary,
-      reason: r.reason,
-    })),
-  });
-  await appendThreadTurn(threadKey, {
-    ts: now,
-    role: 'assistant',
+  const assistantTurnCandidate = {
+    role: /** @type {'assistant'} */ ('assistant'),
     text: out.text,
     attachments: [],
-  });
+  };
 
-  return { text: out.text, threadKey };
+  return {
+    answer: out.text,
+    threadKey,
+    userTurn,
+    assistantTurnCandidate,
+  };
 }

@@ -31,13 +31,14 @@ assert.ok(!regSrc.includes('forbiddenPhrases'), 'handlers do not wire forbidden 
 assert.ok(!regSrc.includes('parseForbiddenPhrasesFromConstitution'), 'no runtime parse');
 
 let outbound = '';
-await sendFounderResponse({
+const r = await sendFounderResponse({
   say: async (p) => {
     outbound = typeof p === 'string' ? p : p?.text;
   },
   text: 'council synthesis and 한 줄 요약 in one line',
   constitutionSha256: 'abc',
 });
+assert.equal(r.ok, true);
 assert.ok(outbound.includes('council'), 'pass-through content');
 
 console.log('test-direct-conversation-pass_through_runtime: ok');

@@ -36,5 +36,6 @@ assert.ok(reg.includes('sendFounderResponse'), 'register must use sendFounderRes
 
 const h = fs.readFileSync(path.join(root, 'src/founder/handleFounderSlackTurn.js'), 'utf8');
 assert.ok(h.includes('runFounderDirectConversation'), 'controller must call runFounderDirectConversation');
+assert.ok(h.includes("return `dm:${channel}`"), 'DM thread key is channel-stable');
 
 console.log('test-founder-spine: ok');
