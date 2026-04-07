@@ -26,11 +26,24 @@ assert.ok(arts.some((x) => x.type === 'tool_result'), 'artifact: result ledger')
 
 await clearExecutionArtifacts(tk);
 
+const prevFetch = globalThis.fetch;
 process.env.RAILWAY_TOKEN = 'fake-live-token';
+globalThis.fetch = async (url) => {
+  assert.ok(String(url).includes('railway'), 'live path hits railway');
+  return new Response(JSON.stringify({ data: { deploymentLogs: [] } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
 const b = await invokeExternalTool(
-  { tool: 'railway', action: 'deploy', payload: { service: 'api' } },
+  {
+    tool: 'railway',
+    action: 'inspect_logs',
+    payload: { deployment_id: 'dep-mock-1' },
+  },
   { threadKey: tk },
 );
+globalThis.fetch = prevFetch;
 delete process.env.RAILWAY_TOKEN;
 
 assert.equal(b.execution_mode, 'live');

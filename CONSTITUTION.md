@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.4 — Model-owned execution layer (adapter + ledger visibility)
+## Version 2.5 — Real adapters, specialized packets, ledger as visibility spine
 
 ---
 
@@ -34,12 +34,14 @@ External tools (Cursor, GitHub, Supabase, Vercel, Railway 등)
 
 ### COS ↔ Harness ↔ Tools (추가 원칙)
 
-- Harness **team shape**는 COS가 정한다.
+- Harness **팀**은 COS가 그때그때 설계하는 **내부 실행 조직**이다. **team shape**는 COS가 정한다.
 - **external tool choice**는 COS가 정한다.
 - 앱 코드는 **adapter**와 **evidence ledger**만 제공한다 (판단기·통제기 아님).
 - 실행 artifact(harness dispatch·task packet 봉투·tool invocation 등)는 **founder에게 직접 보이지 않고**, COS 내부 실행 문맥·ledger로만 남는다.
-- **Task packet**은 앱이 의미를 해석하는 포맷이 아니라, COS가 내린 지시를 외부 실행기에 넘기기 위한 **canonical envelope(전달용 봉투)** 이다.
-- 과사용·독단·편향이 있는 에이전트 조율은 **COS가 ledger·실행 기록 visibility**를 바탕으로 수행한다. 코드가 대신 감시·우선순위를 정하지 않는다.
+- **Task packet**은 통제 규칙이 아니라, COS가 내린 지시를 외부 실행기에 넘기기 위한 **canonical envelope(전달용 봉투)** 이다. 앱은 의미를 해석하지 않는다.
+- **external tool invocation**은 **live**(실제 API가 성공한 경우) 또는 **artifact**(런타임에 기록된 대체 산출물) 모두 **실행 사실**이다. 자격 증명만으로 **가짜 live**(스텁만 수행하며 live로 표기)는 허용되지 않는다.
+- **execution ledger**는 COS가 실행층을 감시·조율하기 위한 **visibility spine**이다.
+- 과사용·독단·편향이 있는 에이전트 조율은 **COS의 책임**이며, **COS가 ledger·실행 기록 visibility**를 바탕으로 수행한다. 코드는 visibility만 제공하고 감시·우선순위를 대신 정하지 않는다.
 
 ### 런타임 policing (재확인)
 

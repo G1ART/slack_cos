@@ -4,7 +4,11 @@
 
 import { runHarnessOrchestration } from './harnessBridge.js';
 import { invokeExternalTool, isValidToolAction } from './toolsBridge.js';
-import { appendExecutionArtifact, readRecentExecutionArtifacts } from './executionLedger.js';
+import {
+  appendExecutionArtifact,
+  readExecutionSummary,
+  readRecentExecutionArtifacts,
+} from './executionLedger.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -23,32 +27,7 @@ const INVOKE_ACTION_ENUM = [
 ];
 
 const PERSONA_ENUM_ARR = ['research', 'pm', 'engineering', 'design', 'qa', 'data'];
-
-/**
- * @param {{ type: string, summary?: string, payload?: object }} a
- */
-export function summarizeExecutionArtifact(a) {
-  const pl = a.payload && typeof a.payload === 'object' && !Array.isArray(a.payload) ? a.payload : {};
-  const type = String(a.type || '');
-  if (type === 'harness_dispatch') {
-    const shape = pl.team_shape || '?';
-    const obj = String(pl.objective || a.summary || '').slice(0, 120);
-    return `- harness_dispatch: ${shape} / objective: ${obj}`;
-  }
-  if (type === 'harness_packet') {
-    return `- harness_packet: ${pl.persona || '?'} → ${String(pl.handoff_to || '(end)')} / ${String(pl.mission || '').slice(0, 80)}`;
-  }
-  if (type === 'tool_invocation') {
-    return `- tool_invocation: ${pl.tool}.${pl.action} / ${pl.execution_mode || 'artifact'} mode`;
-  }
-  if (type === 'tool_result') {
-    return `- tool_result: ${pl.tool || '?'}.${pl.action || '?'} / ${String(a.summary || '').slice(0, 120)}`;
-  }
-  if (type === 'execution_note') {
-    return `- execution_note: ${String(a.summary || '').slice(0, 200)}`;
-  }
-  return `- ${type}: ${String(a.summary || '').slice(0, 120)}`;
-}
+const PREFERRED_TOOL_ENUM = ['cursor', 'github', 'supabase', 'vercel', 'railway'];
 
 /**
  * Tool-call 인자의 기계적 스키마 검증만.
@@ -78,6 +57,27 @@ export function validateToolCallArgs(callName, args) {
         }
         if (typeof pkt.handoff_to !== 'string') return { blocked: true, reason: 'invalid_payload' };
         if (typeof pkt.artifact_format !== 'string' || !pkt.artifact_format.trim()) {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (pkt.preferred_tool != null) {
+          const pt = String(pkt.preferred_tool);
+          if (!PREFERRED_TOOL_ENUM.includes(pt)) return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (pkt.preferred_action != null) {
+          const pa = String(pkt.preferred_action);
+          if (!INVOKE_ACTION_ENUM.includes(pa)) return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (pkt.review_required !== undefined && typeof pkt.review_required !== 'boolean') {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (pkt.review_focus !== undefined && !Array.isArray(pkt.review_focus)) {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (
+          pkt.packet_status !== undefined &&
+          pkt.packet_status !== 'draft' &&
+          pkt.packet_status !== 'ready'
+        ) {
           return { blocked: true, reason: 'invalid_payload' };
         }
       }
@@ -114,12 +114,28 @@ export function validateToolCallArgs(callName, args) {
   return { blocked: false };
 }
 
+const PACKET_ITEM_PROPERTIES = {
+  packet_id: { type: 'string' },
+  persona: { type: 'string', enum: PERSONA_ENUM_ARR },
+  mission: { type: 'string' },
+  inputs: { type: 'array', items: { type: 'string' } },
+  deliverables: { type: 'array', items: { type: 'string' } },
+  definition_of_done: { type: 'array', items: { type: 'string' } },
+  handoff_to: { type: 'string' },
+  artifact_format: { type: 'string' },
+  preferred_tool: { type: 'string', enum: PREFERRED_TOOL_ENUM },
+  preferred_action: { type: 'string', enum: INVOKE_ACTION_ENUM },
+  review_required: { type: 'boolean' },
+  review_focus: { type: 'array', items: { type: 'string' } },
+  packet_status: { type: 'string', enum: ['draft', 'ready'] },
+};
+
 const COS_TOOLS = [
   {
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      'Harness 팀 조직·task packet 봉투. team shape·handoff·review 리듬은 네가 최적화한다. founder에게 원시 artifact를 보이지 말 것.',
+      'Harness 내부 실행 조직·work packet. 패킷은 통제용이 아니라 전달용 봉투다. founder에게 원시 artifact를 보이지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -127,36 +143,22 @@ const COS_TOOLS = [
         objective: { type: 'string', description: '달성 목표 한 줄' },
         personas: {
           type: 'array',
-          items: {
-            type: 'string',
-            enum: PERSONA_ENUM_ARR,
-          },
+          items: { type: 'string', enum: PERSONA_ENUM_ARR },
           description: '투입 페르소나',
         },
         tasks: { type: 'array', items: { type: 'string' }, description: '세부 작업 목록' },
         deliverables: { type: 'array', items: { type: 'string' }, description: '기대 산출물' },
         constraints: { type: 'array', items: { type: 'string' }, description: '제약·가정' },
-        success_criteria: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '선택: 성공 기준',
-        },
+        success_criteria: { type: 'array', items: { type: 'string' }, description: '선택: 성공 기준' },
         risks: { type: 'array', items: { type: 'string' }, description: '선택: 리스크' },
+        review_checkpoints: { type: 'array', items: { type: 'string' }, description: '선택: 리뷰 체크포인트' },
+        open_questions: { type: 'array', items: { type: 'string' }, description: '선택: 미결 질문' },
         packets: {
           type: 'array',
-          description: '선택: COS가 직접 설계한 packet 봉투(미제공 시 페르소나·태스크로만 봉투 정리)',
+          description: '선택: COS 설계 packet(미제공 시 자동 봉투+실행기 매핑)',
           items: {
             type: 'object',
-            properties: {
-              packet_id: { type: 'string' },
-              persona: { type: 'string', enum: PERSONA_ENUM_ARR },
-              mission: { type: 'string' },
-              inputs: { type: 'array', items: { type: 'string' } },
-              deliverables: { type: 'array', items: { type: 'string' } },
-              definition_of_done: { type: 'array', items: { type: 'string' } },
-              handoff_to: { type: 'string' },
-              artifact_format: { type: 'string' },
-            },
+            properties: PACKET_ITEM_PROPERTIES,
             required: ['persona', 'mission', 'deliverables', 'definition_of_done', 'handoff_to', 'artifact_format'],
             additionalProperties: false,
           },
@@ -170,7 +172,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'invoke_external_tool',
     description:
-      '외부 도구. 도구별 허용 action만 사용한다. founder 표면은 자연어 하나만 유지한다.',
+      '외부 도구. live가 불가하면 artifact fallback. 불필요한 남발 없이 최소 호출. founder 표면은 자연어만.',
     strict: true,
     parameters: {
       type: 'object',
@@ -200,7 +202,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'record_execution_note',
     description:
-      '내부 실행 메모(예: packet 좁히기, 페르소나 과사용). founder 비노출. COS가 visibility 보고 조율한다.',
+      '내부 운영 메모(예: packet 축소, 페르소나 과사용). founder 비노출. ledger visibility용.',
     strict: true,
     parameters: {
       type: 'object',
@@ -215,7 +217,7 @@ const COS_TOOLS = [
   {
     type: 'function',
     name: 'read_execution_context',
-    description: '최근 execution ledger를 다시 읽는다.',
+    description: '최근 ledger 요약 라인 + raw artifact 배열을 반환한다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -234,11 +236,14 @@ const COS_TOOLS = [
 export function buildSystemInstructions(constitutionMarkdown) {
   return [
     '당신은 G1 COS다. Slack의 founder와 자연어로 대화하고, scope 락 이후 Harness·Tools 실행층을 네가 지휘한다.',
+    '하네스 팀은 네가 그때그때 조립하는 내부 실행 조직이다. 패킷은 통제용이 아니라 전달용 canonical envelope다.',
     '아래 헌법 전문을 반드시 준수하라. 헌법에 나온 금지 문자열·레거시 표면을 founder에게 출력하지 마라.',
     'founder와 대화하며 scope를 스스로 구체화하라. lock이 충분하지 않으면 질문하라.',
-    'lock이 충분하면 필요한 harness 조직(delegate_harness_team)과 외부 도구(invoke_external_tool)를 스스로 선택하라. harness team shape와 review 리듬은 네가 최적화한다.',
-    'record_execution_note / read_execution_context 로 내부 실행 맥락을 정리·재확인할 수 있다.',
-    'founder에게 내부 조직·도구·packet·원시 artifact를 직접 보여주지 말라. founder에게는 자연어 응답 하나만 보인다.',
+    'lock이 충분하면 harness(delegate_harness_team)와 외부 도구(invoke_external_tool)를 스스로 선택하라. team shape·review 리듬은 네가 최적화한다.',
+    '실행 아티팩트·ledger·결과를 보고 과사용·독단·낭비를 스스로 조율하라. 코드는 visibility만 준다.',
+    'live adapter가 없거나 계약이 부족하면 artifact fallback을 사용한다. 불필요한 tool 남발 없이 최소 호출로 진행하라.',
+    'record_execution_note / read_execution_context 로 내부 맥락을 정리·재확인한다.',
+    'founder에게 내부 artifact·원시 JSON을 직접 보여주지 말고 자연어로만 보고하라.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -252,7 +257,7 @@ export function buildSystemInstructions(constitutionMarkdown) {
  *   userText: string,
  *   attachmentResults: { filename: string, ok: boolean, summary?: string, reason?: string }[],
  *   metadata: Record<string, unknown>,
- *   executionArtifacts?: { ts: string, type: string, summary: string, payload?: object }[],
+ *   executionSummaryLines?: string[],
  * }} p
  */
 export function buildFounderConversationInput(p) {
@@ -281,12 +286,10 @@ export function buildFounderConversationInput(p) {
   lines.push(attLines.length ? 'attachments:\n' + attLines.join('\n') : 'attachments: (없음)');
   lines.push('');
   lines.push('[최근 실행 아티팩트]');
-  const arts = p.executionArtifacts || [];
-  if (!arts.length) lines.push('(없음)');
+  const sl = p.executionSummaryLines || [];
+  if (!sl.length) lines.push('(없음)');
   else {
-    for (const a of arts) {
-      lines.push(summarizeExecutionArtifact(a));
-    }
+    for (const line of sl) lines.push(line);
   }
   lines.push('');
   lines.push('[최소 메타 — 앱은 의미 분류하지 않음]');
@@ -316,8 +319,9 @@ async function handleRecordExecutionNote(args, threadKey) {
     type: 'execution_note',
     summary: note.slice(0, 500),
     payload: detail,
+    status: null,
   });
-  return { ok: true, recorded: true };
+  return { ok: true, recorded: true, summary: note.slice(0, 500) };
 }
 
 /**
@@ -328,8 +332,9 @@ async function handleReadExecutionContext(args, threadKey) {
   const limRaw = args?.limit;
   const limit =
     typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
-  const list = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
-  return { ok: true, artifacts: list };
+  const artifacts = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
+  const summary_lines = threadKey ? await readExecutionSummary(threadKey, limit) : [];
+  return { ok: true, summary_lines, artifacts };
 }
 
 /**
@@ -428,7 +433,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
  */
 export async function runFounderDirectConversation(ctx) {
   const tk = String(ctx.threadKey || '');
-  const executionArtifacts = tk ? await readRecentExecutionArtifacts(tk, 5) : [];
+  const executionSummaryLines = tk ? await readExecutionSummary(tk, 5) : [];
 
   const instructions = buildSystemInstructions(ctx.constitutionMarkdown);
   const initialInput = buildFounderConversationInput({
@@ -436,7 +441,7 @@ export async function runFounderDirectConversation(ctx) {
     userText: ctx.userText,
     attachmentResults: ctx.attachmentResults || [],
     metadata: ctx.metadata || {},
-    executionArtifacts,
+    executionSummaryLines,
   });
 
   const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput, tk);
