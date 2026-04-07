@@ -54,6 +54,10 @@ export function appRunToDbRow(row) {
     completed_at: row.completed_at ?? null,
     last_progressed_at: row.last_progressed_at ?? null,
     last_founder_update_sha: row.last_founder_update_sha != null ? String(row.last_founder_update_sha) : null,
+    cursor_external_terminal_by_packet:
+      row.cursor_external_terminal_by_packet && typeof row.cursor_external_terminal_by_packet === 'object'
+        ? row.cursor_external_terminal_by_packet
+        : {},
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
@@ -106,6 +110,10 @@ export function dbRowToAppRun(db) {
     handoff_order: Array.isArray(db.handoff_order) ? db.handoff_order.map(String) : [],
     packet_ids: Array.isArray(db.required_packet_ids) ? db.required_packet_ids.map(String) : [],
     external_run_id: ext,
+    cursor_external_terminal_by_packet:
+      db.cursor_external_terminal_by_packet && typeof db.cursor_external_terminal_by_packet === 'object'
+        ? db.cursor_external_terminal_by_packet
+        : {},
   };
 }
 
@@ -215,6 +223,7 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
       completed_at: dbUp.completed_at,
       last_progressed_at: dbUp.last_progressed_at,
       last_founder_update_sha: dbUp.last_founder_update_sha,
+      cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
       updated_at: dbUp.updated_at,
     })
     .eq('id', cur.id);

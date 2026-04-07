@@ -11,12 +11,12 @@ const nestedAgent = {
 };
 const n = normalizeCursorWebhookPayload(nestedAgent);
 assert.ok(n);
-assert.equal(n.external_run_id, 'real-run-1');
-assert.equal(n.thread_key_hint, 'dm:realistic:1');
-assert.equal(n.packet_id_hint, 'pkt-9');
-assert.equal(n.status_hint, 'external_completed');
-assert.equal(n.payload.branch, 'main');
-assert.ok(String(n.payload.pr_url || '').includes('gh/pr'));
+assert.equal(n.canonical.external_run_id, 'real-run-1');
+assert.equal(n.canonical.thread_key_hint, 'dm:realistic:1');
+assert.equal(n.canonical.packet_id_hint, 'pkt-9');
+assert.equal(n.canonical.status_hint, 'external_completed');
+assert.equal(n.canonical.payload.branch, 'main');
+assert.ok(String(n.canonical.payload.pr_url || '').includes('gh/pr'));
 
 const jobWrapped = {
   job: {
@@ -27,10 +27,10 @@ const jobWrapped = {
 };
 const j = normalizeCursorWebhookPayload(jobWrapped);
 assert.ok(j);
-assert.equal(j.external_run_id, 'job-run-7');
-assert.equal(j.status_hint, 'external_failed');
-assert.equal(j.packet_id_hint, 'pJ');
-assert.equal(j.thread_key_hint, 'dm:job:1');
+assert.equal(j.canonical.external_run_id, 'job-run-7');
+assert.equal(j.canonical.status_hint, 'external_failed');
+assert.equal(j.canonical.packet_id_hint, 'pJ');
+assert.equal(j.canonical.thread_key_hint, 'dm:job:1');
 
 const payloadOnly = {
   payload: {
@@ -41,8 +41,8 @@ const payloadOnly = {
 };
 const p = normalizeCursorWebhookPayload(payloadOnly);
 assert.ok(p);
-assert.equal(p.external_run_id, 'nested-run-z');
-assert.equal(p.run_id_hint, 'uuid-run-row');
-assert.equal(p.packet_id_hint, 'pZ');
+assert.equal(p.canonical.external_run_id, 'nested-run-z');
+assert.equal(p.canonical.run_id_hint, 'uuid-run-row');
+assert.equal(p.canonical.packet_id_hint, 'pZ');
 
 console.log('test-cursor-webhook-realistic-payloads: ok');

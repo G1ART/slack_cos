@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
+import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import { __cursorAutomationFetchForTests } from '../src/founder/cursorCloudAdapter.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
@@ -107,5 +108,60 @@ const r2 = await getActiveRunForThread(tk);
 assert.equal(r2.packet_state_map.p1, 'completed');
 assert.equal(r2.packet_state_map.p2, 'completed');
 assert.equal(r2.status, 'completed');
+
+const tk2 = 'mention:smoke_webhook_override:1';
+const run2 = await persistRunAfterDelegate({
+  threadKey: tk2,
+  dispatch: {
+    ok: true,
+    status: 'accepted',
+    dispatch_id: 'ds_ov',
+    objective: 'ov',
+    packets: [
+      {
+        packet_id: 'p_ov',
+        packet_status: 'running',
+        preferred_tool: 'cursor',
+        preferred_action: 'create_spec',
+        mission: 'm',
+      },
+    ],
+  },
+  starter_kickoff: {
+    executed: true,
+    packet_id: 'p_ov',
+    tool: 'cursor',
+    action: 'create_spec',
+    outcome: { status: 'running', outcome_code: 'cloud_agent_dispatch_accepted' },
+  },
+  founder_request_summary: '',
+});
+const extOv = 'override_smoke_run_99';
+await upsertExternalCorrelation({
+  run_id: String(run2.id),
+  thread_key: tk2,
+  packet_id: 'p_ov',
+  provider: 'cursor',
+  object_type: 'cloud_agent_run',
+  object_id: extOv,
+});
+
+const nestedBody = JSON.stringify({
+  outer: { nested: { cursorRun: extOv, phase: 'done' } },
+});
+const rawOv = Buffer.from(nestedBody, 'utf8');
+const sigOv = `sha256=${crypto.createHmac('sha256', secret).update(rawOv).digest('hex')}`;
+const whOv = await handleCursorWebhookIngress({
+  rawBody: rawOv,
+  headers: { 'x-cursor-signature-256': sigOv },
+  env: {
+    CURSOR_WEBHOOK_SECRET: secret,
+    CURSOR_WEBHOOK_RUN_ID_PATH: 'outer.nested.cursorRun',
+    CURSOR_WEBHOOK_STATUS_PATH: 'outer.nested.phase',
+  },
+});
+assert.equal(whOv.matched, true);
+const rOv = await getActiveRunForThread(tk2);
+assert.equal(rOv.packet_state_map.p_ov, 'completed');
 
 console.log('test-cursor-cloud-smoke-lifecycle: ok');

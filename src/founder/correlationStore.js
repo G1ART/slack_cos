@@ -144,12 +144,13 @@ export async function findExternalCorrelation(provider, objectType, objectId) {
  *   packet_id?: string | null,
  *   thread_key?: string | null,
  * }} hints
+ * @returns {Promise<{ corr: Record<string, unknown> | null, matched_by: string }>}
  */
-export async function findExternalCorrelationCursorHints(hints) {
+export async function findExternalCorrelationCursorHintsWithMeta(hints) {
   const ext = String(hints.external_run_id || '').trim();
   if (ext) {
     const hit = await findExternalCorrelation('cursor', 'cloud_agent_run', ext);
-    if (hit) return hit;
+    if (hit) return { corr: hit, matched_by: 'external_run_id' };
   }
 
   const rid = String(hints.run_id || '').trim();
@@ -160,20 +161,24 @@ export async function findExternalCorrelationCursorHints(hints) {
   if (mode === 'memory') {
     for (const rec of memCorrelations.values()) {
       if (String(rec.provider || '') !== 'cursor') continue;
-      if (rid && String(rec.run_id || '') === rid && (!pid || String(rec.packet_id || '') === pid)) return rec;
-      if (tk && String(rec.thread_key || '') === tk && pid && String(rec.packet_id || '') === pid) return rec;
+      if (rid && String(rec.run_id || '') === rid && (!pid || String(rec.packet_id || '') === pid)) {
+        return { corr: rec, matched_by: 'run_uuid_packet' };
+      }
+      if (tk && String(rec.thread_key || '') === tk && pid && String(rec.packet_id || '') === pid) {
+        return { corr: rec, matched_by: 'thread_key_packet_id' };
+      }
     }
-    return null;
+    return { corr: null, matched_by: 'none' };
   }
 
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
-    if (!sb) return null;
+    if (!sb) return { corr: null, matched_by: 'none' };
     if (rid) {
       let q = sb.from('cos_external_correlations').select('*').eq('provider', 'cursor').eq('run_id', rid);
       if (pid) q = q.eq('packet_id', pid);
       const { data, error } = await q.limit(1);
-      if (!error && Array.isArray(data) && data[0]) return data[0];
+      if (!error && Array.isArray(data) && data[0]) return { corr: data[0], matched_by: 'run_uuid_packet' };
     }
     if (tk && pid) {
       const { data, error } = await sb
@@ -183,18 +188,35 @@ export async function findExternalCorrelationCursorHints(hints) {
         .eq('thread_key', tk)
         .eq('packet_id', pid)
         .limit(1);
-      if (!error && Array.isArray(data) && data[0]) return data[0];
+      if (!error && Array.isArray(data) && data[0]) return { corr: data[0], matched_by: 'thread_key_packet_id' };
     }
-    return null;
+    return { corr: null, matched_by: 'none' };
   }
 
   const list = await readFileCorrelations();
   for (const rec of list) {
     if (String(rec.provider) !== 'cursor') continue;
-    if (rid && String(rec.run_id) === rid && (!pid || String(rec.packet_id || '') === pid)) return rec;
-    if (tk && String(rec.thread_key) === tk && pid && String(rec.packet_id) === pid) return rec;
+    if (rid && String(rec.run_id) === rid && (!pid || String(rec.packet_id || '') === pid)) {
+      return { corr: rec, matched_by: 'run_uuid_packet' };
+    }
+    if (tk && String(rec.thread_key) === tk && pid && String(rec.packet_id) === pid) {
+      return { corr: rec, matched_by: 'thread_key_packet_id' };
+    }
   }
-  return null;
+  return { corr: null, matched_by: 'none' };
+}
+
+/**
+ * @param {{
+ *   external_run_id?: string | null,
+ *   run_id?: string | null,
+ *   packet_id?: string | null,
+ *   thread_key?: string | null,
+ * }} hints
+ */
+export async function findExternalCorrelationCursorHints(hints) {
+  const { corr } = await findExternalCorrelationCursorHintsWithMeta(hints);
+  return corr;
 }
 
 export function __resetCorrelationMemoryForTests() {

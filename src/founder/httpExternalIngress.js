@@ -111,7 +111,8 @@ function buildReadyz(env) {
     cursor_cloud_lane: cc.cursor_cloud_lane_enabled ? 'on' : 'off',
     cursor_cloud_automation: cc.cursor_cloud_ready ? 'ready' : 'not_ready',
     cursor_callback_signature: cc.cursor_callback_signature_mode,
-    cursor_automation_response_override_count: cc.cursor_cloud_response_paths.length,
+    cursor_automation_response_override_count: cc.cursor_automation_response_override_count,
+    cursor_webhook_override_count: cc.cursor_webhook_override_count,
   };
   const degraded = !hasOpenAI || !hasSlackSocket;
   return {

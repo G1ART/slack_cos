@@ -264,6 +264,7 @@ export async function persistRunAfterDelegate(p) {
     last_founder_update_sha: crypto.createHash('sha256').update(`${run_id}:${now}`).digest('hex'),
     last_progressed_at: now,
     last_auto_invocation_sha: null,
+    cursor_external_terminal_by_packet: {},
   };
 
   const mode = storeMode();

@@ -14,6 +14,7 @@ import {
   isCursorCloudAgentLaneReady,
   listAutomationResponseOverrideKeys,
 } from './cursorCloudAdapter.js';
+import { listCursorWebhookOverrideKeys } from './cursorWebhookIngress.js';
 
 /**
  * @param {NodeJS.ProcessEnv} env
@@ -42,10 +43,15 @@ function supabaseEnvTruth(env) {
  */
 export function getCursorCloudRuntimeTruth(env = process.env) {
   const whSecret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
+  const automationKeys = listAutomationResponseOverrideKeys(env);
+  const webhookKeys = listCursorWebhookOverrideKeys(env);
   return {
     cursor_cloud_lane_enabled: isCursorCloudAgentEnabled(env),
     cursor_cloud_ready: isCursorCloudAgentLaneReady(env),
-    cursor_cloud_response_paths: listAutomationResponseOverrideKeys(env),
+    cursor_cloud_response_paths: automationKeys,
+    cursor_automation_response_override_count: automationKeys.length,
+    cursor_webhook_override_keys: webhookKeys,
+    cursor_webhook_override_count: webhookKeys.length,
     cursor_callback_signature_mode: whSecret ? 'secret-configured' : 'none',
   };
 }

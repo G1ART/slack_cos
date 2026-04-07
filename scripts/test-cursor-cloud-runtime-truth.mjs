@@ -22,12 +22,15 @@ const t1 = getCursorCloudRuntimeTruth({
   CURSOR_WEBHOOK_SECRET: 'whsec_test',
   CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH: 'data.run.id',
   CURSOR_AUTOMATION_RESPONSE_URL_PATH: 'data.run.url',
+  CURSOR_WEBHOOK_RUN_ID_PATH: 'agent.id',
 });
 assert.equal(t1.cursor_cloud_lane_enabled, true);
 assert.equal(t1.cursor_cloud_ready, true);
 assert.equal(t1.cursor_callback_signature_mode, 'secret-configured');
 assert.ok(t1.cursor_cloud_response_paths.includes('CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH'));
 assert.ok(t1.cursor_cloud_response_paths.includes('CURSOR_AUTOMATION_RESPONSE_URL_PATH'));
-assert.equal(t1.cursor_cloud_response_paths.length, 2);
+assert.equal(t1.cursor_automation_response_override_count, 2);
+assert.ok(t1.cursor_webhook_override_keys.includes('CURSOR_WEBHOOK_RUN_ID_PATH'));
+assert.equal(t1.cursor_webhook_override_count, 1);
 
 console.log('test-cursor-cloud-runtime-truth: ok');

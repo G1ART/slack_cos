@@ -1,8 +1,31 @@
 /**
  * Cursor Cloud Agent webhook verify + payload normalization (runtime plumbing).
+ * Webhook-only dot-path overrides via CURSOR_WEBHOOK_*_PATH env (see listCursorWebhookOverrideKeys).
  */
 
 import crypto from 'node:crypto';
+import { getByDotPath } from './cursorCloudAdapter.js';
+import { canonicalizeExternalRunStatus } from './externalRunStatus.js';
+
+export const CURSOR_WEBHOOK_OVERRIDE_ENV_KEYS = [
+  'CURSOR_WEBHOOK_RUN_ID_PATH',
+  'CURSOR_WEBHOOK_STATUS_PATH',
+  'CURSOR_WEBHOOK_THREAD_KEY_PATH',
+  'CURSOR_WEBHOOK_PACKET_ID_PATH',
+  'CURSOR_WEBHOOK_BRANCH_PATH',
+  'CURSOR_WEBHOOK_PR_URL_PATH',
+  'CURSOR_WEBHOOK_SUMMARY_PATH',
+  'CURSOR_WEBHOOK_OCCURRED_AT_PATH',
+];
+
+/** @param {NodeJS.ProcessEnv} [env] */
+export function listCursorWebhookOverrideKeys(env = process.env) {
+  const keys = [];
+  for (const k of CURSOR_WEBHOOK_OVERRIDE_ENV_KEYS) {
+    if (String(env[k] || '').trim()) keys.push(k);
+  }
+  return keys;
+}
 
 /**
  * @param {string} secret
@@ -42,10 +65,31 @@ function firstNonEmptyString(values) {
 }
 
 /**
- * @param {Record<string, unknown>} body
- * @returns {Record<string, unknown> | null} canonical-shaped object (see canonicalExternalEvent.js)
+ * @param {Record<string, unknown>} root
+ * @param {string} envKey
+ * @param {NodeJS.ProcessEnv} env
+ * @param {() => { value: string, trace: string }} heuristic
+ * @param {string[]} selectedKeysOut
  */
-export function normalizeCursorWebhookPayload(body) {
+function pickString(root, envKey, env, heuristic, selectedKeysOut) {
+  const path = String(env[envKey] || '').trim();
+  if (path) {
+    const v = getByDotPath(root, path);
+    if (v != null && String(v).trim()) {
+      selectedKeysOut.push(envKey);
+      return { value: String(v).trim(), source: envKey };
+    }
+  }
+  const h = heuristic();
+  return { value: h.value, source: h.trace };
+}
+
+/**
+ * @param {Record<string, unknown>} body
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {null | { canonical: Record<string, unknown>, evidence: Record<string, unknown> }}
+ */
+export function normalizeCursorWebhookPayload(body, env = process.env) {
   const root = asRecord(body);
   const nested = asRecord(root.payload);
   const context = asRecord(root.context);
@@ -56,6 +100,8 @@ export function normalizeCursorWebhookPayload(body) {
   const dataRun = asRecord(data.run);
   const jobRun = asRecord(job.run);
   const nestedRun = asRecord(nested.run);
+
+  const selected_override_keys = [];
 
   const eventType =
     firstNonEmptyString([
@@ -69,86 +115,126 @@ export function normalizeCursorWebhookPayload(body) {
       job.type,
     ]) || 'statusChange';
 
-  const statusRaw = firstNonEmptyString([
-    dataRun.status,
-    dataRun.state,
-    runRoot.status,
-    runRoot.state,
-    jobRun.status,
-    jobRun.state,
-    nestedRun.status,
-    nestedRun.state,
-    agent.status,
-    agent.state,
-    job.status,
-    job.state,
-    data.status,
-    data.state,
-    nested.status,
-    nested.state,
-    root.status,
-    root.state,
-    root.runStatus,
-  ]).toLowerCase();
+  const statusPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_STATUS_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        dataRun.status,
+        dataRun.state,
+        runRoot.status,
+        runRoot.state,
+        jobRun.status,
+        jobRun.state,
+        nestedRun.status,
+        nestedRun.state,
+        agent.status,
+        agent.state,
+        job.status,
+        job.state,
+        data.status,
+        data.state,
+        nested.status,
+        nested.state,
+        root.status,
+        root.state,
+        root.runStatus,
+      ]),
+      trace: 'heuristic:nested.status|state',
+    }),
+    selected_override_keys,
+  );
+  const statusRaw = String(statusPick.value || '').toLowerCase();
 
-  const externalRunId = firstNonEmptyString([
-    dataRun.id,
-    dataRun.runId,
-    dataRun.run_id,
-    jobRun.id,
-    nestedRun.id,
-    nestedRun.runId,
-    nestedRun.run_id,
-    runRoot.id,
-    runRoot.runId,
-    runRoot.run_id,
-    agent.runId,
-    agent.run_id,
-    agent.id,
-    job.runId,
-    job.run_id,
-    job.id,
-    data.runId,
-    data.run_id,
-    data.agentRunId,
-    data.cloudRunId,
-    nested.runId,
-    nested.run_id,
-    nested.agentRunId,
-    nested.cloudRunId,
-    root.runId,
-    root.run_id,
-    root.agentRunId,
-    root.cloudRunId,
-    root.externalRunId,
-    root.id,
-  ]);
+  const runIdPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_RUN_ID_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        dataRun.id,
+        dataRun.runId,
+        dataRun.run_id,
+        jobRun.id,
+        nestedRun.id,
+        nestedRun.runId,
+        nestedRun.run_id,
+        runRoot.id,
+        runRoot.runId,
+        runRoot.run_id,
+        agent.runId,
+        agent.run_id,
+        agent.id,
+        job.runId,
+        job.run_id,
+        job.id,
+        data.runId,
+        data.run_id,
+        data.agentRunId,
+        data.cloudRunId,
+        nested.runId,
+        nested.run_id,
+        nested.agentRunId,
+        nested.cloudRunId,
+        root.runId,
+        root.run_id,
+        root.agentRunId,
+        root.cloudRunId,
+        root.externalRunId,
+        root.id,
+      ]),
+      trace: 'heuristic:run.id|runId',
+    }),
+    selected_override_keys,
+  );
+  const externalRunId = runIdPick.value;
 
-  const threadKeyHint = firstNonEmptyString([
-    context.thread_key,
-    context.threadKey,
-    data.thread_key,
-    data.threadKey,
-    job.thread_key,
-    job.threadKey,
-    nested.thread_key,
-    nested.threadKey,
-    root.thread_key,
-    root.threadKey,
-  ]);
+  const threadPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_THREAD_KEY_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        context.thread_key,
+        context.threadKey,
+        data.thread_key,
+        data.threadKey,
+        job.thread_key,
+        job.threadKey,
+        nested.thread_key,
+        nested.threadKey,
+        root.thread_key,
+        root.threadKey,
+      ]),
+      trace: 'heuristic:context.threadKey',
+    }),
+    selected_override_keys,
+  );
+  const threadKeyHint = threadPick.value;
 
-  const packetIdHint = firstNonEmptyString([
-    context.packet_id,
-    context.packetId,
-    data.packet_id,
-    data.packetId,
-    job.packet_id,
-    job.packetId,
-    nested.packet_id,
-    nested.packetId,
-    root.packet_id,
-    root.packetId,
-  ]);
+  const packetPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_PACKET_ID_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        context.packet_id,
+        context.packetId,
+        data.packet_id,
+        data.packetId,
+        job.packet_id,
+        job.packetId,
+        nested.packet_id,
+        nested.packetId,
+        root.packet_id,
+        root.packetId,
+      ]),
+      trace: 'heuristic:packet_id',
+    }),
+    selected_override_keys,
+  );
+  const packetIdHint = packetPick.value;
 
   const runUuidHint = firstNonEmptyString([
     context.cos_run_id,
@@ -163,75 +249,108 @@ export function normalizeCursorWebhookPayload(body) {
     root.run_uuid,
   ]);
 
-  const branchRaw = firstNonEmptyString([
-    dataRun.branch,
-    dataRun.gitBranch,
-    runRoot.branch,
-    data.branch,
-    job.branch,
-    nested.branch,
-    nested.gitBranch,
-    root.branch,
-    root.gitBranch,
-  ]);
+  const branchPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_BRANCH_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        dataRun.branch,
+        dataRun.gitBranch,
+        runRoot.branch,
+        data.branch,
+        job.branch,
+        nested.branch,
+        nested.gitBranch,
+        root.branch,
+        root.gitBranch,
+      ]),
+      trace: 'heuristic:branch',
+    }),
+    selected_override_keys,
+  );
+  const branchRaw = branchPick.value;
 
-  const prUrlRaw = firstNonEmptyString([
-    dataRun.prUrl,
-    dataRun.pullRequestUrl,
-    data.prUrl,
-    data.pullRequestUrl,
-    job.pullRequestUrl,
-    job.prUrl,
-    nested.prUrl,
-    nested.pullRequestUrl,
-    root.prUrl,
-    root.pullRequestUrl,
-  ]);
+  const prPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_PR_URL_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        dataRun.prUrl,
+        dataRun.pullRequestUrl,
+        data.prUrl,
+        data.pullRequestUrl,
+        job.pullRequestUrl,
+        job.prUrl,
+        nested.prUrl,
+        nested.pullRequestUrl,
+        root.prUrl,
+        root.pullRequestUrl,
+      ]),
+      trace: 'heuristic:prUrl',
+    }),
+    selected_override_keys,
+  );
+  const prUrlRaw = prPick.value;
 
-  const summaryRaw = firstNonEmptyString([
-    dataRun.summary,
-    runRoot.summary,
-    data.summary,
-    job.message,
-    job.summary,
-    nested.summary,
-    nested.message,
-    root.summary,
-    root.message,
-    root.title,
-  ]);
+  const summaryPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_SUMMARY_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        dataRun.summary,
+        runRoot.summary,
+        data.summary,
+        job.message,
+        job.summary,
+        nested.summary,
+        nested.message,
+        root.summary,
+        root.message,
+        root.title,
+      ]),
+      trace: 'heuristic:summary|message',
+    }),
+    selected_override_keys,
+  );
+  const summaryRaw = summaryPick.value;
 
-  const occurredPick = firstNonEmptyString([
-    root.occurred_at,
-    root.occurredAt,
-    root.timestamp,
-    nested.occurred_at,
-    data.occurred_at,
-    job.updatedAt,
-  ]);
+  const occurredPick = pickString(
+    root,
+    'CURSOR_WEBHOOK_OCCURRED_AT_PATH',
+    env,
+    () => ({
+      value: firstNonEmptyString([
+        root.occurred_at,
+        root.occurredAt,
+        root.timestamp,
+        nested.occurred_at,
+        data.occurred_at,
+        job.updatedAt,
+      ]),
+      trace: 'heuristic:occurred_at|timestamp',
+    }),
+    selected_override_keys,
+  );
+  const occurredPickVal = occurredPick.value;
 
   if (!externalRunId && !threadKeyHint && !(runUuidHint && packetIdHint)) {
     return null;
   }
 
+  const canon = canonicalizeExternalRunStatus(statusRaw);
   let status_hint = 'external_status_update';
-  if (statusRaw === 'completed' || statusRaw === 'success' || statusRaw === 'succeeded') {
-    status_hint = 'external_completed';
-  } else if (
-    statusRaw === 'failed' ||
-    statusRaw === 'error' ||
-    statusRaw === 'canceled' ||
-    statusRaw === 'cancelled'
-  ) {
-    status_hint = 'external_failed';
-  }
+  if (canon.bucket === 'positive_terminal') status_hint = 'external_completed';
+  else if (canon.bucket === 'negative_terminal') status_hint = 'external_failed';
 
-  const occurred_at = occurredPick || new Date().toISOString();
+  const occurred_at = occurredPickVal || new Date().toISOString();
   const external_id = externalRunId
     ? `cursor:cloud_run:${externalRunId}`
     : `cursor:hint:${runUuidHint || threadKeyHint || 'unknown'}`;
 
-  return {
+  const canonical = {
     provider: 'cursor',
     event_type: eventType || 'statusChange',
     external_id,
@@ -247,6 +366,20 @@ export function normalizeCursorWebhookPayload(body) {
       pr_url: prUrlRaw || null,
       summary: summaryRaw ? summaryRaw.slice(0, 500) : null,
       raw_keys: Object.keys(root).slice(0, 40),
+      canonical_status_bucket: canon.bucket,
+      canonical_status_label: canon.canonical_label,
+      source_status_field: statusPick.source,
+      source_run_id_field: runIdPick.source,
     },
   };
+
+  const evidence = {
+    selected_override_keys,
+    source_status_field_name: statusPick.source,
+    source_run_id_field_name: runIdPick.source,
+    canonical_status: canon.bucket,
+    canonical_status_label: canon.canonical_label,
+  };
+
+  return { canonical, evidence };
 }

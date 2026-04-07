@@ -2,7 +2,8 @@
  * Inbound external events: validate → canonical → correlate → cos_run_events → run patch → supervisor wake.
  */
 
-import { __resetCorrelationMemoryForTests } from './correlationStore.js';
+import crypto from 'node:crypto';
+import { __resetCorrelationMemoryForTests, findExternalCorrelationCursorHintsWithMeta } from './correlationStore.js';
 import { tryRecordGithubDelivery, __resetGithubDeliveryMemoryForTests } from './githubWebhookDedupe.js';
 import { __resetCosRunEventsMemoryForTests } from './runCosEvents.js';
 import {
@@ -127,15 +128,52 @@ export async function handleCursorWebhookIngress(p) {
     return { ok: false, httpStatus: 400, body: 'invalid json' };
   }
 
-  const canonical = normalizeCursorWebhookPayload(
+  const norm = normalizeCursorWebhookPayload(
     body && typeof body === 'object' && !Array.isArray(body) ? body : {},
+    env,
   );
-  if (!canonical) {
+  if (!norm) {
     return { ok: true, httpStatus: 202, body: 'ignored: insufficient payload', ignored: true };
   }
 
-  const corr = await resolveCorrelationForCanonical(canonical);
+  const { canonical, evidence: ingressEvidence } = norm;
+  const { corr, matched_by } = await findExternalCorrelationCursorHintsWithMeta({
+    external_run_id: canonical.external_run_id,
+    run_id: canonical.run_id_hint,
+    packet_id: canonical.packet_id_hint,
+    thread_key: canonical.thread_key_hint,
+  });
   const out = await processCanonicalExternalEvent(canonical, corr);
+
+  if (out.matched) {
+    const extId = String(canonical.external_run_id || '');
+    const external_run_id_tail = extId.length > 6 ? extId.slice(-6) : extId;
+    const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
+    console.info(
+      JSON.stringify({
+        event: 'cos_cursor_callback_evidence',
+        correlation_registered: true,
+        matched_by,
+        canonical_status: out.canonical_status ?? null,
+        source_status_field_name: ingressEvidence.source_status_field_name,
+        source_run_id_field_name: ingressEvidence.source_run_id_field_name,
+        selected_override_keys: ingressEvidence.selected_override_keys,
+        external_run_id_tail,
+        has_thread_key: Boolean(canonical.thread_key_hint),
+        has_packet_id: Boolean(canonical.packet_id_hint),
+        has_branch: Boolean(
+          canonical.payload && typeof canonical.payload === 'object' && canonical.payload.branch,
+        ),
+        has_pr_url: Boolean(
+          canonical.payload && typeof canonical.payload === 'object' && canonical.payload.pr_url,
+        ),
+        has_summary: Boolean(
+          canonical.payload && typeof canonical.payload === 'object' && canonical.payload.summary,
+        ),
+        payload_fingerprint_prefix: fp,
+      }),
+    );
+  }
 
   return {
     ok: true,

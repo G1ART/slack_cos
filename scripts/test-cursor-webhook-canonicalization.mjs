@@ -13,18 +13,18 @@ const c1 = normalizeCursorWebhookPayload({
   summary: 'done',
 });
 assert.ok(c1);
-assert.equal(c1.provider, 'cursor');
-assert.equal(c1.external_run_id, 'run_xyz');
-assert.equal(c1.status_hint, 'external_completed');
-assert.equal(c1.event_type, 'statusChange');
-assert.ok(String(c1.external_id).includes('run_xyz'));
+assert.equal(c1.canonical.provider, 'cursor');
+assert.equal(c1.canonical.external_run_id, 'run_xyz');
+assert.equal(c1.canonical.status_hint, 'external_completed');
+assert.equal(c1.canonical.event_type, 'statusChange');
+assert.ok(String(c1.canonical.external_id).includes('run_xyz'));
 
 const c2 = normalizeCursorWebhookPayload({
   payload: { run_id: 'inner', state: 'failed' },
 });
 assert.ok(c2);
-assert.equal(c2.external_run_id, 'inner');
-assert.equal(c2.status_hint, 'external_failed');
+assert.equal(c2.canonical.external_run_id, 'inner');
+assert.equal(c2.canonical.status_hint, 'external_failed');
 
 assert.equal(normalizeCursorWebhookPayload({}), null);
 
