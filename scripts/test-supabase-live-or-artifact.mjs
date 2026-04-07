@@ -20,7 +20,10 @@ const a = await invokeExternalTool(
   { threadKey: tk },
 );
 assert.equal(a.execution_mode, 'artifact');
-assert.ok(String(a.result_summary).includes('artifact'));
+assert.equal(a.status, 'blocked');
+assert.equal(a.outcome_code, 'blocked_missing_input');
+assert.equal(a.needs_review, true);
+assert.ok(String(a.result_summary).includes('blocked'));
 
 process.env.SUPABASE_URL = 'https://testproj.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
@@ -46,6 +49,9 @@ const b = await invokeExternalTool(
 globalThis.fetch = prevFetch;
 
 assert.equal(b.execution_mode, 'live');
+assert.equal(b.status, 'completed');
+assert.equal(b.outcome_code, 'live_completed');
+assert.equal(b.needs_review, false);
 assert.ok(b.result_summary.includes('live'));
 
 globalThis.fetch = async () => {
@@ -58,7 +64,11 @@ const c = await invokeExternalTool(
 globalThis.fetch = prevFetch;
 
 assert.equal(c.execution_mode, 'artifact');
-assert.ok(c.result_summary.includes('live error') || c.result_summary.includes('artifact'));
+assert.equal(c.status, 'degraded');
+// @supabase/supabase-js often maps thrown fetch to RPC error (ok:false), not a host exception.
+assert.equal(c.outcome_code, 'degraded_from_live_failure');
+assert.equal(c.needs_review, true);
+assert.ok(c.result_summary.includes('degraded'));
 
 if (prevUrl === undefined) delete process.env.SUPABASE_URL;
 else process.env.SUPABASE_URL = prevUrl;

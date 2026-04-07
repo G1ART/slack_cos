@@ -41,16 +41,23 @@ assert.ok(arts1.some((a) => a.type === 'harness_dispatch'), 'harness in ledger')
 assert.ok(arts1.some((a) => a.type === 'harness_packet'), 'packet rows in ledger');
 
 const prevGithub = process.env.GITHUB_TOKEN;
+const prevPat = process.env.GITHUB_FINE_GRAINED_PAT;
 process.env.GITHUB_TOKEN = '';
+process.env.GITHUB_FINE_GRAINED_PAT = '';
 const tArt = await invokeExternalTool(
   { tool: 'github', action: 'open_pr', payload: { x: 1 } },
   { threadKey: tk },
 );
 if (prevGithub === undefined) delete process.env.GITHUB_TOKEN;
 else process.env.GITHUB_TOKEN = prevGithub;
+if (prevPat === undefined) delete process.env.GITHUB_FINE_GRAINED_PAT;
+else process.env.GITHUB_FINE_GRAINED_PAT = prevPat;
 
 assert.equal(tArt.ok, true);
 assert.equal(tArt.execution_mode, 'artifact');
+assert.equal(tArt.status, 'blocked');
+assert.equal(tArt.outcome_code, 'blocked_missing_input');
+assert.equal(tArt.needs_review, true);
 
 const prevRepo = process.env.GITHUB_REPOSITORY;
 const prevFetch = globalThis.fetch;
@@ -71,6 +78,9 @@ if (prevRepo === undefined) delete process.env.GITHUB_REPOSITORY;
 else process.env.GITHUB_REPOSITORY = prevRepo;
 
 assert.equal(tLive.execution_mode, 'live');
+assert.equal(tLive.status, 'completed');
+assert.equal(tLive.outcome_code, 'live_completed');
+assert.equal(tLive.needs_review, false);
 assert.ok(tLive.result_summary, 'result_summary set');
 
 const arts2 = await readRecentExecutionArtifacts(tk, 20);

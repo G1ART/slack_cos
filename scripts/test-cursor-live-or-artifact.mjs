@@ -22,6 +22,9 @@ const noCli = await invokeExternalTool(
   { threadKey: tk },
 );
 assert.equal(noCli.execution_mode, 'artifact');
+assert.equal(noCli.status, 'completed');
+assert.equal(noCli.outcome_code, 'artifact_prepared');
+assert.equal(noCli.needs_review, false);
 
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'cos-cursor-'));
 const okScript = path.join(tmp, 'agent-ok.sh');
@@ -36,6 +39,9 @@ const liveOk = await invokeExternalTool(
   { threadKey: tk },
 );
 assert.equal(liveOk.execution_mode, 'live');
+assert.equal(liveOk.status, 'completed');
+assert.equal(liveOk.outcome_code, 'live_completed');
+assert.equal(liveOk.needs_review, false);
 assert.ok(String(liveOk.result_summary).includes('live'));
 
 const badScript = path.join(tmp, 'agent-bad.sh');
@@ -48,7 +54,10 @@ const liveBad = await invokeExternalTool(
   { threadKey: tk },
 );
 assert.equal(liveBad.execution_mode, 'artifact');
-assert.ok(liveBad.result_summary.includes('live failed') || liveBad.error_code);
+assert.equal(liveBad.status, 'degraded');
+assert.equal(liveBad.outcome_code, 'degraded_from_live_failure');
+assert.equal(liveBad.needs_review, true);
+assert.ok(liveBad.result_summary.includes('degraded'));
 
 process.env.CURSOR_CLI_BIN = okScript;
 __cursorExecFileForTests.fn = async () => ({ stdout: 'mocked-stdout', stderr: '' });
@@ -58,6 +67,8 @@ const mocked = await invokeExternalTool(
 );
 __cursorExecFileForTests.fn = null;
 assert.equal(mocked.execution_mode, 'live');
+assert.equal(mocked.status, 'completed');
+assert.equal(mocked.outcome_code, 'live_completed');
 assert.ok(String(mocked.result_summary).includes('live'));
 
 if (prevBin === undefined) delete process.env.CURSOR_CLI_BIN;

@@ -56,15 +56,31 @@ assert.deepEqual(h.personas, ['research', 'engineering']);
 assert.ok(Array.isArray(h.team_plan) && h.team_plan.length >= 1);
 assert.equal(h.next_step, 'cursor_spec_emit');
 
-const t = await invokeExternalTool({ tool: 'github', action: 'open_pr', payload: { x: 1 } });
+const prevGh = process.env.GITHUB_TOKEN;
+const prevPat = process.env.GITHUB_FINE_GRAINED_PAT;
+const prevRepo = process.env.GITHUB_REPOSITORY;
+process.env.GITHUB_TOKEN = 'test-token-memory';
+process.env.GITHUB_REPOSITORY = 'acme/demo';
+const t = await invokeExternalTool({ tool: 'github', action: 'open_pr', payload: { title: 'x' } });
+if (prevGh === undefined) delete process.env.GITHUB_TOKEN;
+else process.env.GITHUB_TOKEN = prevGh;
+if (prevPat === undefined) delete process.env.GITHUB_FINE_GRAINED_PAT;
+else process.env.GITHUB_FINE_GRAINED_PAT = prevPat;
+if (prevRepo === undefined) delete process.env.GITHUB_REPOSITORY;
+else process.env.GITHUB_REPOSITORY = prevRepo;
+
 assert.equal(t.ok, true);
 assert.equal(t.mode, 'external_tool_invocation');
 assert.equal(t.tool, 'github');
 assert.equal(t.accepted, true);
 assert.ok(t.invocation_id && String(t.invocation_id).startsWith('tool_'));
-assert.equal(t.next_required_input, null);
-assert.ok(t.execution_mode === 'live' || t.execution_mode === 'artifact');
+assert.equal(t.status, 'blocked');
+assert.equal(t.outcome_code, 'blocked_missing_input');
+assert.equal(t.needs_review, true);
+assert.equal(t.next_required_input, 'head');
+assert.equal(t.execution_mode, 'artifact');
 assert.ok(typeof t.result_summary === 'string');
+assert.ok(String(t.result_summary).includes('blocked'));
 
 await clearThread(key);
 

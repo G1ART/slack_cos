@@ -108,14 +108,69 @@ export async function readRecentExecutionArtifacts(threadKey, limit = 5) {
 }
 
 /**
- * COS 모델 입력용 한 줄 요약 (JSON 덩어리 대신).
+ * ledger에 해당 도구의 live_completed 기록이 있는지 (Supabase contract 등).
+ * @param {string} threadKey
+ * @param {string} tool
+ * @param {number} lookback
+ */
+export async function hasRecentToolLiveCompleted(threadKey, tool, lookback = 60) {
+  const list = await readAll(threadKey);
+  let n = lookback;
+  for (let i = list.length - 1; i >= 0 && n > 0; i -= 1, n -= 1) {
+    const row = normalizeArtifactRow(list[i]);
+    if (row.type !== 'tool_result') continue;
+    const pl = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload) ? row.payload : {};
+    if (pl.tool === tool && pl.outcome_code === 'live_completed') return true;
+  }
+  return false;
+}
+
+/**
+ * read_execution_context용 — tool_result 기준 집계.
+ * @param {string} threadKey
+ * @param {number} lookback
+ */
+export async function computeExecutionOutcomeCounts(threadKey, lookback = 200) {
+  const list = await readAll(threadKey);
+  const slice = list.slice(-lookback);
+  let review_required_count = 0;
+  let degraded_count = 0;
+  let blocked_count = 0;
+  let failed_count = 0;
+  for (const raw of slice) {
+    const row = normalizeArtifactRow(raw);
+    if (row.type !== 'tool_result') continue;
+    const pl = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload) ? row.payload : {};
+    if (row.needs_review || pl.needs_review) review_required_count += 1;
+    const st = String(row.status || pl.status || '');
+    if (st === 'degraded') degraded_count += 1;
+    else if (st === 'blocked') blocked_count += 1;
+    else if (st === 'failed') failed_count += 1;
+  }
+  return { review_required_count, degraded_count, blocked_count, failed_count };
+}
+
+/**
+ * COS 모델 입력용 한 줄 요약 — REVIEW·상태 우선 정렬 후 상위 limit개.
  * @param {string} threadKey
  * @param {number} limit
  * @returns {Promise<string[]>}
  */
 export async function readExecutionSummary(threadKey, limit = 5) {
-  const rows = await readRecentExecutionArtifacts(threadKey, limit);
-  return rows.map(formatExecutionSummaryLine);
+  const list = await readAll(threadKey);
+  const mapped = list.map((r) => normalizeArtifactRow(r));
+  const pool = mapped.slice(-Math.max(40, limit * 6));
+  const sorted = [...pool].sort((a, b) => {
+    const na = Boolean(a.needs_review);
+    const nb = Boolean(b.needs_review);
+    if (na !== nb) return na ? -1 : 1;
+    const order = { failed: 0, blocked: 1, degraded: 2, completed: 3 };
+    const sa = order[String(a.status || '')] ?? 5;
+    const sb = order[String(b.status || '')] ?? 5;
+    if (sa !== sb) return sa - sb;
+    return String(a.ts || '').localeCompare(String(b.ts || ''));
+  });
+  return sorted.slice(0, limit).map(formatExecutionSummaryLine);
 }
 
 /**
@@ -143,17 +198,23 @@ export function formatExecutionSummaryLine(a) {
     const mode = pl.execution_mode || 'artifact';
     const tool = pl.tool || '?';
     const action = pl.action || '?';
-    const invSt = pl.status || st || 'accepted';
-    return `- tool_invocation ${invSt}: ${tool}.${action} / ${mode}`;
+    const invSt = pl.status || st || '?';
+    const oc = pl.outcome_code ? String(pl.outcome_code) : '';
+    const rev = a.needs_review || pl.needs_review ? ' [REVIEW]' : '';
+    const ocPart = oc ? ` / ${oc}` : '';
+    return `- tool_invocation${rev} ${invSt} / ${mode} / ${tool}:${action}${ocPart}`;
   }
   if (type === 'tool_result') {
     const tool = pl.tool || '?';
     const action = pl.action || '?';
     const mode = pl.execution_mode || '?';
-    const rs = pl.status || st || 'completed';
-    const next = pl.next_required_input ? ` / next: ${String(pl.next_required_input).slice(0, 60)}` : '';
-    const ap = pl.artifact_path ? ` / path: ${pl.artifact_path}` : '';
-    return `- tool_result ${rs}: ${tool}.${action} / ${mode}${ap}${next}`;
+    const rs = pl.status || st || '?';
+    const oc = pl.outcome_code ? String(pl.outcome_code) : '';
+    const rev = a.needs_review || pl.needs_review ? ' [REVIEW]' : '';
+    const next = pl.next_required_input ? ` / next:${String(pl.next_required_input).slice(0, 40)}` : '';
+    const ap = pl.artifact_path ? ` / path:${String(pl.artifact_path).slice(-48)}` : '';
+    const ocPart = oc ? ` / ${oc}` : '';
+    return `- tool_result${rev} ${rs} / ${mode} / ${tool}:${action}${ocPart}${next}${ap}`;
   }
   if (type === 'execution_note') {
     return `- execution_note: ${String(a.summary || '').slice(0, 200)}`;

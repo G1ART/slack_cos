@@ -24,6 +24,9 @@ if (prev === undefined) delete process.env.RAILWAY_TOKEN;
 else process.env.RAILWAY_TOKEN = prev;
 
 assert.equal(a.execution_mode, 'artifact');
+assert.equal(a.status, 'blocked');
+assert.equal(a.outcome_code, 'blocked_missing_input');
+assert.equal(a.needs_review, true);
 let arts = await readRecentExecutionArtifacts(tk, 20);
 assert.ok(arts.some((x) => x.type === 'tool_invocation'), 'artifact: invocation ledger');
 assert.ok(arts.some((x) => x.type === 'tool_result'), 'artifact: result ledger');
@@ -51,6 +54,9 @@ globalThis.fetch = prevFetch;
 delete process.env.RAILWAY_TOKEN;
 
 assert.equal(b.execution_mode, 'live');
+assert.equal(b.status, 'completed');
+assert.equal(b.outcome_code, 'live_completed');
+assert.equal(b.needs_review, false);
 arts = await readRecentExecutionArtifacts(tk, 20);
 assert.ok(arts.filter((x) => x.type === 'tool_invocation').length >= 1, 'live: invocation');
 assert.ok(arts.filter((x) => x.type === 'tool_result').length >= 1, 'live: result');

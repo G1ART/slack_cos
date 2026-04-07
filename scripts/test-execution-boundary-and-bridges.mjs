@@ -20,17 +20,32 @@ assert.ok(typeof h.team_shape === 'string' && h.team_shape.length > 0);
 assert.ok(Array.isArray(h.handoff_order));
 assert.equal(h.next_step, 'cursor_spec_emit');
 
+const prevGh = process.env.GITHUB_TOKEN;
+const prevPat = process.env.GITHUB_FINE_GRAINED_PAT;
+const prevRepo = process.env.GITHUB_REPOSITORY;
+process.env.GITHUB_TOKEN = 'test-token-boundary';
+process.env.GITHUB_REPOSITORY = 'acme/demo';
 const t = await invokeExternalTool({
   tool: 'github',
   action: 'open_pr',
   payload: { title: 'x', branch: 'main' },
 });
+if (prevGh === undefined) delete process.env.GITHUB_TOKEN;
+else process.env.GITHUB_TOKEN = prevGh;
+if (prevPat === undefined) delete process.env.GITHUB_FINE_GRAINED_PAT;
+else process.env.GITHUB_FINE_GRAINED_PAT = prevPat;
+if (prevRepo === undefined) delete process.env.GITHUB_REPOSITORY;
+else process.env.GITHUB_REPOSITORY = prevRepo;
+
 assert.equal(t.ok, true);
 assert.equal(t.accepted, true);
 assert.equal(t.mode, 'external_tool_invocation');
 assert.ok(/^tool_\d+_[a-f0-9]+$/.test(t.invocation_id));
-assert.equal(t.next_required_input, null);
-assert.ok(t.execution_mode === 'live' || t.execution_mode === 'artifact');
+assert.equal(t.status, 'blocked');
+assert.equal(t.outcome_code, 'blocked_missing_input');
+assert.equal(t.needs_review, true);
+assert.equal(t.next_required_input, 'head');
+assert.equal(t.execution_mode, 'artifact');
 assert.ok(t.result_summary);
 
 // 스키마만: assistant 턴 여부와 무관하게 허용

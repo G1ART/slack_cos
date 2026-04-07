@@ -10,7 +10,11 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { appendExecutionArtifact, cosRuntimeBaseDir } from './executionLedger.js';
+import {
+  appendExecutionArtifact,
+  cosRuntimeBaseDir,
+  hasRecentToolLiveCompleted,
+} from './executionLedger.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -21,6 +25,93 @@ const TOOL_ENUM = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway'])
 
 /** PostgREST RPC 이름 — DB에 함수가 있어야 apply_sql live 성공 */
 export const SUPABASE_APPLY_SQL_RPC = 'cos_apply_sql';
+
+/** @typedef {'completed'|'degraded'|'blocked'|'failed'} ToolExecutionStatus */
+
+/** outcome_code — ledger·요약에서 실행 진실 구분 */
+export const TOOL_OUTCOME_CODES = {
+  LIVE_COMPLETED: 'live_completed',
+  ARTIFACT_PREPARED: 'artifact_prepared',
+  DEGRADED_FROM_LIVE_FAILURE: 'degraded_from_live_failure',
+  DEGRADED_FROM_LIVE_EXCEPTION: 'degraded_from_live_exception',
+  BLOCKED_MISSING_INPUT: 'blocked_missing_input',
+  FAILED_ARTIFACT_BUILD: 'failed_artifact_build',
+  FAILED_LIVE_AND_ARTIFACT: 'failed_live_and_artifact',
+};
+
+/** 테스트: 특정 도구의 artifact 빌드만 실패시키기 */
+export const __invokeToolTestHooks = { failArtifactForTool: /** @type {string | null} */ (null) };
+
+/**
+ * 호출 전 차단 — credential/필수 payload 없으면 live·artifact 시도 없이 blocked.
+ * @param {string} tool
+ * @param {string} action
+ * @param {Record<string, unknown>} payload
+ * @param {NodeJS.ProcessEnv} env
+ */
+export function toolInvocationBlocked(tool, action, payload, env) {
+  const e = env || process.env;
+  const pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  if (tool === 'railway' && action === 'inspect_logs') {
+    if (!String(e.RAILWAY_TOKEN || '').trim()) {
+      return {
+        blocked: true,
+        blocked_reason: 'missing RAILWAY_TOKEN',
+        next_required_input: null,
+      };
+    }
+    const dep = String(pl.deployment_id || e.RAILWAY_DEPLOYMENT_ID || '').trim();
+    if (!dep) {
+      return {
+        blocked: true,
+        blocked_reason: 'inspect_logs requires deployment_id in payload or RAILWAY_DEPLOYMENT_ID',
+        next_required_input: 'deployment_id',
+      };
+    }
+  }
+  if (tool === 'github') {
+    if (!resolveGithubToken(e)) {
+      return {
+        blocked: true,
+        blocked_reason: 'missing GITHUB_TOKEN or GITHUB_FINE_GRAINED_PAT',
+        next_required_input: null,
+      };
+    }
+    if (!parseGithubRepoFromEnv(e)) {
+      return {
+        blocked: true,
+        blocked_reason: 'missing GITHUB_REPOSITORY or GITHUB_DEFAULT_OWNER/REPO',
+        next_required_input: null,
+      };
+    }
+    if (action === 'open_pr' && !String(pl.head || '').trim()) {
+      return {
+        blocked: true,
+        blocked_reason: 'open_pr requires payload.head',
+        next_required_input: 'head',
+      };
+    }
+  }
+  if (tool === 'supabase' && action === 'apply_sql') {
+    const url = String(e.SUPABASE_URL || '').trim();
+    const key = String(e.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+    if (!url || !key) {
+      return {
+        blocked: true,
+        blocked_reason: 'missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
+        next_required_input: null,
+      };
+    }
+    if (!String(pl.sql || pl.query || '').trim()) {
+      return {
+        blocked: true,
+        blocked_reason: 'apply_sql requires payload.sql',
+        next_required_input: 'sql',
+      };
+    }
+  }
+  return { blocked: false, blocked_reason: null, next_required_input: null };
+}
 
 /** @param {string} sub */
 async function artifactSubdir(sub) {
@@ -181,10 +272,12 @@ async function isDir(dir) {
 /**
  * @param {string} tool
  * @param {NodeJS.ProcessEnv} [env]
+ * @param {{ threadKey?: string }} [options] supabase contract_state용 ledger 조회
  * @returns {Promise<AdapterReadiness>}
  */
-export async function getAdapterReadiness(tool, env = process.env) {
+export async function getAdapterReadiness(tool, env = process.env, options = {}) {
   const e = env || process.env;
+  const threadKeyOpt = options.threadKey ? String(options.threadKey) : '';
 
   if (tool === 'github') {
     const token = resolveGithubToken(e);
@@ -235,9 +328,20 @@ export async function getAdapterReadiness(tool, env = process.env) {
     if (url && !urlOk) missing.push('SUPABASE_URL(invalid)');
     const configured = !!url && !!key && urlOk;
     const live_capable = configured;
-    const reason = live_capable
-      ? `service-role 클라이언트 + RPC ${SUPABASE_APPLY_SQL_RPC} 호출 시도 (DB에 함수 필요)`
-      : '자격·URL 부족 → artifact';
+    /** @type {'missing_env'|'env_ready_unverified'|'verified_recent_success'} */
+    let contract_state = 'missing_env';
+    if (!url || !key || !urlOk) contract_state = 'missing_env';
+    else if (threadKeyOpt && (await hasRecentToolLiveCompleted(threadKeyOpt, 'supabase'))) {
+      contract_state = 'verified_recent_success';
+    } else {
+      contract_state = 'env_ready_unverified';
+    }
+    const reason =
+      contract_state === 'missing_env'
+        ? '자격·URL 부족 → artifact/blocked'
+        : contract_state === 'verified_recent_success'
+          ? `ledger에서 최근 apply_sql live 성공 확인 · RPC ${SUPABASE_APPLY_SQL_RPC}`
+          : `env만 충족 — DB·RPC는 ledger 검증 전(contract:${contract_state})`;
     return {
       tool: 'supabase',
       live_capable,
@@ -249,6 +353,7 @@ export async function getAdapterReadiness(tool, env = process.env) {
         url_valid: urlOk,
         service_role_present: !!key,
         rpc: SUPABASE_APPLY_SQL_RPC,
+        contract_state,
       },
     };
   }
@@ -330,13 +435,14 @@ export async function getAdapterReadiness(tool, env = process.env) {
 
 /**
  * @param {NodeJS.ProcessEnv} [env]
+ * @param {{ threadKey?: string }} [options]
  * @returns {Promise<AdapterReadiness[]>}
  */
-export async function getAllAdapterReadiness(env = process.env) {
+export async function getAllAdapterReadiness(env = process.env, options = {}) {
   const tools = ['github', 'supabase', 'cursor', 'railway', 'vercel'];
   const out = [];
   for (const t of tools) {
-    out.push(await getAdapterReadiness(t, env));
+    out.push(await getAdapterReadiness(t, env, options));
   }
   return out;
 }
@@ -357,7 +463,9 @@ export function formatAdapterReadinessOneLine(r) {
     return `github: ${r.live_capable ? 'live-ready' : 'artifact'}${tag} — ${r.reason}`;
   }
   if (r.tool === 'supabase') {
-    return `supabase: ${r.live_capable ? 'live-ready(apply_sql→rpc)' : 'artifact'} — ${r.reason}`;
+    const cs = r.details?.contract_state ? String(r.details.contract_state) : '';
+    const csPart = cs ? ` [${cs}]` : '';
+    return `supabase: ${r.live_capable ? 'live-ready(apply_sql→rpc)' : 'artifact'}${csPart} — ${r.reason}`;
   }
   if (r.tool === 'cursor') {
     return `cursor: ${r.live_capable ? 'create_spec live-ready' : 'artifact-only'} — ${r.reason}`;
@@ -376,10 +484,11 @@ export function formatAdapterReadinessOneLine(r) {
 /**
  * @param {NodeJS.ProcessEnv} [env]
  * @param {number} [max]
+ * @param {string} [threadKey] supabase contract_state
  * @returns {Promise<string[]>}
  */
-export async function formatAdapterReadinessCompactLines(env = process.env, max = 6) {
-  const all = await getAllAdapterReadiness(env);
+export async function formatAdapterReadinessCompactLines(env = process.env, max = 6, threadKey = '') {
+  const all = await getAllAdapterReadiness(env, { threadKey });
   return all.map(formatAdapterReadinessOneLine).slice(0, max);
 }
 
@@ -691,69 +800,173 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const adapter = TOOL_ADAPTERS[tool];
   const env = process.env;
 
+  const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
+  const snap = {
+    tool: readiness_snapshot.tool,
+    live_capable: readiness_snapshot.live_capable,
+    configured: readiness_snapshot.configured,
+    details: readiness_snapshot.details,
+  };
+
+  const block = toolInvocationBlocked(tool, action, payload, env);
+  if (block.blocked) {
+    const status = 'blocked';
+    const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
+    const needs_review = true;
+    const execution_mode = 'artifact';
+    const result_summary = `blocked / artifact / ${tool}:${action} — ${String(block.blocked_reason || '').slice(0, 160)}`;
+    const ledgerPayload = {
+      invocation_id,
+      tool,
+      action,
+      execution_mode,
+      status,
+      artifact_path: null,
+      next_required_input: block.next_required_input ?? null,
+      error_code: 'blocked_missing_input',
+      result_summary,
+      outcome_code,
+      live_attempted: false,
+      readiness_snapshot: snap,
+      fallback_reason: null,
+      blocked_reason: block.blocked_reason,
+      degraded_from: null,
+    };
+    const result = {
+      ok: true,
+      mode: 'external_tool_invocation',
+      invocation_id,
+      tool,
+      action,
+      accepted: true,
+      execution_mode,
+      status,
+      outcome_code,
+      payload,
+      result_summary,
+      artifact_path: null,
+      next_required_input: block.next_required_input ?? null,
+      needs_review,
+      error_code: 'blocked_missing_input',
+    };
+    if (threadKey) {
+      await appendExecutionArtifact(threadKey, {
+        type: 'tool_invocation',
+        summary: result_summary.slice(0, 500),
+        status,
+        needs_review,
+        payload: ledgerPayload,
+      });
+      await appendExecutionArtifact(threadKey, {
+        type: 'tool_result',
+        summary: result_summary.slice(0, 500),
+        status,
+        needs_review,
+        payload: ledgerPayload,
+      });
+    }
+    return result;
+  }
+
   let execution_mode = 'artifact';
+  /** @type {'completed'|'degraded'|'blocked'|'failed'} */
   let status = 'failed';
+  let outcome_code = TOOL_OUTCOME_CODES.FAILED_ARTIFACT_BUILD;
   let result_summary = '';
   let artifact_path = null;
   let next_required_input = null;
   let error_code = null;
+  let live_attempted = false;
+  let fallback_reason = null;
+  const blocked_reason = null;
+  let degraded_from = null;
 
   const canLive =
     tool === 'cursor'
       ? await adapter.canExecuteLive(action, payload, env)
       : adapter.canExecuteLive(action, payload, env);
 
+  async function runBuildArtifact() {
+    if (__invokeToolTestHooks.failArtifactForTool === tool) {
+      __invokeToolTestHooks.failArtifactForTool = null;
+      return {
+        ok: false,
+        result_summary: 'artifact build failed (test hook)',
+        artifact_path: null,
+        next_required_input: null,
+      };
+    }
+    return adapter.buildArtifact(action, payload, invocation_id);
+  }
+
   if (canLive) {
+    live_attempted = true;
     try {
       const lr = await adapter.executeLive(action, payload, env);
       if (lr.ok) {
         execution_mode = 'live';
         status = 'completed';
-        result_summary = lr.result_summary;
+        outcome_code = TOOL_OUTCOME_CODES.LIVE_COMPLETED;
+        result_summary = `completed / live / ${tool}:${action} — ${String(lr.result_summary || '').slice(0, 400)}`;
         artifact_path = lr.artifact_path ?? null;
         next_required_input = lr.next_required_input ?? null;
       } else {
-        const ar = await adapter.buildArtifact(action, payload, invocation_id);
+        fallback_reason = String(lr.result_summary || 'live failed').slice(0, 300);
+        const ar = await runBuildArtifact();
         execution_mode = 'artifact';
-        status = 'completed';
-        result_summary = `${ar.result_summary} (live failed: ${lr.result_summary.slice(0, 120)})`;
-        artifact_path = ar.artifact_path ?? null;
-        next_required_input = ar.next_required_input ?? lr.next_required_input ?? null;
-        error_code = lr.error_code ?? null;
+        if (ar.ok) {
+          status = 'degraded';
+          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+          degraded_from = 'live_failure';
+          result_summary = `degraded / artifact / ${tool}:${action} (live failed) — ${String(ar.result_summary || '').slice(0, 200)}`;
+          artifact_path = ar.artifact_path ?? null;
+          next_required_input = ar.next_required_input ?? lr.next_required_input ?? null;
+          error_code = lr.error_code ?? null;
+        } else {
+          status = 'failed';
+          outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+          result_summary = `failed / artifact / ${tool}:${action} — live+artifact both failed`;
+          error_code = lr.error_code ?? 'artifact_failed';
+        }
       }
     } catch (e) {
-      const ar = await adapter.buildArtifact(action, payload, invocation_id);
+      fallback_reason = String(e?.message || e).slice(0, 300);
+      const ar = await runBuildArtifact();
       execution_mode = 'artifact';
-      status = 'completed';
-      result_summary = `${ar.result_summary} (live error: ${String(e?.message || e).slice(0, 120)})`;
-      artifact_path = ar.artifact_path ?? null;
-      next_required_input = ar.next_required_input ?? null;
-      error_code = 'live_exception';
+      if (ar.ok) {
+        status = 'degraded';
+        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_EXCEPTION;
+        degraded_from = 'live_exception';
+        result_summary = `degraded / artifact / ${tool}:${action} (live exception) — ${String(ar.result_summary || '').slice(0, 200)}`;
+        artifact_path = ar.artifact_path ?? null;
+        next_required_input = ar.next_required_input ?? null;
+        error_code = 'live_exception';
+      } else {
+        status = 'failed';
+        outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+        result_summary = `failed / artifact / ${tool}:${action} — live exception + artifact failed`;
+        error_code = 'live_exception';
+      }
     }
   } else {
-    const ar = await adapter.buildArtifact(action, payload, invocation_id);
-    execution_mode = 'artifact';
-    status = 'completed';
-    result_summary = ar.result_summary;
-    artifact_path = ar.artifact_path ?? null;
-    next_required_input = ar.next_required_input ?? null;
+    live_attempted = false;
+    const ar = await runBuildArtifact();
+    if (ar.ok) {
+      execution_mode = 'artifact';
+      status = 'completed';
+      outcome_code = TOOL_OUTCOME_CODES.ARTIFACT_PREPARED;
+      result_summary = `completed / artifact / ${tool}:${action} — ${String(ar.result_summary || '').slice(0, 300)}`;
+      artifact_path = ar.artifact_path ?? null;
+      next_required_input = ar.next_required_input ?? null;
+    } else {
+      execution_mode = 'artifact';
+      status = 'failed';
+      outcome_code = TOOL_OUTCOME_CODES.FAILED_ARTIFACT_BUILD;
+      result_summary = `failed / artifact / ${tool}:${action} — artifact build failed`;
+    }
   }
 
-  const result = {
-    ok: true,
-    mode: 'external_tool_invocation',
-    invocation_id,
-    tool,
-    action,
-    accepted: true,
-    execution_mode,
-    status,
-    payload,
-    result_summary,
-    artifact_path,
-    next_required_input,
-    ...(error_code ? { error_code } : {}),
-  };
+  const needs_review = status === 'degraded' || status === 'failed';
 
   const ledgerPayload = {
     invocation_id,
@@ -765,21 +978,45 @@ export async function invokeExternalTool(spec, ctx = {}) {
     next_required_input,
     error_code,
     result_summary,
+    outcome_code,
+    live_attempted,
+    readiness_snapshot: snap,
+    fallback_reason,
+    blocked_reason,
+    degraded_from,
+  };
+
+  const result = {
+    ok: true,
+    mode: 'external_tool_invocation',
+    invocation_id,
+    tool,
+    action,
+    accepted: true,
+    execution_mode,
+    status,
+    outcome_code,
+    payload,
+    result_summary,
+    artifact_path,
+    next_required_input,
+    needs_review,
+    ...(error_code ? { error_code } : {}),
   };
 
   if (threadKey) {
     await appendExecutionArtifact(threadKey, {
       type: 'tool_invocation',
-      summary: `${invocation_id} ${tool}/${action} / ${execution_mode} / ${status}`,
+      summary: result_summary.slice(0, 500),
       status,
-      needs_review: status === 'failed',
+      needs_review,
       payload: ledgerPayload,
     });
     await appendExecutionArtifact(threadKey, {
       type: 'tool_result',
       summary: result_summary.slice(0, 500),
       status,
-      needs_review: status === 'failed',
+      needs_review,
       payload: ledgerPayload,
     });
   }

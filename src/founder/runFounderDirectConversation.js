@@ -12,6 +12,7 @@ import {
   appendExecutionArtifact,
   readExecutionSummary,
   readRecentExecutionArtifacts,
+  computeExecutionOutcomeCounts,
 } from './executionLedger.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
@@ -222,7 +223,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      '최근 ledger 요약·raw artifact·adapter readiness(호스트 기준 live 가능 여부). founder에게 그대로 노출하지 말 것.',
+      '최근 ledger 요약·raw artifact·adapter readiness·실행 집계(review_required/degraded/blocked/failed 카운트). founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -347,8 +348,25 @@ async function handleReadExecutionContext(args, threadKey) {
     typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
   const artifacts = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
   const summary_lines = threadKey ? await readExecutionSummary(threadKey, limit) : [];
-  const adapter_readiness_lines = await formatAdapterReadinessCompactLines(process.env, 6);
-  return { ok: true, summary_lines, artifacts, adapter_readiness_lines };
+  const adapter_readiness_lines = await formatAdapterReadinessCompactLines(process.env, 6, threadKey);
+  const counts = threadKey
+    ? await computeExecutionOutcomeCounts(threadKey)
+    : {
+        review_required_count: 0,
+        degraded_count: 0,
+        blocked_count: 0,
+        failed_count: 0,
+      };
+  return {
+    ok: true,
+    summary_lines,
+    artifacts,
+    adapter_readiness_lines,
+    review_required_count: counts.review_required_count,
+    degraded_count: counts.degraded_count,
+    blocked_count: counts.blocked_count,
+    failed_count: counts.failed_count,
+  };
 }
 
 /**
@@ -448,7 +466,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
 export async function runFounderDirectConversation(ctx) {
   const tk = String(ctx.threadKey || '');
   const executionSummaryLines = tk ? await readExecutionSummary(tk, 5) : [];
-  const adapterReadinessLines = await formatAdapterReadinessCompactLines(process.env, 6);
+  const adapterReadinessLines = await formatAdapterReadinessCompactLines(process.env, 6, tk);
 
   const instructions = buildSystemInstructions(ctx.constitutionMarkdown);
   const initialInput = buildFounderConversationInput({
