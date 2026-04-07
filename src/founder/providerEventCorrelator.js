@@ -1,5 +1,6 @@
 /**
  * Record external object ↔ run correlation after successful adapter calls.
+ * Cursor callbacks resolve via `object_type: cloud_agent_run` + `object_id` (= Automation 응답 run id).
  */
 
 import { getActiveRunForThread } from './executionRunStore.js';

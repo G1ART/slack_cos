@@ -21,6 +21,7 @@ import {
   isCursorAutomationConfigured,
   triggerCursorAutomation,
   automationEndpointHostOnly,
+  isCursorAutomationSmokeMode,
 } from './cursorCloudAdapter.js';
 
 const execFileAsync = promisify(execFile);
@@ -982,6 +983,8 @@ export async function invokeExternalTool(spec, ctx = {}) {
       external_url: tr.external_url,
       cursor_automation_request_id: tr.request_id,
       cursor_automation_http_status: tr.status,
+      automation_status_raw: tr.automation_status_raw ?? null,
+      automation_branch_raw: tr.automation_branch_raw ?? null,
     };
   }
 
@@ -990,14 +993,26 @@ export async function invokeExternalTool(spec, ctx = {}) {
     execution_lane = 'cloud_agent';
     try {
       const cloudRunId = String(tr.external_run_id || '').trim() || `cr_${invocation_id}`;
+      let correlation_registered = false;
       if (threadKey) {
         const { recordCursorCloudCorrelation } = await import('./providerEventCorrelator.js');
-        await recordCursorCloudCorrelation({
+        correlation_registered = await recordCursorCloudCorrelation({
           threadKey,
           packetId: runPacketId || undefined,
           cloudRunId,
           action,
         });
+      }
+      if (isCursorAutomationSmokeMode(env)) {
+        console.info(
+          JSON.stringify({
+            event: 'cos_cursor_automation_smoke',
+            action,
+            correlation_registered,
+            has_external_run_id: Boolean(String(tr.external_run_id || '').trim()),
+            invocation_tail: String(invocation_id).slice(-12),
+          }),
+        );
       }
       execution_mode = 'live';
       status = 'running';
@@ -1256,6 +1271,8 @@ export async function invokeExternalTool(spec, ctx = {}) {
           external_run_id: cursorAutomationAudit.external_run_id,
           trigger_response_preview: cursorAutomationAudit.trigger_response_preview,
           cursor_automation_request_id: cursorAutomationAudit.cursor_automation_request_id,
+          automation_status_raw: cursorAutomationAudit.automation_status_raw,
+          automation_branch_raw: cursorAutomationAudit.automation_branch_raw,
         }
       : {}),
   };

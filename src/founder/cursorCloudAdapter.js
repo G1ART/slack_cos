@@ -51,6 +51,109 @@ export function automationEndpointHostOnly(endpoint) {
 }
 
 /**
+ * Dot-path getter (e.g. data.run.id). Bracket indices not supported.
+ * @param {unknown} obj
+ * @param {string} pathStr
+ */
+export function getByDotPath(obj, pathStr) {
+  const path = String(pathStr || '').trim();
+  if (!path || obj == null || typeof obj !== 'object') return undefined;
+  const parts = path.split('.').filter(Boolean);
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null || typeof cur !== 'object' || Array.isArray(cur)) return undefined;
+    cur = /** @type {Record<string, unknown>} */ (cur)[p];
+  }
+  return cur;
+}
+
+const RESPONSE_PATH_ENVS = [
+  'CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH',
+  'CURSOR_AUTOMATION_RESPONSE_URL_PATH',
+  'CURSOR_AUTOMATION_RESPONSE_STATUS_PATH',
+  'CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH',
+];
+
+/** @param {NodeJS.ProcessEnv} [env] */
+export function listAutomationResponseOverrideKeys(env = process.env) {
+  const keys = [];
+  for (const k of RESPONSE_PATH_ENVS) {
+    if (String(env[k] || '').trim()) keys.push(k);
+  }
+  return keys;
+}
+
+/**
+ * @param {Record<string, unknown> | null} parsed
+ * @param {NodeJS.ProcessEnv} env
+ */
+export function extractAutomationResponseFields(parsed, env) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      external_run_id: null,
+      external_url: null,
+      automation_status_raw: null,
+      automation_branch_raw: null,
+    };
+  }
+
+  const runIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH || '').trim();
+  const urlPath = String(env.CURSOR_AUTOMATION_RESPONSE_URL_PATH || '').trim();
+  const statusPath = String(env.CURSOR_AUTOMATION_RESPONSE_STATUS_PATH || '').trim();
+  const branchPath = String(env.CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH || '').trim();
+
+  let external_run_id = '';
+  if (runIdPath) {
+    const v = getByDotPath(parsed, runIdPath);
+    if (v != null) external_run_id = String(v).trim();
+  }
+  if (!external_run_id) {
+    external_run_id = String(
+      parsed.run_id ??
+        parsed.runId ??
+        parsed.id ??
+        parsed.external_run_id ??
+        parsed.externalRunId ??
+        '',
+    ).trim();
+  }
+
+  let external_url = '';
+  if (urlPath) {
+    const v = getByDotPath(parsed, urlPath);
+    if (v != null) external_url = String(v).trim();
+  }
+  if (!external_url) {
+    external_url = String(
+      parsed.url ?? parsed.run_url ?? parsed.runUrl ?? parsed.external_url ?? parsed.externalUrl ?? '',
+    ).trim();
+  }
+
+  let automation_status_raw = null;
+  if (statusPath) {
+    const v = getByDotPath(parsed, statusPath);
+    automation_status_raw = v != null ? String(v).trim() : null;
+  }
+
+  let automation_branch_raw = null;
+  if (branchPath) {
+    const v = getByDotPath(parsed, branchPath);
+    automation_branch_raw = v != null ? String(v).trim() : null;
+  }
+
+  return {
+    external_run_id: external_run_id || null,
+    external_url: external_url || null,
+    automation_status_raw,
+    automation_branch_raw,
+  };
+}
+
+export function isCursorAutomationSmokeMode(env = process.env) {
+  return String(env.CURSOR_AUTOMATION_SMOKE_MODE || '').trim() === '1';
+}
+
+/**
  * @param {{
  *   action: string,
  *   payload: Record<string, unknown>,
@@ -116,19 +219,11 @@ export async function triggerCursorAutomation(opts) {
     } catch {
       parsed = null;
     }
-    const external_run_id =
-      parsed &&
-      String(
-        parsed.run_id ??
-          parsed.runId ??
-          parsed.id ??
-          parsed.external_run_id ??
-          parsed.externalRunId ??
-          '',
-      ).trim();
-    const external_url =
-      parsed &&
-      String(parsed.url ?? parsed.run_url ?? parsed.runUrl ?? parsed.external_url ?? '').trim();
+    const extracted = extractAutomationResponseFields(parsed, env);
+    const external_run_id = extracted.external_run_id;
+    const external_url = extracted.external_url;
+    const automation_branch_raw = extracted.automation_branch_raw;
+    const automation_status_raw = extracted.automation_status_raw;
 
     const ok = res.ok;
     return {
@@ -137,8 +232,10 @@ export async function triggerCursorAutomation(opts) {
       status: res.status,
       trigger_response_preview: preview || null,
       request_id,
-      external_run_id: external_run_id || null,
-      external_url: external_url || null,
+      external_run_id,
+      external_url,
+      automation_branch_raw,
+      automation_status_raw,
       error_code: ok ? null : `cursor_automation_http_${res.status}`,
     };
   } catch (e) {

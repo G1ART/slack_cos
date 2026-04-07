@@ -133,6 +133,8 @@ export async function reconcileRunFromLedger(threadKey) {
 
   for (const [pid, pl] of Object.entries(latestByPacket)) {
     if (!required.includes(pid)) continue;
+    const existing = String(packet_state_map[pid] || 'queued');
+    if (existing === 'completed' || existing === 'failed' || existing === 'skipped') continue;
     packet_state_map[pid] = derivePacketStateFromOutcome(pl);
   }
 

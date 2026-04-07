@@ -6,6 +6,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { handleGithubWebhookIngress, handleCursorWebhookIngress } from './externalEventGateway.js';
+import { getCursorCloudRuntimeTruth } from './cosRuntimeTruth.js';
 
 const MAX_WEBHOOK_BYTES = 512 * 1024;
 
@@ -101,11 +102,16 @@ function buildReadyz(env) {
   const hasSlackSocket = !!(
     String(e.SLACK_APP_TOKEN || '').trim() && String(e.SLACK_BOT_TOKEN || '').trim()
   );
+  const cc = getCursorCloudRuntimeTruth(e);
   const checks = {
     slack_socket: hasSlackSocket ? 'configured' : 'absent',
     supabase: hasSb ? 'configured' : 'absent',
     openai: hasOpenAI ? 'configured' : 'absent',
     public_ingress: 'ok',
+    cursor_cloud_lane: cc.cursor_cloud_lane_enabled ? 'on' : 'off',
+    cursor_cloud_automation: cc.cursor_cloud_ready ? 'ready' : 'not_ready',
+    cursor_callback_signature: cc.cursor_callback_signature_mode,
+    cursor_automation_response_override_count: cc.cursor_cloud_response_paths.length,
   };
   const degraded = !hasOpenAI || !hasSlackSocket;
   return {
