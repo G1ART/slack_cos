@@ -11,7 +11,11 @@ import bolt from '@slack/bolt';
 import OpenAI from 'openai';
 import { registerFounderHandlers } from './src/founder/registerFounderHandlers.js';
 import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFounderDirectConversation.js';
-import { startRunSupervisorLoop, tickRunSupervisorForThread } from './src/founder/runSupervisor.js';
+import {
+  startRunSupervisorLoop,
+  tickRunSupervisorForRun,
+  tickRunSupervisorForThread,
+} from './src/founder/runSupervisor.js';
 import { registerRunStateChangeListener } from './src/founder/supervisorDirectTrigger.js';
 import { startCosHttpServer } from './src/founder/httpExternalIngress.js';
 import { logCosRuntimeTruthBoot } from './src/founder/cosRuntimeTruth.js';
@@ -54,12 +58,20 @@ const slackApp = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 });
 
-registerRunStateChangeListener((threadKey) => {
-  tickRunSupervisorForThread(threadKey, {
-    client: slackApp.client,
-    constitutionSha256,
-    skipLease: false,
-  }).catch((e) => console.error('[cos_direct_supervisor]', e));
+registerRunStateChangeListener((threadKey, runId) => {
+  if (runId) {
+    tickRunSupervisorForRun(runId, {
+      client: slackApp.client,
+      constitutionSha256,
+      skipLease: false,
+    }).catch((e) => console.error('[cos_direct_supervisor]', e));
+  } else {
+    tickRunSupervisorForThread(threadKey, {
+      client: slackApp.client,
+      constitutionSha256,
+      skipLease: false,
+    }).catch((e) => console.error('[cos_direct_supervisor]', e));
+  }
 });
 
 registerFounderHandlers(slackApp, {
