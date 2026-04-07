@@ -5,6 +5,7 @@ import { runHarnessOrchestration, PERSONA_REGISTRY } from '../src/founder/harnes
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import {
   readRecentExecutionArtifacts,
+  readExecutionSummary,
   clearExecutionArtifacts,
 } from '../src/founder/executionLedger.js';
 import { buildFounderConversationInput } from '../src/founder/runFounderDirectConversation.js';
@@ -51,12 +52,23 @@ else process.env.GITHUB_TOKEN = prevGithub;
 assert.equal(tArt.ok, true);
 assert.equal(tArt.execution_mode, 'artifact');
 
+const prevRepo = process.env.GITHUB_REPOSITORY;
+const prevFetch = globalThis.fetch;
 process.env.GITHUB_TOKEN = 'test-token-fake';
+process.env.GITHUB_REPOSITORY = 'acme/demo';
+globalThis.fetch = async () =>
+  new Response(JSON.stringify({ number: 42, html_url: 'https://github.com/acme/demo/issues/42' }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
 const tLive = await invokeExternalTool(
   { tool: 'github', action: 'create_issue', payload: { title: 't' } },
   { threadKey: tk },
 );
+globalThis.fetch = prevFetch;
 delete process.env.GITHUB_TOKEN;
+if (prevRepo === undefined) delete process.env.GITHUB_REPOSITORY;
+else process.env.GITHUB_REPOSITORY = prevRepo;
 
 assert.equal(tLive.execution_mode, 'live');
 assert.ok(tLive.result_summary, 'result_summary set');
@@ -66,12 +78,13 @@ const inv = arts2.filter((a) => a.type === 'tool_invocation');
 assert.ok(inv.length >= 2, 'tool invocations recorded');
 assert.ok(arts2.filter((a) => a.type === 'tool_result').length >= 2, 'each invocation has tool_result');
 
+const summaryLines = await readExecutionSummary(tk, 5);
 const input = buildFounderConversationInput({
   recentTurns: [],
   userText: 'hi',
   attachmentResults: [],
   metadata: {},
-  executionArtifacts: arts2.slice(-5),
+  executionSummaryLines: summaryLines,
 });
 assert.ok(input.includes('[최근 실행 아티팩트]'), 'conversation can embed ledger slice');
 assert.ok(input.includes('harness_dispatch') || input.includes('tool_invocation'), 'artifact types in input');
