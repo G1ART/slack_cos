@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import bolt from '@slack/bolt';
 import OpenAI from 'openai';
 import { registerFounderHandlers } from './src/founder/registerFounderHandlers.js';
+import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFounderDirectConversation.js';
 
 const { App } = bolt;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,18 @@ registerFounderHandlers(slackApp, {
   constitutionMarkdown,
   constitutionSha256,
 });
+
+const dhProps = getDelegateHarnessTeamParametersSnapshot()?.properties;
+const delegateKeys =
+  dhProps && typeof dhProps === 'object' && !Array.isArray(dhProps) ? Object.keys(dhProps).sort() : [];
+console.info(
+  JSON.stringify({
+    event: 'cos_boot_delegate_schema',
+    delegate_parameter_keys: delegateKeys,
+    delegate_schema_includes_packets: delegateKeys.includes('packets'),
+    deploy_git_sha: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_COMMIT_SHA || null,
+  }),
+);
 
 await slackApp.start();
 console.log('[startup] COS founder spine running.');
