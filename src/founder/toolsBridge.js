@@ -262,8 +262,9 @@ async function isDir(dir) {
 /**
  * @typedef {object} AdapterReadiness
  * @property {string} tool
- * @property {boolean} live_capable
- * @property {boolean} configured
+ * @property {boolean} declared any relevant env/CLI declaration present (may be partial)
+ * @property {boolean} configured minimum complete local contract for that adapter
+ * @property {boolean} live_capable live attempt possible in this runtime
  * @property {string} reason
  * @property {string[]} missing
  * @property {Record<string, unknown>} details
@@ -289,23 +290,28 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     if (!token) missing.push('GITHUB_TOKEN or GITHUB_FINE_GRAINED_PAT');
     if (!repoRaw) missing.push('GITHUB_REPOSITORY or GITHUB_DEFAULT_OWNER + GITHUB_DEFAULT_REPO');
     else if (!repo) missing.push('repository(parse: need owner/repo)');
+    const declared =
+      !!String(e.GITHUB_TOKEN || '').trim() ||
+      !!String(e.GITHUB_FINE_GRAINED_PAT || '').trim() ||
+      !!String(e.GITHUB_REPOSITORY || '').trim() ||
+      !!String(e.GITHUB_DEFAULT_OWNER || '').trim() ||
+      !!String(e.GITHUB_DEFAULT_REPO || '').trim();
     const configured = !!token && !!repo;
     const live_capable = configured;
     const reason = live_capable
-      ? `token+repo OK → REST live 가능 (token:${tokenSrc}, repo:${repoSrc})`
-      : !token
-        ? '토큰 없음(GITHUB_TOKEN·FINE_GRAINED_PAT) → artifact'
-        : !repoRaw
-          ? '저장소 없음(GITHUB_REPOSITORY·DEFAULT_OWNER/REPO) → artifact'
-          : '저장소 형식 오류(owner/repo) → artifact';
+      ? `configured: token+repo OK → REST live (token:${tokenSrc}, repo:${repoSrc})`
+      : !declared
+        ? 'declared: 없음 → artifact'
+        : !token
+          ? 'declared: 저장소·alias만 있음 — 토큰 없음 → artifact'
+          : !repoRaw
+            ? 'declared: 토큰만 있음 — 저장소 없음 → artifact'
+            : 'declared: 부분 설정 — 저장소 형식 오류(owner/repo) → artifact';
     return {
       tool: 'github',
+      declared,
       live_capable,
-      configured: !!(String(e.GITHUB_TOKEN || '').trim() ||
-        String(e.GITHUB_FINE_GRAINED_PAT || '').trim() ||
-        String(e.GITHUB_REPOSITORY || '').trim() ||
-        String(e.GITHUB_DEFAULT_OWNER || '').trim() ||
-        String(e.GITHUB_DEFAULT_REPO || '').trim()),
+      configured,
       reason,
       missing,
       details: {
@@ -324,9 +330,10 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     const missing = [];
     if (!url) missing.push('SUPABASE_URL');
     if (!key) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-    const urlOk = url && isPlausibleSupabaseUrl(url);
+    const urlOk = !!(url && isPlausibleSupabaseUrl(url));
     if (url && !urlOk) missing.push('SUPABASE_URL(invalid)');
-    const configured = !!url && !!key && urlOk;
+    const declared = !!(url || key);
+    const configured = !!(url && key && urlOk);
     const live_capable = configured;
     /** @type {'missing_env'|'env_ready_unverified'|'verified_recent_success'} */
     let contract_state = 'missing_env';
@@ -336,16 +343,18 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     } else {
       contract_state = 'env_ready_unverified';
     }
-    const reason =
-      contract_state === 'missing_env'
-        ? '자격·URL 부족 → artifact/blocked'
+    const reason = !declared
+      ? 'declared: 없음 → artifact/blocked'
+      : !configured
+        ? 'declared: URL·키 중 일부만 있거나 URL 무효 — configured 아님 → artifact/blocked'
         : contract_state === 'verified_recent_success'
-          ? `ledger에서 최근 apply_sql live 성공 확인 · RPC ${SUPABASE_APPLY_SQL_RPC}`
-          : `env만 충족 — DB·RPC는 ledger 검증 전(contract:${contract_state})`;
+          ? `configured + ledger live_completed · RPC ${SUPABASE_APPLY_SQL_RPC}`
+          : `configured — contract:${contract_state} (ledger 검증 전)`;
     return {
       tool: 'supabase',
+      declared,
       live_capable,
-      configured: !!url || !!key,
+      configured,
       reason,
       missing,
       details: {
@@ -362,19 +371,26 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     const cliPath = await resolveCursorCliPath(e);
     const cwd = cursorProjectDir(e);
     const cwdOk = await isDir(cwd);
+    const binDeclared = !!String(e.CURSOR_CLI_BIN || '').trim();
+    const dirDeclared = !!String(e.CURSOR_PROJECT_DIR || '').trim();
+    const declared = binDeclared || !!cliPath || dirDeclared;
     const missing = [];
     if (!cliPath) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
     if (!cwdOk) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
-    const live_capable = !!cliPath && cwdOk;
+    const configured = !!cliPath && cwdOk;
+    const live_capable = configured;
     const reason = live_capable
-      ? 'CLI+cwd OK → create_spec live 시도 가능 (emit_patch는 artifact-only)'
-      : !cliPath
-        ? 'Cursor CLI 없음 → artifact-only'
-        : '작업 디렉터리 없음 → artifact-only';
+      ? 'configured: CLI+cwd OK → create_spec live (emit_patch는 artifact-only)'
+      : !declared
+        ? 'declared: 없음 → artifact-only'
+        : !cliPath
+          ? 'declared: CLI 미해결 → artifact-only'
+          : 'declared: cwd 없음/무효 → artifact-only';
     return {
       tool: 'cursor',
+      declared,
       live_capable,
-      configured: !!cliPath || !!String(e.CURSOR_CLI_BIN || '').trim(),
+      configured,
       reason,
       missing,
       details: {
@@ -393,13 +409,22 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     const missing = [];
     if (!token) missing.push('RAILWAY_TOKEN');
     if (!dep) missing.push('RAILWAY_DEPLOYMENT_ID 또는 payload.deployment_id');
-    const inspectReady = !!token;
+    const declared = !!(token || dep);
+    const configured = !!token;
     const inspectLiveCapable = !!token && !!dep;
-    const reason = `inspect_logs: ${inspectLiveCapable ? 'live 가능(deployment_id 있음)' : token ? 'deployment_id 필요' : '토큰 없음'}; deploy: 비활성`;
+    const live_capable = inspectLiveCapable;
+    const reason = !declared
+      ? 'declared: 토큰·기본 deployment_id 없음 → inspect_logs blocked/artifact'
+      : !configured
+        ? 'configured: 토큰 없음 (deployment_id만 선언) → artifact'
+        : inspectLiveCapable
+          ? 'configured: 토큰+deployment_id → inspect_logs live 가능; deploy: 비활성'
+          : 'configured: 토큰 있음 — deployment_id 필요 → inspect_logs live 불가';
     return {
       tool: 'railway',
-      live_capable: inspectLiveCapable,
-      configured: !!token,
+      declared,
+      live_capable,
+      configured,
       reason,
       missing: token ? (dep ? [] : ['deployment_id']) : ['RAILWAY_TOKEN'],
       details: {
@@ -415,9 +440,10 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
   if (tool === 'vercel') {
     return {
       tool: 'vercel',
+      declared: false,
       live_capable: false,
       configured: false,
-      reason: 'vercel live 미구현 → 항상 artifact',
+      reason: 'declared/configured/live 미구현 → 항상 artifact-only',
       missing: [],
       details: { deploy_live: false },
     };
@@ -425,6 +451,7 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
 
   return {
     tool: String(tool),
+    declared: false,
     live_capable: false,
     configured: false,
     reason: 'unknown tool',
@@ -803,6 +830,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
   const snap = {
     tool: readiness_snapshot.tool,
+    declared: readiness_snapshot.declared,
     live_capable: readiness_snapshot.live_capable,
     configured: readiness_snapshot.configured,
     details: readiness_snapshot.details,
@@ -831,6 +859,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       fallback_reason: null,
       blocked_reason: block.blocked_reason,
       degraded_from: null,
+      needs_review,
     };
     const result = {
       ok: true,
@@ -984,6 +1013,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     fallback_reason,
     blocked_reason,
     degraded_from,
+    needs_review,
   };
 
   const result = {

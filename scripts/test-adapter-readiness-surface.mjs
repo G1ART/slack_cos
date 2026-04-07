@@ -8,6 +8,8 @@ import {
 async function ghEmpty() {
   const r = await getAdapterReadiness('github', {});
   assert.equal(r.tool, 'github');
+  assert.equal(r.declared, false);
+  assert.equal(r.configured, false);
   assert.equal(r.live_capable, false);
   assert.ok(r.missing.some((m) => m.includes('GITHUB_TOKEN') && m.includes('FINE_GRAINED')));
   assert.ok(r.missing.some((m) => m.includes('GITHUB_REPOSITORY') && m.includes('DEFAULT')));
@@ -19,6 +21,8 @@ async function ghCanonicalTokenAndRepo() {
     GITHUB_TOKEN: 't',
     GITHUB_REPOSITORY: 'acme/yo',
   });
+  assert.equal(r.declared, true);
+  assert.equal(r.configured, true);
   assert.equal(r.live_capable, true);
   assert.equal(r.details.repo_parse_ok, true);
   assert.equal(r.details.github_token_source, 'GITHUB_TOKEN');
@@ -62,6 +66,8 @@ async function ghBadRepo() {
     GITHUB_TOKEN: 't',
     GITHUB_REPOSITORY: 'nope',
   });
+  assert.equal(r.declared, true);
+  assert.equal(r.configured, false);
   assert.equal(r.live_capable, false);
   assert.ok(r.missing.some((x) => x.includes('parse')));
 }

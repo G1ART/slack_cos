@@ -2,7 +2,11 @@ import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { invokeExternalTool, __invokeToolTestHooks, SUPABASE_APPLY_SQL_RPC } from '../src/founder/toolsBridge.js';
-import { readExecutionSummary, clearExecutionArtifacts } from '../src/founder/executionLedger.js';
+import {
+  appendExecutionArtifact,
+  readExecutionSummary,
+  clearExecutionArtifacts,
+} from '../src/founder/executionLedger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-exec-summary-statuses');
@@ -82,6 +86,44 @@ assert.ok(joined.includes('live_completed'), `summary shows live_completed: ${jo
 assert.ok(joined.includes('failed'), `summary shows failed: ${joined}`);
 assert.ok(joined.includes('failed_artifact_build'), `summary shows failed_artifact_build: ${joined}`);
 assert.ok(joined.includes('[REVIEW]'), `review-tagged rows surface: ${joined}`);
+
+// 동일 심각도(degraded) 버킷 안에서는 최신 ts가 먼저
+await appendExecutionArtifact(tk, {
+  type: 'tool_result',
+  summary: 'deg-old',
+  status: 'degraded',
+  needs_review: true,
+  ts: '2020-01-01T00:00:00.000Z',
+  payload: {
+    tool: 'railway',
+    action: 'inspect_logs',
+    execution_mode: 'artifact',
+    status: 'degraded',
+    outcome_code: 'degraded_from_live_failure',
+    needs_review: true,
+    artifact_path: '/tmp/cos-summary-order-OLDER-degraded-marker',
+  },
+});
+await appendExecutionArtifact(tk, {
+  type: 'tool_result',
+  summary: 'deg-new',
+  status: 'degraded',
+  needs_review: true,
+  ts: '2025-06-15T12:00:00.000Z',
+  payload: {
+    tool: 'railway',
+    action: 'inspect_logs',
+    execution_mode: 'artifact',
+    status: 'degraded',
+    outcome_code: 'degraded_from_live_failure',
+    needs_review: true,
+    artifact_path: '/tmp/cos-summary-order-NEWER-degraded-marker',
+  },
+});
+const linesOrder = await readExecutionSummary(tk, 25);
+const idxNew = linesOrder.findIndex((l) => l.includes('NEWER-degraded-marker'));
+const idxOld = linesOrder.findIndex((l) => l.includes('OLDER-degraded-marker'));
+assert.ok(idxNew >= 0 && idxOld >= 0 && idxNew < idxOld, `newer degraded before older: ${linesOrder.join(' | ')}`);
 
 await clearExecutionArtifacts(tk);
 

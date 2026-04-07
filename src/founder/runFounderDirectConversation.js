@@ -13,6 +13,7 @@ import {
   readExecutionSummary,
   readRecentExecutionArtifacts,
   computeExecutionOutcomeCounts,
+  readReviewQueue,
 } from './executionLedger.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
@@ -48,7 +49,7 @@ export function validateToolCallArgs(callName, args) {
     if (typeof objective !== 'string' || !objective.trim()) {
       return { blocked: true, reason: 'invalid_payload' };
     }
-    if (a.packets !== undefined) {
+    if (a.packets != null) {
       if (!Array.isArray(a.packets)) return { blocked: true, reason: 'invalid_payload' };
       for (const pkt of a.packets) {
         if (!pkt || typeof pkt !== 'object' || Array.isArray(pkt)) {
@@ -119,21 +120,46 @@ export function validateToolCallArgs(callName, args) {
   return { blocked: false };
 }
 
-const PACKET_ITEM_PROPERTIES = {
-  packet_id: { type: 'string' },
+/** OpenAI strict: object의 properties 키마다 required에 포함되어야 함. 패킷 확장 필드는 스키마에 넣지 않고 서버·harness에서 보강. */
+const HARNESS_PACKET_ITEM_STRICT_PROPERTIES = {
   persona: { type: 'string', enum: PERSONA_ENUM_ARR },
   mission: { type: 'string' },
-  inputs: { type: 'array', items: { type: 'string' } },
   deliverables: { type: 'array', items: { type: 'string' } },
   definition_of_done: { type: 'array', items: { type: 'string' } },
   handoff_to: { type: 'string' },
   artifact_format: { type: 'string' },
-  preferred_tool: { type: 'string', enum: PREFERRED_TOOL_ENUM },
-  preferred_action: { type: 'string', enum: INVOKE_ACTION_ENUM },
-  review_required: { type: 'boolean' },
-  review_focus: { type: 'array', items: { type: 'string' } },
-  packet_status: { type: 'string', enum: ['draft', 'ready'] },
 };
+
+const HARNESS_PACKET_ITEM_STRICT_REQUIRED = [
+  'persona',
+  'mission',
+  'deliverables',
+  'definition_of_done',
+  'handoff_to',
+  'artifact_format',
+];
+
+/** nullable 배열 (strict에서 선택 필드) */
+const NULLABLE_STRING_ARRAY = {
+  anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+};
+
+const NULLABLE_PERSONA_ARRAY = {
+  anyOf: [{ type: 'array', items: { type: 'string', enum: PERSONA_ENUM_ARR } }, { type: 'null' }],
+};
+
+const DELEGATE_HARNESS_REQUIRED_KEYS = [
+  'objective',
+  'personas',
+  'tasks',
+  'deliverables',
+  'constraints',
+  'success_criteria',
+  'risks',
+  'review_checkpoints',
+  'open_questions',
+  'packets',
+];
 
 const COS_TOOLS = [
   {
@@ -147,29 +173,34 @@ const COS_TOOLS = [
       properties: {
         objective: { type: 'string', description: '달성 목표 한 줄' },
         personas: {
-          type: 'array',
-          items: { type: 'string', enum: PERSONA_ENUM_ARR },
-          description: '투입 페르소나',
+          ...NULLABLE_PERSONA_ARRAY,
+          description: '투입 페르소나; 없으면 null',
         },
-        tasks: { type: 'array', items: { type: 'string' }, description: '세부 작업 목록' },
-        deliverables: { type: 'array', items: { type: 'string' }, description: '기대 산출물' },
-        constraints: { type: 'array', items: { type: 'string' }, description: '제약·가정' },
-        success_criteria: { type: 'array', items: { type: 'string' }, description: '선택: 성공 기준' },
-        risks: { type: 'array', items: { type: 'string' }, description: '선택: 리스크' },
-        review_checkpoints: { type: 'array', items: { type: 'string' }, description: '선택: 리뷰 체크포인트' },
-        open_questions: { type: 'array', items: { type: 'string' }, description: '선택: 미결 질문' },
+        tasks: { ...NULLABLE_STRING_ARRAY, description: '세부 작업; 없으면 null' },
+        deliverables: { ...NULLABLE_STRING_ARRAY, description: '기대 산출물; 없으면 null' },
+        constraints: { ...NULLABLE_STRING_ARRAY, description: '제약·가정; 없으면 null' },
+        success_criteria: { ...NULLABLE_STRING_ARRAY, description: '성공 기준; 없으면 null' },
+        risks: { ...NULLABLE_STRING_ARRAY, description: '리스크; 없으면 null' },
+        review_checkpoints: { ...NULLABLE_STRING_ARRAY, description: '리뷰 체크포인트; 없으면 null' },
+        open_questions: { ...NULLABLE_STRING_ARRAY, description: '미결 질문; 없으면 null' },
         packets: {
-          type: 'array',
-          description: '선택: COS 설계 packet(미제공 시 자동 봉투+실행기 매핑)',
-          items: {
-            type: 'object',
-            properties: PACKET_ITEM_PROPERTIES,
-            required: ['persona', 'mission', 'deliverables', 'definition_of_done', 'handoff_to', 'artifact_format'],
-            additionalProperties: false,
-          },
+          anyOf: [
+            {
+              type: 'array',
+              description: 'COS 설계 packet; 미제공 시 null(자동 봉투)',
+              items: {
+                type: 'object',
+                properties: HARNESS_PACKET_ITEM_STRICT_PROPERTIES,
+                required: HARNESS_PACKET_ITEM_STRICT_REQUIRED,
+                additionalProperties: false,
+              },
+            },
+            { type: 'null' },
+          ],
+          description: '선택 패킷 배열 또는 null',
         },
       },
-      required: ['objective'],
+      required: DELEGATE_HARNESS_REQUIRED_KEYS,
       additionalProperties: false,
     },
   },
@@ -178,7 +209,7 @@ const COS_TOOLS = [
     name: 'invoke_external_tool',
     description:
       '외부 도구. live가 불가하면 artifact fallback. 불필요한 남발 없이 최소 호출. founder 표면은 자연어만.',
-    strict: true,
+    strict: false,
     parameters: {
       type: 'object',
       properties: {
@@ -213,9 +244,12 @@ const COS_TOOLS = [
       type: 'object',
       properties: {
         note: { type: 'string', description: '한 줄 요약 (내부용)' },
-        detail: { type: 'object', additionalProperties: true, description: '선택: 구조화 디테일' },
+        detail: {
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          description: '구조화 디테일; 없으면 null',
+        },
       },
-      required: ['note'],
+      required: ['note', 'detail'],
       additionalProperties: false,
     },
   },
@@ -223,14 +257,17 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      '최근 ledger 요약·raw artifact·adapter readiness·실행 집계(review_required/degraded/blocked/failed 카운트). founder에게 그대로 노출하지 말 것.',
+      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계(review_required/degraded/blocked/failed 카운트). founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
       properties: {
-        limit: { type: 'integer', description: '최대 개수 (1–20), 생략 시 5' },
+        limit: {
+          anyOf: [{ type: 'integer', minimum: 1, maximum: 20 }, { type: 'null' }],
+          description: '최대 개수 (1–20); 기본 5는 null',
+        },
       },
-      required: [],
+      required: ['limit'],
       additionalProperties: false,
     },
   },
@@ -342,7 +379,7 @@ async function handleRecordExecutionNote(args, threadKey) {
  * @param {Record<string, unknown>} args
  * @param {string} threadKey
  */
-async function handleReadExecutionContext(args, threadKey) {
+export async function handleReadExecutionContext(args, threadKey) {
   const limRaw = args?.limit;
   const limit =
     typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
@@ -357,11 +394,13 @@ async function handleReadExecutionContext(args, threadKey) {
         blocked_count: 0,
         failed_count: 0,
       };
+  const review_queue = threadKey ? await readReviewQueue(threadKey, limit) : [];
   return {
     ok: true,
     summary_lines,
     artifacts,
     adapter_readiness_lines,
+    review_queue,
     review_required_count: counts.review_required_count,
     degraded_count: counts.degraded_count,
     blocked_count: counts.blocked_count,

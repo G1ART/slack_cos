@@ -9,7 +9,10 @@ import {
   clearExecutionArtifacts,
   computeExecutionOutcomeCounts,
 } from '../src/founder/executionLedger.js';
-import { buildFounderConversationInput } from '../src/founder/runFounderDirectConversation.js';
+import {
+  buildFounderConversationInput,
+  handleReadExecutionContext,
+} from '../src/founder/runFounderDirectConversation.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-roundtrip');
@@ -55,6 +58,10 @@ assert.equal(typeof counts.blocked_count, 'number');
 assert.equal(typeof counts.failed_count, 'number');
 assert.ok(counts.review_required_count >= 1, 'read_execution_context-style counts: blocked tool needs review');
 assert.ok(counts.blocked_count >= 1, 'blocked status counted');
+
+const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
+assert.ok(Array.isArray(ctx.review_queue));
+assert.ok(ctx.review_queue.length >= 1, 'review_queue surfaces blocked github row');
 
 await clearExecutionArtifacts(tk);
 

@@ -99,6 +99,26 @@ assert.equal(artFail.status, 'failed');
 assert.equal(artFail.outcome_code, 'failed_artifact_build');
 assert.equal(artFail.needs_review, true);
 
+// 6) live failure + artifact hook failure → failed_live_and_artifact
+await clearExecutionArtifacts(tk);
+process.env.RAILWAY_TOKEN = 'tok-fail-both';
+__invokeToolTestHooks.failArtifactForTool = 'railway';
+globalThis.fetch = async (url) => {
+  assert.ok(String(url).includes('railway'));
+  return new Response('no', { status: 500 });
+};
+const bothFail = await invokeExternalTool(
+  { tool: 'railway', action: 'inspect_logs', payload: { deployment_id: 'dep-both' } },
+  { threadKey: tk },
+);
+globalThis.fetch = prevFetch1;
+delete process.env.RAILWAY_TOKEN;
+assert.equal(__invokeToolTestHooks.failArtifactForTool, null, 'railway hook consumed');
+
+assert.equal(bothFail.status, 'failed');
+assert.equal(bothFail.outcome_code, 'failed_live_and_artifact');
+assert.equal(bothFail.needs_review, true);
+
 await clearExecutionArtifacts(tk);
 
 console.log('test-tool-outcome-semantics: ok');

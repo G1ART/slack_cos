@@ -168,9 +168,67 @@ export async function readExecutionSummary(threadKey, limit = 5) {
     const sa = order[String(a.status || '')] ?? 5;
     const sb = order[String(b.status || '')] ?? 5;
     if (sa !== sb) return sa - sb;
-    return String(a.ts || '').localeCompare(String(b.ts || ''));
+    return String(b.ts || '').localeCompare(String(a.ts || ''));
   });
   return sorted.slice(0, limit).map(formatExecutionSummaryLine);
+}
+
+const REVIEW_QUEUE_STATUS_ORDER = { failed: 0, blocked: 1, degraded: 2, completed: 3 };
+
+/** @param {Record<string, unknown>} row */
+function payloadOfRow(row) {
+  return row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload) ? row.payload : {};
+}
+
+/**
+ * @param {Record<string, unknown>} row
+ */
+export function normalizeReviewQueueItem(row) {
+  const pl = payloadOfRow(row);
+  return {
+    type: String(row.type || ''),
+    tool: pl.tool != null ? String(pl.tool) : null,
+    action: pl.action != null ? String(pl.action) : null,
+    status: String(row.status || pl.status || ''),
+    outcome_code: pl.outcome_code != null ? String(pl.outcome_code) : null,
+    needs_review: Boolean(row.needs_review || pl.needs_review),
+    result_summary: String(pl.result_summary || row.summary || '').slice(0, 2000),
+    next_required_input: pl.next_required_input ?? null,
+    fallback_reason: pl.fallback_reason != null ? String(pl.fallback_reason) : null,
+    blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason) : null,
+    ts: String(row.ts || ''),
+  };
+}
+
+/**
+ * Review 대상 tool_result만 — needs_review 또는 failed/blocked/degraded.
+ * 정렬: needs_review 우선 → 상태 심각도 → 동일 버킷 내 최신 ts 우선.
+ * @param {string} threadKey
+ * @param {number} limit
+ */
+export async function readReviewQueue(threadKey, limit = 10) {
+  const list = await readAll(threadKey);
+  const mapped = list.map((r) => normalizeArtifactRow(r));
+  const candidates = mapped.filter((row) => {
+    if (row.type !== 'tool_result') return false;
+    const pl = payloadOfRow(row);
+    const st = String(row.status || pl.status || '');
+    const nr = row.needs_review || pl.needs_review;
+    if (nr) return true;
+    return st === 'failed' || st === 'blocked' || st === 'degraded';
+  });
+  const sorted = [...candidates].sort((a, b) => {
+    const pla = payloadOfRow(a);
+    const plb = payloadOfRow(b);
+    const na = Boolean(a.needs_review || pla.needs_review);
+    const nb = Boolean(b.needs_review || plb.needs_review);
+    if (na !== nb) return na ? -1 : 1;
+    const sa = REVIEW_QUEUE_STATUS_ORDER[String(a.status || pla.status || '')] ?? 5;
+    const sb = REVIEW_QUEUE_STATUS_ORDER[String(b.status || plb.status || '')] ?? 5;
+    if (sa !== sb) return sa - sb;
+    return String(b.ts || '').localeCompare(String(a.ts || ''));
+  });
+  return sorted.slice(0, limit).map((r) => normalizeReviewQueueItem(r));
 }
 
 /**
