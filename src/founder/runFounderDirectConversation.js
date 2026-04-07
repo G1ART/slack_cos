@@ -106,6 +106,8 @@ export function validateToolCallArgs(callName, args) {
   if (callName === 'record_execution_note') {
     const note = a.note;
     if (typeof note !== 'string' || !note.trim()) return { blocked: true, reason: 'invalid_payload' };
+    const d = a.detail;
+    if (d !== undefined && d !== null && typeof d !== 'string') return { blocked: true, reason: 'invalid_payload' };
     return { blocked: false };
   }
 
@@ -209,8 +211,14 @@ const COS_TOOLS = [
       properties: {
         note: { type: 'string', description: '한 줄 요약 (내부용)' },
         detail: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          description: '구조화 디테일; 없으면 null',
+          anyOf: [
+            {
+              type: 'string',
+              description: '선택 구조화 디테일(JSON 객체를 문자열로) 또는 빈 문자열; 없으면 null',
+            },
+            { type: 'null' },
+          ],
+          description: 'JSON 문자열 또는 null(OpenAI strict 호환)',
         },
       },
       required: ['note', 'detail'],
@@ -248,6 +256,9 @@ export function collectOpenAiStrictSchemaViolations(schema, path = 'root') {
   const out = [];
   if (schema.type === 'object' && schema.properties && typeof schema.properties === 'object') {
     const keys = Object.keys(schema.properties);
+    if (keys.length > 0 && schema.additionalProperties !== false) {
+      out.push(`${path}: object with properties must set additionalProperties: false (OpenAI strict)`);
+    }
     const req = new Set(Array.isArray(schema.required) ? schema.required : []);
     for (const k of keys) {
       if (!req.has(k)) out.push(`${path}: missing "${k}" in required (OpenAI strict)`);
@@ -373,12 +384,25 @@ export function buildFounderConversationInput(p) {
  * @param {Record<string, unknown>} args
  * @param {string} threadKey
  */
+function parseExecutionNoteDetail(raw) {
+  if (raw == null) return {};
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') return {};
+  const t = raw.trim();
+  if (!t) return {};
+  try {
+    const j = JSON.parse(t);
+    return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
+  } catch {
+    return {};
+  }
+}
+
 async function handleRecordExecutionNote(args, threadKey) {
   if (!threadKey) return { ok: false, blocked: true, reason: 'invalid_payload' };
   const note = String(args?.note || '').trim();
   if (!note) return { ok: false, blocked: true, reason: 'invalid_payload' };
-  const detail =
-    args?.detail && typeof args.detail === 'object' && !Array.isArray(args.detail) ? args.detail : {};
+  const detail = parseExecutionNoteDetail(args?.detail);
   await appendExecutionArtifact(threadKey, {
     type: 'execution_note',
     summary: note.slice(0, 500),
