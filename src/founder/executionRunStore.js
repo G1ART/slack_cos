@@ -51,6 +51,11 @@ function storeMode() {
   return 'file';
 }
 
+/** 외부 이벤트·correlation 모듈용 */
+export function getCosRunStoreMode() {
+  return storeMode();
+}
+
 /** Test isolation */
 export function __resetCosRunMemoryStore() {
   memRuns.clear();
@@ -223,8 +228,10 @@ export async function persistRunAfterDelegate(p) {
   const handoff_order = Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order.map(String) : [];
 
   const now = new Date().toISOString();
+  const runUuid = crypto.randomUUID();
   /** @type {Record<string, unknown>} */
   const row = {
+    id: runUuid,
     run_id,
     external_run_id: run_id,
     thread_key: threadKey,

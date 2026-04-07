@@ -941,6 +941,25 @@ export async function invokeExternalTool(spec, ctx = {}) {
         result_summary = `completed / live / ${tool}:${action} — ${String(lr.result_summary || '').slice(0, 400)}`;
         artifact_path = lr.artifact_path ?? null;
         next_required_input = lr.next_required_input ?? null;
+        if (
+          threadKey &&
+          tool === 'github' &&
+          (action === 'create_issue' || action === 'open_pr') &&
+          lr.data &&
+          typeof lr.data === 'object'
+        ) {
+          try {
+            const { recordGithubInvocationCorrelation } = await import('./providerEventCorrelator.js');
+            await recordGithubInvocationCorrelation({
+              threadKey,
+              packetId: runPacketId,
+              action,
+              apiData: /** @type {Record<string, unknown>} */ (lr.data),
+            });
+          } catch (e) {
+            console.error('[cos_github_correlation]', e);
+          }
+        }
       } else {
         fallback_reason = String(lr.result_summary || 'live failed').slice(0, 300);
         const ar = await runBuildArtifact();
@@ -1056,3 +1075,25 @@ export async function invokeExternalTool(spec, ctx = {}) {
 
   return result;
 }
+
+/** Runtime plumbing — sync | webhook | polling (not founder/COS judgment). */
+export const ADAPTER_RUNTIME_CAPS = {
+  github: {
+    create_issue: { completion_mode: 'webhook', callback_provider: 'github', correlation_required: true },
+    open_pr: { completion_mode: 'webhook', callback_provider: 'github', correlation_required: true },
+  },
+  cursor: {
+    create_spec: { completion_mode: 'sync', correlation_required: false },
+    emit_patch: { completion_mode: 'sync', correlation_required: false },
+  },
+  supabase: {
+    apply_sql: { completion_mode: 'sync', callback_provider: 'supabase', correlation_required: false },
+  },
+  railway: {
+    inspect_logs: { completion_mode: 'sync', correlation_required: false },
+    deploy: { completion_mode: 'polling', correlation_required: false },
+  },
+  vercel: {
+    deploy: { completion_mode: 'polling', correlation_required: false },
+  },
+};

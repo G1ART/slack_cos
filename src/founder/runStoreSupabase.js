@@ -23,7 +23,7 @@ export function appRunToDbRow(row) {
       : Array.isArray(snap.handoff_order)
         ? snap.handoff_order.map(String)
         : [];
-  return {
+  const base = {
     thread_key: String(row.thread_key || ''),
     dispatch_id: String(row.dispatch_id || ''),
     objective: String(row.objective || ''),
@@ -57,6 +57,10 @@ export function appRunToDbRow(row) {
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
+  if (row.id != null && String(row.id).trim()) {
+    return { id: String(row.id).trim(), ...base };
+  }
+  return base;
 }
 
 /**

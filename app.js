@@ -13,6 +13,7 @@ import { registerFounderHandlers } from './src/founder/registerFounderHandlers.j
 import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFounderDirectConversation.js';
 import { startRunSupervisorLoop, tickRunSupervisorForThread } from './src/founder/runSupervisor.js';
 import { registerRunStateChangeListener } from './src/founder/supervisorDirectTrigger.js';
+import { startCosHttpServer } from './src/founder/httpExternalIngress.js';
 
 const { App } = bolt;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -82,6 +83,8 @@ console.info(
 
 await slackApp.start();
 console.log('[startup] COS founder spine running.');
+
+await startCosHttpServer({ env: process.env });
 
 if (String(process.env.COS_RUN_SUPERVISOR_DISABLED || '').trim() !== '1') {
   startRunSupervisorLoop({
