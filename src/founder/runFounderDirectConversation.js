@@ -3,7 +3,7 @@
  */
 
 import { runHarnessOrchestration } from './harnessBridge.js';
-import { invokeExternalTool } from './toolsBridge.js';
+import { invokeExternalTool, isValidToolAction } from './toolsBridge.js';
 import { appendExecutionArtifact, readRecentExecutionArtifacts } from './executionLedger.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
@@ -11,7 +11,8 @@ export { runHarnessOrchestration, invokeExternalTool };
 const MAX_TOOL_ROUNDS = 8;
 
 const ALLOWED_EXTERNAL_TOOLS = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
-const ALLOWED_EXTERNAL_ACTIONS = new Set([
+
+const INVOKE_ACTION_ENUM = [
   'create_spec',
   'emit_patch',
   'create_issue',
@@ -19,7 +20,35 @@ const ALLOWED_EXTERNAL_ACTIONS = new Set([
   'apply_sql',
   'deploy',
   'inspect_logs',
-]);
+];
+
+const PERSONA_ENUM_ARR = ['research', 'pm', 'engineering', 'design', 'qa', 'data'];
+
+/**
+ * @param {{ type: string, summary?: string, payload?: object }} a
+ */
+export function summarizeExecutionArtifact(a) {
+  const pl = a.payload && typeof a.payload === 'object' && !Array.isArray(a.payload) ? a.payload : {};
+  const type = String(a.type || '');
+  if (type === 'harness_dispatch') {
+    const shape = pl.team_shape || '?';
+    const obj = String(pl.objective || a.summary || '').slice(0, 120);
+    return `- harness_dispatch: ${shape} / objective: ${obj}`;
+  }
+  if (type === 'harness_packet') {
+    return `- harness_packet: ${pl.persona || '?'} → ${String(pl.handoff_to || '(end)')} / ${String(pl.mission || '').slice(0, 80)}`;
+  }
+  if (type === 'tool_invocation') {
+    return `- tool_invocation: ${pl.tool}.${pl.action} / ${pl.execution_mode || 'artifact'} mode`;
+  }
+  if (type === 'tool_result') {
+    return `- tool_result: ${pl.tool || '?'}.${pl.action || '?'} / ${String(a.summary || '').slice(0, 120)}`;
+  }
+  if (type === 'execution_note') {
+    return `- execution_note: ${String(a.summary || '').slice(0, 200)}`;
+  }
+  return `- ${type}: ${String(a.summary || '').slice(0, 120)}`;
+}
 
 /**
  * Tool-call 인자의 기계적 스키마 검증만.
@@ -35,6 +64,24 @@ export function validateToolCallArgs(callName, args) {
     if (typeof objective !== 'string' || !objective.trim()) {
       return { blocked: true, reason: 'invalid_payload' };
     }
+    if (a.packets !== undefined) {
+      if (!Array.isArray(a.packets)) return { blocked: true, reason: 'invalid_payload' };
+      for (const pkt of a.packets) {
+        if (!pkt || typeof pkt !== 'object' || Array.isArray(pkt)) {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+        const persona = String(pkt.persona || '').toLowerCase();
+        if (!PERSONA_ENUM_ARR.includes(persona)) return { blocked: true, reason: 'invalid_payload' };
+        if (typeof pkt.mission !== 'string' || !pkt.mission.trim()) return { blocked: true, reason: 'invalid_payload' };
+        if (!Array.isArray(pkt.deliverables) || !Array.isArray(pkt.definition_of_done)) {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+        if (typeof pkt.handoff_to !== 'string') return { blocked: true, reason: 'invalid_payload' };
+        if (typeof pkt.artifact_format !== 'string' || !pkt.artifact_format.trim()) {
+          return { blocked: true, reason: 'invalid_payload' };
+        }
+      }
+    }
     return { blocked: false };
   }
 
@@ -43,7 +90,7 @@ export function validateToolCallArgs(callName, args) {
     const action = String(a.action || '').trim();
     const payload = a.payload;
     if (!ALLOWED_EXTERNAL_TOOLS.has(tool)) return { blocked: true, reason: 'unsupported_tool' };
-    if (!ALLOWED_EXTERNAL_ACTIONS.has(action)) return { blocked: true, reason: 'unsupported_action' };
+    if (!isValidToolAction(tool, action)) return { blocked: true, reason: 'unsupported_action' };
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       return { blocked: true, reason: 'invalid_payload' };
     }
@@ -72,7 +119,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      'multi-persona harness 팀 조직·분배. Harness team shape와 태스크 분할은 네가 최적화한다. founder에게 artifact를 그대로 보이지 말 것.',
+      'Harness 팀 조직·task packet 봉투. team shape·handoff·review 리듬은 네가 최적화한다. founder에게 원시 artifact를 보이지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -82,7 +129,7 @@ const COS_TOOLS = [
           type: 'array',
           items: {
             type: 'string',
-            enum: ['research', 'pm', 'engineering', 'design', 'qa', 'data'],
+            enum: PERSONA_ENUM_ARR,
           },
           description: '투입 페르소나',
         },
@@ -92,9 +139,28 @@ const COS_TOOLS = [
         success_criteria: {
           type: 'array',
           items: { type: 'string' },
-          description: '선택: 성공 기준 한 줄들',
+          description: '선택: 성공 기준',
         },
-        risks: { type: 'array', items: { type: 'string' }, description: '선택: 리스크 한 줄들' },
+        risks: { type: 'array', items: { type: 'string' }, description: '선택: 리스크' },
+        packets: {
+          type: 'array',
+          description: '선택: COS가 직접 설계한 packet 봉투(미제공 시 페르소나·태스크로만 봉투 정리)',
+          items: {
+            type: 'object',
+            properties: {
+              packet_id: { type: 'string' },
+              persona: { type: 'string', enum: PERSONA_ENUM_ARR },
+              mission: { type: 'string' },
+              inputs: { type: 'array', items: { type: 'string' } },
+              deliverables: { type: 'array', items: { type: 'string' } },
+              definition_of_done: { type: 'array', items: { type: 'string' } },
+              handoff_to: { type: 'string' },
+              artifact_format: { type: 'string' },
+            },
+            required: ['persona', 'mission', 'deliverables', 'definition_of_done', 'handoff_to', 'artifact_format'],
+            additionalProperties: false,
+          },
+        },
       },
       required: ['objective'],
       additionalProperties: false,
@@ -104,7 +170,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'invoke_external_tool',
     description:
-      '외부 도구 실행. tool·action·payload는 네가 선택한다. founder 표면은 자연어 하나만 유지한다.',
+      '외부 도구. 도구별 허용 action만 사용한다. founder 표면은 자연어 하나만 유지한다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -116,16 +182,9 @@ const COS_TOOLS = [
         },
         action: {
           type: 'string',
-          enum: [
-            'create_spec',
-            'emit_patch',
-            'create_issue',
-            'open_pr',
-            'apply_sql',
-            'deploy',
-            'inspect_logs',
-          ],
-          description: '수행할 액션',
+          enum: INVOKE_ACTION_ENUM,
+          description:
+            'cursor: create_spec|emit_patch · github: create_issue|open_pr · supabase: apply_sql · vercel: deploy · railway: inspect_logs|deploy',
         },
         payload: {
           type: 'object',
@@ -141,7 +200,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'record_execution_note',
     description:
-      '내부 실행 메모를 ledger에 남긴다. founder에게 노출하지 않는다. orchestration 맥락 정리용.',
+      '내부 실행 메모(예: packet 좁히기, 페르소나 과사용). founder 비노출. COS가 visibility 보고 조율한다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -156,7 +215,7 @@ const COS_TOOLS = [
   {
     type: 'function',
     name: 'read_execution_context',
-    description: '이 thread의 최근 harness/tool 실행 artifact를 다시 확인한다.',
+    description: '최근 execution ledger를 다시 읽는다.',
     strict: true,
     parameters: {
       type: 'object',
@@ -174,12 +233,12 @@ const COS_TOOLS = [
  */
 export function buildSystemInstructions(constitutionMarkdown) {
   return [
-    '당신은 G1 COS다. Slack의 founder와 직접 대화하는 단일 어시스턴트이자, scope 락 이후 Harness·Tools orchestration의 지휘자다.',
+    '당신은 G1 COS다. Slack의 founder와 자연어로 대화하고, scope 락 이후 Harness·Tools 실행층을 네가 지휘한다.',
     '아래 헌법 전문을 반드시 준수하라. 헌법에 나온 금지 문자열·레거시 표면을 founder에게 출력하지 마라.',
-    '한국어 자연어로 답하라. founder와 대화하며 scope를 스스로 구체화하라. 더 필요한 정보가 있으면 질문하라.',
-    '네가 충분히 락인됐다고 판단하면 Harness(delegate_harness_team)나 외부 도구(invoke_external_tool)를 호출하라. team shape와 tool 선택은 네가 최적화한다.',
+    'founder와 대화하며 scope를 스스로 구체화하라. lock이 충분하지 않으면 질문하라.',
+    'lock이 충분하면 필요한 harness 조직(delegate_harness_team)과 외부 도구(invoke_external_tool)를 스스로 선택하라. harness team shape와 review 리듬은 네가 최적화한다.',
     'record_execution_note / read_execution_context 로 내부 실행 맥락을 정리·재확인할 수 있다.',
-    'founder에게 내부 실행 artifact·원시 JSON·도구 이름을 그대로 보여주지 말라. founder 표면은 자연어 하나만 유지하라.',
+    'founder에게 내부 조직·도구·packet·원시 artifact를 직접 보여주지 말라. founder에게는 자연어 응답 하나만 보인다.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -226,8 +285,7 @@ export function buildFounderConversationInput(p) {
   if (!arts.length) lines.push('(없음)');
   else {
     for (const a of arts) {
-      lines.push(`- [${a.type}] ${String(a.summary || '').slice(0, 500)} @${a.ts}`);
-      lines.push(`  ${JSON.stringify(a.payload || {}).slice(0, 1500)}`);
+      lines.push(summarizeExecutionArtifact(a));
     }
   }
   lines.push('');

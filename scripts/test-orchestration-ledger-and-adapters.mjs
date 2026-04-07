@@ -33,9 +33,11 @@ assert.ok(h.team_shape.includes('pm'));
 assert.ok(Array.isArray(h.handoff_order));
 assert.ok(Array.isArray(h.success_criteria));
 assert.ok(Array.isArray(h.risks));
+assert.ok(Array.isArray(h.packets) && h.packets.length >= 1, 'envelope packets');
 
-const arts1 = await readRecentExecutionArtifacts(tk, 10);
+const arts1 = await readRecentExecutionArtifacts(tk, 20);
 assert.ok(arts1.some((a) => a.type === 'harness_dispatch'), 'harness in ledger');
+assert.ok(arts1.some((a) => a.type === 'harness_packet'), 'packet rows in ledger');
 
 const prevGithub = process.env.GITHUB_TOKEN;
 process.env.GITHUB_TOKEN = '';
@@ -62,7 +64,7 @@ assert.ok(tLive.result_summary, 'result_summary set');
 const arts2 = await readRecentExecutionArtifacts(tk, 20);
 const inv = arts2.filter((a) => a.type === 'tool_invocation');
 assert.ok(inv.length >= 2, 'tool invocations recorded');
-assert.ok(arts2.some((a) => a.type === 'tool_result'), 'live tool_result recorded');
+assert.ok(arts2.filter((a) => a.type === 'tool_result').length >= 2, 'each invocation has tool_result');
 
 const input = buildFounderConversationInput({
   recentTurns: [],
