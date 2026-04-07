@@ -47,6 +47,18 @@ export async function handleFounderSlackTurn(ctx) {
   const rawText = extractSlackUserText(ctx.event);
   const files = Array.isArray(ctx.event.files) ? ctx.event.files : [];
 
+  console.info(
+    JSON.stringify({
+      event: 'cos_turn_ingress',
+      channel: ctx.event.channel || null,
+      channel_type: ctx.event.channel_type || null,
+      thread_ts: ctx.event.thread_ts || null,
+      user: ctx.event.user || null,
+      text_len: rawText.length,
+      file_count: files.length,
+    }),
+  );
+
   const attachmentResults = await ingestCurrentTurnAttachments({
     client: ctx.client,
     files,

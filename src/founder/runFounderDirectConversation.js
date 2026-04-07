@@ -310,6 +310,8 @@ export function buildSystemInstructions(constitutionMarkdown) {
     '실행 아티팩트·ledger·결과를 보고 과사용·독단·낭비를 스스로 조율하라. 코드는 visibility만 준다.',
     'live adapter가 없거나 계약이 부족하면 artifact fallback을 사용한다. 불필요한 tool 남발 없이 최소 호출로 진행하라.',
     'record_execution_note / read_execution_context 로 내부 맥락을 정리·재확인한다.',
+    'founder에게 Node·OS 수준 오류(예: ENOENT, errno, 절대경로 열기 실패) 형식의 메시지를 출력하지 마라. 그런 문자열은 앱 표면이 아니다.',
+    '채널·스레드 식별자는 이미 입력 블록([최소 메타], [최근 대화])에 있다. channel-context.json 등 가상 경로를 읽었다고 가정하거나 언급하지 마라.',
     'founder에게 내부 artifact·원시 JSON을 직접 보여주지 말고 자연어로만 보고하라.',
     '[Adapter readiness] 블록은 시스템 입력 전용이다. founder 답변에 인용·복붙하지 말 것.',
     '',
@@ -588,6 +590,7 @@ export async function runFounderDirectConversation(ctx) {
       stage: 'cos_turn',
       constitution_sha256: ctx.constitutionSha256,
       output_chars: text.length,
+      response_preview: text.slice(0, 160),
     }),
   );
 
