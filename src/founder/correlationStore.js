@@ -54,6 +54,7 @@ export async function upsertExternalCorrelation(row) {
   if (!run_id || !thread_key || !provider || !object_type || !object_id) return false;
 
   const mode = getCosRunStoreMode();
+  const nowIso = new Date().toISOString();
   const rec = {
     run_id,
     thread_key,
@@ -61,6 +62,7 @@ export async function upsertExternalCorrelation(row) {
     provider,
     object_type,
     object_id,
+    last_seen_at: nowIso,
   };
 
   if (mode === 'memory') {
@@ -79,6 +81,7 @@ export async function upsertExternalCorrelation(row) {
         provider,
         object_type,
         object_id,
+        last_seen_at: nowIso,
       },
       { onConflict: 'provider,object_type,object_id' },
     );
@@ -132,6 +135,66 @@ export async function findExternalCorrelation(provider, objectType, objectId) {
   const list = await readFileCorrelations();
   const hit = list.find((r) => r.provider === p && r.object_type === ot && r.object_id === oid);
   return hit || null;
+}
+
+/**
+ * @param {{
+ *   external_run_id?: string | null,
+ *   run_id?: string | null,
+ *   packet_id?: string | null,
+ *   thread_key?: string | null,
+ * }} hints
+ */
+export async function findExternalCorrelationCursorHints(hints) {
+  const ext = String(hints.external_run_id || '').trim();
+  if (ext) {
+    const hit = await findExternalCorrelation('cursor', 'cloud_agent_run', ext);
+    if (hit) return hit;
+  }
+
+  const rid = String(hints.run_id || '').trim();
+  const pid = String(hints.packet_id || '').trim();
+  const tk = String(hints.thread_key || '').trim();
+
+  const mode = getCosRunStoreMode();
+  if (mode === 'memory') {
+    for (const rec of memCorrelations.values()) {
+      if (String(rec.provider || '') !== 'cursor') continue;
+      if (rid && String(rec.run_id || '') === rid && (!pid || String(rec.packet_id || '') === pid)) return rec;
+      if (tk && String(rec.thread_key || '') === tk && pid && String(rec.packet_id || '') === pid) return rec;
+    }
+    return null;
+  }
+
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    if (rid) {
+      let q = sb.from('cos_external_correlations').select('*').eq('provider', 'cursor').eq('run_id', rid);
+      if (pid) q = q.eq('packet_id', pid);
+      const { data, error } = await q.limit(1);
+      if (!error && Array.isArray(data) && data[0]) return data[0];
+    }
+    if (tk && pid) {
+      const { data, error } = await sb
+        .from('cos_external_correlations')
+        .select('*')
+        .eq('provider', 'cursor')
+        .eq('thread_key', tk)
+        .eq('packet_id', pid)
+        .limit(1);
+      if (!error && Array.isArray(data) && data[0]) return data[0];
+    }
+    return null;
+  }
+
+  const list = await readFileCorrelations();
+  for (const rec of list) {
+    if (String(rec.provider) !== 'cursor') continue;
+    if (rid && String(rec.run_id) === rid && (!pid || String(rec.packet_id || '') === pid)) return rec;
+    if (tk && String(rec.thread_key) === tk && pid && String(rec.packet_id) === pid) return rec;
+  }
+  return null;
 }
 
 export function __resetCorrelationMemoryForTests() {

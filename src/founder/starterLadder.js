@@ -102,6 +102,7 @@ export function derivePacketStateFromOutcome(outcome) {
     return 'failed';
   }
   if (st === 'degraded') return 'review_required';
+  if (oc === TOOL_OUTCOME_CODES.CLOUD_AGENT_DISPATCH_ACCEPTED) return 'running';
   if (
     st === 'completed' ||
     oc === TOOL_OUTCOME_CODES.LIVE_COMPLETED ||

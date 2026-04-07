@@ -46,3 +46,39 @@ export async function recordGithubInvocationCorrelation(ctx) {
   });
   return true;
 }
+
+/**
+ * @param {{
+ *   threadKey: string,
+ *   packetId?: string,
+ *   cloudRunId: string,
+ * }} ctx
+ */
+export async function recordCursorCloudCorrelation(ctx) {
+  const threadKey = String(ctx.threadKey || '').trim();
+  const cloudRunId = String(ctx.cloudRunId || '').trim();
+  if (!threadKey || !cloudRunId) return false;
+  const run = await getActiveRunForThread(threadKey);
+  if (!run?.id) return false;
+  const packetId = ctx.packetId != null ? String(ctx.packetId).trim() : '';
+
+  const ok = await upsertExternalCorrelation({
+    run_id: String(run.id),
+    thread_key: threadKey,
+    packet_id: packetId || null,
+    provider: 'cursor',
+    object_type: 'cloud_agent_run',
+    object_id: cloudRunId,
+  });
+  if (!ok) return false;
+
+  await appendCosRunEvent(threadKey, 'tool_invoked', {
+    tool: 'cursor',
+    action: 'create_spec',
+    object_type: 'cloud_agent_run',
+    object_id: cloudRunId,
+    correlation_registered: true,
+    execution_lane: 'cloud_agent',
+  });
+  return true;
+}

@@ -13,6 +13,37 @@ let memLease = null;
 /** After first Supabase lease failure, stay on memory until process restart. */
 let supabaseLeasePathBroken = false;
 
+/** @type {string | null} */
+let lastLeaseErrorKind = null;
+
+/**
+ * @param {string} host
+ */
+export function maskSupabaseHostForLogs(host) {
+  const h = String(host || '').trim();
+  if (!h || h.startsWith('(')) return h || null;
+  const parts = h.split('.');
+  if (parts.length >= 3 && parts.includes('supabase') && parts.includes('co')) {
+    return `<ref>.${parts.slice(-3).join('.')}`;
+  }
+  if (parts.length >= 2) return `<ref>.${parts.slice(-2).join('.')}`;
+  return '<host>';
+}
+
+/**
+ * @param {string} msg
+ */
+function classifyLeaseConnectivity(msg) {
+  const m = String(msg || '').toLowerCase();
+  if (m.includes('enotfound') || m.includes('getaddrinfo') || m.includes('name not resolved')) return 'dns_resolution';
+  if (m.includes('econnrefused') || m.includes('etimedout') || m.includes('fetch failed')) return 'network_transport';
+  return 'postgrest_or_unknown';
+}
+
+export function getSupervisorLeaseLastErrorKind() {
+  return lastLeaseErrorKind;
+}
+
 /**
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {'supabase' | 'degraded-memory' | 'disabled'}
@@ -143,10 +174,12 @@ export async function tryAcquireSupervisorLease(ownerId) {
     if (selErr) {
       const shape = pickErrorShape(selErr);
       const se = /** @type {any} */ (selErr);
+      lastLeaseErrorKind = classifyLeaseConnectivity(shape.error_message);
       logLease({
         outcome: 'select_error',
         mode: 'supabase',
         target_url_host: host,
+        target_url_host_masked: maskSupabaseHostForLogs(host),
         response_status: se.status != null ? Number(se.status) : null,
         ...shape,
       });
@@ -155,7 +188,8 @@ export async function tryAcquireSupervisorLease(ownerId) {
         JSON.stringify({
           event: 'cos_supervisor_lease_degraded_fallback',
           reason: 'supabase_select_failed',
-          target_url_host: host,
+          target_url_host_masked: maskSupabaseHostForLogs(host),
+          supervisor_lease_last_error_kind: lastLeaseErrorKind,
         }),
       );
       return acquireMemoryLease(owner, until);
@@ -179,10 +213,12 @@ export async function tryAcquireSupervisorLease(ownerId) {
     if (upErr) {
       const shape = pickErrorShape(upErr);
       const ue = /** @type {any} */ (upErr);
+      lastLeaseErrorKind = classifyLeaseConnectivity(shape.error_message);
       logLease({
         outcome: 'upsert_error',
         mode: 'supabase',
         target_url_host: host,
+        target_url_host_masked: maskSupabaseHostForLogs(host),
         response_status: ue.status != null ? Number(ue.status) : null,
         ...shape,
       });
@@ -191,7 +227,8 @@ export async function tryAcquireSupervisorLease(ownerId) {
         JSON.stringify({
           event: 'cos_supervisor_lease_degraded_fallback',
           reason: 'supabase_upsert_failed',
-          target_url_host: host,
+          target_url_host_masked: maskSupabaseHostForLogs(host),
+          supervisor_lease_last_error_kind: lastLeaseErrorKind,
         }),
       );
       return acquireMemoryLease(owner, until);
@@ -200,10 +237,12 @@ export async function tryAcquireSupervisorLease(ownerId) {
     return true;
   } catch (e) {
     const shape = pickErrorShape(e);
+    lastLeaseErrorKind = classifyLeaseConnectivity(shape.error_message);
     logLease({
       outcome: 'thrown',
       mode: 'supabase',
       target_url_host: host,
+      target_url_host_masked: maskSupabaseHostForLogs(host),
       response_status: null,
       ...shape,
     });
@@ -212,8 +251,9 @@ export async function tryAcquireSupervisorLease(ownerId) {
       JSON.stringify({
         event: 'cos_supervisor_lease_degraded_fallback',
         reason: 'supabase_lease_exception',
-        target_url_host: host,
+        target_url_host_masked: maskSupabaseHostForLogs(host),
         error_name: shape.error_name,
+        supervisor_lease_last_error_kind: lastLeaseErrorKind,
       }),
     );
     return acquireMemoryLease(owner, until);
@@ -235,6 +275,7 @@ export function __resetSupervisorLeaseMemory() {
 
 export function __resetSupervisorLeaseDegradedStateForTests() {
   supabaseLeasePathBroken = false;
+  lastLeaseErrorKind = null;
 }
 
 export { LEASE_MS, LEASE_NAME };

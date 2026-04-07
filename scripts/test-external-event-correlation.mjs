@@ -4,7 +4,12 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation, findExternalCorrelation } from '../src/founder/correlationStore.js';
-import { handleGithubWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
+import {
+  handleGithubWebhookIngress,
+  handleCursorWebhookIngress,
+  __resetExternalGatewayTestState,
+} from '../src/founder/externalEventGateway.js';
+import { findExternalCorrelationCursorHints } from '../src/founder/correlationStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-ext-corr');
@@ -108,5 +113,33 @@ const noCorr = await handleGithubWebhookIngress({
   env: { GITHUB_WEBHOOK_SECRET: secret, GITHUB_REPOSITORY: 'G1ART/slack_cos' },
 });
 assert.equal(noCorr.matched, false);
+
+await upsertExternalCorrelation({
+  run_id: String(run.id),
+  thread_key: tk,
+  packet_id: 'pkt_cursor_hint',
+  provider: 'cursor',
+  object_type: 'cloud_agent_run',
+  object_id: 'cloud_corr_demo',
+});
+
+const byRun = await findExternalCorrelationCursorHints({
+  external_run_id: 'cloud_corr_demo',
+});
+assert.ok(byRun);
+assert.equal(byRun.thread_key, tk);
+
+const cursorSecret = 'cursor_corr_secret_test_min_len___';
+const cBody = JSON.stringify({ type: 'statusChange', runId: 'cloud_corr_demo', status: 'running' });
+const cRaw = Buffer.from(cBody, 'utf8');
+const cSig = `sha256=${crypto.createHmac('sha256', cursorSecret).update(cRaw).digest('hex')}`;
+const cOut = await handleCursorWebhookIngress({
+  rawBody: cRaw,
+  headers: { 'x-cursor-signature-256': cSig },
+  env: { CURSOR_WEBHOOK_SECRET: cursorSecret },
+});
+assert.equal(cOut.matched, true);
+const rCursor = await getActiveRunForThread(tk);
+assert.equal(rCursor.packet_state_map.pkt_cursor_hint, 'running');
 
 console.log('test-external-event-correlation: ok');

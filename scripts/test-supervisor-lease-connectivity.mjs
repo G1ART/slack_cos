@@ -5,6 +5,7 @@ import {
   __resetSupervisorLeaseDegradedStateForTests,
   getSupervisorLeaseRuntimeMode,
   getSupervisorLeaseBootMode,
+  getSupervisorLeaseLastErrorKind,
 } from '../src/founder/supervisorLease.js';
 
 const prevFetch = globalThis.fetch;
@@ -35,6 +36,7 @@ globalThis.fetch = async (input) => {
 const ok503 = await tryAcquireSupervisorLease('lease-owner-503');
 assert.equal(ok503, true, 'non-200 PostgREST should fall back to memory lease');
 assert.equal(getSupervisorLeaseRuntimeMode(), 'degraded-memory');
+assert.ok(getSupervisorLeaseLastErrorKind(), 'structured lease error kind after fallback');
 
 globalThis.fetch = prevFetch;
 delete process.env.SUPABASE_URL;

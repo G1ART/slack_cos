@@ -3,7 +3,11 @@
  */
 
 import { createCosRuntimeSupabase } from './runStoreSupabase.js';
-import { getSupervisorLeaseBootMode } from './supervisorLease.js';
+import {
+  getSupervisorLeaseBootMode,
+  getSupervisorLeaseRuntimeMode,
+  getSupervisorLeaseLastErrorKind,
+} from './supervisorLease.js';
 import { resolveGithubToken, parseGithubRepoFromEnv } from './toolsBridge.js';
 
 /**
@@ -46,6 +50,8 @@ export function logCosRuntimeTruthBoot(env = process.env) {
   const github_api_ready = Boolean(resolveGithubToken(env) && parseGithubRepoFromEnv(env));
   const supabase_run_store_ready = Boolean(createCosRuntimeSupabase());
   const supervisor_lease_mode = getSupervisorLeaseBootMode(env);
+  const supervisor_lease_effective_mode = getSupervisorLeaseRuntimeMode();
+  const supervisor_lease_last_error_kind = getSupervisorLeaseLastErrorKind();
   const webhook_ingress_ready = String(env.COS_HTTP_DISABLED || '').trim() !== '1';
 
   console.info(
@@ -54,6 +60,8 @@ export function logCosRuntimeTruthBoot(env = process.env) {
       github_api_ready,
       supabase_run_store_ready,
       supervisor_lease_mode,
+      supervisor_lease_effective_mode,
+      supervisor_lease_last_error_kind,
       webhook_ingress_ready,
     }),
   );

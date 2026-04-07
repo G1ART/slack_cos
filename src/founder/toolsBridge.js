@@ -23,6 +23,11 @@ export const __cursorExecFileForTests = { fn: /** @type {typeof execFileAsync | 
 
 const TOOL_ENUM = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
 
+/** Cloud Agent lane: async callbacks via /webhooks/cursor */
+export function isCursorCloudAgentConfigured(env = process.env) {
+  return String(env.CURSOR_CLOUD_AGENT_ENABLED || '').trim() === '1';
+}
+
 /** PostgREST RPC 이름 — DB에 함수가 있어야 apply_sql live 성공 */
 export const SUPABASE_APPLY_SQL_RPC = 'cos_apply_sql';
 
@@ -37,6 +42,8 @@ export const TOOL_OUTCOME_CODES = {
   BLOCKED_MISSING_INPUT: 'blocked_missing_input',
   FAILED_ARTIFACT_BUILD: 'failed_artifact_build',
   FAILED_LIVE_AND_ARTIFACT: 'failed_live_and_artifact',
+  /** Cursor Cloud Agent accepted async work; packet stays running until webhook */
+  CLOUD_AGENT_DISPATCH_ACCEPTED: 'cloud_agent_dispatch_accepted',
 };
 
 /** 테스트: 특정 도구의 artifact 빌드만 실패시키기 */
@@ -373,19 +380,22 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     const cwdOk = await isDir(cwd);
     const binDeclared = !!String(e.CURSOR_CLI_BIN || '').trim();
     const dirDeclared = !!String(e.CURSOR_PROJECT_DIR || '').trim();
-    const declared = binDeclared || !!cliPath || dirDeclared;
+    const cloudLane = isCursorCloudAgentConfigured(e);
+    const declared = binDeclared || !!cliPath || dirDeclared || cloudLane;
     const missing = [];
-    if (!cliPath) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
-    if (!cwdOk) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
+    if (!cliPath && !cloudLane) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
+    if (!cwdOk && !cloudLane) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
     const configured = !!cliPath && cwdOk;
-    const live_capable = configured;
-    const reason = live_capable
-      ? 'configured: CLI+cwd OK → create_spec live (emit_patch는 artifact-only)'
-      : !declared
-        ? 'declared: 없음 → artifact-only'
-        : !cliPath
-          ? 'declared: CLI 미해결 → artifact-only'
-          : 'declared: cwd 없음/무효 → artifact-only';
+    const live_capable = configured || cloudLane;
+    const reason = cloudLane
+      ? 'CURSOR_CLOUD_AGENT_ENABLED=1 → cloud_agent 우선 (웹훅 콜백); CLI는 폴백'
+      : live_capable
+        ? 'configured: CLI+cwd OK → create_spec live (emit_patch는 artifact-only)'
+        : !declared
+          ? 'declared: 없음 → artifact-only'
+          : !cliPath
+            ? 'declared: CLI 미해결 → artifact-only'
+            : 'declared: cwd 없음/무효 → artifact-only';
     return {
       tool: 'cursor',
       declared,
@@ -397,6 +407,8 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
         cli_path: cliPath,
         cwd,
         cwd_ok: cwdOk,
+        cloud_agent_enabled: cloudLane,
+        execution_lane_preference: cloudLane ? 'cloud_agent' : configured ? 'local_cli' : 'artifact',
         live_actions: ['create_spec'],
         artifact_actions: ['emit_patch'],
       },
@@ -849,6 +861,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       tool,
       action,
       execution_mode,
+      execution_lane: 'artifact',
       status,
       artifact_path: null,
       next_required_input: block.next_required_input ?? null,
@@ -871,6 +884,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       action,
       accepted: true,
       execution_mode,
+      execution_lane: 'artifact',
       status,
       outcome_code,
       payload,
@@ -900,7 +914,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
   }
 
   let execution_mode = 'artifact';
-  /** @type {'completed'|'degraded'|'blocked'|'failed'} */
+  /** @type {'completed'|'degraded'|'blocked'|'failed'|'running'} */
   let status = 'failed';
   let outcome_code = TOOL_OUTCOME_CODES.FAILED_ARTIFACT_BUILD;
   let result_summary = '';
@@ -911,10 +925,18 @@ export async function invokeExternalTool(spec, ctx = {}) {
   let fallback_reason = null;
   const blocked_reason = null;
   let degraded_from = null;
+  /** @type {'cloud_agent'|'local_cli'|'artifact'} */
+  let execution_lane = 'artifact';
+
+  const cloudCursorFirst =
+    tool === 'cursor' &&
+    action === 'create_spec' &&
+    isCursorCloudAgentConfigured(env) &&
+    __invokeToolTestHooks.failArtifactForTool !== tool;
 
   const canLive =
     tool === 'cursor'
-      ? await adapter.canExecuteLive(action, payload, env)
+      ? !cloudCursorFirst && (await adapter.canExecuteLive(action, payload, env))
       : adapter.canExecuteLive(action, payload, env);
 
   async function runBuildArtifact() {
@@ -930,8 +952,48 @@ export async function invokeExternalTool(spec, ctx = {}) {
     return adapter.buildArtifact(action, payload, invocation_id);
   }
 
-  if (canLive) {
+  if (cloudCursorFirst) {
     live_attempted = true;
+    execution_lane = 'cloud_agent';
+    try {
+      const cloudRunId = `cr_${invocation_id}`;
+      if (threadKey) {
+        const { recordCursorCloudCorrelation } = await import('./providerEventCorrelator.js');
+        await recordCursorCloudCorrelation({
+          threadKey,
+          packetId: runPacketId || undefined,
+          cloudRunId,
+        });
+      }
+      execution_mode = 'live';
+      status = 'running';
+      outcome_code = TOOL_OUTCOME_CODES.CLOUD_AGENT_DISPATCH_ACCEPTED;
+      result_summary = `running / cloud_agent / cursor:${action} — dispatch accepted (${cloudRunId}); webhook completes`;
+      artifact_path = null;
+      next_required_input = null;
+    } catch (e) {
+      fallback_reason = String(e?.message || e).slice(0, 300);
+      execution_lane = 'artifact';
+      const ar = await runBuildArtifact();
+      execution_mode = 'artifact';
+      if (ar.ok) {
+        status = 'degraded';
+        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_EXCEPTION;
+        degraded_from = 'cloud_dispatch_exception';
+        result_summary = `degraded / artifact / ${tool}:${action} (cloud dispatch exception) — ${String(ar.result_summary || '').slice(0, 200)}`;
+        artifact_path = ar.artifact_path ?? null;
+        next_required_input = ar.next_required_input ?? null;
+        error_code = 'cloud_dispatch_exception';
+      } else {
+        status = 'failed';
+        outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+        result_summary = `failed / artifact / ${tool}:${action} — cloud dispatch exception + artifact failed`;
+        error_code = 'cloud_dispatch_exception';
+      }
+    }
+  } else if (canLive) {
+    live_attempted = true;
+    execution_lane = 'local_cli';
     try {
       const lr = await adapter.executeLive(action, payload, env);
       if (lr.ok) {
@@ -964,6 +1026,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         fallback_reason = String(lr.result_summary || 'live failed').slice(0, 300);
         const ar = await runBuildArtifact();
         execution_mode = 'artifact';
+        execution_lane = 'artifact';
         if (ar.ok) {
           status = 'degraded';
           outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
@@ -983,6 +1046,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       fallback_reason = String(e?.message || e).slice(0, 300);
       const ar = await runBuildArtifact();
       execution_mode = 'artifact';
+      execution_lane = 'artifact';
       if (ar.ok) {
         status = 'degraded';
         outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_EXCEPTION;
@@ -1000,6 +1064,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     }
   } else {
     live_attempted = false;
+    execution_lane = 'artifact';
     const ar = await runBuildArtifact();
     if (ar.ok) {
       execution_mode = 'artifact';
@@ -1023,6 +1088,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     tool,
     action,
     execution_mode,
+    execution_lane,
     status,
     artifact_path,
     next_required_input,
@@ -1046,6 +1112,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     action,
     accepted: true,
     execution_mode,
+    execution_lane,
     status,
     outcome_code,
     payload,
@@ -1083,7 +1150,7 @@ export const ADAPTER_RUNTIME_CAPS = {
     open_pr: { completion_mode: 'webhook', callback_provider: 'github', correlation_required: true },
   },
   cursor: {
-    create_spec: { completion_mode: 'sync', correlation_required: false },
+    create_spec: { completion_mode: 'webhook', callback_provider: 'cursor', correlation_required: false },
     emit_patch: { completion_mode: 'sync', correlation_required: false },
   },
   supabase: {

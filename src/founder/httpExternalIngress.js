@@ -5,7 +5,7 @@
 
 import http from 'node:http';
 import crypto from 'node:crypto';
-import { handleGithubWebhookIngress } from './externalEventGateway.js';
+import { handleGithubWebhookIngress, handleCursorWebhookIngress } from './externalEventGateway.js';
 
 const MAX_WEBHOOK_BYTES = 512 * 1024;
 
@@ -221,8 +221,51 @@ export async function startCosHttpServer(opts = {}) {
         return;
       }
 
-      if (req.method === 'POST' && (urlPath === '/webhooks/cursor' || urlPath === '/webhooks/railway')) {
-        const source = urlPath === '/webhooks/cursor' ? 'cursor' : 'railway';
+      if (req.method === 'POST' && urlPath === '/webhooks/cursor') {
+        const requestId = String(req.headers['x-request-id'] || crypto.randomUUID());
+        const headersPresent = headerKeysPresent(req);
+        let rawBody;
+        try {
+          rawBody = await readBodyWithLimit(req, MAX_WEBHOOK_BYTES);
+        } catch (e) {
+          if (e && e.code === 'PAYLOAD_TOO_LARGE') {
+            sendJson(res, 413, { ok: false, error: 'payload too large', source: 'cursor', request_id: requestId });
+            return;
+          }
+          throw e;
+        }
+        logWebhookAudit('cursor', headersPresent, rawBody.length, requestId);
+        const cursorSecret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
+        if (cursorSecret) {
+          /** @type {Record<string, string | undefined>} */
+          const lower = {};
+          for (const [k, v] of Object.entries(req.headers)) {
+            lower[String(k).toLowerCase()] = Array.isArray(v) ? v[0] : v;
+          }
+          const out = await handleCursorWebhookIngress({ rawBody, headers: lower, env });
+          sendJson(res, out.httpStatus, {
+            ok: out.ok,
+            accepted: out.httpStatus >= 200 && out.httpStatus < 300,
+            source: 'cursor',
+            message: out.body,
+            matched: out.matched,
+            ignored: out.ignored,
+            request_id: requestId,
+          });
+          return;
+        }
+        try {
+          if (rawBody.length) JSON.parse(rawBody.toString('utf8'));
+        } catch {
+          sendJson(res, 400, { ok: false, error: 'invalid json', source: 'cursor', request_id: requestId });
+          return;
+        }
+        sendJson(res, 202, { ok: true, accepted: true, source: 'cursor', request_id: requestId });
+        return;
+      }
+
+      if (req.method === 'POST' && urlPath === '/webhooks/railway') {
+        const source = 'railway';
         const requestId = String(req.headers['x-request-id'] || crypto.randomUUID());
         const headersPresent = headerKeysPresent(req);
         let rawBody;
