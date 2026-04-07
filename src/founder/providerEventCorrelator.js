@@ -52,11 +52,13 @@ export async function recordGithubInvocationCorrelation(ctx) {
  *   threadKey: string,
  *   packetId?: string,
  *   cloudRunId: string,
+ *   action?: string,
  * }} ctx
  */
 export async function recordCursorCloudCorrelation(ctx) {
   const threadKey = String(ctx.threadKey || '').trim();
   const cloudRunId = String(ctx.cloudRunId || '').trim();
+  const cursorAction = String(ctx.action || 'create_spec').trim() || 'create_spec';
   if (!threadKey || !cloudRunId) return false;
   const run = await getActiveRunForThread(threadKey);
   if (!run?.id) return false;
@@ -74,7 +76,7 @@ export async function recordCursorCloudCorrelation(ctx) {
 
   await appendCosRunEvent(threadKey, 'tool_invoked', {
     tool: 'cursor',
-    action: 'create_spec',
+    action: cursorAction,
     object_type: 'cloud_agent_run',
     object_id: cloudRunId,
     correlation_registered: true,

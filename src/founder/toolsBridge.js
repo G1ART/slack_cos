@@ -15,18 +15,26 @@ import {
   cosRuntimeBaseDir,
   hasRecentToolLiveCompleted,
 } from './executionLedger.js';
+import {
+  isCursorCloudAgentLaneReady,
+  isCursorCloudAgentEnabled,
+  isCursorAutomationConfigured,
+  triggerCursorAutomation,
+  automationEndpointHostOnly,
+} from './cursorCloudAdapter.js';
 
 const execFileAsync = promisify(execFile);
+
+export {
+  isCursorCloudAgentLaneReady as isCursorCloudAgentConfigured,
+  isCursorCloudAgentEnabled,
+  isCursorAutomationConfigured,
+} from './cursorCloudAdapter.js';
 
 /** 테스트 전용: Cursor live 경로의 execFile 대체 (@param {typeof execFileAsync | null} fn */
 export const __cursorExecFileForTests = { fn: /** @type {typeof execFileAsync | null} */ (null) };
 
 const TOOL_ENUM = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
-
-/** Cloud Agent lane: async callbacks via /webhooks/cursor */
-export function isCursorCloudAgentConfigured(env = process.env) {
-  return String(env.CURSOR_CLOUD_AGENT_ENABLED || '').trim() === '1';
-}
 
 /** PostgREST RPC 이름 — DB에 함수가 있어야 apply_sql live 성공 */
 export const SUPABASE_APPLY_SQL_RPC = 'cos_apply_sql';
@@ -380,22 +388,28 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
     const cwdOk = await isDir(cwd);
     const binDeclared = !!String(e.CURSOR_CLI_BIN || '').trim();
     const dirDeclared = !!String(e.CURSOR_PROJECT_DIR || '').trim();
-    const cloudLane = isCursorCloudAgentConfigured(e);
-    const declared = binDeclared || !!cliPath || dirDeclared || cloudLane;
+    const epDeclared = !!String(e.CURSOR_AUTOMATION_ENDPOINT || '').trim();
+    const authDeclared = !!String(e.CURSOR_AUTOMATION_AUTH_HEADER || '').trim();
+    const automationLane = isCursorCloudAgentLaneReady(e);
+    const enabledNoCreds = isCursorCloudAgentEnabled(e) && !isCursorAutomationConfigured(e);
+    const declared =
+      binDeclared || !!cliPath || dirDeclared || epDeclared || authDeclared || isCursorCloudAgentEnabled(e);
     const missing = [];
-    if (!cliPath && !cloudLane) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
-    if (!cwdOk && !cloudLane) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
+    if (!cliPath && !automationLane) missing.push('CURSOR_CLI_BIN 또는 PATH의 agent|cursor-agent');
+    if (!cwdOk && !automationLane) missing.push('CURSOR_PROJECT_DIR(존재하는 디렉터리)');
     const configured = !!cliPath && cwdOk;
-    const live_capable = configured || cloudLane;
-    const reason = cloudLane
-      ? 'CURSOR_CLOUD_AGENT_ENABLED=1 → cloud_agent 우선 (웹훅 콜백); CLI는 폴백'
-      : live_capable
-        ? 'configured: CLI+cwd OK → create_spec live (emit_patch는 artifact-only)'
-        : !declared
-          ? 'declared: 없음 → artifact-only'
-          : !cliPath
-            ? 'declared: CLI 미해결 → artifact-only'
-            : 'declared: cwd 없음/무효 → artifact-only';
+    const live_capable = configured || automationLane;
+    const reason = automationLane
+      ? 'CURSOR_CLOUD_AGENT_ENABLED=1 + Automation(endpoint+auth) → cloud_agent(create_spec|emit_patch); 웹훅 완료; CLI 폴백'
+      : enabledNoCreds
+        ? 'CURSOR_CLOUD_AGENT_ENABLED=1 이지만 CURSOR_AUTOMATION_* 없음 → CLI 또는 artifact'
+        : live_capable
+          ? 'configured: CLI+cwd OK → create_spec live; emit_patch는 cloud 없으면 artifact'
+          : !declared
+            ? 'declared: 없음 → artifact-only'
+            : !cliPath
+              ? 'declared: CLI 미해결 → artifact-only'
+              : 'declared: cwd 없음/무효 → artifact-only';
     return {
       tool: 'cursor',
       declared,
@@ -407,10 +421,11 @@ export async function getAdapterReadiness(tool, env = process.env, options = {})
         cli_path: cliPath,
         cwd,
         cwd_ok: cwdOk,
-        cloud_agent_enabled: cloudLane,
-        execution_lane_preference: cloudLane ? 'cloud_agent' : configured ? 'local_cli' : 'artifact',
-        live_actions: ['create_spec'],
-        artifact_actions: ['emit_patch'],
+        cloud_agent_lane_ready: automationLane,
+        automation_endpoint_host: automationLane ? automationEndpointHostOnly(e.CURSOR_AUTOMATION_ENDPOINT) : null,
+        execution_lane_preference: automationLane ? 'cloud_agent' : configured ? 'local_cli' : 'artifact',
+        live_actions: automationLane ? ['create_spec', 'emit_patch'] : ['create_spec'],
+        artifact_actions: automationLane ? [] : ['emit_patch'],
       },
     };
   }
@@ -536,8 +551,9 @@ const TOOL_ADAPTERS = {
     /** @param {string} action */
     async canExecuteLive(action, _payload, env) {
       if (action !== 'create_spec') return false;
-      const r = await getAdapterReadiness('cursor', env);
-      return r.live_capable;
+      const cliPath = await resolveCursorCliPath(env);
+      const cwd = cursorProjectDir(env);
+      return !!(cliPath && (await isDir(cwd)));
     },
     async executeLive(action, payload, env) {
       const cli = await resolveCursorCliPath(env);
@@ -928,15 +944,15 @@ export async function invokeExternalTool(spec, ctx = {}) {
   /** @type {'cloud_agent'|'local_cli'|'artifact'} */
   let execution_lane = 'artifact';
 
-  const cloudCursorFirst =
+  const automationLane =
     tool === 'cursor' &&
-    action === 'create_spec' &&
-    isCursorCloudAgentConfigured(env) &&
+    (action === 'create_spec' || action === 'emit_patch') &&
+    isCursorCloudAgentLaneReady(env) &&
     __invokeToolTestHooks.failArtifactForTool !== tool;
 
   const canLive =
     tool === 'cursor'
-      ? !cloudCursorFirst && (await adapter.canExecuteLive(action, payload, env))
+      ? await adapter.canExecuteLive(action, payload, env)
       : adapter.canExecuteLive(action, payload, env);
 
   async function runBuildArtifact() {
@@ -952,17 +968,35 @@ export async function invokeExternalTool(spec, ctx = {}) {
     return adapter.buildArtifact(action, payload, invocation_id);
   }
 
-  if (cloudCursorFirst) {
+  const tr = automationLane
+    ? await triggerCursorAutomation({ action, payload, env, invocation_id })
+    : null;
+
+  /** @type {Record<string, unknown> | null} */
+  let cursorAutomationAudit = null;
+  if (automationLane && tr) {
+    cursorAutomationAudit = {
+      trigger_status: tr.trigger_status,
+      trigger_response_preview: tr.trigger_response_preview,
+      external_run_id: tr.external_run_id,
+      external_url: tr.external_url,
+      cursor_automation_request_id: tr.request_id,
+      cursor_automation_http_status: tr.status,
+    };
+  }
+
+  if (automationLane && tr?.ok) {
     live_attempted = true;
     execution_lane = 'cloud_agent';
     try {
-      const cloudRunId = `cr_${invocation_id}`;
+      const cloudRunId = String(tr.external_run_id || '').trim() || `cr_${invocation_id}`;
       if (threadKey) {
         const { recordCursorCloudCorrelation } = await import('./providerEventCorrelator.js');
         await recordCursorCloudCorrelation({
           threadKey,
           packetId: runPacketId || undefined,
           cloudRunId,
+          action,
         });
       }
       execution_mode = 'live';
@@ -989,6 +1023,100 @@ export async function invokeExternalTool(spec, ctx = {}) {
         outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
         result_summary = `failed / artifact / ${tool}:${action} — cloud dispatch exception + artifact failed`;
         error_code = 'cloud_dispatch_exception';
+      }
+    }
+  } else if (automationLane && tr && !tr.ok) {
+    live_attempted = true;
+    fallback_reason = String(
+      tr.error_code || tr.trigger_response_preview || tr.trigger_status || 'cursor_automation_failed',
+    ).slice(0, 300);
+    if (action === 'create_spec' && canLive) {
+      execution_lane = 'local_cli';
+      try {
+        const lr = await adapter.executeLive(action, payload, env);
+        if (lr.ok) {
+          execution_mode = 'live';
+          status = 'completed';
+          outcome_code = TOOL_OUTCOME_CODES.LIVE_COMPLETED;
+          result_summary = `completed / live / ${tool}:${action} — ${String(lr.result_summary || '').slice(0, 400)}`;
+          artifact_path = lr.artifact_path ?? null;
+          next_required_input = lr.next_required_input ?? null;
+          if (
+            threadKey &&
+            tool === 'github' &&
+            (action === 'create_issue' || action === 'open_pr') &&
+            lr.data &&
+            typeof lr.data === 'object'
+          ) {
+            try {
+              const { recordGithubInvocationCorrelation } = await import('./providerEventCorrelator.js');
+              await recordGithubInvocationCorrelation({
+                threadKey,
+                packetId: runPacketId,
+                action,
+                apiData: /** @type {Record<string, unknown>} */ (lr.data),
+              });
+            } catch (e) {
+              console.error('[cos_github_correlation]', e);
+            }
+          }
+        } else {
+          fallback_reason = String(lr.result_summary || 'live failed').slice(0, 300);
+          const ar = await runBuildArtifact();
+          execution_mode = 'artifact';
+          execution_lane = 'artifact';
+          if (ar.ok) {
+            status = 'degraded';
+            outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+            degraded_from = 'live_failure';
+            result_summary = `degraded / artifact / ${tool}:${action} (live failed) — ${String(ar.result_summary || '').slice(0, 200)}`;
+            artifact_path = ar.artifact_path ?? null;
+            next_required_input = ar.next_required_input ?? lr.next_required_input ?? null;
+            error_code = lr.error_code ?? null;
+          } else {
+            status = 'failed';
+            outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+            result_summary = `failed / artifact / ${tool}:${action} — live+artifact both failed`;
+            error_code = lr.error_code ?? 'artifact_failed';
+          }
+        }
+      } catch (e) {
+        fallback_reason = String(e?.message || e).slice(0, 300);
+        const ar = await runBuildArtifact();
+        execution_mode = 'artifact';
+        execution_lane = 'artifact';
+        if (ar.ok) {
+          status = 'degraded';
+          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_EXCEPTION;
+          degraded_from = 'live_exception';
+          result_summary = `degraded / artifact / ${tool}:${action} (live exception) — ${String(ar.result_summary || '').slice(0, 200)}`;
+          artifact_path = ar.artifact_path ?? null;
+          next_required_input = ar.next_required_input ?? null;
+          error_code = 'live_exception';
+        } else {
+          status = 'failed';
+          outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+          result_summary = `failed / artifact / ${tool}:${action} — live exception + artifact failed`;
+          error_code = 'live_exception';
+        }
+      }
+    } else {
+      execution_lane = 'artifact';
+      const ar = await runBuildArtifact();
+      execution_mode = 'artifact';
+      if (ar.ok) {
+        status = 'degraded';
+        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+        degraded_from = 'cursor_automation_failed';
+        result_summary = `degraded / artifact / ${tool}:${action} (cursor automation failed) — ${String(ar.result_summary || '').slice(0, 200)}`;
+        artifact_path = ar.artifact_path ?? null;
+        next_required_input = ar.next_required_input ?? null;
+        error_code = tr.error_code ?? 'cursor_automation_failed';
+      } else {
+        status = 'failed';
+        outcome_code = TOOL_OUTCOME_CODES.FAILED_LIVE_AND_ARTIFACT;
+        result_summary = `failed / artifact / ${tool}:${action} — automation failed + artifact failed`;
+        error_code = tr.error_code ?? 'cursor_automation_failed';
       }
     }
   } else if (canLive) {
@@ -1102,6 +1230,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     degraded_from,
     needs_review,
     ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+    ...(cursorAutomationAudit || {}),
   };
 
   const result = {
@@ -1121,6 +1250,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
     next_required_input,
     needs_review,
     ...(error_code ? { error_code } : {}),
+    ...(cursorAutomationAudit
+      ? {
+          trigger_status: cursorAutomationAudit.trigger_status,
+          external_run_id: cursorAutomationAudit.external_run_id,
+          trigger_response_preview: cursorAutomationAudit.trigger_response_preview,
+          cursor_automation_request_id: cursorAutomationAudit.cursor_automation_request_id,
+        }
+      : {}),
   };
 
   if (threadKey) {
@@ -1151,7 +1288,7 @@ export const ADAPTER_RUNTIME_CAPS = {
   },
   cursor: {
     create_spec: { completion_mode: 'webhook', callback_provider: 'cursor', correlation_required: false },
-    emit_patch: { completion_mode: 'sync', correlation_required: false },
+    emit_patch: { completion_mode: 'webhook', callback_provider: 'cursor', correlation_required: false },
   },
   supabase: {
     apply_sql: { completion_mode: 'sync', callback_provider: 'supabase', correlation_required: false },
