@@ -46,10 +46,59 @@ export function isValidToolAction(tool, action) {
 }
 
 /**
+ * GitHub 토큰: GITHUB_TOKEN 우선, 없으면 GITHUB_FINE_GRAINED_PAT.
  * @param {Record<string, string | undefined>} env
  */
-function parseGithubRepo(env) {
-  const r = String(env.GITHUB_REPOSITORY || '').trim();
+export function resolveGithubToken(env) {
+  const e = env && typeof env === 'object' ? env : process.env;
+  const a = String(e.GITHUB_TOKEN || '').trim();
+  if (a) return a;
+  return String(e.GITHUB_FINE_GRAINED_PAT || '').trim();
+}
+
+/**
+ * owner/repo 문자열: GITHUB_REPOSITORY 우선, 없으면 GITHUB_DEFAULT_OWNER/REPO.
+ * @param {Record<string, string | undefined>} env
+ */
+export function resolveGithubRepositoryString(env) {
+  const e = env && typeof env === 'object' ? env : process.env;
+  const r = String(e.GITHUB_REPOSITORY || '').trim();
+  if (r) return r;
+  const owner = String(e.GITHUB_DEFAULT_OWNER || '').trim();
+  const repoName = String(e.GITHUB_DEFAULT_REPO || '').trim();
+  if (owner && repoName) return `${owner}/${repoName}`;
+  return '';
+}
+
+/**
+ * @param {Record<string, string | undefined>} env
+ * @returns {'GITHUB_TOKEN' | 'GITHUB_FINE_GRAINED_PAT' | null}
+ */
+export function resolveGithubTokenSource(env) {
+  const e = env && typeof env === 'object' ? env : process.env;
+  if (String(e.GITHUB_TOKEN || '').trim()) return 'GITHUB_TOKEN';
+  if (String(e.GITHUB_FINE_GRAINED_PAT || '').trim()) return 'GITHUB_FINE_GRAINED_PAT';
+  return null;
+}
+
+/**
+ * @param {Record<string, string | undefined>} env
+ * @returns {'GITHUB_REPOSITORY' | 'GITHUB_DEFAULT_OWNER_REPO' | null}
+ */
+export function resolveGithubRepositorySource(env) {
+  const e = env && typeof env === 'object' ? env : process.env;
+  if (String(e.GITHUB_REPOSITORY || '').trim()) return 'GITHUB_REPOSITORY';
+  const owner = String(e.GITHUB_DEFAULT_OWNER || '').trim();
+  const repoName = String(e.GITHUB_DEFAULT_REPO || '').trim();
+  if (owner && repoName) return 'GITHUB_DEFAULT_OWNER_REPO';
+  return null;
+}
+
+/**
+ * @param {Record<string, string | undefined>} env
+ */
+export function parseGithubRepoFromEnv(env) {
+  const r = resolveGithubRepositoryString(env);
   const parts = r.split('/');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
   return { owner: parts[0], repo: parts[1] };
@@ -138,29 +187,41 @@ export async function getAdapterReadiness(tool, env = process.env) {
   const e = env || process.env;
 
   if (tool === 'github') {
-    const token = String(e.GITHUB_TOKEN || '').trim();
-    const repoRaw = String(e.GITHUB_REPOSITORY || '').trim();
-    const repo = parseGithubRepo(e);
+    const token = resolveGithubToken(e);
+    const repoRaw = resolveGithubRepositoryString(e);
+    const repo = parseGithubRepoFromEnv(e);
+    const tokenSrc = resolveGithubTokenSource(e);
+    const repoSrc = resolveGithubRepositorySource(e);
     const missing = [];
-    if (!token) missing.push('GITHUB_TOKEN');
-    if (!repoRaw) missing.push('GITHUB_REPOSITORY');
-    else if (!repo) missing.push('GITHUB_REPOSITORY(parse: need owner/repo)');
+    if (!token) missing.push('GITHUB_TOKEN or GITHUB_FINE_GRAINED_PAT');
+    if (!repoRaw) missing.push('GITHUB_REPOSITORY or GITHUB_DEFAULT_OWNER + GITHUB_DEFAULT_REPO');
+    else if (!repo) missing.push('repository(parse: need owner/repo)');
     const configured = !!token && !!repo;
     const live_capable = configured;
     const reason = live_capable
-      ? 'token+repo OK → REST live 가능'
+      ? `token+repo OK → REST live 가능 (token:${tokenSrc}, repo:${repoSrc})`
       : !token
-        ? '토큰 없음 → artifact'
+        ? '토큰 없음(GITHUB_TOKEN·FINE_GRAINED_PAT) → artifact'
         : !repoRaw
-          ? 'GITHUB_REPOSITORY 없음 → artifact'
-          : 'GITHUB_REPOSITORY 형식 오류(owner/repo) → artifact';
+          ? '저장소 없음(GITHUB_REPOSITORY·DEFAULT_OWNER/REPO) → artifact'
+          : '저장소 형식 오류(owner/repo) → artifact';
     return {
       tool: 'github',
       live_capable,
-      configured: !!token || !!repoRaw,
+      configured: !!(String(e.GITHUB_TOKEN || '').trim() ||
+        String(e.GITHUB_FINE_GRAINED_PAT || '').trim() ||
+        String(e.GITHUB_REPOSITORY || '').trim() ||
+        String(e.GITHUB_DEFAULT_OWNER || '').trim() ||
+        String(e.GITHUB_DEFAULT_REPO || '').trim()),
       reason,
       missing,
-      details: { has_token: !!token, repo_parse_ok: !!repo, repository: repoRaw || null },
+      details: {
+        has_token: !!token,
+        repo_parse_ok: !!repo,
+        effective_repository: repoRaw || null,
+        github_token_source: tokenSrc,
+        github_repository_source: repoSrc,
+      },
     };
   }
 
@@ -286,7 +347,14 @@ export async function getAllAdapterReadiness(env = process.env) {
  */
 export function formatAdapterReadinessOneLine(r) {
   if (r.tool === 'github') {
-    return `github: ${r.live_capable ? 'live-ready' : 'artifact'} — ${r.reason}`;
+    const d = r.details;
+    const ts = d.github_token_source;
+    const rs = d.github_repository_source;
+    const tag =
+      ts && rs && (ts !== 'GITHUB_TOKEN' || rs !== 'GITHUB_REPOSITORY')
+        ? ` [${ts}+${rs}]`
+        : '';
+    return `github: ${r.live_capable ? 'live-ready' : 'artifact'}${tag} — ${r.reason}`;
   }
   if (r.tool === 'supabase') {
     return `supabase: ${r.live_capable ? 'live-ready(apply_sql→rpc)' : 'artifact'} — ${r.reason}`;
@@ -384,16 +452,17 @@ const TOOL_ADAPTERS = {
 
   github: {
     canExecuteLive(action, _payload, env) {
-      if (!String(env.GITHUB_TOKEN || '').trim()) return false;
-      if (!parseGithubRepo(env)) return false;
+      if (!resolveGithubToken(env)) return false;
+      if (!parseGithubRepoFromEnv(env)) return false;
       if (action === 'create_issue') return true;
       if (action === 'open_pr') return true;
       return false;
     },
     async executeLive(action, payload, env) {
-      const token = String(env.GITHUB_TOKEN || '').trim();
-      const repo = parseGithubRepo(env);
-      if (!repo) return { ok: false, result_summary: 'GITHUB_REPOSITORY missing', error_code: 'no_repo' };
+      const token = resolveGithubToken(env);
+      const repo = parseGithubRepoFromEnv(env);
+      if (!token) return { ok: false, result_summary: 'GitHub token missing', error_code: 'no_token' };
+      if (!repo) return { ok: false, result_summary: 'GitHub repository not configured', error_code: 'no_repo' };
 
       if (action === 'create_issue') {
         const res = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.repo}/issues`, {

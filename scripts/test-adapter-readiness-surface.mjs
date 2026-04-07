@@ -9,17 +9,52 @@ async function ghEmpty() {
   const r = await getAdapterReadiness('github', {});
   assert.equal(r.tool, 'github');
   assert.equal(r.live_capable, false);
-  assert.ok(r.missing.includes('GITHUB_TOKEN'));
-  assert.ok(r.missing.includes('GITHUB_REPOSITORY'));
+  assert.ok(r.missing.some((m) => m.includes('GITHUB_TOKEN') && m.includes('FINE_GRAINED')));
+  assert.ok(r.missing.some((m) => m.includes('GITHUB_REPOSITORY') && m.includes('DEFAULT')));
 }
 
-async function ghConfigured() {
+/** GITHUB_TOKEN + GITHUB_REPOSITORY — live-ready */
+async function ghCanonicalTokenAndRepo() {
   const r = await getAdapterReadiness('github', {
     GITHUB_TOKEN: 't',
     GITHUB_REPOSITORY: 'acme/yo',
   });
   assert.equal(r.live_capable, true);
   assert.equal(r.details.repo_parse_ok, true);
+  assert.equal(r.details.github_token_source, 'GITHUB_TOKEN');
+  assert.equal(r.details.github_repository_source, 'GITHUB_REPOSITORY');
+  assert.equal(r.details.effective_repository, 'acme/yo');
+  const line = formatAdapterReadinessOneLine(r);
+  assert.ok(!line.includes('[GITHUB_TOKEN+GITHUB_REPOSITORY]'), line);
+}
+
+/** GITHUB_FINE_GRAINED_PAT + DEFAULT_OWNER/REPO — 동일하게 live-ready */
+async function ghAliasPatAndDefaults() {
+  const r = await getAdapterReadiness('github', {
+    GITHUB_FINE_GRAINED_PAT: 'pat',
+    GITHUB_DEFAULT_OWNER: 'G1ART',
+    GITHUB_DEFAULT_REPO: 'slack_cos',
+  });
+  assert.equal(r.live_capable, true);
+  assert.equal(r.details.github_token_source, 'GITHUB_FINE_GRAINED_PAT');
+  assert.equal(r.details.github_repository_source, 'GITHUB_DEFAULT_OWNER_REPO');
+  assert.equal(r.details.effective_repository, 'G1ART/slack_cos');
+  const line = formatAdapterReadinessOneLine(r);
+  assert.ok(line.includes('[GITHUB_FINE_GRAINED_PAT+GITHUB_DEFAULT_OWNER_REPO]'), line);
+}
+
+async function ghPrecedenceCanonicalOverAlias() {
+  const r = await getAdapterReadiness('github', {
+    GITHUB_TOKEN: 'aa',
+    GITHUB_FINE_GRAINED_PAT: 'bb',
+    GITHUB_REPOSITORY: 'x/y',
+    GITHUB_DEFAULT_OWNER: 'o',
+    GITHUB_DEFAULT_REPO: 'r',
+  });
+  assert.equal(r.live_capable, true);
+  assert.equal(r.details.github_token_source, 'GITHUB_TOKEN');
+  assert.equal(r.details.github_repository_source, 'GITHUB_REPOSITORY');
+  assert.equal(r.details.effective_repository, 'x/y');
 }
 
 async function ghBadRepo() {
@@ -73,6 +108,7 @@ async function railwayTokenDep() {
 async function allLines() {
   const all = await getAllAdapterReadiness({
     GITHUB_TOKEN: '',
+    GITHUB_FINE_GRAINED_PAT: '',
     SUPABASE_URL: '',
     CURSOR_CLI_BIN: '/nope',
     RAILWAY_TOKEN: '',
@@ -85,7 +121,9 @@ async function allLines() {
 }
 
 await ghEmpty();
-await ghConfigured();
+await ghCanonicalTokenAndRepo();
+await ghAliasPatAndDefaults();
+await ghPrecedenceCanonicalOverAlias();
 await ghBadRepo();
 await supaMissing();
 await supaConfigured();
