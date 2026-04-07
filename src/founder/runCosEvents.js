@@ -8,6 +8,25 @@ import { cosRuntimeBaseDir } from './executionLedger.js';
 import { createCosRuntimeSupabase, supabaseAppendRunEvent } from './runStoreSupabase.js';
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
 
+/**
+ * @param {Record<string, unknown>} row
+ */
+function eventRowFromPayload(eventType, payload, evidence) {
+  const pl = payload && typeof payload === 'object' ? payload : {};
+  const ev = evidence && typeof evidence === 'object' ? evidence : {};
+  return {
+    event_type: String(eventType || 'unknown'),
+    payload: pl,
+    created_at: new Date().toISOString(),
+    matched_by: ev.matched_by != null && String(ev.matched_by).trim() ? String(ev.matched_by).trim() : null,
+    canonical_status: ev.canonical_status != null && String(ev.canonical_status).trim() ? String(ev.canonical_status).trim() : null,
+    payload_fingerprint_prefix:
+      ev.payload_fingerprint_prefix != null && String(ev.payload_fingerprint_prefix).trim()
+        ? String(ev.payload_fingerprint_prefix).trim().slice(0, 32)
+        : null,
+  };
+}
+
 /** @type {Map<string, { event_type: string, payload: Record<string, unknown>, created_at: string }[]>} */
 const memByRun = new Map();
 
@@ -30,11 +49,7 @@ export async function appendCosRunEvent(threadKey, eventType, payload) {
 
   const pl = payload && typeof payload === 'object' ? payload : {};
   const mode = getCosRunStoreMode();
-  const row = {
-    event_type: String(eventType || 'unknown'),
-    payload: pl,
-    created_at: new Date().toISOString(),
-  };
+  const row = eventRowFromPayload(eventType, pl, {});
 
   if (mode === 'memory') {
     const arr = memByRun.get(rid) || [];
@@ -45,7 +60,39 @@ export async function appendCosRunEvent(threadKey, eventType, payload) {
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
     if (!sb) return false;
-    await supabaseAppendRunEvent(sb, rid, row.event_type, pl);
+    await supabaseAppendRunEvent(sb, rid, row.event_type, pl, {});
+    return true;
+  }
+
+  const fp = eventsFilePath(rid);
+  await fs.mkdir(path.dirname(fp), { recursive: true });
+  await fs.appendFile(fp, `${JSON.stringify(row)}\n`, 'utf8');
+  return true;
+}
+
+/**
+ * @param {string} runUuid
+ * @param {string} eventType
+ * @param {Record<string, unknown>} payload
+ * @param {{ matched_by?: string | null, canonical_status?: string | null, payload_fingerprint_prefix?: string | null }} [evidence]
+ * @returns {Promise<boolean>}
+ */
+export async function appendCosRunEventForRun(runUuid, eventType, payload, evidence) {
+  const rid = String(runUuid || '').trim();
+  if (!rid) return false;
+  const mode = getCosRunStoreMode();
+  const row = eventRowFromPayload(eventType, payload, evidence);
+
+  if (mode === 'memory') {
+    const arr = memByRun.get(rid) || [];
+    arr.push(row);
+    memByRun.set(rid, arr);
+    return true;
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return false;
+    await supabaseAppendRunEvent(sb, rid, row.event_type, row.payload, evidence);
     return true;
   }
 
@@ -72,7 +119,7 @@ export async function listCosRunEventsForRun(runUuid, limit = 50) {
     if (!sb) return [];
     const { data, error } = await sb
       .from('cos_run_events')
-      .select('event_type, payload, created_at')
+      .select('event_type, payload, created_at, matched_by, canonical_status, payload_fingerprint_prefix')
       .eq('run_id', rid)
       .order('created_at', { ascending: false })
       .limit(limit);

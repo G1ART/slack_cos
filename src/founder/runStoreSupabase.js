@@ -155,6 +155,21 @@ export async function supabaseSelectLatestRun(sb, threadKey) {
 
 /**
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {string} runUuid
+ */
+export async function supabaseSelectRunById(sb, runUuid) {
+  const rid = String(runUuid || '').trim();
+  if (!rid) return null;
+  const { data, error } = await sb.from('cos_runs').select('*').eq('id', rid).maybeSingle();
+  if (error) {
+    console.error('[cos_runs by id]', error.message);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
  * @param {Record<string, unknown>} appRow
  * @returns {Promise<Record<string, unknown> | null>}
  */
@@ -175,13 +190,27 @@ export async function supabaseInsertRun(sb, appRow) {
  * @param {string} eventType
  * @param {Record<string, unknown>} payload
  */
-export async function supabaseAppendRunEvent(sb, runUuid, eventType, payload) {
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {string} runUuid
+ * @param {string} eventType
+ * @param {Record<string, unknown>} payload
+ * @param {{ matched_by?: string | null, canonical_status?: string | null, payload_fingerprint_prefix?: string | null }} [evidence]
+ */
+export async function supabaseAppendRunEvent(sb, runUuid, eventType, payload, evidence) {
   const rid = String(runUuid || '');
   if (!rid) return;
+  const ev = evidence && typeof evidence === 'object' ? evidence : {};
   await sb.from('cos_run_events').insert({
     run_id: rid,
     event_type: String(eventType || 'unknown'),
     payload: payload && typeof payload === 'object' ? payload : {},
+    matched_by: ev.matched_by != null && String(ev.matched_by).trim() ? String(ev.matched_by).trim() : null,
+    canonical_status: ev.canonical_status != null && String(ev.canonical_status).trim() ? String(ev.canonical_status).trim() : null,
+    payload_fingerprint_prefix:
+      ev.payload_fingerprint_prefix != null && String(ev.payload_fingerprint_prefix).trim()
+        ? String(ev.payload_fingerprint_prefix).trim().slice(0, 32)
+        : null,
   });
 }
 
@@ -232,6 +261,58 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
     return null;
   }
   const again = await supabaseSelectLatestRun(sb, threadKey);
+  return dbRowToAppRun(again);
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {string} runUuid
+ * @param {Record<string, unknown>} patch app-shaped patch
+ */
+export async function supabasePatchRunById(sb, runUuid, patch) {
+  const rid = String(runUuid || '').trim();
+  if (!rid) return null;
+  const cur = await supabaseSelectRunById(sb, rid);
+  if (!cur) return null;
+  const merged = { ...dbRowToAppRun(cur), ...patch };
+  merged.updated_at = new Date().toISOString();
+  const dbUp = appRunToDbRow(merged);
+  const { error } = await sb
+    .from('cos_runs')
+    .update({
+      dispatch_id: dbUp.dispatch_id,
+      objective: dbUp.objective,
+      status: dbUp.status,
+      stage: dbUp.stage,
+      current_packet_id: dbUp.current_packet_id,
+      next_packet_id: dbUp.next_packet_id,
+      packet_state_map: dbUp.packet_state_map,
+      handoff_order: dbUp.handoff_order,
+      dispatch_payload: dbUp.dispatch_payload,
+      starter_kickoff: dbUp.starter_kickoff,
+      last_auto_invocation_sha: dbUp.last_auto_invocation_sha,
+      founder_request_summary: dbUp.founder_request_summary,
+      founder_notified_started_at: dbUp.founder_notified_started_at,
+      founder_notified_review_required_at: dbUp.founder_notified_review_required_at,
+      founder_notified_blocked_at: dbUp.founder_notified_blocked_at,
+      founder_notified_completed_at: dbUp.founder_notified_completed_at,
+      founder_notified_failed_at: dbUp.founder_notified_failed_at,
+      external_run_id: dbUp.external_run_id,
+      required_packet_ids: dbUp.required_packet_ids,
+      terminal_packet_ids: dbUp.terminal_packet_ids,
+      harness_snapshot: dbUp.harness_snapshot,
+      completed_at: dbUp.completed_at,
+      last_progressed_at: dbUp.last_progressed_at,
+      last_founder_update_sha: dbUp.last_founder_update_sha,
+      cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
+      updated_at: dbUp.updated_at,
+    })
+    .eq('id', rid);
+  if (error) {
+    console.error('[cos_runs patch by id]', error.message);
+    return null;
+  }
+  const again = await supabaseSelectRunById(sb, rid);
   return dbRowToAppRun(again);
 }
 

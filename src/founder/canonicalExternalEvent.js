@@ -16,19 +16,53 @@
 
 import {
   getActiveRunForThread,
+  getRunById,
   patchRun,
+  patchRunById,
   deriveRunTerminalStatus,
   deriveRunStage,
 } from './executionRunStore.js';
 import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
 import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
-import { appendCosRunEvent } from './runCosEvents.js';
+import { appendCosRunEventForRun } from './runCosEvents.js';
 import { findExternalCorrelation, findExternalCorrelationCursorHints } from './correlationStore.js';
 import {
   canonicalizeExternalRunStatus,
   resolveCursorPacketStateAuthority,
   externalBucketToDesiredPacketState,
 } from './externalRunStatus.js';
+
+/**
+ * @param {string} provider
+ * @param {string} reason
+ * @param {Record<string, unknown>} [extra]
+ */
+function logStaleOrMissingRun(provider, reason, extra) {
+  console.info(
+    JSON.stringify({
+      event: 'cos_external_event_stale_or_missing_run',
+      provider: String(provider || ''),
+      reason,
+      ...(extra && typeof extra === 'object' ? extra : {}),
+    }),
+  );
+}
+
+/**
+ * @param {CanonicalExternalEvent} canonical
+ * @param {string} statusHint
+ * @param {{ bucket: string }} canonForOut
+ */
+function evidenceCanonicalStatus(canonical, statusHint, canonForOut) {
+  const p = String(canonical.provider || '');
+  if (p === 'cursor') return String(canonForOut.bucket || '');
+  if (p === 'github') {
+    if (statusHint === 'external_completed') return 'positive_terminal';
+    if (statusHint === 'external_failed') return 'negative_terminal';
+    return 'non_milestone';
+  }
+  return null;
+}
 
 /**
  * @param {Record<string, unknown>} norm normalizeGithubWebhookPayload result
@@ -120,7 +154,48 @@ export async function applyExternalPacketProgressState(threadKey, packetId, pack
     next_packet_id,
     status,
     stage,
-    completed_at: status === 'completed' ? now : run.completed_at ?? null,
+    completed_at: status === 'completed' ? now : null,
+    last_progressed_at: now,
+  });
+}
+
+/**
+ * @param {string} runId
+ * @param {string} packetId
+ * @param {string} packetState
+ */
+export async function applyExternalPacketProgressStateForRun(runId, packetId, packetState) {
+  const rid = String(runId || '').trim();
+  const pid = String(packetId || '').trim();
+  const st = String(packetState || '').trim();
+  if (!rid || !pid || !st) return;
+  const allowed = new Set(['queued', 'ready', 'running', 'review_required', 'blocked', 'completed', 'failed', 'skipped']);
+  if (!allowed.has(st)) return;
+
+  const run = await getRunById(rid);
+  if (!run) return;
+  const required = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
+  const psm = {
+    ...(run.packet_state_map && typeof run.packet_state_map === 'object' ? run.packet_state_map : {}),
+    [pid]: st,
+  };
+  const packetsById = buildPacketsById(run);
+  const terminal_packet_ids = required.filter((id) => {
+    const s = psm[id];
+    return s === 'completed' || s === 'skipped' || s === 'failed';
+  });
+  const { current_packet_id, next_packet_id } = recomputeCurrentNext(required, psm, packetsById);
+  const status = deriveRunTerminalStatus(psm, required);
+  const stage = deriveRunStage(status, Boolean(run.starter_kickoff && run.starter_kickoff.executed));
+  const now = new Date().toISOString();
+  await patchRunById(rid, {
+    packet_state_map: psm,
+    terminal_packet_ids,
+    current_packet_id,
+    next_packet_id,
+    status,
+    stage,
+    completed_at: status === 'completed' ? now : null,
     last_progressed_at: now,
   });
 }
@@ -196,7 +271,83 @@ export async function applyExternalCursorPacketProgress(threadKey, packetId, can
     next_packet_id,
     status,
     stage,
-    completed_at: status === 'completed' ? now : run.completed_at ?? null,
+    completed_at: status === 'completed' ? now : null,
+    last_progressed_at: now,
+    cursor_external_terminal_by_packet: termMap,
+  });
+}
+
+/**
+ * @param {string} runId
+ * @param {string} packetId
+ * @param {CanonicalExternalEvent} canonical
+ */
+export async function applyExternalCursorPacketProgressForRun(runId, packetId, canonical) {
+  const rid = String(runId || '').trim();
+  const pid = String(packetId || '').trim();
+  if (!rid || !pid) return;
+  const run = await getRunById(rid);
+  if (!run) return;
+
+  const statusRaw = String(
+    canonical.payload && typeof canonical.payload === 'object'
+      ? /** @type {Record<string, unknown>} */ (canonical.payload).status || ''
+      : '',
+  );
+  const canon = canonicalizeExternalRunStatus(statusRaw);
+  /** @type {string} */
+  let desired;
+  if (canon.bucket === 'positive_terminal') desired = 'completed';
+  else if (canon.bucket === 'negative_terminal') desired = 'failed';
+  else if (canon.bucket === 'non_terminal') {
+    desired = externalBucketToDesiredPacketState('non_terminal', canon.raw_normalized);
+  } else {
+    const hint = String(canonical.status_hint || '');
+    if (hint === 'external_completed') desired = 'completed';
+    else if (hint === 'external_failed') desired = 'failed';
+    else desired = 'running';
+  }
+
+  const psm = {
+    ...(run.packet_state_map && typeof run.packet_state_map === 'object' ? run.packet_state_map : {}),
+  };
+  const existing = String(psm[pid] || 'queued');
+  const termMap =
+    run.cursor_external_terminal_by_packet && typeof run.cursor_external_terminal_by_packet === 'object'
+      ? { .../** @type {Record<string, unknown>} */ (run.cursor_external_terminal_by_packet) }
+      : {};
+  const lastRecRaw = termMap[pid];
+  const lastRec =
+    lastRecRaw && typeof lastRecRaw === 'object' && !Array.isArray(lastRecRaw)
+      ? /** @type {{ occurred_at?: string, outcome?: string }} */ (lastRecRaw)
+      : null;
+
+  const res = resolveCursorPacketStateAuthority(existing, desired, canonical.occurred_at, lastRec);
+  if (res.skipPatch) return;
+
+  psm[pid] = res.state;
+  if (res.terminalRecord) {
+    termMap[pid] = res.terminalRecord;
+  }
+
+  const required = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
+  const terminal_packet_ids = required.filter((id) => {
+    const s = psm[id];
+    return s === 'completed' || s === 'skipped' || s === 'failed';
+  });
+  const packetsById = buildPacketsById(run);
+  const { current_packet_id, next_packet_id } = recomputeCurrentNext(required, psm, packetsById);
+  const status = deriveRunTerminalStatus(psm, required);
+  const stage = deriveRunStage(status, Boolean(run.starter_kickoff && run.starter_kickoff.executed));
+  const now = new Date().toISOString();
+  await patchRunById(rid, {
+    packet_state_map: psm,
+    terminal_packet_ids,
+    current_packet_id,
+    next_packet_id,
+    status,
+    stage,
+    completed_at: status === 'completed' ? now : null,
     last_progressed_at: now,
     cursor_external_terminal_by_packet: termMap,
   });
@@ -205,9 +356,10 @@ export async function applyExternalCursorPacketProgress(threadKey, packetId, can
 /**
  * @param {CanonicalExternalEvent} canonical
  * @param {Record<string, unknown> | null} corr
+ * @param {{ matched_by?: string | null, payload_fingerprint_prefix?: string | null }} [ingressMeta]
  * @returns {Promise<{ matched: boolean, httpBody: string, canonical_status?: string }>}
  */
-export async function processCanonicalExternalEvent(canonical, corr) {
+export async function processCanonicalExternalEvent(canonical, corr, ingressMeta) {
   const statusHint = String(canonical.status_hint || 'external_status_update');
   const eventType =
     statusHint === 'external_completed'
@@ -242,7 +394,37 @@ export async function processCanonicalExternalEvent(canonical, corr) {
     return { matched: false, httpBody: 'no thread_key' };
   }
 
-  await appendCosRunEvent(threadKey, eventType, {
+  const runId = corr.run_id != null ? String(corr.run_id).trim() : '';
+  if (!runId) {
+    logStaleOrMissingRun(canonical.provider, 'missing_run_id', {
+      external_id: canonical.external_id,
+      thread_key: threadKey,
+    });
+    return { matched: false, httpBody: 'missing run_id' };
+  }
+
+  const runRow = await getRunById(runId);
+  if (!runRow) {
+    logStaleOrMissingRun(canonical.provider, 'run_not_found', {
+      run_id: runId,
+      external_id: canonical.external_id,
+      thread_key: threadKey,
+    });
+    return { matched: false, httpBody: 'run not found' };
+  }
+  if (String(runRow.thread_key || '') !== threadKey) {
+    logStaleOrMissingRun(canonical.provider, 'thread_key_mismatch', {
+      run_id: runId,
+      thread_key: threadKey,
+      run_thread_key: String(runRow.thread_key || ''),
+    });
+    return { matched: false, httpBody: 'thread mismatch' };
+  }
+
+  const meta = ingressMeta && typeof ingressMeta === 'object' ? ingressMeta : {};
+  const cs = evidenceCanonicalStatus(canonical, statusHint, canonForOut);
+
+  await appendCosRunEventForRun(runId, eventType, {
     canonical_provider: canonical.provider,
     canonical_event_type: canonical.event_type,
     external_id: canonical.external_id,
@@ -251,15 +433,19 @@ export async function processCanonicalExternalEvent(canonical, corr) {
     occurred_at: canonical.occurred_at,
     correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
     payload: canonical.payload,
+  }, {
+    matched_by: meta.matched_by ?? null,
+    canonical_status: cs,
+    payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
   });
 
   const pkt = corr.packet_id != null ? String(corr.packet_id).trim() : '';
 
   if (canonical.provider === 'cursor' && pkt) {
-    await applyExternalCursorPacketProgress(threadKey, pkt, canonical);
+    await applyExternalCursorPacketProgressForRun(runId, pkt, canonical);
   } else if (canonical.provider === 'github' && pkt && (statusHint === 'external_completed' || statusHint === 'external_failed')) {
-    await applyExternalPacketProgressState(
-      threadKey,
+    await applyExternalPacketProgressStateForRun(
+      runId,
       pkt,
       statusHint === 'external_completed' ? 'completed' : 'failed',
     );
