@@ -1,5 +1,7 @@
 /**
- * Thread 단위 execution evidence (dispatch / invocation). tracked 경로 사용 금지.
+ * Thread 단위 execution evidence (visibility spine). tracked 경로 사용 금지.
+ *
+ * Artifact types: harness_dispatch | harness_packet | tool_invocation | tool_result | execution_note
  */
 
 import fs from 'node:fs/promises';
@@ -43,7 +45,12 @@ async function writeAll(threadKey, artifacts) {
  * @param {string} threadKey
  * @param {{
  *   ts?: string,
- *   type: 'harness_dispatch' | 'tool_invocation' | 'tool_result' | 'execution_note',
+ *   type:
+ *     | 'harness_dispatch'
+ *     | 'harness_packet'
+ *     | 'tool_invocation'
+ *     | 'tool_result'
+ *     | 'execution_note',
  *   summary: string,
  *   payload?: Record<string, unknown>,
  * }} artifact

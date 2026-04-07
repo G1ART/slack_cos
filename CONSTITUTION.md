@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.3 — Zero-interference spine: model-owned orchestration + execution ledger
+## Version 2.4 — Model-owned execution layer (adapter + ledger visibility)
 
 ---
 
@@ -35,9 +35,11 @@ External tools (Cursor, GitHub, Supabase, Vercel, Railway 등)
 ### COS ↔ Harness ↔ Tools (추가 원칙)
 
 - Harness **team shape**는 COS가 정한다.
-- **tool choice**는 COS가 정한다.
-- 앱은 **adapter 실행**과 **execution evidence ledger**만 담당한다.
-- 실행 artifact는 내부에만 남고, founder에게는 자연어로만 돌아온다.
+- **external tool choice**는 COS가 정한다.
+- 앱 코드는 **adapter**와 **evidence ledger**만 제공한다 (판단기·통제기 아님).
+- 실행 artifact(harness dispatch·task packet 봉투·tool invocation 등)는 **founder에게 직접 보이지 않고**, COS 내부 실행 문맥·ledger로만 남는다.
+- **Task packet**은 앱이 의미를 해석하는 포맷이 아니라, COS가 내린 지시를 외부 실행기에 넘기기 위한 **canonical envelope(전달용 봉투)** 이다.
+- 과사용·독단·편향이 있는 에이전트 조율은 **COS가 ledger·실행 기록 visibility**를 바탕으로 수행한다. 코드가 대신 감시·우선순위를 정하지 않는다.
 
 ### 런타임 policing (재확인)
 
@@ -155,6 +157,7 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 - founder와 COS는 여러 턴에 걸쳐 scope를 좁혀가고 락인할 수 있어야 한다.
 - DM은 **채널 단일 키**로 하나의 연속 대화로 이어진다. 채널 멘션 스레드는 **root thread 단일 키**로 이어진다.
 - **assistant** 턴은 Slack 송신이 성공한 뒤에만 raw memory에 남긴다 (전달 확인).
+- assistant 턴의 **attachments** 슬롯에는 해당 턴의 첨부 요약을 넣어 다음 턴 연속성을 돕는다 (founder 노출 텍스트와 별개).
 - thread 단위 **raw transcript memory**(user/assistant 원문·첨부 요약)만 사용할 수 있다.
 - intent label, routing label, planner artifact, council memo 등 **semantic routing state**는 저장하지 않는다.
 
@@ -166,6 +169,8 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 - COS는 orchestration의 **지휘자**다. Harness 조직과 외부 도구 선택·순서를 모델이 최적화한다.
 - 앱은 허용 tool 이름·action enum·payload 타입 같은 **기계적 스키마 검증**과 adapter 실행만 하고, 대화가 “충분한지”는 판단하지 않는다.
 - COS는 Responses API **tool-call**로 `delegate_harness_team` · `invoke_external_tool` · (선택) `record_execution_note` · `read_execution_context` 를 쓸 수 있다.
-- harness dispatch·tool invocation 등 실행 증거는 thread 단위 **execution ledger**에 남길 수 있다 (founder 비노출).
+- `invoke_external_tool` 은 **도구별 허용 action** 조합만 스키마로 검증한다 (통제가 아니라 기계적 계약).
+- harness dispatch·task packet·tool invocation·tool 결과 등 실행 증거는 thread 단위 **execution ledger**에 남길 수 있다 (founder 비노출).
+- 모델 입력의 실행 요약은 ledger를 한 줄 요약으로만 넣어 **visibility는 높이고 context 오염은 줄인다**.
 - 앱은 tool-call을 실행하고 결과를 모델에 되돌려 줄 뿐이다.
 - founder에게 내부 tool 이름·원시 페이로드를 그대로 노출하지 않는다.

@@ -72,4 +72,12 @@ const bInvalidPayload = validateToolCallArgs('invoke_external_tool', {
 assert.equal(bInvalidPayload.blocked, true);
 assert.equal(bInvalidPayload.reason, 'invalid_payload');
 
+const bWrongPair = validateToolCallArgs('invoke_external_tool', {
+  tool: 'github',
+  action: 'deploy',
+  payload: { x: 1 },
+});
+assert.equal(bWrongPair.blocked, true);
+assert.equal(bWrongPair.reason, 'unsupported_action');
+
 console.log('test-execution-boundary-and-bridges: ok');

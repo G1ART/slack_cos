@@ -97,7 +97,12 @@ export async function handleFounderSlackTurn(ctx) {
   const assistantTurnCandidate = {
     role: /** @type {'assistant'} */ ('assistant'),
     text: out.text,
-    attachments: [],
+    attachments: attachmentResults.map((r) => ({
+      filename: r.filename,
+      ok: r.ok,
+      summary: r.summary,
+      reason: r.reason,
+    })),
   };
 
   return {
