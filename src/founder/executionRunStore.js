@@ -1,5 +1,5 @@
 /**
- * vNext.13.29b + 13.30 — execution run + packet graph (persisted).
+ * vNext.13.29b–13.31 — execution run + packet graph (durable Supabase, memory test, optional file).
  *
  * Run status: queued | running | review_required | blocked | completed | failed | canceled
  * Run stage: delegated | starter_kickoff | executing | reviewing | finalizing
@@ -11,11 +11,25 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { cosRuntimeBaseDir } from './executionLedger.js';
 import { orderPacketsByHandoff, derivePacketStateFromOutcome } from './starterLadder.js';
+import {
+  createCosRuntimeSupabase,
+  dbRowToAppRun,
+  supabaseCancelActiveRuns,
+  supabaseInsertRun,
+  supabasePatchLatestRun,
+  supabaseSelectLatestRun,
+  supabaseListThreadKeys,
+  supabaseAppendRunEvent,
+} from './runStoreSupabase.js';
+import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
 
 /** @typedef {'queued'|'running'|'review_required'|'blocked'|'completed'|'failed'|'canceled'} RunStatus */
 /** @typedef {'delegated'|'starter_kickoff'|'executing'|'reviewing'|'finalizing'} RunStage */
 /** @typedef {'started'|'review_required'|'blocked'|'completed'|'failed'} CallbackMilestone */
 /** @typedef {'queued'|'ready'|'running'|'review_required'|'blocked'|'completed'|'failed'|'skipped'} PacketState */
+
+/** @type {Map<string, Record<string, unknown>>} */
+const memRuns = new Map();
 
 function runsDir() {
   return path.join(cosRuntimeBaseDir(), 'execution_runs');
@@ -24,6 +38,34 @@ function runsDir() {
 /** @param {string} threadKey */
 function safeName(threadKey) {
   return `${Buffer.from(String(threadKey), 'utf8').toString('base64url')}.json`;
+}
+
+/**
+ * @returns {'supabase'|'memory'|'file'}
+ */
+function storeMode() {
+  const m = String(process.env.COS_RUN_STORE || '').trim().toLowerCase();
+  if (m === 'file') return 'file';
+  if (m === 'memory') return 'memory';
+  if (createCosRuntimeSupabase()) return 'supabase';
+  return 'file';
+}
+
+/** Test isolation */
+export function __resetCosRunMemoryStore() {
+  memRuns.clear();
+}
+
+/**
+ * @param {Record<string, unknown>} patch
+ */
+function normalizePatch(patch) {
+  const p = { ...patch };
+  if ('founder_notified_review_at' in p) {
+    p.founder_notified_review_required_at = p.founder_notified_review_at;
+    delete p.founder_notified_review_at;
+  }
+  return p;
 }
 
 /**
@@ -178,11 +220,13 @@ export async function persistRunAfterDelegate(p) {
   const stage = /** @type {RunStage} */ (deriveRunStage(status, Boolean(kick && kick.executed)));
   const packets = Array.isArray(dispatch.packets) ? dispatch.packets : [];
   const packet_ids = packets.map((x) => String(x?.packet_id || '').trim()).filter(Boolean);
+  const handoff_order = Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order.map(String) : [];
 
   const now = new Date().toISOString();
   /** @type {Record<string, unknown>} */
   const row = {
     run_id,
+    external_run_id: run_id,
     thread_key: threadKey,
     objective,
     founder_request_summary: String(p.founder_request_summary || '').slice(0, 500),
@@ -201,10 +245,12 @@ export async function persistRunAfterDelegate(p) {
     terminal_packet_ids: graph.terminal_packet_ids,
     harness_snapshot: {
       packets: Array.isArray(dispatch.packets) ? dispatch.packets : [],
-      handoff_order: Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order : [],
+      handoff_order,
     },
+    dispatch_payload: dispatch,
+    handoff_order,
     founder_notified_started_at: null,
-    founder_notified_review_at: null,
+    founder_notified_review_required_at: null,
     founder_notified_blocked_at: null,
     founder_notified_completed_at: null,
     founder_notified_failed_at: null,
@@ -213,10 +259,33 @@ export async function persistRunAfterDelegate(p) {
     last_auto_invocation_sha: null,
   };
 
-  const dir = runsDir();
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, safeName(threadKey)), JSON.stringify(row, null, 0), 'utf8');
-  return row;
+  const mode = storeMode();
+  let out = null;
+
+  if (mode === 'memory') {
+    memRuns.set(threadKey, structuredClone(row));
+    out = memRuns.get(threadKey);
+  } else if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    await supabaseCancelActiveRuns(sb, threadKey);
+    const inserted = await supabaseInsertRun(sb, row);
+    if (!inserted?.id) return null;
+    await supabaseAppendRunEvent(sb, String(inserted.id), 'run_persisted', {
+      thread_key: threadKey,
+      dispatch_id,
+      status,
+    });
+    out = inserted;
+  } else {
+    const dir = runsDir();
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, safeName(threadKey)), JSON.stringify(row, null, 0), 'utf8');
+    out = row;
+  }
+
+  notifyRunStateChanged(threadKey);
+  return out;
 }
 
 /**
@@ -224,10 +293,29 @@ export async function persistRunAfterDelegate(p) {
  * @returns {Promise<Record<string, unknown> | null>}
  */
 export async function getActiveRunForThread(threadKey) {
-  const fp = path.join(runsDir(), safeName(threadKey));
+  const tk = String(threadKey || '');
+  if (!tk) return null;
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    const r = memRuns.get(tk);
+    return r ? structuredClone(r) : null;
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    const raw = await supabaseSelectLatestRun(sb, tk);
+    return dbRowToAppRun(raw);
+  }
+
+  const fp = path.join(runsDir(), safeName(tk));
   try {
     const raw = await fs.readFile(fp, 'utf8');
-    return JSON.parse(raw);
+    const j = JSON.parse(raw);
+    if (j && typeof j === 'object' && j.founder_notified_review_at && !j.founder_notified_review_required_at) {
+      j.founder_notified_review_required_at = j.founder_notified_review_at;
+    }
+    return j;
   } catch {
     return null;
   }
@@ -238,10 +326,28 @@ export async function getActiveRunForThread(threadKey) {
  * @param {Record<string, unknown>} patch
  */
 export async function patchRun(threadKey, patch) {
-  const cur = await getActiveRunForThread(threadKey);
+  const tk = String(threadKey || '');
+  if (!tk) return null;
+  const normalized = normalizePatch(patch);
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    const cur = memRuns.get(tk);
+    if (!cur) return null;
+    const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
+    memRuns.set(tk, next);
+    return structuredClone(next);
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return null;
+    return supabasePatchLatestRun(sb, tk, normalized);
+  }
+
+  const cur = await getActiveRunForThread(tk);
   if (!cur) return null;
-  const next = { ...cur, ...patch, updated_at: new Date().toISOString() };
-  await fs.writeFile(path.join(runsDir(), safeName(threadKey)), JSON.stringify(next, null, 0), 'utf8');
+  const next = { ...cur, ...normalized, updated_at: new Date().toISOString() };
+  await fs.writeFile(path.join(runsDir(), safeName(tk)), JSON.stringify(next, null, 0), 'utf8');
   return next;
 }
 
@@ -253,7 +359,7 @@ export function milestoneField(milestone) {
     case 'started':
       return 'founder_notified_started_at';
     case 'review_required':
-      return 'founder_notified_review_at';
+      return 'founder_notified_review_required_at';
     case 'blocked':
       return 'founder_notified_blocked_at';
     case 'completed':
@@ -269,6 +375,14 @@ export function milestoneField(milestone) {
  * @returns {Promise<string[]>}
  */
 export async function listRunThreadKeys() {
+  const mode = storeMode();
+  if (mode === 'memory') return [...memRuns.keys()];
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return [];
+    return supabaseListThreadKeys(sb);
+  }
+
   const dir = runsDir();
   let names = [];
   try {

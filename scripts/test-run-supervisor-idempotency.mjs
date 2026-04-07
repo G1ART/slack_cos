@@ -5,11 +5,16 @@ import { saveSlackRouting } from '../src/founder/slackRoutingStore.js';
 import {
   persistRunAfterDelegate,
   getActiveRunForThread,
+  __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { processRunMilestones } from '../src/founder/runSupervisor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-supervisor-idem');
+process.env.COS_RUN_STORE = 'memory';
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+__resetCosRunMemoryStore();
 
 const tk = 'mention:C_test_idem:1.0';
 await saveSlackRouting(tk, { channel: 'C_test_idem', thread_ts: '1.0' });

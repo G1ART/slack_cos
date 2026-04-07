@@ -1,12 +1,20 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { persistRunAfterDelegate, getActiveRunForThread } from '../src/founder/executionRunStore.js';
+import {
+  persistRunAfterDelegate,
+  getActiveRunForThread,
+  __resetCosRunMemoryStore,
+} from '../src/founder/executionRunStore.js';
 import { maybeAdvanceNextPacket } from '../src/founder/runProgressor.js';
 import { __starterKickoffTestHooks } from '../src/founder/starterLadder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-run-progressor');
+process.env.COS_RUN_STORE = 'memory';
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+__resetCosRunMemoryStore();
 
 const tk = 'mention:C_prog_linear:9.9';
 

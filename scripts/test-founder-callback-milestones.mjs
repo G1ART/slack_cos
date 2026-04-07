@@ -43,6 +43,7 @@ const e = renderEagerCombinedMilestone({
 assert.ok(e.includes('첫 실행을 시작했고'));
 
 assert.equal(milestoneField('started'), 'founder_notified_started_at');
+assert.equal(milestoneField('review_required'), 'founder_notified_review_required_at');
 assert.equal(milestoneField('completed'), 'founder_notified_completed_at');
 
 console.log('test-founder-callback-milestones: ok');

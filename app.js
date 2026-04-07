@@ -11,7 +11,8 @@ import bolt from '@slack/bolt';
 import OpenAI from 'openai';
 import { registerFounderHandlers } from './src/founder/registerFounderHandlers.js';
 import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFounderDirectConversation.js';
-import { startRunSupervisorLoop } from './src/founder/runSupervisor.js';
+import { startRunSupervisorLoop, tickRunSupervisorForThread } from './src/founder/runSupervisor.js';
+import { registerRunStateChangeListener } from './src/founder/supervisorDirectTrigger.js';
 
 const { App } = bolt;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,6 +50,14 @@ const slackApp = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   socketMode: true,
   appToken: process.env.SLACK_APP_TOKEN,
+});
+
+registerRunStateChangeListener((threadKey) => {
+  tickRunSupervisorForThread(threadKey, {
+    client: slackApp.client,
+    constitutionSha256,
+    skipLease: false,
+  }).catch((e) => console.error('[cos_direct_supervisor]', e));
 });
 
 registerFounderHandlers(slackApp, {

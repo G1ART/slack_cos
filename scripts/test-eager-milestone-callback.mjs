@@ -3,11 +3,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderEagerCombinedMilestone } from '../src/founder/founderCallbackCopy.js';
 import { saveSlackRouting } from '../src/founder/slackRoutingStore.js';
-import { persistRunAfterDelegate, getActiveRunForThread, patchRun } from '../src/founder/executionRunStore.js';
+import {
+  persistRunAfterDelegate,
+  getActiveRunForThread,
+  patchRun,
+  __resetCosRunMemoryStore,
+} from '../src/founder/executionRunStore.js';
 import { processRunMilestones } from '../src/founder/runSupervisor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-eager-milestone');
+process.env.COS_RUN_STORE = 'memory';
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+__resetCosRunMemoryStore();
 
 const ec = renderEagerCombinedMilestone({
   objective: '테스트 목표',
