@@ -23,7 +23,7 @@ import {
   supabaseListThreadKeys,
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
-import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
+import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 
 /** @typedef {'queued'|'running'|'review_required'|'blocked'|'completed'|'failed'|'canceled'} RunStatus */
 /** @typedef {'delegated'|'starter_kickoff'|'executing'|'reviewing'|'finalizing'} RunStage */
@@ -345,7 +345,7 @@ export async function persistRunAfterDelegate(p) {
     out = row;
   }
 
-  notifyRunStateChanged(threadKey);
+  notifyRunStateChangedForRun(threadKey, String(row.id));
   return out;
 }
 

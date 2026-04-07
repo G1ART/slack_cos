@@ -23,7 +23,7 @@ import {
   deriveRunStage,
 } from './executionRunStore.js';
 import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
-import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
+import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
 import { findExternalCorrelation, findExternalCorrelationCursorHints } from './correlationStore.js';
 import {
@@ -451,7 +451,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     );
   }
 
-  notifyRunStateChanged(threadKey);
+  notifyRunStateChangedForRun(threadKey, runId);
   return {
     matched: true,
     httpBody: 'ok',

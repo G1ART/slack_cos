@@ -103,6 +103,7 @@ export async function appendCosRunEventForRun(runUuid, eventType, payload, evide
 }
 
 /**
+ * Recent events for a specific durable run uuid (full history for that run id).
  * @param {string} runUuid
  * @param {number} [limit]
  */
@@ -136,7 +137,12 @@ export async function listCosRunEventsForRun(runUuid, limit = 50) {
   }
 }
 
+/** Alias for {@link listCosRunEventsForRun} — explicit “by run id” naming. */
+export const listRecentCosRunEventsForRun = listCosRunEventsForRun;
+
 /**
+ * **Active-run view only:** events for the thread’s current latest run snapshot (see {@link getActiveRunForThread}).
+ * Does not aggregate older runs on the same Slack thread.
  * @param {string} threadKey
  * @param {number} [limit]
  */
@@ -147,7 +153,17 @@ export async function listRecentCosRunEventsForThread(threadKey, limit = 30) {
 }
 
 /**
- * 슈퍼바이저/프로그레서가 외부 콜백 이벤트만 빠르게 볼 때 사용.
+ * External-shaped events for one run uuid (`external_*` event_type prefix).
+ * @param {string} runUuid
+ * @param {number} [limit]
+ */
+export async function getLatestExternalRunEventsForRun(runUuid, limit = 20) {
+  const rows = await listCosRunEventsForRun(String(runUuid), limit);
+  return rows.filter((e) => String(e.event_type || '').startsWith('external_'));
+}
+
+/**
+ * **Active-run view only** — external events for the thread’s latest run, not older runs on the same thread.
  * @param {string} threadKey
  * @param {number} [limit]
  */

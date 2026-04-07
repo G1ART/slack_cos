@@ -24,3 +24,7 @@ npm test
 ```
 
 Apply the new migration on Supabase before relying on production `cos_run_events` inserts with evidence columns.
+
+## Follow-on (13.39)
+
+External match → `notifyRunStateChangedForRun` → `tickRunSupervisorForRun` keeps reconcile/advance/milestones on the same `corr.run_id`. See `COS_Run_Scoped_Supervisor_2026-04-01.md`.

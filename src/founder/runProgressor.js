@@ -6,12 +6,14 @@ import crypto from 'node:crypto';
 import { readRecentExecutionArtifacts } from './executionLedger.js';
 import {
   getActiveRunForThread,
+  getRunById,
   patchRun,
+  patchRunById,
   deriveRunTerminalStatus,
   deriveRunStage,
 } from './executionRunStore.js';
 import { derivePacketStateFromOutcome, executePacketInvocation } from './starterLadder.js';
-import { notifyRunStateChanged } from './supervisorDirectTrigger.js';
+import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 
 /**
  * @param {Record<string, unknown>} run
@@ -105,14 +107,16 @@ function findPacketDef(run, packetId) {
 }
 
 /**
- * @param {string} threadKey
+ * @param {string} runId
  * @returns {Promise<Record<string, unknown> | null>}
  */
-export async function reconcileRunFromLedger(threadKey) {
-  const tk = String(threadKey || '');
-  if (!tk) return null;
-  let run = await getActiveRunForThread(tk);
+export async function reconcileRunFromLedgerForRun(runId) {
+  const rid = String(runId || '').trim();
+  if (!rid) return null;
+  let run = await getRunById(rid);
   if (!run) return null;
+  const tk = String(run.thread_key || '');
+  if (!tk) return null;
 
   const artifacts = await readRecentExecutionArtifacts(tk, 400);
   const toolResults = artifacts.filter((a) => a.type === 'tool_result');
@@ -148,7 +152,7 @@ export async function reconcileRunFromLedger(threadKey) {
   const status = deriveRunTerminalStatus(packet_state_map, required);
   const stage = deriveRunStage(status, Boolean(run.starter_kickoff && run.starter_kickoff.executed));
   const now = new Date().toISOString();
-  const newCompleted = status === 'completed' ? now : run.completed_at ?? null;
+  const newCompleted = status === 'completed' ? now : null;
 
   const prevPsm = JSON.stringify(run.packet_state_map || {});
   const newPsm = JSON.stringify(packet_state_map);
@@ -161,7 +165,7 @@ export async function reconcileRunFromLedger(threadKey) {
     String(run.completed_at || '') !== String(newCompleted || '');
 
   if (changed) {
-    await patchRun(tk, {
+    await patchRunById(rid, {
       packet_state_map,
       terminal_packet_ids,
       current_packet_id,
@@ -171,22 +175,37 @@ export async function reconcileRunFromLedger(threadKey) {
       completed_at: newCompleted,
       last_progressed_at: now,
     });
-    notifyRunStateChanged(tk);
+    notifyRunStateChangedForRun(tk, rid);
   }
 
-  return getActiveRunForThread(tk);
+  return getRunById(rid);
 }
 
 /**
+ * Active run for thread only — use {@link reconcileRunFromLedgerForRun} for a specific historical run.
  * @param {string} threadKey
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function reconcileRunFromLedger(threadKey) {
+  const tk = String(threadKey || '');
+  if (!tk) return null;
+  const active = await getActiveRunForThread(tk);
+  if (!active?.id) return null;
+  return reconcileRunFromLedgerForRun(String(active.id));
+}
+
+/**
+ * @param {string} runId
  * @returns {Promise<{ advanced: boolean, target?: string, reason?: string }>}
  */
-export async function maybeAdvanceNextPacket(threadKey) {
-  const tk = String(threadKey || '');
-  if (!tk) return { advanced: false, reason: 'no_thread' };
+export async function maybeAdvanceNextPacketForRun(runId) {
+  const rid = String(runId || '').trim();
+  if (!rid) return { advanced: false, reason: 'no_run_id' };
 
-  let run = await getActiveRunForThread(tk);
+  let run = await getRunById(rid);
   if (!run) return { advanced: false, reason: 'no_run' };
+  const tk = String(run.thread_key || '');
+  if (!tk) return { advanced: false, reason: 'no_thread' };
 
   const status = String(run.status || '');
   if (status === 'blocked' || status === 'failed' || status === 'review_required') {
@@ -203,7 +222,7 @@ export async function maybeAdvanceNextPacket(threadKey) {
   if (!target) return { advanced: false, reason: 'no_next_runnable' };
 
   const lastSha = run.last_auto_invocation_sha ? String(run.last_auto_invocation_sha) : '';
-  const fp = crypto.createHash('sha256').update(`${tk}|${target}|auto_invoke`).digest('hex');
+  const fp = crypto.createHash('sha256').update(`${rid}|${target}|auto_invoke`).digest('hex');
   const curSt = String(packet_state_map[target] || '');
   if (lastSha === fp && curSt !== 'queued' && curSt !== 'ready') {
     return { advanced: false, reason: 'duplicate_fingerprint' };
@@ -213,7 +232,7 @@ export async function maybeAdvanceNextPacket(threadKey) {
   if (!pkt) return { advanced: false, reason: 'no_packet_def' };
 
   packet_state_map[target] = 'running';
-  await patchRun(tk, {
+  await patchRunById(rid, {
     packet_state_map,
     last_progressed_at: new Date().toISOString(),
   });
@@ -231,13 +250,13 @@ export async function maybeAdvanceNextPacket(threadKey) {
   );
   const now = new Date().toISOString();
 
-  await patchRun(tk, {
+  await patchRunById(rid, {
     packet_state_map,
     current_packet_id,
     next_packet_id,
     status: nextStatus,
     stage,
-    completed_at: nextStatus === 'completed' ? now : run.completed_at ?? null,
+    completed_at: nextStatus === 'completed' ? now : null,
     terminal_packet_ids: required.filter((id) => {
       const st = packet_state_map[id];
       return st === 'completed' || st === 'skipped' || st === 'failed';
@@ -245,7 +264,20 @@ export async function maybeAdvanceNextPacket(threadKey) {
     last_auto_invocation_sha: fp,
     last_progressed_at: now,
   });
-  notifyRunStateChanged(tk);
+  notifyRunStateChangedForRun(tk, rid);
 
   return { advanced: true, target };
+}
+
+/**
+ * Active run for thread only — use {@link maybeAdvanceNextPacketForRun} for a specific run uuid.
+ * @param {string} threadKey
+ * @returns {Promise<{ advanced: boolean, target?: string, reason?: string }>}
+ */
+export async function maybeAdvanceNextPacket(threadKey) {
+  const tk = String(threadKey || '');
+  if (!tk) return { advanced: false, reason: 'no_thread' };
+  const active = await getActiveRunForThread(tk);
+  if (!active?.id) return { advanced: false, reason: 'no_run' };
+  return maybeAdvanceNextPacketForRun(String(active.id));
 }

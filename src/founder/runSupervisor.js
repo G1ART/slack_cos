@@ -4,8 +4,13 @@
 
 import crypto from 'node:crypto';
 import { readReviewQueue, readExecutionSummary } from './executionLedger.js';
-import { getActiveRunForThread, listRunThreadKeys, patchRun } from './executionRunStore.js';
-import { reconcileRunFromLedger, maybeAdvanceNextPacket } from './runProgressor.js';
+import { getActiveRunForThread, getRunById, listRunThreadKeys, patchRunById } from './executionRunStore.js';
+import {
+  reconcileRunFromLedger,
+  reconcileRunFromLedgerForRun,
+  maybeAdvanceNextPacket,
+  maybeAdvanceNextPacketForRun,
+} from './runProgressor.js';
 import { getSlackRouting } from './slackRoutingStore.js';
 import { sendFounderResponse } from './sendFounderResponse.js';
 import { tryAcquireSupervisorLease } from './supervisorLease.js';
@@ -29,6 +34,7 @@ const tickInflight = new Set();
  */
 export async function processRunMilestones(p) {
   const run = p.run;
+  if (!run || run.id == null || !String(run.id).trim()) return null;
   const threadKey = String(run.thread_key || '');
   const routing = await getSlackRouting(threadKey);
   if (!routing) return null;
@@ -97,7 +103,7 @@ export async function processRunMilestones(p) {
         if (status === 'blocked') patch.founder_notified_blocked_at = now;
         if (status === 'review_required') patch.founder_notified_review_required_at = now;
         if (status === 'failed') patch.founder_notified_failed_at = now;
-        await patchRun(threadKey, patch);
+        await patchRunById(String(run.id), patch);
         return 'eager_combined';
       }
       return null;
@@ -116,7 +122,7 @@ export async function processRunMilestones(p) {
       constitutionSha256: p.constitutionSha256,
     });
     if (r.ok) {
-      await patchRun(threadKey, { founder_notified_started_at: now });
+      await patchRunById(String(run.id), { founder_notified_started_at: now });
       return 'started';
     }
     return null;
@@ -137,7 +143,7 @@ export async function processRunMilestones(p) {
       constitutionSha256: p.constitutionSha256,
     });
     if (r.ok) {
-      await patchRun(threadKey, { founder_notified_blocked_at: now });
+      await patchRunById(String(run.id), { founder_notified_blocked_at: now });
       return 'blocked';
     }
     return null;
@@ -159,7 +165,7 @@ export async function processRunMilestones(p) {
       constitutionSha256: p.constitutionSha256,
     });
     if (r.ok) {
-      await patchRun(threadKey, { founder_notified_review_required_at: now });
+      await patchRunById(String(run.id), { founder_notified_review_required_at: now });
       return 'review_required';
     }
     return null;
@@ -176,7 +182,7 @@ export async function processRunMilestones(p) {
       constitutionSha256: p.constitutionSha256,
     });
     if (r.ok) {
-      await patchRun(threadKey, { founder_notified_completed_at: now });
+      await patchRunById(String(run.id), { founder_notified_completed_at: now });
       return 'completed';
     }
     return null;
@@ -192,7 +198,7 @@ export async function processRunMilestones(p) {
       constitutionSha256: p.constitutionSha256,
     });
     if (r.ok) {
-      await patchRun(threadKey, { founder_notified_failed_at: now });
+      await patchRunById(String(run.id), { founder_notified_failed_at: now });
       return 'failed';
     }
   }
@@ -212,14 +218,15 @@ export async function tickRunSupervisorForThread(threadKey, ctx) {
   const tk = String(threadKey || '');
   if (!tk || !ctx.client?.chat?.postMessage) return { skipped: true, reason: 'no_client' };
 
-  if (tickInflight.has(tk)) return { skipped: true, reason: 'reentrant' };
+  const inflightKey = `t:${tk}`;
+  if (tickInflight.has(inflightKey)) return { skipped: true, reason: 'reentrant' };
 
   if (!ctx.skipLease) {
     const ok = await tryAcquireSupervisorLease(OWNER_ID);
     if (!ok) return { skipped: true, reason: 'lease_held' };
   }
 
-  tickInflight.add(tk);
+  tickInflight.add(inflightKey);
   try {
     let run = await getActiveRunForThread(tk);
     if (!run?.run_id) return { skipped: true, reason: 'no_run' };
@@ -243,7 +250,56 @@ export async function tickRunSupervisorForThread(threadKey, ctx) {
 
     return { skipped: false };
   } finally {
-    tickInflight.delete(tk);
+    tickInflight.delete(inflightKey);
+  }
+}
+
+/**
+ * Reconcile / advance / milestones for one durable run uuid (not necessarily the thread's active run).
+ * @param {string} runId
+ * @param {{
+ *   client: import('@slack/web-api').WebClient,
+ *   constitutionSha256: string,
+ *   skipLease?: boolean,
+ * }} ctx
+ */
+export async function tickRunSupervisorForRun(runId, ctx) {
+  const rid = String(runId || '').trim();
+  if (!rid || !ctx.client?.chat?.postMessage) return { skipped: true, reason: 'no_client' };
+
+  const inflightKey = `r:${rid}`;
+  if (tickInflight.has(inflightKey)) return { skipped: true, reason: 'reentrant' };
+
+  if (!ctx.skipLease) {
+    const ok = await tryAcquireSupervisorLease(OWNER_ID);
+    if (!ok) return { skipped: true, reason: 'lease_held' };
+  }
+
+  tickInflight.add(inflightKey);
+  try {
+    let run = await getRunById(rid);
+    if (!run?.run_id) return { skipped: true, reason: 'no_run' };
+    if (String(run.status) === 'canceled') return { skipped: true, reason: 'canceled' };
+
+    await reconcileRunFromLedgerForRun(rid);
+
+    for (let i = 0; i < 6; i += 1) {
+      const adv = await maybeAdvanceNextPacketForRun(rid);
+      if (!adv.advanced) break;
+    }
+
+    run = await getRunById(rid);
+    if (run) {
+      await processRunMilestones({
+        run,
+        client: ctx.client,
+        constitutionSha256: ctx.constitutionSha256,
+      });
+    }
+
+    return { skipped: false };
+  } finally {
+    tickInflight.delete(inflightKey);
   }
 }
 
