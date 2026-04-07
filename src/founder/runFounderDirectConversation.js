@@ -120,25 +120,6 @@ export function validateToolCallArgs(callName, args) {
   return { blocked: false };
 }
 
-/** OpenAI strict: object의 properties 키마다 required에 포함되어야 함. 패킷 확장 필드는 스키마에 넣지 않고 서버·harness에서 보강. */
-const HARNESS_PACKET_ITEM_STRICT_PROPERTIES = {
-  persona: { type: 'string', enum: PERSONA_ENUM_ARR },
-  mission: { type: 'string' },
-  deliverables: { type: 'array', items: { type: 'string' } },
-  definition_of_done: { type: 'array', items: { type: 'string' } },
-  handoff_to: { type: 'string' },
-  artifact_format: { type: 'string' },
-};
-
-const HARNESS_PACKET_ITEM_STRICT_REQUIRED = [
-  'persona',
-  'mission',
-  'deliverables',
-  'definition_of_done',
-  'handoff_to',
-  'artifact_format',
-];
-
 /** nullable 배열 (strict에서 선택 필드) */
 const NULLABLE_STRING_ARRAY = {
   anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
@@ -158,7 +139,6 @@ const DELEGATE_HARNESS_REQUIRED_KEYS = [
   'risks',
   'review_checkpoints',
   'open_questions',
-  'packets',
 ];
 
 const COS_TOOLS = [
@@ -166,7 +146,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      'Harness 내부 실행 조직·work packet. 패킷은 통제용이 아니라 전달용 봉투다. founder에게 원시 artifact를 보이지 말 것.',
+      'Harness 내부 실행 조직·work packet. 패킷 envelope는 인자로 넘기지 말 것(서버가 objective·페르소나 등으로 자동 생성). founder에게 원시 artifact를 보이지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -183,22 +163,6 @@ const COS_TOOLS = [
         risks: { ...NULLABLE_STRING_ARRAY, description: '리스크; 없으면 null' },
         review_checkpoints: { ...NULLABLE_STRING_ARRAY, description: '리뷰 체크포인트; 없으면 null' },
         open_questions: { ...NULLABLE_STRING_ARRAY, description: '미결 질문; 없으면 null' },
-        packets: {
-          anyOf: [
-            {
-              type: 'array',
-              description: 'COS 설계 packet; 미제공 시 null(자동 봉투)',
-              items: {
-                type: 'object',
-                properties: HARNESS_PACKET_ITEM_STRICT_PROPERTIES,
-                required: HARNESS_PACKET_ITEM_STRICT_REQUIRED,
-                additionalProperties: false,
-              },
-            },
-            { type: 'null' },
-          ],
-          description: '선택 패킷 배열 또는 null',
-        },
       },
       required: DELEGATE_HARNESS_REQUIRED_KEYS,
       additionalProperties: false,
@@ -272,6 +236,55 @@ const COS_TOOLS = [
     },
   },
 ];
+
+/**
+ * OpenAI Responses `strict: true` 도구 스키마: 각 object 노드에서 properties 키 전부가 required에 있어야 함.
+ * @param {Record<string, unknown>} schema
+ * @param {string} path
+ * @returns {string[]}
+ */
+export function collectOpenAiStrictSchemaViolations(schema, path = 'root') {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return [];
+  const out = [];
+  if (schema.type === 'object' && schema.properties && typeof schema.properties === 'object') {
+    const keys = Object.keys(schema.properties);
+    const req = new Set(Array.isArray(schema.required) ? schema.required : []);
+    for (const k of keys) {
+      if (!req.has(k)) out.push(`${path}: missing "${k}" in required (OpenAI strict)`);
+    }
+    for (const k of keys) {
+      const child = schema.properties[k];
+      out.push(...collectOpenAiStrictSchemaViolations(child, `${path}.${k}`));
+    }
+  }
+  if (schema.items) {
+    out.push(...collectOpenAiStrictSchemaViolations(schema.items, `${path}[items]`));
+  }
+  if (Array.isArray(schema.anyOf)) {
+    for (let i = 0; i < schema.anyOf.length; i += 1) {
+      const branch = schema.anyOf[i];
+      if (branch && typeof branch === 'object' && branch.type === 'null') continue;
+      out.push(...collectOpenAiStrictSchemaViolations(branch, `${path}.anyOf[${i}]`));
+    }
+  }
+  return out;
+}
+
+/** strict:true 인 COS_TOOLS만 검사 — CI·회귀용 */
+export function getOpenAiStrictViolationsForCosTools() {
+  const errs = [];
+  for (const t of COS_TOOLS) {
+    if (t.type !== 'function' || !t.strict || !t.parameters) continue;
+    errs.push(...collectOpenAiStrictSchemaViolations(t.parameters, `tool:${t.name}.parameters`));
+  }
+  return errs;
+}
+
+/** @returns {Record<string, unknown> | null} */
+export function getDelegateHarnessTeamParametersSnapshot() {
+  const t = COS_TOOLS.find((x) => x.type === 'function' && x.name === 'delegate_harness_team');
+  return t && t.parameters && typeof t.parameters === 'object' ? t.parameters : null;
+}
 
 /**
  * @param {string} constitutionMarkdown
@@ -437,7 +450,34 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
       req.input = initialInput;
     }
 
-    const res = await openai.responses.create(req);
+    let res;
+    try {
+      res = await openai.responses.create(req);
+    } catch (e) {
+      const code = e && typeof e === 'object' && 'code' in e ? String(e.code) : '';
+      const errObj = e && typeof e === 'object' && 'error' in e && e.error && typeof e.error === 'object' ? e.error : null;
+      const innerCode = errObj && 'code' in errObj ? String(errObj.code) : '';
+      const param = e && typeof e === 'object' && 'param' in e ? String(e.param || '') : '';
+      const status = e && typeof e === 'object' && 'status' in e ? Number(e.status) : 0;
+      const msg = String(e && typeof e === 'object' && 'message' in e ? e.message : e);
+      if (
+        innerCode === 'invalid_function_parameters' ||
+        code === 'invalid_function_parameters' ||
+        /invalid schema for function/i.test(msg) ||
+        (status === 400 && /tools?\[/i.test(param))
+      ) {
+        console.error(
+          JSON.stringify({
+            category: 'founder_tool_schema_invalid',
+            message: msg.slice(0, 500),
+            code: innerCode || code,
+            param,
+            status,
+          }),
+        );
+      }
+      throw e;
+    }
     previousResponseId = res.id;
 
     const output = Array.isArray(res.output) ? res.output : [];
