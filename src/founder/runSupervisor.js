@@ -1,0 +1,208 @@
+/**
+ * 단일 프로세스 내 interval tick — milestone founder callback (Slack proactive).
+ * 다중 레플리카·공유 볼륨 없으면 파일 lease는 best-effort.
+ */
+
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { cosRuntimeBaseDir } from './executionLedger.js';
+import { readReviewQueue, readExecutionSummary } from './executionLedger.js';
+import { getActiveRunForThread, listRunThreadKeys, patchRun } from './executionRunStore.js';
+import { getSlackRouting } from './slackRoutingStore.js';
+import { sendFounderResponse } from './sendFounderResponse.js';
+import {
+  renderStartedMilestone,
+  renderReviewMilestone,
+  renderBlockedMilestone,
+  renderCompletedMilestone,
+  renderFailedMilestone,
+} from './founderCallbackCopy.js';
+
+const LEASE_MS = 25_000;
+const OWNER = String(process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || process.pid);
+
+function leasePath() {
+  return path.join(cosRuntimeBaseDir(), 'supervisor_lease.json');
+}
+
+/**
+ * @returns {Promise<boolean>}
+ */
+async function tryAcquireSupervisorLease() {
+  const fp = leasePath();
+  const dir = path.dirname(fp);
+  await fs.mkdir(dir, { recursive: true });
+  const until = Date.now() + LEASE_MS;
+  try {
+    const raw = await fs.readFile(fp, 'utf8');
+    const j = JSON.parse(raw);
+    const u = typeof j.until === 'number' ? j.until : 0;
+    const o = String(j.owner || '');
+    if (u > Date.now() && o && o !== OWNER) return false;
+  } catch {
+    /* no lease */
+  }
+  await fs.writeFile(fp, JSON.stringify({ owner: OWNER, until }, null, 0), 'utf8');
+  return true;
+}
+
+/**
+ * @param {{ run: Record<string, unknown>, client: import('@slack/web-api').WebClient, constitutionSha256: string }} p
+ * @returns {Promise<'started'|'review_required'|'blocked'|'completed'|'failed'|null>}
+ */
+export async function processRunMilestones(p) {
+  const run = p.run;
+  const threadKey = String(run.thread_key || '');
+  const routing = await getSlackRouting(threadKey);
+  if (!routing) return null;
+
+  const objective = String(run.objective || '');
+  const kick = run.starter_kickoff && typeof run.starter_kickoff === 'object' ? run.starter_kickoff : null;
+  const status = String(run.status || '');
+  const now = new Date().toISOString();
+
+  if (kick && kick.executed && !run.founder_notified_started_at) {
+    const text = renderStartedMilestone({
+      objective,
+      tool: String(kick.tool || ''),
+      action: String(kick.action || ''),
+    });
+    const r = await sendFounderResponse({
+      client: p.client,
+      channel: routing.channel,
+      thread_ts: routing.thread_ts || undefined,
+      text,
+      constitutionSha256: p.constitutionSha256,
+    });
+    if (r.ok) {
+      await patchRun(threadKey, { founder_notified_started_at: now });
+      return 'started';
+    }
+    return null;
+  }
+
+  if (status === 'blocked' && !run.founder_notified_blocked_at) {
+    const rq = await readReviewQueue(threadKey, 3);
+    const need =
+      rq.map((x) => x.next_required_input).find(Boolean) ||
+      rq.map((x) => x.blocked_reason).find(Boolean) ||
+      '';
+    const text = renderBlockedMilestone({ objective, need_line: String(need || '') });
+    const r = await sendFounderResponse({
+      client: p.client,
+      channel: routing.channel,
+      thread_ts: routing.thread_ts || undefined,
+      text,
+      constitutionSha256: p.constitutionSha256,
+    });
+    if (r.ok) {
+      await patchRun(threadKey, { founder_notified_blocked_at: now });
+      return 'blocked';
+    }
+    return null;
+  }
+
+  if (status === 'review_required' && !run.founder_notified_review_at) {
+    const review = await readReviewQueue(threadKey, 5);
+    const lines = review
+      .filter((x) => x.needs_review || x.status === 'degraded')
+      .map((x) => x.result_summary || x.blocked_reason || '')
+      .filter(Boolean);
+    if (!lines.length) return null;
+    const text = renderReviewMilestone({ objective, lines });
+    const r = await sendFounderResponse({
+      client: p.client,
+      channel: routing.channel,
+      thread_ts: routing.thread_ts || undefined,
+      text,
+      constitutionSha256: p.constitutionSha256,
+    });
+    if (r.ok) {
+      await patchRun(threadKey, { founder_notified_review_at: now });
+      return 'review_required';
+    }
+    return null;
+  }
+
+  if (status === 'completed' && !run.founder_notified_completed_at) {
+    const lines = await readExecutionSummary(threadKey, 5);
+    const text = renderCompletedMilestone({ objective, summary_lines: lines });
+    const r = await sendFounderResponse({
+      client: p.client,
+      channel: routing.channel,
+      thread_ts: routing.thread_ts || undefined,
+      text,
+      constitutionSha256: p.constitutionSha256,
+    });
+    if (r.ok) {
+      await patchRun(threadKey, { founder_notified_completed_at: now });
+      return 'completed';
+    }
+    return null;
+  }
+
+  if (status === 'failed' && !run.founder_notified_failed_at) {
+    const text = renderFailedMilestone({ objective });
+    const r = await sendFounderResponse({
+      client: p.client,
+      channel: routing.channel,
+      thread_ts: routing.thread_ts || undefined,
+      text,
+      constitutionSha256: p.constitutionSha256,
+    });
+    if (r.ok) {
+      await patchRun(threadKey, { founder_notified_failed_at: now });
+      return 'failed';
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @param {{
+ *   client: import('@slack/web-api').WebClient,
+ *   constitutionSha256: string,
+ * }} ctx
+ */
+export async function tickRunSupervisor(ctx) {
+  const ok = await tryAcquireSupervisorLease();
+  if (!ok) return { skipped: true, reason: 'lease_held' };
+
+  const keys = await listRunThreadKeys();
+  let processed = 0;
+  for (const threadKey of keys) {
+    const run = await getActiveRunForThread(threadKey);
+    if (!run || !run.run_id) continue;
+    const st = String(run.status || '');
+    if (st === 'canceled') continue;
+
+    await processRunMilestones({
+      run,
+      client: ctx.client,
+      constitutionSha256: ctx.constitutionSha256,
+    });
+    processed += 1;
+  }
+
+  return { skipped: false, processed };
+}
+
+/**
+ * @param {{
+ *   client: import('@slack/web-api').WebClient,
+ *   constitutionSha256: string,
+ *   intervalMs?: number,
+ * }} ctx
+ * @returns {() => void} stop
+ */
+export function startRunSupervisorLoop(ctx) {
+  const ms = Number(ctx.intervalMs ?? 45_000);
+  const id = setInterval(() => {
+    tickRunSupervisor({
+      client: ctx.client,
+      constitutionSha256: ctx.constitutionSha256,
+    }).catch((e) => console.error('[run_supervisor]', e));
+  }, ms);
+  return () => clearInterval(id);
+}

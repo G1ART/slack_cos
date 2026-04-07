@@ -15,6 +15,8 @@ import {
   computeExecutionOutcomeCounts,
   readReviewQueue,
 } from './executionLedger.js';
+import { persistRunAfterDelegate } from './executionRunStore.js';
+import { executeStarterKickoffIfEligible } from './starterLadder.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -454,8 +456,12 @@ export async function handleReadExecutionContext(args, threadKey) {
  * @param {string} initialInput
  * @param {string} threadKey
  */
-async function runToolLoop(openai, model, instructions, initialInput, threadKey) {
+/**
+ * @param {{ founderRequestSummary?: string }} [loopExtras]
+ */
+async function runToolLoop(openai, model, instructions, initialInput, threadKey, loopExtras = {}) {
   const tk = String(threadKey || '');
+  const founderRequestSummary = String(loopExtras.founderRequestSummary || '');
   let previousResponseId = null;
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
@@ -528,6 +534,20 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
         result = { ok: false, blocked: true, reason: schema.reason };
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args, { threadKey: tk });
+        if (result && result.ok && String(result.status) === 'accepted' && tk) {
+          const kick = await executeStarterKickoffIfEligible({
+            threadKey: tk,
+            dispatch: result,
+            env: process.env,
+          });
+          result = { ...result, starter_kickoff: kick };
+          await persistRunAfterDelegate({
+            threadKey: tk,
+            dispatch: result,
+            starter_kickoff: kick,
+            founder_request_summary: founderRequestSummary,
+          });
+        }
       } else if (call.name === 'invoke_external_tool') {
         result = await invokeExternalTool(args, { threadKey: tk });
       } else if (call.name === 'record_execution_note') {
@@ -566,6 +586,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
  *   metadata: Record<string, unknown>,
  *   recentTurns: { role: string, text: string, attachments?: object[], ts?: string }[],
  *   threadKey: string,
+ *   userText?: string,
  * }} ctx
  */
 export async function runFounderDirectConversation(ctx) {
@@ -583,7 +604,9 @@ export async function runFounderDirectConversation(ctx) {
     adapterReadinessLines,
   });
 
-  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput, tk);
+  const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput, tk, {
+    founderRequestSummary: String(ctx.userText || '').slice(0, 500),
+  });
 
   console.info(
     JSON.stringify({

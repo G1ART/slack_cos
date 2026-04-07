@@ -11,6 +11,7 @@ import bolt from '@slack/bolt';
 import OpenAI from 'openai';
 import { registerFounderHandlers } from './src/founder/registerFounderHandlers.js';
 import { getDelegateHarnessTeamParametersSnapshot } from './src/founder/runFounderDirectConversation.js';
+import { startRunSupervisorLoop } from './src/founder/runSupervisor.js';
 
 const { App } = bolt;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -72,3 +73,12 @@ console.info(
 
 await slackApp.start();
 console.log('[startup] COS founder spine running.');
+
+if (String(process.env.COS_RUN_SUPERVISOR_DISABLED || '').trim() !== '1') {
+  startRunSupervisorLoop({
+    client: slackApp.client,
+    constitutionSha256,
+    intervalMs: Number(process.env.COS_RUN_SUPERVISOR_MS || 45_000),
+  });
+  console.log('[startup] run supervisor loop enabled.');
+}

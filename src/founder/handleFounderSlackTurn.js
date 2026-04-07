@@ -5,6 +5,7 @@
 import { ingestCurrentTurnAttachments } from './ingestAttachments.js';
 import { runFounderDirectConversation } from './runFounderDirectConversation.js';
 import { appendThreadTurn, readRecentThreadTurns } from './threadMemory.js';
+import { saveSlackRouting } from './slackRoutingStore.js';
 
 /**
  * @param {import('@slack/types').AppMentionEvent | import('@slack/types').MessageEvent} event
@@ -46,6 +47,15 @@ export async function handleFounderSlackTurn(ctx) {
   const threadKey = computeThreadKey(ctx.event);
   const rawText = extractSlackUserText(ctx.event);
   const files = Array.isArray(ctx.event.files) ? ctx.event.files : [];
+
+  const routeTs =
+    ctx.event.channel_type === 'im'
+      ? null
+      : String(ctx.event.thread_ts || ctx.event.ts || '').trim() || null;
+  await saveSlackRouting(threadKey, {
+    channel: String(ctx.event.channel || ''),
+    thread_ts: routeTs,
+  });
 
   console.info(
     JSON.stringify({
