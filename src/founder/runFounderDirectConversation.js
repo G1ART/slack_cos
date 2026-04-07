@@ -3,7 +3,11 @@
  */
 
 import { runHarnessOrchestration } from './harnessBridge.js';
-import { invokeExternalTool, isValidToolAction } from './toolsBridge.js';
+import {
+  invokeExternalTool,
+  isValidToolAction,
+  formatAdapterReadinessCompactLines,
+} from './toolsBridge.js';
 import {
   appendExecutionArtifact,
   readExecutionSummary,
@@ -217,7 +221,8 @@ const COS_TOOLS = [
   {
     type: 'function',
     name: 'read_execution_context',
-    description: '최근 ledger 요약 라인 + raw artifact 배열을 반환한다.',
+    description:
+      '최근 ledger 요약·raw artifact·adapter readiness(호스트 기준 live 가능 여부). founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -244,6 +249,7 @@ export function buildSystemInstructions(constitutionMarkdown) {
     'live adapter가 없거나 계약이 부족하면 artifact fallback을 사용한다. 불필요한 tool 남발 없이 최소 호출로 진행하라.',
     'record_execution_note / read_execution_context 로 내부 맥락을 정리·재확인한다.',
     'founder에게 내부 artifact·원시 JSON을 직접 보여주지 말고 자연어로만 보고하라.',
+    '[Adapter readiness] 블록은 시스템 입력 전용이다. founder 답변에 인용·복붙하지 말 것.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -258,6 +264,7 @@ export function buildSystemInstructions(constitutionMarkdown) {
  *   attachmentResults: { filename: string, ok: boolean, summary?: string, reason?: string }[],
  *   metadata: Record<string, unknown>,
  *   executionSummaryLines?: string[],
+ *   adapterReadinessLines?: string[],
  * }} p
  */
 export function buildFounderConversationInput(p) {
@@ -290,6 +297,12 @@ export function buildFounderConversationInput(p) {
   if (!sl.length) lines.push('(없음)');
   else {
     for (const line of sl) lines.push(line);
+  }
+  const ar = p.adapterReadinessLines;
+  if (ar && ar.length) {
+    lines.push('');
+    lines.push('[Adapter readiness — COS 내부만, founder 응답에 인용 금지]');
+    for (const line of ar.slice(0, 6)) lines.push(line);
   }
   lines.push('');
   lines.push('[최소 메타 — 앱은 의미 분류하지 않음]');
@@ -334,7 +347,8 @@ async function handleReadExecutionContext(args, threadKey) {
     typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
   const artifacts = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
   const summary_lines = threadKey ? await readExecutionSummary(threadKey, limit) : [];
-  return { ok: true, summary_lines, artifacts };
+  const adapter_readiness_lines = await formatAdapterReadinessCompactLines(process.env, 6);
+  return { ok: true, summary_lines, artifacts, adapter_readiness_lines };
 }
 
 /**
@@ -434,6 +448,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey)
 export async function runFounderDirectConversation(ctx) {
   const tk = String(ctx.threadKey || '');
   const executionSummaryLines = tk ? await readExecutionSummary(tk, 5) : [];
+  const adapterReadinessLines = await formatAdapterReadinessCompactLines(process.env, 6);
 
   const instructions = buildSystemInstructions(ctx.constitutionMarkdown);
   const initialInput = buildFounderConversationInput({
@@ -442,6 +457,7 @@ export async function runFounderDirectConversation(ctx) {
     attachmentResults: ctx.attachmentResults || [],
     metadata: ctx.metadata || {},
     executionSummaryLines,
+    adapterReadinessLines,
   });
 
   const { text } = await runToolLoop(ctx.openai, ctx.model, instructions, initialInput, tk);

@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { invokeExternalTool } from '../src/founder/toolsBridge.js';
+import { invokeExternalTool, getAdapterReadiness } from '../src/founder/toolsBridge.js';
 import { readRecentExecutionArtifacts, clearExecutionArtifacts } from '../src/founder/executionLedger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -9,6 +9,10 @@ process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test
 
 const tk = `dm:tool-${Date.now()}`;
 await clearExecutionArtifacts(tk);
+
+const rr = await getAdapterReadiness('railway', { RAILWAY_TOKEN: '', RAILWAY_DEPLOYMENT_ID: '' });
+assert.equal(rr.live_capable, false);
+assert.equal(rr.details.deploy_live, false);
 
 const prev = process.env.RAILWAY_TOKEN;
 process.env.RAILWAY_TOKEN = '';
