@@ -13,6 +13,44 @@ export function createCosRuntimeSupabase() {
 }
 
 /**
+ * Read-only Supabase client for ops summaries: optional COS_RUNTIME_* overrides, then app defaults.
+ * Does not change {@link createCosRuntimeSupabase} behavior used by the main run store.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {string} [urlOverride]
+ * @param {string} [keyOverride]
+ */
+export function createCosRuntimeSupabaseForSummary(env = process.env, urlOverride, keyOverride) {
+  const url = String(urlOverride || env.COS_RUNTIME_SUPABASE_URL || env.SUPABASE_URL || '').trim();
+  const key = String(
+    keyOverride || env.COS_RUNTIME_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '',
+  ).trim();
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{ runId?: string | null, limit?: number }} p
+ */
+export async function supabaseListOpsSmokePhaseEvents(sb, p) {
+  const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
+  const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  let q = sb
+    .from('cos_run_events')
+    .select('run_id, event_type, payload, created_at')
+    .eq('event_type', 'ops_smoke_phase');
+  if (rid) q = q.eq('run_id', rid);
+  const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
+  if (error) return [];
+  return (data || []).map((r) => ({
+    run_id: String(r.run_id || ''),
+    event_type: String(r.event_type || ''),
+    payload: r.payload && typeof r.payload === 'object' ? r.payload : {},
+    created_at: r.created_at != null ? String(r.created_at) : '',
+  }));
+}
+
+/**
  * @param {Record<string, unknown>} row app-shaped run row (camel/snake mix from existing code)
  */
 export function appRunToDbRow(row) {

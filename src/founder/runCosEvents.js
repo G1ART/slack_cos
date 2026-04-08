@@ -5,7 +5,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { cosRuntimeBaseDir } from './executionLedger.js';
-import { createCosRuntimeSupabase, supabaseAppendRunEvent } from './runStoreSupabase.js';
+import {
+  createCosRuntimeSupabase,
+  createCosRuntimeSupabaseForSummary,
+  supabaseAppendRunEvent,
+  supabaseListOpsSmokePhaseEvents,
+} from './runStoreSupabase.js';
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
 
 /**
@@ -32,6 +37,112 @@ const memByRun = new Map();
 
 function eventsFilePath(runUuid) {
   return path.join(cosRuntimeBaseDir(), 'cos_run_events', `${runUuid}.jsonl`);
+}
+
+function cosEventsDirForSummary(runtimeStateDir) {
+  const base =
+    runtimeStateDir != null && String(runtimeStateDir).trim()
+      ? path.resolve(String(runtimeStateDir))
+      : cosRuntimeBaseDir();
+  return path.join(base, 'cos_run_events');
+}
+
+async function readEventsJsonlFile(fp) {
+  try {
+    const raw = await fs.readFile(fp, 'utf8');
+    return raw
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Read-only: `ops_smoke_phase` rows for ops summary (file | memory | supabase), one code path.
+ * @param {{
+ *   runId?: string | null,
+ *   maxRows?: number,
+ *   modeOverride?: 'file' | 'memory' | 'supabase' | null,
+ *   runtimeStateDir?: string | null,
+ *   supabaseClient?: import('@supabase/supabase-js').SupabaseClient | null,
+ * }} [opts]
+ * @returns {Promise<Array<{ run_id: string, event_type: string, payload: Record<string, unknown>, created_at: string }>>}
+ */
+export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
+  const runId = opts.runId != null && String(opts.runId).trim() ? String(opts.runId).trim() : null;
+  const maxRows = Math.max(1, Math.min(Number(opts.maxRows) || 2000, 10000));
+  const modeRaw = opts.modeOverride != null ? String(opts.modeOverride).trim().toLowerCase() : '';
+  const mode =
+    modeRaw === 'file' || modeRaw === 'memory' || modeRaw === 'supabase'
+      ? modeRaw
+      : getCosRunStoreMode();
+
+  if (mode === 'memory') {
+    const out = [];
+    for (const [uuid, arr] of memByRun.entries()) {
+      if (runId && uuid !== runId) continue;
+      for (const row of arr) {
+        if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+        out.push({
+          run_id: uuid,
+          event_type: String(row.event_type || ''),
+          payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
+          created_at: row.created_at != null ? String(row.created_at) : '',
+        });
+      }
+    }
+    out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    return out.slice(0, maxRows);
+  }
+
+  if (mode === 'supabase') {
+    const sb = opts.supabaseClient || createCosRuntimeSupabaseForSummary();
+    if (!sb) return [];
+    return supabaseListOpsSmokePhaseEvents(sb, { runId, limit: maxRows });
+  }
+
+  const dir = cosEventsDirForSummary(opts.runtimeStateDir ?? null);
+  const out = [];
+  if (runId) {
+    const fp = path.join(dir, `${runId}.jsonl`);
+    const rows = await readEventsJsonlFile(fp);
+    for (const row of rows) {
+      if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+      out.push({
+        run_id: runId,
+        event_type: String(row.event_type || ''),
+        payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
+        created_at: row.created_at != null ? String(row.created_at) : '',
+      });
+    }
+    out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    return out.slice(0, maxRows);
+  }
+
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+  for (const n of names) {
+    if (!n.endsWith('.jsonl')) continue;
+    const uuid = path.basename(n, '.jsonl');
+    const rows = await readEventsJsonlFile(path.join(dir, n));
+    for (const row of rows) {
+      if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+      out.push({
+        run_id: uuid,
+        event_type: String(row.event_type || ''),
+        payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
+        created_at: row.created_at != null ? String(row.created_at) : '',
+      });
+    }
+  }
+  out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  return out.slice(0, maxRows);
 }
 
 /**

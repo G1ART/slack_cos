@@ -201,6 +201,38 @@ export function aggregateSmokeSessionProgress(rows) {
 }
 
 /**
+ * Group flat cos_run_events-shaped rows into smoke session summaries (read-only ops tooling).
+ * @param {Array<{ run_id?: string, event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} flatRows
+ * @param {{ sessionLimit?: number }} [opts]
+ */
+export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
+  const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
+  /** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown> }[] }>} */
+  const bySession = new Map();
+  for (const row of flatRows || []) {
+    if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    const sid = String(pl.smoke_session_id || '').trim();
+    if (!sid) continue;
+    const runId = String(row.run_id || '').trim() || 'unknown';
+    if (!bySession.has(sid)) bySession.set(sid, { run_id: runId, rows: [] });
+    const bucket = bySession.get(sid);
+    bucket.rows.push({ event_type: 'ops_smoke_phase', payload: pl });
+    if (bucket.run_id !== runId) bucket.run_id = `${bucket.run_id}+${runId}`;
+  }
+  const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
+    const agg = aggregateSmokeSessionProgress(rows);
+    const lastAt = rows.reduce((m, r) => {
+      const t = String(r.payload?.at || '');
+      return t > m ? t : m;
+    }, '');
+    return { smoke_session_id, run_id, lastAt, ...agg };
+  });
+  sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
+  return sessions.slice(0, sessionLimit);
+}
+
+/**
  * @param {{
  *   env?: NodeJS.ProcessEnv,
  *   runId: string,
