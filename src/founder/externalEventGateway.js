@@ -151,6 +151,7 @@ export async function handleCursorWebhookIngress(p) {
   const out = await processCanonicalExternalEvent(canonical, corr, {
     matched_by,
     payload_fingerprint_prefix: fp,
+    ingress_evidence: ingressEvidence,
   });
 
   if (out.matched) {
