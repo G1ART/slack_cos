@@ -44,7 +44,7 @@ const sum = summarizeToolArgsForAudit('invoke_external_tool', {
   payload,
 });
 assert.ok(Array.isArray(sum.payload_top_level_keys) && sum.payload_top_level_keys.length > 0);
-assert.equal(sum.delegate_packets_present, false);
+assert.equal(sum.delegate_packets_present, true);
 assert.equal(sum.delegate_live_patch_present, true);
 
 console.log('test-minimal-live-smoke-produces-nonempty-payload-top-level-keys: ok');

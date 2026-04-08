@@ -7,6 +7,8 @@ import {
   invokeExternalTool,
   isValidToolAction,
   formatAdapterReadinessCompactLines,
+  DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
+  DELEGATE_REQUIRED_BEFORE_EMIT_PATCH,
 } from './toolsBridge.js';
 import {
   appendExecutionArtifact,
@@ -381,6 +383,19 @@ export function formatFounderSafeToolBlockMessage(parsedToolResults) {
   for (const r of arr) {
     if (!r || typeof r !== 'object') continue;
     const o = /** @type {Record<string, unknown>} */ (r);
+    const br = o.blocked_reason != null ? String(o.blocked_reason) : '';
+    if (
+      o.status === 'blocked' &&
+      (br === DELEGATE_REQUIRED_BEFORE_EMIT_PATCH || br === DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH)
+    ) {
+      lines.push(br);
+      if (o.machine_hint) lines.push(String(o.machine_hint));
+      if (Array.isArray(o.missing_required_fields)) {
+        for (const f of o.missing_required_fields.slice(0, 16)) {
+          lines.push(`required: ${String(f)}`);
+        }
+      }
+    }
     if (o.blocked === true && o.reason === 'invalid_payload') {
       if (o.machine_hint) lines.push(String(o.machine_hint));
       if (Array.isArray(o.missing_required_fields)) {
@@ -419,6 +434,12 @@ export function shouldReplaceFounderTextWithSafeToolBlockMessage(parsedToolResul
   return arr.some((r) => {
     if (!r || typeof r !== 'object') return false;
     const o = /** @type {Record<string, unknown>} */ (r);
+    const br = o.blocked_reason != null ? String(o.blocked_reason) : '';
+    if (
+      o.status === 'blocked' &&
+      (br === DELEGATE_REQUIRED_BEFORE_EMIT_PATCH || br === DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH)
+    )
+      return true;
     if (o.blocked === true && o.reason === 'invalid_payload') return true;
     if (o.degraded_from === 'emit_patch_cloud_contract_not_met') return true;
     return false;

@@ -32,6 +32,9 @@ const execFileAsync = promisify(execFile);
 /** Machine reason: founder must supply structured delegate narrow live_patch before cloud emit_patch. */
 export const DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH = 'delegate_packets_missing_for_emit_patch';
 
+/** Live-only/no-fallback thread: cloud emit_patch requires merged delegate packet (cannot bypass via packet_id alone). */
+export const DELEGATE_REQUIRED_BEFORE_EMIT_PATCH = 'delegate_required_before_emit_patch';
+
 /** Structured delegate had live_only+no_fallback emit_patch — create_spec is not allowed on this thread. */
 export const CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE = 'create_spec_disallowed_in_live_only_mode';
 
@@ -870,9 +873,11 @@ export async function invokeExternalTool(spec, ctx = {}) {
     };
   }
 
+  /** @type {Awaited<ReturnType<typeof loadDelegateEmitPatchStash>> | null} */
+  let delegateEmitPatchModule = null;
   if (tool === 'cursor' && action === 'emit_patch' && threadKey) {
-    const sm = await loadDelegateEmitPatchStash();
-    payload = sm.tryMergeStashedDelegateEmitPatchPayload(threadKey, payload).payload;
+    delegateEmitPatchModule = await loadDelegateEmitPatchStash();
+    payload = delegateEmitPatchModule.tryMergeStashedDelegateEmitPatchPayload(threadKey, payload).payload;
   }
 
   const invocation_id = `tool_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
@@ -983,13 +988,25 @@ export async function invokeExternalTool(spec, ctx = {}) {
     isCursorCloudAgentLaneReady(env) &&
     __invokeToolTestHooks.failArtifactForTool !== tool;
 
-  if (
+  const liveOnlyNoFallbackEmitThread =
+    Boolean(threadKey) &&
+    Boolean(delegateEmitPatchModule) &&
+    delegateEmitPatchModule.isThreadLiveOnlyNoFallbackSmoke(threadKey);
+  const missingEmitPatchCloudContract = !emitPatchHasCloudContractSource(payload);
+  const needsDelegateFirstEmitPatchBlock =
     tool === 'cursor' &&
     action === 'emit_patch' &&
     automationLanePrecheck &&
-    !runPacketId &&
-    !emitPatchHasCloudContractSource(payload)
-  ) {
+    missingEmitPatchCloudContract &&
+    (liveOnlyNoFallbackEmitThread || !runPacketId);
+
+  if (needsDelegateFirstEmitPatchBlock) {
+    const blockedEmitReason = liveOnlyNoFallbackEmitThread
+      ? DELEGATE_REQUIRED_BEFORE_EMIT_PATCH
+      : DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH;
+    const blockedEmitMachineHint = liveOnlyNoFallbackEmitThread
+      ? 'live_only_emit_patch_requires_delegate_packets'
+      : 'emit_patch_requires_delegate_merge_or_packet_scope';
     if (opsSmokeSessionId && cosRunId) {
       try {
         await recordCosPretriggerAudit({
@@ -1000,7 +1017,8 @@ export async function invokeExternalTool(spec, ctx = {}) {
           call_name: 'invoke_external_tool',
           args: { tool, action, payload },
           blocked: true,
-          blocked_reason: DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
+          blocked_reason: blockedEmitReason,
+          machine_hint: blockedEmitMachineHint,
           missing_required_fields: ['packets', 'live_patch'],
         });
       } catch (e) {
@@ -1011,7 +1029,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
     const needs_review = true;
     const execution_mode = 'artifact';
-    const result_summary = `blocked / artifact / ${tool}:${action} — ${DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH}`;
+    const result_summary = `blocked / artifact / ${tool}:${action} — ${blockedEmitReason}`;
     const ledgerPayload = {
       invocation_id,
       tool,
@@ -1027,7 +1045,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       live_attempted: false,
       readiness_snapshot: snap,
       fallback_reason: null,
-      blocked_reason: DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
+      blocked_reason: blockedEmitReason,
       degraded_from: null,
       needs_review,
       ...(runPacketId ? { run_packet_id: runPacketId } : {}),
@@ -1050,6 +1068,9 @@ export async function invokeExternalTool(spec, ctx = {}) {
       next_required_input: null,
       needs_review,
       error_code: 'blocked_missing_input',
+      blocked_reason: blockedEmitReason,
+      machine_hint: blockedEmitMachineHint,
+      missing_required_fields: ['packets', 'live_patch'],
     };
     if (threadKey) {
       await appendExecutionArtifact(threadKey, {

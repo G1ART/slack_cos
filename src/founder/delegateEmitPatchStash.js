@@ -18,6 +18,14 @@ export function __resetDelegateEmitPatchStashForTests() {
   liveOnlyNoFallbackByThread.clear();
 }
 
+/** Test-only: live-only/no-fallback flag without stashed packet (merge cannot supply contract). */
+export function __seedLiveOnlyNoFallbackThreadWithoutStashForTests(threadKey) {
+  const tk = String(threadKey || '').trim();
+  if (!tk) return;
+  liveOnlyNoFallbackByThread.set(tk, true);
+  stashByThread.set(tk, null);
+}
+
 /**
  * @param {Record<string, unknown>} dispatch
  */

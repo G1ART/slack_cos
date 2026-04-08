@@ -6,6 +6,7 @@ import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow } from './runCosEv
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
 import { createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
+import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
 
 /**
  * @param {string} callName
@@ -16,14 +17,15 @@ export function summarizeToolArgsForAudit(callName, args) {
   if (callName === 'invoke_external_tool') {
     const pl = a.payload && typeof a.payload === 'object' && !Array.isArray(a.payload) ? a.payload : {};
     const hasLp = pl.live_patch && typeof pl.live_patch === 'object' && !Array.isArray(pl.live_patch);
+    const contractOk = emitPatchHasCloudContractSource(pl);
     return {
       selected_tool: a.tool != null ? String(a.tool) : null,
       selected_action: a.action != null ? String(a.action) : null,
       payload_top_level_keys: Object.keys(pl)
         .sort()
         .slice(0, 48),
-      delegate_packets_present: false,
-      delegate_packets_count: 0,
+      delegate_packets_present: contractOk,
+      delegate_packets_count: contractOk ? 1 : 0,
       delegate_live_patch_present: Boolean(hasLp),
     };
   }
