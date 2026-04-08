@@ -3,7 +3,7 @@
 ## Wake
 
 - `registerRunStateChangeListener((threadKey, runId?) => …)` — second arg set when the write targeted a specific durable run uuid.
-- `notifyRunStateChangedForRun(threadKey, runId)` — used from `processCanonicalExternalEvent`, `persistRunAfterDelegate`, and run-scoped progressor paths.
+- `signalSupervisorWakeForRun(threadKey, runId)` — sets durable `pending_supervisor_wake` then calls `notifyRunStateChangedForRun` (direct listener). Used from `persistRunAfterDelegate`, canonical external event handling, and run-scoped progressor paths. See `COS_vNext13_40_Durable_Run_Queue_Ledger_2026-04-02.md` for periodic backstop + ledger filtering.
 - `notifyRunStateChanged(threadKey)` — backward compatible; invokes listener with `runId === null` (active-thread tick).
 - Production (`app.js`): if `runId` is present, `tickRunSupervisorForRun(runId, …)`; else `tickRunSupervisorForThread(threadKey, …)`.
 

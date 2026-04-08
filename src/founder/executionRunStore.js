@@ -21,6 +21,8 @@ import {
   supabaseSelectLatestRun,
   supabaseSelectRunById,
   supabaseListThreadKeys,
+  supabaseListNonTerminalRunIds,
+  supabaseListPendingSupervisorWakeRunIds,
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
 import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
@@ -314,6 +316,8 @@ export async function persistRunAfterDelegate(p) {
     last_progressed_at: now,
     last_auto_invocation_sha: null,
     cursor_external_terminal_by_packet: {},
+    pending_supervisor_wake: false,
+    last_supervisor_wake_request_at: null,
   };
 
   const mode = storeMode();
@@ -345,8 +349,135 @@ export async function persistRunAfterDelegate(p) {
     out = row;
   }
 
-  notifyRunStateChangedForRun(threadKey, String(row.id));
+  await signalSupervisorWakeForRun(threadKey, String(row.id));
   return out;
+}
+
+/**
+ * Clears durable wake hint after an attempted run-scoped supervisor tick.
+ * @param {string} runId
+ */
+export async function clearPendingSupervisorWake(runId) {
+  const rid = String(runId || '').trim();
+  if (!rid) return;
+  await patchRunById(rid, { pending_supervisor_wake: false });
+}
+
+/**
+ * Marks run for periodic backstop and notifies direct listener (best-effort).
+ * @param {string} threadKey
+ * @param {string} runId
+ */
+export async function signalSupervisorWakeForRun(threadKey, runId) {
+  const tk = String(threadKey || '').trim();
+  const rid = String(runId || '').trim();
+  if (!tk || !rid) return;
+  await patchRunById(rid, {
+    pending_supervisor_wake: true,
+    last_supervisor_wake_request_at: new Date().toISOString(),
+  });
+  notifyRunStateChangedForRun(tk, rid);
+}
+
+/**
+ * @param {unknown} status
+ */
+export function isRunStatusNonTerminal(status) {
+  const s = String(status || '');
+  return s !== 'completed' && s !== 'failed' && s !== 'canceled';
+}
+
+/**
+ * @param {{ limit?: number, updatedSince?: string | null }} [opts]
+ * @returns {Promise<string[]>}
+ */
+export async function listNonTerminalRunIds(opts) {
+  const limit = opts?.limit != null ? Number(opts.limit) : 80;
+  const updatedSince = opts?.updatedSince != null ? String(opts.updatedSince).trim() : '';
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    const rows = [...memRunsById.values()].filter((r) => isRunStatusNonTerminal(r.status));
+    rows.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+    let filtered = rows;
+    if (updatedSince) {
+      filtered = rows.filter((r) => String(r.updated_at || '') >= updatedSince);
+    }
+    return filtered.slice(0, limit).map((r) => String(r.id || '').trim()).filter(Boolean);
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return [];
+    return supabaseListNonTerminalRunIds(sb, limit, updatedSince || null);
+  }
+
+  const dir = runsByIdDir();
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+  /** @type {Record<string, unknown>[]} */
+  const rows = [];
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue;
+    try {
+      const raw = await fs.readFile(path.join(dir, n), 'utf8');
+      const j = JSON.parse(raw);
+      if (j && typeof j === 'object' && isRunStatusNonTerminal(j.status)) rows.push(j);
+    } catch {
+      /* skip */
+    }
+  }
+  rows.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+  let filtered = rows;
+  if (updatedSince) {
+    filtered = rows.filter((r) => String(r.updated_at || '') >= updatedSince);
+  }
+  return filtered.slice(0, limit).map((r) => String(r.id || '').trim()).filter(Boolean);
+}
+
+/**
+ * @param {number} [limit]
+ * @returns {Promise<string[]>}
+ */
+export async function listPendingSupervisorWakeRunIds(limit = 50) {
+  const lim = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    const rows = [...memRunsById.values()].filter((r) => r.pending_supervisor_wake === true);
+    rows.sort((a, b) => String(b.last_supervisor_wake_request_at || '').localeCompare(String(a.last_supervisor_wake_request_at || '')));
+    return rows.slice(0, lim).map((r) => String(r.id || '').trim()).filter(Boolean);
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return [];
+    return supabaseListPendingSupervisorWakeRunIds(sb, lim);
+  }
+
+  const dir = runsByIdDir();
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+  /** @type {Record<string, unknown>[]} */
+  const rows = [];
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue;
+    try {
+      const raw = await fs.readFile(path.join(dir, n), 'utf8');
+      const j = JSON.parse(raw);
+      if (j && typeof j === 'object' && j.pending_supervisor_wake === true) rows.push(j);
+    } catch {
+      /* skip */
+    }
+  }
+  rows.sort((a, b) => String(b.last_supervisor_wake_request_at || '').localeCompare(String(a.last_supervisor_wake_request_at || '')));
+  return rows.slice(0, lim).map((r) => String(r.id || '').trim()).filter(Boolean);
 }
 
 /**

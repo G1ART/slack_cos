@@ -11,9 +11,9 @@ import {
   patchRunById,
   deriveRunTerminalStatus,
   deriveRunStage,
+  signalSupervisorWakeForRun,
 } from './executionRunStore.js';
 import { derivePacketStateFromOutcome, executePacketInvocation } from './starterLadder.js';
-import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 
 /**
  * @param {Record<string, unknown>} run
@@ -107,6 +107,19 @@ function findPacketDef(run, packetId) {
 }
 
 /**
+ * @param {Record<string, unknown>} pl
+ * @param {string} rid
+ * @returns {'match'|'exclude'|'legacy'}
+ */
+function ledgerPayloadRunScope(pl, rid) {
+  const c = pl.cos_run_id != null ? String(pl.cos_run_id).trim() : '';
+  if (c) return c === rid ? 'match' : 'exclude';
+  const r = pl.run_id != null ? String(pl.run_id).trim() : '';
+  if (r) return r === rid ? 'match' : 'exclude';
+  return 'legacy';
+}
+
+/**
  * @param {string} runId
  * @returns {Promise<Record<string, unknown> | null>}
  */
@@ -123,14 +136,27 @@ export async function reconcileRunFromLedgerForRun(runId) {
   toolResults.sort((a, b) => String(a.ts || '').localeCompare(String(b.ts || '')));
 
   /** @type {Record<string, Record<string, unknown>>} */
-  const latestByPacket = {};
+  const latestScoped = {};
+  /** @type {Record<string, Record<string, unknown>>} */
+  const latestLegacy = {};
   for (const row of toolResults) {
     const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    const scope = ledgerPayloadRunScope(pl, rid);
+    if (scope === 'exclude') continue;
     const pid = pl.run_packet_id != null ? String(pl.run_packet_id).trim() : '';
-    if (pid) latestByPacket[pid] = pl;
+    if (!pid) continue;
+    if (scope === 'match') latestScoped[pid] = pl;
+    else latestLegacy[pid] = pl;
   }
 
   const required = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
+  /** @type {Record<string, Record<string, unknown>>} */
+  const latestByPacket = {};
+  for (const pid of required) {
+    if (latestScoped[pid]) latestByPacket[pid] = latestScoped[pid];
+    else if (latestLegacy[pid]) latestByPacket[pid] = latestLegacy[pid];
+  }
+
   const packet_state_map = {
     ...(run.packet_state_map && typeof run.packet_state_map === 'object' ? run.packet_state_map : {}),
   };
@@ -175,7 +201,7 @@ export async function reconcileRunFromLedgerForRun(runId) {
       completed_at: newCompleted,
       last_progressed_at: now,
     });
-    notifyRunStateChangedForRun(tk, rid);
+    await signalSupervisorWakeForRun(tk, rid);
   }
 
   return getRunById(rid);
@@ -237,7 +263,7 @@ export async function maybeAdvanceNextPacketForRun(runId) {
     last_progressed_at: new Date().toISOString(),
   });
 
-  const outcome = await executePacketInvocation(pkt, { threadKey: tk });
+  const outcome = await executePacketInvocation(pkt, { threadKey: tk, cosRunId: rid });
   packet_state_map[target] = derivePacketStateFromOutcome(
     outcome && typeof outcome === 'object' ? outcome : {},
   );
@@ -264,7 +290,7 @@ export async function maybeAdvanceNextPacketForRun(runId) {
     last_auto_invocation_sha: fp,
     last_progressed_at: now,
   });
-  notifyRunStateChangedForRun(tk, rid);
+  await signalSupervisorWakeForRun(tk, rid);
 
   return { advanced: true, target };
 }
