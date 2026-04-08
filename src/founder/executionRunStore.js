@@ -252,28 +252,28 @@ export function deriveRunStage(status, kickExecuted) {
 }
 
 /**
+ * Accepted dispatch 직후 durable run row만 확보 (starter kickoff 이전). Supervisor wake 없음.
  * @param {{
  *   threadKey: string,
  *   dispatch: Record<string, unknown>,
- *   starter_kickoff: Record<string, unknown> | null,
  *   founder_request_summary?: string,
  * }} p
+ * @returns {Promise<Record<string, unknown> | null>}
  */
-export async function persistRunAfterDelegate(p) {
+export async function persistAcceptedRunShell(p) {
   const threadKey = String(p.threadKey || '');
   if (!threadKey) return null;
 
   const dispatch = p.dispatch && typeof p.dispatch === 'object' ? p.dispatch : {};
   const dispatch_id = String(dispatch.dispatch_id || '');
   const objective = String(dispatch.objective || '').trim();
-  const kick = p.starter_kickoff && typeof p.starter_kickoff === 'object' ? p.starter_kickoff : null;
 
   const run_id = `run_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
-  const graph = buildPacketGraphFromDispatch(dispatch, kick);
+  const graph = buildPacketGraphFromDispatch(dispatch, null);
   const status = /** @type {RunStatus} */ (
     deriveRunTerminalStatus(graph.packet_state_map, graph.required_packet_ids)
   );
-  const stage = /** @type {RunStage} */ (deriveRunStage(status, Boolean(kick && kick.executed)));
+  const stage = /** @type {RunStage} */ (deriveRunStage(status, false));
   const packets = Array.isArray(dispatch.packets) ? dispatch.packets : [];
   const packet_ids = packets.map((x) => String(x?.packet_id || '').trim()).filter(Boolean);
   const handoff_order = Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order.map(String) : [];
@@ -296,7 +296,7 @@ export async function persistRunAfterDelegate(p) {
     completed_at: status === 'completed' ? now : null,
     current_packet_id: graph.current_packet_id,
     next_packet_id: graph.next_packet_id,
-    starter_kickoff: kick,
+    starter_kickoff: null,
     packet_ids,
     packet_state_map: graph.packet_state_map,
     required_packet_ids: graph.required_packet_ids,
@@ -334,11 +334,6 @@ export async function persistRunAfterDelegate(p) {
     await supabaseCancelActiveRuns(sb, threadKey);
     const inserted = await supabaseInsertRun(sb, row);
     if (!inserted?.id) return null;
-    await supabaseAppendRunEvent(sb, String(inserted.id), 'run_persisted', {
-      thread_key: threadKey,
-      dispatch_id,
-      status,
-    });
     out = inserted;
   } else {
     const dir = runsDir();
@@ -349,8 +344,109 @@ export async function persistRunAfterDelegate(p) {
     out = row;
   }
 
-  await signalSupervisorWakeForRun(threadKey, String(row.id));
   return out;
+}
+
+/**
+ * Shell row에 starter kickoff + packet graph 반영 후 supervisor wake.
+ * @param {{
+ *   runId: string,
+ *   threadKey: string,
+ *   dispatch: Record<string, unknown>,
+ *   starter_kickoff: Record<string, unknown> | null,
+ *   founder_request_summary?: string,
+ * }} p
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function finalizeRunAfterStarterKickoff(p) {
+  const runId = String(p.runId || '').trim();
+  const threadKey = String(p.threadKey || '');
+  if (!runId || !threadKey) return null;
+
+  const existing = await getRunById(runId);
+  if (!existing || String(existing.thread_key || '') !== threadKey) return null;
+
+  const dispatch = p.dispatch && typeof p.dispatch === 'object' ? p.dispatch : {};
+  const dispatch_id = String(dispatch.dispatch_id || '');
+  const kick = p.starter_kickoff && typeof p.starter_kickoff === 'object' ? p.starter_kickoff : null;
+
+  const graph = buildPacketGraphFromDispatch(dispatch, kick);
+  const status = /** @type {RunStatus} */ (
+    deriveRunTerminalStatus(graph.packet_state_map, graph.required_packet_ids)
+  );
+  const stage = /** @type {RunStage} */ (deriveRunStage(status, Boolean(kick && kick.executed)));
+  const packets = Array.isArray(dispatch.packets) ? dispatch.packets : [];
+  const packet_ids = packets.map((x) => String(x?.packet_id || '').trim()).filter(Boolean);
+  const handoff_order = Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order.map(String) : [];
+  const now = new Date().toISOString();
+  const run_id = String(existing.run_id || existing.external_run_id || '');
+
+  const patch = {
+    founder_request_summary: String(p.founder_request_summary ?? existing.founder_request_summary ?? '').slice(
+      0,
+      500,
+    ),
+    starter_kickoff: kick,
+    packet_ids,
+    packet_state_map: graph.packet_state_map,
+    required_packet_ids: graph.required_packet_ids,
+    terminal_packet_ids: graph.terminal_packet_ids,
+    current_packet_id: graph.current_packet_id,
+    next_packet_id: graph.next_packet_id,
+    status,
+    stage,
+    completed_at: status === 'completed' ? now : null,
+    harness_snapshot: {
+      packets: Array.isArray(dispatch.packets) ? dispatch.packets : [],
+      handoff_order,
+    },
+    dispatch_payload: dispatch,
+    handoff_order,
+    last_founder_update_sha: crypto.createHash('sha256').update(`${run_id}:${now}`).digest('hex'),
+    last_progressed_at: now,
+    updated_at: now,
+  };
+
+  await patchRunById(runId, patch);
+
+  const mode = storeMode();
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (sb) {
+      await supabaseAppendRunEvent(sb, runId, 'run_persisted', {
+        thread_key: threadKey,
+        dispatch_id,
+        status,
+      });
+    }
+  }
+
+  await signalSupervisorWakeForRun(threadKey, runId);
+  return getRunById(runId);
+}
+
+/**
+ * @param {{
+ *   threadKey: string,
+ *   dispatch: Record<string, unknown>,
+ *   starter_kickoff: Record<string, unknown> | null,
+ *   founder_request_summary?: string,
+ * }} p
+ */
+export async function persistRunAfterDelegate(p) {
+  const shell = await persistAcceptedRunShell({
+    threadKey: p.threadKey,
+    dispatch: p.dispatch,
+    founder_request_summary: p.founder_request_summary,
+  });
+  if (!shell?.id) return null;
+  return finalizeRunAfterStarterKickoff({
+    runId: String(shell.id),
+    threadKey: String(p.threadKey || ''),
+    dispatch: p.dispatch && typeof p.dispatch === 'object' ? p.dispatch : {},
+    starter_kickoff: p.starter_kickoff && typeof p.starter_kickoff === 'object' ? p.starter_kickoff : null,
+    founder_request_summary: p.founder_request_summary,
+  });
 }
 
 /**

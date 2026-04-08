@@ -15,7 +15,11 @@ import {
   computeExecutionOutcomeCounts,
   readReviewQueue,
 } from './executionLedger.js';
-import { persistRunAfterDelegate } from './executionRunStore.js';
+import {
+  persistAcceptedRunShell,
+  finalizeRunAfterStarterKickoff,
+  persistRunAfterDelegate,
+} from './executionRunStore.js';
 import { executeStarterKickoffIfEligible } from './starterLadder.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
@@ -536,18 +540,42 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args, { threadKey: tk });
         if (result && result.ok && String(result.status) === 'accepted' && tk) {
-          const kick = await executeStarterKickoffIfEligible({
+          const shell = await persistAcceptedRunShell({
             threadKey: tk,
             dispatch: result,
-            env: process.env,
-          });
-          result = { ...result, starter_kickoff: kick };
-          await persistRunAfterDelegate({
-            threadKey: tk,
-            dispatch: result,
-            starter_kickoff: kick,
             founder_request_summary: founderRequestSummary,
           });
+          const runId = shell?.id != null ? String(shell.id).trim() : '';
+          let kick;
+          if (runId) {
+            kick = await executeStarterKickoffIfEligible({
+              threadKey: tk,
+              dispatch: result,
+              env: process.env,
+              cosRunId: runId,
+            });
+            result = { ...result, starter_kickoff: kick };
+            await finalizeRunAfterStarterKickoff({
+              runId,
+              threadKey: tk,
+              dispatch: result,
+              starter_kickoff: kick,
+              founder_request_summary: founderRequestSummary,
+            });
+          } else {
+            kick = await executeStarterKickoffIfEligible({
+              threadKey: tk,
+              dispatch: result,
+              env: process.env,
+            });
+            result = { ...result, starter_kickoff: kick };
+            await persistRunAfterDelegate({
+              threadKey: tk,
+              dispatch: result,
+              starter_kickoff: kick,
+              founder_request_summary: founderRequestSummary,
+            });
+          }
         }
       } else if (call.name === 'invoke_external_tool') {
         result = await invokeExternalTool(args, { threadKey: tk });

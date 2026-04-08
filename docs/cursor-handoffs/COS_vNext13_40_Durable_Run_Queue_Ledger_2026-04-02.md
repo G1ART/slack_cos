@@ -24,6 +24,8 @@ Apply Supabase migration when using durable runs in production: `supabase/migrat
 
 No new env vars for 13.40.
 
+Follow-up: **vNext.13.41** (`COS_vNext13_41_Preallocated_Run_Shell_Milestone_Views_2026-04-02.md`) — preallocated run shell before starter kickoff (first tool rows carry `cos_run_id`) and run-scoped execution summary / review queue for founder milestones.
+
 ## Regression scripts (13.40)
 
 - `scripts/test-non-active-run-eventually-ticked-by-periodic-loop.mjs`

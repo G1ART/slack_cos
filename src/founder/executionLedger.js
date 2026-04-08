@@ -156,6 +156,31 @@ export async function computeExecutionOutcomeCounts(threadKey, lookback = 200) {
  * @param {number} limit
  * @returns {Promise<string[]>}
  */
+/**
+ * @param {Record<string, unknown>} run — needs thread_key, id, dispatch_id, required_packet_ids
+ * @param {number} limit
+ * @returns {Promise<string[]>}
+ */
+export async function readExecutionSummaryForRun(run, limit = 5) {
+  const threadKey = String(run?.thread_key || '');
+  if (!threadKey || !run?.id) return [];
+  const list = await readAll(threadKey);
+  const mapped = list.map((r) => normalizeArtifactRow(r));
+  const tail = mapped.slice(-Math.max(120, limit * 24));
+  const pool = tail.filter((row) => executionArtifactMatchesRun(row, run));
+  const sorted = [...pool].sort((a, b) => {
+    const na = Boolean(a.needs_review);
+    const nb = Boolean(b.needs_review);
+    if (na !== nb) return na ? -1 : 1;
+    const order = { failed: 0, blocked: 1, degraded: 2, completed: 3 };
+    const sa = order[String(a.status || '')] ?? 5;
+    const sb = order[String(b.status || '')] ?? 5;
+    if (sa !== sb) return sa - sb;
+    return String(b.ts || '').localeCompare(String(a.ts || ''));
+  });
+  return sorted.slice(0, limit).map(formatExecutionSummaryLine);
+}
+
 export async function readExecutionSummary(threadKey, limit = 5) {
   const list = await readAll(threadKey);
   const mapped = list.map((r) => normalizeArtifactRow(r));
@@ -178,6 +203,47 @@ const REVIEW_QUEUE_STATUS_ORDER = { failed: 0, blocked: 1, degraded: 2, complete
 /** @param {Record<string, unknown>} row */
 function payloadOfRow(row) {
   return row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload) ? row.payload : {};
+}
+
+/**
+ * Run-scoped milestone / summary views. No executionRunStore import (avoid cycles).
+ * Priority: explicit cos_run_id / run_id; legacy tool rows by run_packet_id ∈ required_packet_ids;
+ * harness rows by dispatch_id (+ packet id when present).
+ * @param {Record<string, unknown>} row
+ * @param {Record<string, unknown>} run
+ */
+export function executionArtifactMatchesRun(row, run) {
+  if (!run || run.id == null || !String(run.id).trim()) return false;
+  const runId = String(run.id).trim();
+  const dispatchId = String(run.dispatch_id || '').trim();
+  const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
+  const pl = payloadOfRow(row);
+  const type = String(row.type || '');
+
+  const explicitCos = pl.cos_run_id != null ? String(pl.cos_run_id).trim() : '';
+  const explicitRid = pl.run_id != null ? String(pl.run_id).trim() : '';
+  if (explicitCos || explicitRid) {
+    const c = explicitCos || explicitRid;
+    return c === runId;
+  }
+
+  if (type === 'tool_result' || type === 'tool_invocation') {
+    const pid = pl.run_packet_id != null ? String(pl.run_packet_id).trim() : '';
+    if (pid && req.includes(pid)) return true;
+    return false;
+  }
+  if (type === 'harness_dispatch') {
+    const d = pl.dispatch_id != null ? String(pl.dispatch_id).trim() : '';
+    return Boolean(dispatchId) && d === dispatchId;
+  }
+  if (type === 'harness_packet') {
+    const d = pl.dispatch_id != null ? String(pl.dispatch_id).trim() : '';
+    const pkt = pl.packet_id != null ? String(pl.packet_id).trim() : '';
+    if (!dispatchId || d !== dispatchId) return false;
+    if (!pkt) return true;
+    return req.includes(pkt);
+  }
+  return false;
 }
 
 /**
@@ -206,6 +272,38 @@ export function normalizeReviewQueueItem(row) {
  * @param {string} threadKey
  * @param {number} limit
  */
+/**
+ * @param {Record<string, unknown>} run
+ * @param {number} limit
+ */
+export async function readReviewQueueForRun(run, limit = 10) {
+  const threadKey = String(run?.thread_key || '');
+  if (!threadKey || !run?.id) return [];
+  const list = await readAll(threadKey);
+  const mapped = list.map((r) => normalizeArtifactRow(r));
+  const candidates = mapped.filter((row) => {
+    if (row.type !== 'tool_result') return false;
+    if (!executionArtifactMatchesRun(row, run)) return false;
+    const pl = payloadOfRow(row);
+    const st = String(row.status || pl.status || '');
+    const nr = row.needs_review || pl.needs_review;
+    if (nr) return true;
+    return st === 'failed' || st === 'blocked' || st === 'degraded';
+  });
+  const sorted = [...candidates].sort((a, b) => {
+    const pla = payloadOfRow(a);
+    const plb = payloadOfRow(b);
+    const na = Boolean(a.needs_review || pla.needs_review);
+    const nb = Boolean(b.needs_review || plb.needs_review);
+    if (na !== nb) return na ? -1 : 1;
+    const sa = REVIEW_QUEUE_STATUS_ORDER[String(a.status || pla.status || '')] ?? 5;
+    const sb = REVIEW_QUEUE_STATUS_ORDER[String(b.status || plb.status || '')] ?? 5;
+    if (sa !== sb) return sa - sb;
+    return String(b.ts || '').localeCompare(String(a.ts || ''));
+  });
+  return sorted.slice(0, limit).map((r) => normalizeReviewQueueItem(r));
+}
+
 export async function readReviewQueue(threadKey, limit = 10) {
   const list = await readAll(threadKey);
   const mapped = list.map((r) => normalizeArtifactRow(r));
