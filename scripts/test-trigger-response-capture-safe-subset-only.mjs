@@ -13,6 +13,12 @@ const tr = {
   automation_status_raw: 'SUCCEEDED',
   automation_branch_raw: 'refs/heads/smoke',
   external_url: 'https://api.cursor.com/internal/runs/ultra-secret-id',
+  selected_run_id_field_name: 'data.run.id',
+  selected_status_field_name: 'status',
+  selected_url_field_name: null,
+  has_run_id: true,
+  has_status: true,
+  has_url: true,
 };
 
 const d = buildSafeTriggerSmokeDetail(tr);
@@ -26,6 +32,12 @@ const allowedKeys = new Set([
   'status_extracted',
   'branch_present',
   'url_present',
+  'has_run_id',
+  'has_status',
+  'has_url',
+  'selected_run_id_field_name',
+  'selected_status_field_name',
+  'selected_url_field_name',
   'override_keys_used',
 ]);
 assert.deepEqual(new Set(Object.keys(d)), allowedKeys, 'only safe trigger fields');

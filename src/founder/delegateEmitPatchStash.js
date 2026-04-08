@@ -9,8 +9,37 @@ import { detectNarrowLivePatchFromPayload } from './livePatchPayload.js';
 /** @type {Map<string, { packet: object } | null>} */
 const stashByThread = new Map();
 
+/** Thread is in live-only/no-fallback smoke when accepted delegate has emit_patch packet with those flags (structured only). */
+/** @type {Map<string, boolean>} */
+const liveOnlyNoFallbackByThread = new Map();
+
 export function __resetDelegateEmitPatchStashForTests() {
   stashByThread.clear();
+  liveOnlyNoFallbackByThread.clear();
+}
+
+/**
+ * @param {Record<string, unknown>} dispatch
+ */
+function dispatchHasLiveOnlyNoFallbackEmitPatch(dispatch) {
+  const packets = Array.isArray(dispatch.packets) ? dispatch.packets : [];
+  for (const p of packets) {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) continue;
+    if (String(p.preferred_action || '').trim() !== 'emit_patch') continue;
+    const lp = p.live_patch;
+    if (lp && typeof lp === 'object' && !Array.isArray(lp) && lp.live_only === true && lp.no_fallback === true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @param {string} threadKey
+ */
+export function isThreadLiveOnlyNoFallbackSmoke(threadKey) {
+  const tk = String(threadKey || '').trim();
+  return liveOnlyNoFallbackByThread.get(tk) === true;
 }
 
 /**
@@ -34,6 +63,8 @@ function extractStashableEmitPatchPacket(dispatch) {
 export function stashDelegateEmitPatchContext(threadKey, dispatch) {
   const tk = String(threadKey || '').trim();
   if (!tk) return;
+  const d = dispatch && typeof dispatch === 'object' ? dispatch : {};
+  liveOnlyNoFallbackByThread.set(tk, dispatchHasLiveOnlyNoFallbackEmitPatch(d));
   const pkt = extractStashableEmitPatchPacket(dispatch);
   stashByThread.set(tk, pkt ? { packet: pkt } : null);
 }

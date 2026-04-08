@@ -32,6 +32,9 @@ const execFileAsync = promisify(execFile);
 /** Machine reason: founder must supply structured delegate narrow live_patch before cloud emit_patch. */
 export const DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH = 'delegate_packets_missing_for_emit_patch';
 
+/** Structured delegate had live_only+no_fallback emit_patch — create_spec is not allowed on this thread. */
+export const CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE = 'create_spec_disallowed_in_live_only_mode';
+
 /** @type {Promise<typeof import('./delegateEmitPatchStash.js')> | null} */
 let delegateEmitPatchStashLoad = null;
 function loadDelegateEmitPatchStash() {
@@ -887,6 +890,91 @@ export async function invokeExternalTool(spec, ctx = {}) {
     configured: readiness_snapshot.configured,
     details: readiness_snapshot.details,
   };
+
+  if (tool === 'cursor' && action === 'create_spec' && threadKey) {
+    const sm = await loadDelegateEmitPatchStash();
+    if (sm.isThreadLiveOnlyNoFallbackSmoke(threadKey)) {
+      if (opsSmokeSessionId && cosRunId) {
+        try {
+          await recordCosPretriggerAudit({
+            env,
+            threadKey,
+            runId: cosRunId,
+            smoke_session_id: opsSmokeSessionId,
+            call_name: 'invoke_external_tool',
+            args: { tool, action, payload },
+            blocked: true,
+            blocked_reason: CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE,
+            missing_required_fields: [],
+            machine_hint: 'live_only_no_fallback_create_spec_forbidden',
+          });
+        } catch (e) {
+          console.error('[pretrigger_audit]', e);
+        }
+      }
+      const status = 'blocked';
+      const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
+      const needs_review = true;
+      const execution_mode = 'artifact';
+      const result_summary = `blocked / artifact / ${tool}:${action} — ${CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE}`;
+      const ledgerPayload = {
+        invocation_id,
+        tool,
+        action,
+        execution_mode,
+        execution_lane: 'artifact',
+        status,
+        artifact_path: null,
+        next_required_input: null,
+        error_code: 'blocked_missing_input',
+        result_summary,
+        outcome_code,
+        live_attempted: false,
+        readiness_snapshot: snap,
+        fallback_reason: null,
+        blocked_reason: CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE,
+        degraded_from: null,
+        needs_review,
+        ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+        ...(cosRunId ? { cos_run_id: cosRunId } : {}),
+      };
+      const blockedCreateSpec = {
+        ok: true,
+        mode: 'external_tool_invocation',
+        invocation_id,
+        tool,
+        action,
+        accepted: true,
+        execution_mode,
+        execution_lane: 'artifact',
+        status,
+        outcome_code,
+        payload,
+        result_summary,
+        artifact_path: null,
+        next_required_input: null,
+        needs_review,
+        error_code: 'blocked_missing_input',
+      };
+      if (threadKey) {
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_invocation',
+          summary: result_summary.slice(0, 500),
+          status,
+          needs_review,
+          payload: ledgerPayload,
+        });
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_result',
+          summary: result_summary.slice(0, 500),
+          status,
+          needs_review,
+          payload: ledgerPayload,
+        });
+      }
+      return blockedCreateSpec;
+    }
+  }
 
   const automationLanePrecheck =
     tool === 'cursor' &&

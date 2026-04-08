@@ -51,4 +51,11 @@ const auditOnly = aggregateSmokeSessionProgress([
 ]);
 assert.equal(auditOnly.final_status, 'pre_trigger_blocked_invalid_payload');
 
+const acceptedNoRunId = aggregateSmokeSessionProgress([
+  { event_type: 'ops_smoke_phase', payload: { phase: 'cursor_trigger_recorded', at: '2026-04-02T10:00:00Z' } },
+  { event_type: 'ops_smoke_phase', payload: { phase: 'trigger_accepted_external_run_id_absent', at: '2026-04-02T10:00:01Z' } },
+]);
+assert.equal(acceptedNoRunId.final_status, 'trigger_accepted_external_run_id_missing');
+assert.equal(acceptedNoRunId.breaks_at, 'external_run_id_extracted');
+
 console.log('test-smoke-session-phase-ordering: ok');

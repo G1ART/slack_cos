@@ -88,6 +88,11 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
   const t = tr && typeof tr === 'object' ? tr : {};
   const keys = Array.isArray(t.response_top_level_keys) ? t.response_top_level_keys.map(String).slice(0, 60) : null;
   const extUrl = t.external_url != null ? String(t.external_url).trim() : '';
+  const hasRun = t.has_run_id === true || (t.external_run_id != null && String(t.external_run_id).trim() !== '');
+  const hasStat =
+    t.has_status === true ||
+    (t.automation_status_raw != null && String(t.automation_status_raw).trim() !== '');
+  const hasUrl = t.has_url === true || Boolean(extUrl);
   return {
     response_top_level_keys: keys,
     http_status: typeof t.status === 'number' ? t.status : null,
@@ -99,6 +104,15 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
         : null,
     branch_present: Boolean(t.automation_branch_raw != null && String(t.automation_branch_raw).trim()),
     url_present: Boolean(extUrl),
+    has_run_id: Boolean(hasRun),
+    has_status: Boolean(hasStat),
+    has_url: Boolean(hasUrl),
+    selected_run_id_field_name:
+      t.selected_run_id_field_name != null ? String(t.selected_run_id_field_name).slice(0, 120) : null,
+    selected_status_field_name:
+      t.selected_status_field_name != null ? String(t.selected_status_field_name).slice(0, 120) : null,
+    selected_url_field_name:
+      t.selected_url_field_name != null ? String(t.selected_url_field_name).slice(0, 120) : null,
     override_keys_used: listAutomationResponseOverrideKeys(env),
   };
 }
@@ -137,8 +151,20 @@ export function buildSafeCursorCallbackSmokeDetail(p) {
   };
 }
 
-const PIPELINE_PHASE_ORDER = [
+/** Progress gates only (diagnostic phases do not advance the break pointer). */
+const PIPELINE_BREAK_ORDER = [
   'cursor_trigger_recorded',
+  'external_run_id_extracted',
+  'external_callback_matched',
+  'run_packet_progression_patched',
+  'supervisor_wake_enqueued',
+  'founder_milestone_sent',
+];
+
+/** Sort order for phases_seen / ordered_events. */
+const PHASE_SORT_ORDER = [
+  'cursor_trigger_recorded',
+  'trigger_accepted_external_run_id_absent',
   'external_run_id_extracted',
   'external_callback_matched',
   'run_packet_progression_patched',
@@ -155,6 +181,7 @@ const OPS_PHASE_LIKE_EVENT_TYPES = new Set([
   'live_payload_compilation_started',
   'delegate_packets_ready',
   'emit_patch_payload_validated',
+  'trigger_accepted_external_run_id_absent',
 ]);
 
 function smokeSummaryPhaseFromRow(r) {
@@ -181,7 +208,7 @@ export function aggregateSmokeSessionProgress(rows) {
 
   const seen = new Set(phases.map((p) => String(p.phase || '')));
   const orderIdx = (ph) => {
-    const i = PIPELINE_PHASE_ORDER.indexOf(ph);
+    const i = PHASE_SORT_ORDER.indexOf(ph);
     return i >= 0 ? i : 99;
   };
   const sorted = [...phases].sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
@@ -217,8 +244,8 @@ export function aggregateSmokeSessionProgress(rows) {
   }
 
   let breaksAt = null;
-  for (let i = 0; i < PIPELINE_PHASE_ORDER.length; i += 1) {
-    const step = PIPELINE_PHASE_ORDER[i];
+  for (let i = 0; i < PIPELINE_BREAK_ORDER.length; i += 1) {
+    const step = PIPELINE_BREAK_ORDER[i];
     if (!seen.has(step)) {
       breaksAt = step;
       break;
@@ -226,7 +253,14 @@ export function aggregateSmokeSessionProgress(rows) {
   }
 
   let final_status = 'unknown';
-  if (!breaksAt) final_status = 'full_pipeline_observed';
+  if (
+    seen.has('cursor_trigger_recorded') &&
+    seen.has('trigger_accepted_external_run_id_absent') &&
+    !seen.has('external_run_id_extracted')
+  ) {
+    final_status = 'trigger_accepted_external_run_id_missing';
+    breaksAt = 'external_run_id_extracted';
+  } else if (!breaksAt) final_status = 'full_pipeline_observed';
   else if (breaksAt === 'cursor_trigger_recorded') final_status = 'before_trigger';
   else final_status = `partial_stopped_before_${breaksAt}`;
 
@@ -249,6 +283,62 @@ const SMOKE_SESSION_ROW_EVENT_TYPES = new Set(COS_OPS_SMOKE_SUMMARY_EVENT_TYPES)
  * Latest pre-trigger / blocked machine fields for ops summary (field names only; no raw payload bodies).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
  */
+/**
+ * Latest Cursor automation trigger safe subset for ops session summary (from ops_smoke_phase rows).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractLatestTriggerEvidenceFromRows(rows) {
+  const empty = {
+    response_top_level_keys: null,
+    selected_run_id_field_name: null,
+    selected_status_field_name: null,
+    selected_url_field_name: null,
+    has_run_id: null,
+    has_status: null,
+    has_url: null,
+  };
+  let bestAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let bestTrigger = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const ph = String(pl.phase || '');
+    if (ph !== 'cursor_trigger_recorded' && ph !== 'trigger_accepted_external_run_id_absent') continue;
+    const det = pl.detail && typeof pl.detail === 'object' ? pl.detail : {};
+    const trg =
+      (det.trigger && typeof det.trigger === 'object' ? det.trigger : null) ||
+      (pl.trigger && typeof pl.trigger === 'object' ? pl.trigger : null);
+    if (!trg) continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      bestTrigger = trg;
+    }
+  }
+  if (!bestTrigger) return empty;
+  return {
+    response_top_level_keys: Array.isArray(bestTrigger.response_top_level_keys)
+      ? bestTrigger.response_top_level_keys.map(String).slice(0, 60)
+      : null,
+    selected_run_id_field_name:
+      bestTrigger.selected_run_id_field_name != null
+        ? String(bestTrigger.selected_run_id_field_name).slice(0, 120)
+        : null,
+    selected_status_field_name:
+      bestTrigger.selected_status_field_name != null
+        ? String(bestTrigger.selected_status_field_name).slice(0, 120)
+        : null,
+    selected_url_field_name:
+      bestTrigger.selected_url_field_name != null
+        ? String(bestTrigger.selected_url_field_name).slice(0, 120)
+        : null,
+    has_run_id: bestTrigger.has_run_id != null ? Boolean(bestTrigger.has_run_id) : null,
+    has_status: bestTrigger.has_status != null ? Boolean(bestTrigger.has_status) : null,
+    has_url: bestTrigger.has_url != null ? Boolean(bestTrigger.has_url) : null,
+  };
+}
+
 export function extractOpsSmokeMachineSummaryFromRows(rows) {
   const empty = {
     call_name: null,
@@ -323,13 +413,14 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
     const agg = aggregateSmokeSessionProgress(rows);
     const machine = extractOpsSmokeMachineSummaryFromRows(rows);
+    const triggerEv = extractLatestTriggerEvidenceFromRows(rows);
     const lastAt = rows.reduce((m, r) => {
       const t1 = String(r.payload?.at || '');
       const t2 = String(r.created_at || '');
       const best = t1 > t2 ? t1 : t2;
       return best > m ? best : m;
     }, '');
-    return { smoke_session_id, run_id, lastAt, ...machine, ...agg };
+    return { smoke_session_id, run_id, lastAt, ...machine, ...triggerEv, ...agg };
   });
   sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
   return sessions.slice(0, sessionLimit);
@@ -366,6 +457,19 @@ export async function recordOpsSmokeCursorTrigger(p) {
       trigger_ok: ok,
     },
   });
+
+  if (ok && !ext) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      smoke_session_id: smokeSid || undefined,
+      phase: 'trigger_accepted_external_run_id_absent',
+      detail: {
+        trigger: buildSafeTriggerSmokeDetail(tr, env),
+      },
+    });
+  }
 
   if (ok && ext) {
     await recordOpsSmokePhase({

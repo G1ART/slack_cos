@@ -135,6 +135,13 @@ async function main() {
           blocked_reason: s.blocked_reason,
           machine_hint: s.machine_hint,
           missing_required_fields: s.missing_required_fields,
+          response_top_level_keys: s.response_top_level_keys,
+          selected_run_id_field_name: s.selected_run_id_field_name,
+          selected_status_field_name: s.selected_status_field_name,
+          selected_url_field_name: s.selected_url_field_name,
+          has_run_id: s.has_run_id,
+          has_status: s.has_status,
+          has_url: s.has_url,
         }),
       );
     }
@@ -164,6 +171,15 @@ async function main() {
     console.log(
       `missing_required_fields:  ${s.missing_required_fields != null ? JSON.stringify(s.missing_required_fields) : '(n/a)'}`,
     );
+    console.log(
+      `response_top_level_keys:    ${s.response_top_level_keys != null ? JSON.stringify(s.response_top_level_keys) : '(n/a)'}`,
+    );
+    console.log(`selected_run_id_field_name: ${s.selected_run_id_field_name ?? '(n/a)'}`);
+    console.log(`selected_status_field_name: ${s.selected_status_field_name ?? '(n/a)'}`);
+    console.log(`selected_url_field_name:    ${s.selected_url_field_name ?? '(n/a)'}`);
+    console.log(`has_run_id:                   ${s.has_run_id ?? '(n/a)'}`);
+    console.log(`has_status:                   ${s.has_status ?? '(n/a)'}`);
+    console.log(`has_url:                      ${s.has_url ?? '(n/a)'}`);
   }
 
   console.log('---');

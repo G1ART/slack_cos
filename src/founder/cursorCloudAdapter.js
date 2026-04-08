@@ -83,6 +83,37 @@ export function listAutomationResponseOverrideKeys(env = process.env) {
   return keys;
 }
 
+/** Ordered candidates; only values that exist on the parsed object are used (no guessing). */
+const DEFAULT_RUN_ID_DOT_PATHS = [
+  'run_id',
+  'runId',
+  'id',
+  'external_run_id',
+  'externalRunId',
+  'data.run.id',
+  'result.agentRunId',
+  'result.runId',
+  'job.run.id',
+  'payload.run.id',
+];
+
+const DEFAULT_URL_DOT_PATHS = [
+  'url',
+  'run_url',
+  'runUrl',
+  'external_url',
+  'externalUrl',
+  'data.url',
+  'result.url',
+  'result.runUrl',
+  'job.url',
+  'payload.url',
+];
+
+const DEFAULT_STATUS_DOT_PATHS = ['status', 'state', 'result.status', 'data.status', 'payload.status'];
+
+const DEFAULT_BRANCH_DOT_PATHS = ['branch', 'branch_name', 'branchName', 'result.branch', 'data.branch'];
+
 /**
  * @param {Record<string, unknown> | null} parsed
  * @param {NodeJS.ProcessEnv} env
@@ -94,6 +125,12 @@ export function extractAutomationResponseFields(parsed, env) {
       external_url: null,
       automation_status_raw: null,
       automation_branch_raw: null,
+      selected_run_id_field_name: null,
+      selected_url_field_name: null,
+      selected_status_field_name: null,
+      has_run_id: false,
+      has_status: false,
+      has_url: false,
     };
   }
 
@@ -102,50 +139,115 @@ export function extractAutomationResponseFields(parsed, env) {
   const statusPath = String(env.CURSOR_AUTOMATION_RESPONSE_STATUS_PATH || '').trim();
   const branchPath = String(env.CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH || '').trim();
 
+  /** @type {string | null} */
+  let selected_run_id_field_name = null;
   let external_run_id = '';
   if (runIdPath) {
     const v = getByDotPath(parsed, runIdPath);
-    if (v != null) external_run_id = String(v).trim();
+    if (v != null) {
+      const s = String(v).trim();
+      if (s) {
+        external_run_id = s;
+        selected_run_id_field_name = runIdPath;
+      }
+    }
   }
   if (!external_run_id) {
-    external_run_id = String(
-      parsed.run_id ??
-        parsed.runId ??
-        parsed.id ??
-        parsed.external_run_id ??
-        parsed.externalRunId ??
-        '',
-    ).trim();
+    for (const p of DEFAULT_RUN_ID_DOT_PATHS) {
+      const v = getByDotPath(parsed, p);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) {
+        external_run_id = s;
+        selected_run_id_field_name = p;
+        break;
+      }
+    }
   }
 
+  /** @type {string | null} */
+  let selected_url_field_name = null;
   let external_url = '';
   if (urlPath) {
     const v = getByDotPath(parsed, urlPath);
-    if (v != null) external_url = String(v).trim();
+    if (v != null) {
+      const s = String(v).trim();
+      if (s) {
+        external_url = s;
+        selected_url_field_name = urlPath;
+      }
+    }
   }
   if (!external_url) {
-    external_url = String(
-      parsed.url ?? parsed.run_url ?? parsed.runUrl ?? parsed.external_url ?? parsed.externalUrl ?? '',
-    ).trim();
+    for (const p of DEFAULT_URL_DOT_PATHS) {
+      const v = getByDotPath(parsed, p);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) {
+        external_url = s;
+        selected_url_field_name = p;
+        break;
+      }
+    }
   }
 
+  /** @type {string | null} */
+  let selected_status_field_name = null;
   let automation_status_raw = null;
   if (statusPath) {
     const v = getByDotPath(parsed, statusPath);
-    automation_status_raw = v != null ? String(v).trim() : null;
+    if (v != null) {
+      const s = String(v).trim();
+      automation_status_raw = s || null;
+      selected_status_field_name = s ? statusPath : null;
+    }
+  }
+  if (automation_status_raw == null) {
+    for (const p of DEFAULT_STATUS_DOT_PATHS) {
+      const v = getByDotPath(parsed, p);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) {
+        automation_status_raw = s;
+        selected_status_field_name = p;
+        break;
+      }
+    }
   }
 
+  /** @type {string | null} */
   let automation_branch_raw = null;
   if (branchPath) {
     const v = getByDotPath(parsed, branchPath);
-    automation_branch_raw = v != null ? String(v).trim() : null;
+    automation_branch_raw = v != null ? String(v).trim() || null : null;
   }
+  if (automation_branch_raw == null) {
+    for (const p of DEFAULT_BRANCH_DOT_PATHS) {
+      const v = getByDotPath(parsed, p);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) {
+        automation_branch_raw = s;
+        break;
+      }
+    }
+  }
+
+  const has_run_id = !!external_run_id;
+  const has_url = !!external_url;
+  const has_status = automation_status_raw != null && String(automation_status_raw).trim() !== '';
 
   return {
     external_run_id: external_run_id || null,
     external_url: external_url || null,
     automation_status_raw,
     automation_branch_raw,
+    selected_run_id_field_name,
+    selected_url_field_name,
+    selected_status_field_name,
+    has_run_id,
+    has_status,
+    has_url,
   };
 }
 
@@ -182,6 +284,12 @@ export async function triggerCursorAutomation(opts) {
       external_url: null,
       error_code: 'cursor_automation_not_configured',
       response_top_level_keys: null,
+      selected_run_id_field_name: null,
+      selected_url_field_name: null,
+      selected_status_field_name: null,
+      has_run_id: false,
+      has_status: false,
+      has_url: false,
     };
   }
 
@@ -242,6 +350,12 @@ export async function triggerCursorAutomation(opts) {
         parsed && typeof parsed === 'object' && !Array.isArray(parsed)
           ? Object.keys(parsed).slice(0, 60)
           : null,
+      selected_run_id_field_name: extracted.selected_run_id_field_name,
+      selected_url_field_name: extracted.selected_url_field_name,
+      selected_status_field_name: extracted.selected_status_field_name,
+      has_run_id: extracted.has_run_id,
+      has_status: extracted.has_status,
+      has_url: extracted.has_url,
     };
   } catch (e) {
     clearTimeout(timer);
@@ -256,6 +370,12 @@ export async function triggerCursorAutomation(opts) {
       external_url: null,
       error_code: aborted ? 'cursor_automation_timeout' : 'cursor_automation_fetch_error',
       response_top_level_keys: null,
+      selected_run_id_field_name: null,
+      selected_url_field_name: null,
+      selected_status_field_name: null,
+      has_run_id: false,
+      has_status: false,
+      has_url: false,
     };
   }
 }
