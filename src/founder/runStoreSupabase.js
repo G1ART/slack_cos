@@ -38,6 +38,17 @@ const SMOKE_SUMMARY_SUPABASE_EVENT_TYPES = [
   'cos_pretrigger_tool_call_blocked',
 ];
 
+/** Included in ops smoke session summaries (cos_ops_smoke_events + cos_run_events merge). */
+export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
+  'ops_smoke_phase',
+  'cos_pretrigger_tool_call',
+  'cos_pretrigger_tool_call_blocked',
+  'live_payload_compilation_started',
+  'delegate_packets_ready',
+  'emit_patch_payload_validated',
+  'trigger_blocked_invalid_payload',
+];
+
 export async function supabaseListOpsSmokePhaseEvents(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
@@ -54,6 +65,77 @@ export async function supabaseListOpsSmokePhaseEvents(sb, p) {
     payload: r.payload && typeof r.payload === 'object' ? r.payload : {},
     created_at: r.created_at != null ? String(r.created_at) : '',
   }));
+}
+
+/**
+ * Ops table rows for smoke summaries (nullable run_id; no FK).
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{ runId?: string | null, limit?: number }} p
+ */
+export async function supabaseListCosOpsSmokeEvents(sb, p) {
+  const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
+  const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  let q = sb
+    .from('cos_ops_smoke_events')
+    .select('run_id, event_type, payload, created_at, smoke_session_id, thread_key')
+    .in('event_type', COS_OPS_SMOKE_SUMMARY_EVENT_TYPES);
+  if (rid) q = q.eq('run_id', rid);
+  const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
+  if (error) return [];
+  return (data || []).map((r) => {
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const sid = String(r.smoke_session_id || '').trim();
+    const mergedPl =
+      sid && !String(pl.smoke_session_id || '').trim() ? { ...pl, smoke_session_id: sid } : pl;
+    return {
+      run_id: r.run_id != null && String(r.run_id).trim() ? String(r.run_id) : '_orphan',
+      event_type: String(r.event_type || ''),
+      payload: mergedPl,
+      created_at: r.created_at != null ? String(r.created_at) : '',
+    };
+  });
+}
+
+/**
+ * Merge cos_run_events smoke rows with cos_ops_smoke_events, newest first.
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{ runId?: string | null, limit?: number }} p
+ */
+export async function supabaseListMergedSmokeSummaryEvents(sb, p) {
+  const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
+  const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  const [runEv, opsEv] = await Promise.all([
+    supabaseListOpsSmokePhaseEvents(sb, { runId: rid, limit: lim }),
+    supabaseListCosOpsSmokeEvents(sb, { runId: rid, limit: lim }),
+  ]);
+  const merged = [...runEv, ...opsEv];
+  merged.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  return merged.slice(0, lim);
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{
+ *   smoke_session_id: string,
+ *   run_id?: string | null,
+ *   thread_key?: string | null,
+ *   event_type: string,
+ *   payload: Record<string, unknown>,
+ * }} row
+ */
+export async function supabaseAppendOpsSmokeEvent(sb, row) {
+  const sid = String(row.smoke_session_id || '').trim();
+  const et = String(row.event_type || '').trim();
+  if (!sid || !et) return;
+  const runIdCol = row.run_id != null && String(row.run_id).trim() ? String(row.run_id).trim() : null;
+  const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  await sb.from('cos_ops_smoke_events').insert({
+    smoke_session_id: sid,
+    run_id: runIdCol,
+    thread_key: row.thread_key != null ? String(row.thread_key).slice(0, 512) : null,
+    event_type: et,
+    payload,
+  });
 }
 
 /**

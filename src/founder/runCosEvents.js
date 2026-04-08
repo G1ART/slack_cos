@@ -9,7 +9,7 @@ import {
   createCosRuntimeSupabase,
   createCosRuntimeSupabaseForSummary,
   supabaseAppendRunEvent,
-  supabaseListOpsSmokePhaseEvents,
+  supabaseListMergedSmokeSummaryEvents,
 } from './runStoreSupabase.js';
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
 
@@ -163,7 +163,7 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
   if (mode === 'supabase') {
     const sb = opts.supabaseClient || createCosRuntimeSupabaseForSummary();
     if (!sb) return [];
-    return supabaseListOpsSmokePhaseEvents(sb, { runId, limit: maxRows });
+    return supabaseListMergedSmokeSummaryEvents(sb, { runId, limit: maxRows });
   }
 
   const dir = cosEventsDirForSummary(opts.runtimeStateDir ?? null);

@@ -16,32 +16,32 @@ const stubRows = [
   },
 ];
 
-function createMockSupabase(rows) {
-  const chain = {
-    select() {
-      return this;
-    },
-    in() {
-      return this;
-    },
-    eq() {
-      return this;
-    },
-    order() {
-      return this;
-    },
-    limit() {
-      return Promise.resolve({ data: rows, error: null });
-    },
-  };
+function createMockSupabase(runRows, opsRows = []) {
   return {
-    from() {
-      return chain;
+    from(table) {
+      const rows = table === 'cos_ops_smoke_events' ? opsRows : runRows;
+      return {
+        select() {
+          return this;
+        },
+        in() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return Promise.resolve({ data: rows, error: null });
+        },
+      };
     },
   };
 }
 
-const mockSb = createMockSupabase(stubRows);
+const mockSb = createMockSupabase(stubRows, []);
 const out = await listOpsSmokePhaseEventsForSummary({
   modeOverride: 'supabase',
   supabaseClient: mockSb,

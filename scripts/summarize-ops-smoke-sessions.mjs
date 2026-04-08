@@ -105,7 +105,7 @@ async function main() {
   const limited = args.runId ? summaries : summaries.slice(0, args.limit);
 
   if (!limited.length) {
-    console.log('No ops_smoke_phase events found.');
+    console.log('No ops smoke summary events (cos_run_events + cos_ops_smoke_events).');
     process.exit(0);
   }
 
@@ -126,6 +126,15 @@ async function main() {
           breaks_at: s.breaks_at,
           phases_seen: s.phases_seen,
           ordered_events: s.ordered_events,
+          call_name: s.call_name,
+          selected_tool: s.selected_tool,
+          selected_action: s.selected_action,
+          delegate_packets_present: s.delegate_packets_present,
+          delegate_live_patch_present: s.delegate_live_patch_present,
+          payload_top_level_keys: s.payload_top_level_keys,
+          blocked_reason: s.blocked_reason,
+          machine_hint: s.machine_hint,
+          missing_required_fields: s.missing_required_fields,
         }),
       );
     }
@@ -142,6 +151,19 @@ async function main() {
     console.log(`breaks_at:        ${s.breaks_at ?? '(none — full pipeline)'}`);
     console.log(`phases_seen:      ${s.phases_seen.join(', ')}`);
     console.log(`ordered_events:   ${JSON.stringify(s.ordered_events)}`);
+    console.log(`call_name:                ${s.call_name ?? '(n/a)'}`);
+    console.log(`selected_tool:            ${s.selected_tool ?? '(n/a)'}`);
+    console.log(`selected_action:          ${s.selected_action ?? '(n/a)'}`);
+    console.log(`delegate_packets_present: ${s.delegate_packets_present ?? '(n/a)'}`);
+    console.log(`delegate_live_patch_present: ${s.delegate_live_patch_present ?? '(n/a)'}`);
+    console.log(
+      `payload_top_level_keys:   ${s.payload_top_level_keys != null ? JSON.stringify(s.payload_top_level_keys) : '(n/a)'}`,
+    );
+    console.log(`blocked_reason:           ${s.blocked_reason ?? '(n/a)'}`);
+    console.log(`machine_hint:             ${s.machine_hint ?? '(n/a)'}`);
+    console.log(
+      `missing_required_fields:  ${s.missing_required_fields != null ? JSON.stringify(s.missing_required_fields) : '(n/a)'}`,
+    );
   }
 
   console.log('---');

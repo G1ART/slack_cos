@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { appendCosRunEventForRun } from './runCosEvents.js';
 import { listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
 import { EMIT_PATCH_CONTRACT_NAME } from './livePatchPayload.js';
+import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES } from './runStoreSupabase.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -149,11 +150,19 @@ const PIPELINE_PHASE_ORDER = [
  * Derive closure summary from ops_smoke_phase event rows (payload shape from this module).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown> }>} rows
  */
+const OPS_PHASE_LIKE_EVENT_TYPES = new Set([
+  'trigger_blocked_invalid_payload',
+  'live_payload_compilation_started',
+  'delegate_packets_ready',
+  'emit_patch_payload_validated',
+]);
+
 function smokeSummaryPhaseFromRow(r) {
   const et = String(r.event_type || '');
   const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
   if (et === 'ops_smoke_phase' && pl.phase) return String(pl.phase);
   if (et === 'cos_pretrigger_tool_call' || et === 'cos_pretrigger_tool_call_blocked') return et;
+  if (OPS_PHASE_LIKE_EVENT_TYPES.has(et)) return et;
   return '';
 }
 
@@ -234,15 +243,67 @@ export function aggregateSmokeSessionProgress(rows) {
  * @param {Array<{ run_id?: string, event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} flatRows
  * @param {{ sessionLimit?: number }} [opts]
  */
-const SMOKE_SESSION_ROW_EVENT_TYPES = new Set([
-  'ops_smoke_phase',
-  'cos_pretrigger_tool_call',
-  'cos_pretrigger_tool_call_blocked',
-]);
+const SMOKE_SESSION_ROW_EVENT_TYPES = new Set(COS_OPS_SMOKE_SUMMARY_EVENT_TYPES);
+
+/**
+ * Latest pre-trigger / blocked machine fields for ops summary (field names only; no raw payload bodies).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractOpsSmokeMachineSummaryFromRows(rows) {
+  const empty = {
+    call_name: null,
+    selected_tool: null,
+    selected_action: null,
+    delegate_packets_present: null,
+    delegate_live_patch_present: null,
+    payload_top_level_keys: null,
+    blocked_reason: null,
+    machine_hint: null,
+    missing_required_fields: null,
+  };
+  /** @type {{ _rank: number, _t: string, pl: Record<string, unknown> } | null} */
+  let best = null;
+  for (const r of rows || []) {
+    const et = String(r.event_type || '');
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const ph = String(pl.phase || '');
+    const isBlocked =
+      et === 'cos_pretrigger_tool_call_blocked' ||
+      ph === 'cos_pretrigger_tool_call_blocked' ||
+      et === 'trigger_blocked_invalid_payload' ||
+      ph === 'trigger_blocked_invalid_payload';
+    const isPre = et === 'cos_pretrigger_tool_call' || ph === 'cos_pretrigger_tool_call';
+    if (!isBlocked && !isPre) continue;
+    const rank = isBlocked ? 2 : 1;
+    const t1 = String(pl.at || '');
+    const t2 = String(r.created_at || '');
+    const t = t1 > t2 ? t1 : t2;
+    if (!best || rank > best._rank || (rank === best._rank && t > best._t)) {
+      best = { _rank: rank, _t: t, pl };
+    }
+  }
+  if (!best) return empty;
+  const pl = best.pl;
+  const keys = Array.isArray(pl.payload_top_level_keys) ? pl.payload_top_level_keys.map(String) : null;
+  const miss = Array.isArray(pl.missing_required_fields) ? pl.missing_required_fields.map(String) : null;
+  return {
+    call_name: pl.call_name != null ? String(pl.call_name) : null,
+    selected_tool: pl.selected_tool != null ? String(pl.selected_tool) : null,
+    selected_action: pl.selected_action != null ? String(pl.selected_action) : null,
+    delegate_packets_present:
+      pl.delegate_packets_present != null ? Boolean(pl.delegate_packets_present) : null,
+    delegate_live_patch_present:
+      pl.delegate_live_patch_present != null ? Boolean(pl.delegate_live_patch_present) : null,
+    payload_top_level_keys: keys,
+    blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason) : null,
+    machine_hint: pl.machine_hint != null ? String(pl.machine_hint) : null,
+    missing_required_fields: miss,
+  };
+}
 
 export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
-  /** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown> }[] }>} */
+  /** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown>, created_at: string }[] }>} */
   const bySession = new Map();
   for (const row of flatRows || []) {
     if (!SMOKE_SESSION_ROW_EVENT_TYPES.has(String(row.event_type || ''))) continue;
@@ -252,16 +313,23 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const runId = String(row.run_id || '').trim() || 'unknown';
     if (!bySession.has(sid)) bySession.set(sid, { run_id: runId, rows: [] });
     const bucket = bySession.get(sid);
-    bucket.rows.push({ event_type: 'ops_smoke_phase', payload: pl });
+    bucket.rows.push({
+      event_type: String(row.event_type || ''),
+      payload: pl,
+      created_at: row.created_at != null ? String(row.created_at) : '',
+    });
     if (bucket.run_id !== runId) bucket.run_id = `${bucket.run_id}+${runId}`;
   }
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
     const agg = aggregateSmokeSessionProgress(rows);
+    const machine = extractOpsSmokeMachineSummaryFromRows(rows);
     const lastAt = rows.reduce((m, r) => {
-      const t = String(r.payload?.at || '');
-      return t > m ? t : m;
+      const t1 = String(r.payload?.at || '');
+      const t2 = String(r.created_at || '');
+      const best = t1 > t2 ? t1 : t2;
+      return best > m ? best : m;
     }, '');
-    return { smoke_session_id, run_id, lastAt, ...agg };
+    return { smoke_session_id, run_id, lastAt, ...machine, ...agg };
   });
   sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
   return sessions.slice(0, sessionLimit);

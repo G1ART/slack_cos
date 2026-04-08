@@ -3,7 +3,8 @@
  */
 
 import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow } from './runCosEvents.js';
-import { getActiveRunForThread } from './executionRunStore.js';
+import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
+import { createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
 
 /**
@@ -96,6 +97,17 @@ export async function recordCosPretriggerAudit(p) {
 
   if (runId) {
     await appendCosRunEventForRun(runId, eventType, payload, {});
+  } else if (getCosRunStoreMode() === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (sb) {
+      await supabaseAppendOpsSmokeEvent(sb, {
+        smoke_session_id,
+        run_id: null,
+        thread_key: p.threadKey != null ? String(p.threadKey).slice(0, 200) : null,
+        event_type: eventType,
+        payload,
+      });
+    }
   } else {
     await appendSmokeSummaryOrphanRow({
       event_type: eventType,
