@@ -45,7 +45,7 @@ const run = await persistRunAfterDelegate({
 
 await invokeExternalTool(
   { tool: 'cursor', action: 'emit_patch', payload: { title: 'x' } },
-  { threadKey: tk, cosRunId: String(run.id) },
+  { threadKey: tk, cosRunId: String(run.id), packetId: 'p_pt' },
 );
 
 const evs = await listCosRunEventsForRun(String(run.id), 30);

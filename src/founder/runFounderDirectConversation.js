@@ -23,6 +23,7 @@ import {
   getActiveRunForThread,
 } from './executionRunStore.js';
 import { executeStarterKickoffIfEligible } from './starterLadder.js';
+import { stashDelegateEmitPatchContext } from './delegateEmitPatchStash.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 
@@ -796,6 +797,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args, { threadKey: tk });
         if (result && result.ok && String(result.status) === 'accepted' && tk) {
+          stashDelegateEmitPatchContext(tk, /** @type {Record<string, unknown>} */ (result));
           const shell = await persistAcceptedRunShell({
             threadKey: tk,
             dispatch: result,

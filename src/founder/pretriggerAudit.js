@@ -15,6 +15,7 @@ export function summarizeToolArgsForAudit(callName, args) {
   const a = args && typeof args === 'object' ? args : {};
   if (callName === 'invoke_external_tool') {
     const pl = a.payload && typeof a.payload === 'object' && !Array.isArray(a.payload) ? a.payload : {};
+    const hasLp = pl.live_patch && typeof pl.live_patch === 'object' && !Array.isArray(pl.live_patch);
     return {
       selected_tool: a.tool != null ? String(a.tool) : null,
       selected_action: a.action != null ? String(a.action) : null,
@@ -23,7 +24,7 @@ export function summarizeToolArgsForAudit(callName, args) {
         .slice(0, 48),
       delegate_packets_present: false,
       delegate_packets_count: 0,
-      delegate_live_patch_present: false,
+      delegate_live_patch_present: Boolean(hasLp),
     };
   }
   if (callName === 'delegate_harness_team') {

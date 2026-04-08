@@ -25,8 +25,19 @@ import {
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
+import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
 
 const execFileAsync = promisify(execFile);
+
+/** Machine reason: founder must supply structured delegate narrow live_patch before cloud emit_patch. */
+export const DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH = 'delegate_packets_missing_for_emit_patch';
+
+/** @type {Promise<typeof import('./delegateEmitPatchStash.js')> | null} */
+let delegateEmitPatchStashLoad = null;
+function loadDelegateEmitPatchStash() {
+  if (!delegateEmitPatchStashLoad) delegateEmitPatchStashLoad = import('./delegateEmitPatchStash.js');
+  return delegateEmitPatchStashLoad;
+}
 
 export {
   isCursorCloudAgentLaneReady as isCursorCloudAgentConfigured,
@@ -856,6 +867,11 @@ export async function invokeExternalTool(spec, ctx = {}) {
     };
   }
 
+  if (tool === 'cursor' && action === 'emit_patch' && threadKey) {
+    const sm = await loadDelegateEmitPatchStash();
+    payload = sm.tryMergeStashedDelegateEmitPatchPayload(threadKey, payload).payload;
+  }
+
   const invocation_id = `tool_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const adapter = TOOL_ADAPTERS[tool];
   const env = process.env;
@@ -871,6 +887,99 @@ export async function invokeExternalTool(spec, ctx = {}) {
     configured: readiness_snapshot.configured,
     details: readiness_snapshot.details,
   };
+
+  const automationLanePrecheck =
+    tool === 'cursor' &&
+    (action === 'create_spec' || action === 'emit_patch') &&
+    isCursorCloudAgentLaneReady(env) &&
+    __invokeToolTestHooks.failArtifactForTool !== tool;
+
+  if (
+    tool === 'cursor' &&
+    action === 'emit_patch' &&
+    automationLanePrecheck &&
+    !runPacketId &&
+    !emitPatchHasCloudContractSource(payload)
+  ) {
+    if (opsSmokeSessionId && cosRunId) {
+      try {
+        await recordCosPretriggerAudit({
+          env,
+          threadKey,
+          runId: cosRunId,
+          smoke_session_id: opsSmokeSessionId,
+          call_name: 'invoke_external_tool',
+          args: { tool, action, payload },
+          blocked: true,
+          blocked_reason: DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
+          missing_required_fields: ['packets', 'live_patch'],
+        });
+      } catch (e) {
+        console.error('[pretrigger_audit]', e);
+      }
+    }
+    const status = 'blocked';
+    const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
+    const needs_review = true;
+    const execution_mode = 'artifact';
+    const result_summary = `blocked / artifact / ${tool}:${action} — ${DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH}`;
+    const ledgerPayload = {
+      invocation_id,
+      tool,
+      action,
+      execution_mode,
+      execution_lane: 'artifact',
+      status,
+      artifact_path: null,
+      next_required_input: null,
+      error_code: 'blocked_missing_input',
+      result_summary,
+      outcome_code,
+      live_attempted: false,
+      readiness_snapshot: snap,
+      fallback_reason: null,
+      blocked_reason: DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
+      degraded_from: null,
+      needs_review,
+      ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+      ...(cosRunId ? { cos_run_id: cosRunId } : {}),
+    };
+    const blockedEarly = {
+      ok: true,
+      mode: 'external_tool_invocation',
+      invocation_id,
+      tool,
+      action,
+      accepted: true,
+      execution_mode,
+      execution_lane: 'artifact',
+      status,
+      outcome_code,
+      payload,
+      result_summary,
+      artifact_path: null,
+      next_required_input: null,
+      needs_review,
+      error_code: 'blocked_missing_input',
+    };
+    if (threadKey) {
+      await appendExecutionArtifact(threadKey, {
+        type: 'tool_invocation',
+        summary: result_summary.slice(0, 500),
+        status,
+        needs_review,
+        payload: ledgerPayload,
+      });
+      await appendExecutionArtifact(threadKey, {
+        type: 'tool_result',
+        summary: result_summary.slice(0, 500),
+        status,
+        needs_review,
+        payload: ledgerPayload,
+      });
+    }
+    return blockedEarly;
+  }
 
   if (opsSmokeSessionId && cosRunId) {
     try {

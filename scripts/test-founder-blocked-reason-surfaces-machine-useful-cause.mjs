@@ -21,7 +21,7 @@ const r = await invokeExternalTool(
     action: 'emit_patch',
     payload: { title: 'only title', body: 'no ops array' },
   },
-  { threadKey: 'mention:gate:1' },
+  { threadKey: 'mention:gate:1', packetId: 'pkt_gate' },
 );
 
 assert.equal(r.status, 'degraded');

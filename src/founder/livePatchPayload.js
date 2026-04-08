@@ -45,6 +45,17 @@ export function detectNarrowLivePatchFromPayload(payload) {
 }
 
 /**
+ * True when payload can satisfy cloud emit_patch contract (narrow live_patch or pre-built ops).
+ * @param {Record<string, unknown> | null | undefined} payload
+ */
+export function emitPatchHasCloudContractSource(payload) {
+  const pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  if (detectNarrowLivePatchFromPayload(pl)) return true;
+  if (Array.isArray(pl.ops) && pl.ops.length > 0) return true;
+  return false;
+}
+
+/**
  * Compiler entry: structured harness packet only (no founder raw text).
  * @param {Record<string, unknown> | null | undefined} delegatePacket
  * @returns {ReturnType<typeof prepareEmitPatchForCloudAutomation>}

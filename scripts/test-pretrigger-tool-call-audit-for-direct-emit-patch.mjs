@@ -53,13 +53,14 @@ await invokeExternalTool(
 
 const evs = await listCosRunEventsForRun(String(run.id), 40);
 const types = evs.map((e) => e.event_type);
-assert.ok(types.includes('cos_pretrigger_tool_call'), 'observation event');
+assert.ok(!types.includes('cos_pretrigger_tool_call'), 'delegate-first blocks before observe audit');
 assert.ok(types.includes('cos_pretrigger_tool_call_blocked'), 'blocked event');
 const blocked = evs.find((e) => e.event_type === 'cos_pretrigger_tool_call_blocked');
 assert.ok(blocked?.payload?.call_name === 'invoke_external_tool');
 assert.equal(blocked?.payload?.selected_tool, 'cursor');
 assert.equal(blocked?.payload?.selected_action, 'emit_patch');
-assert.ok(Array.isArray(blocked?.payload?.payload_top_level_keys));
+assert.equal(blocked?.payload?.blocked_reason, 'delegate_packets_missing_for_emit_patch');
+assert.deepEqual(blocked?.payload?.missing_required_fields, ['packets', 'live_patch']);
 assert.ok(blocked?.payload?.smoke_session_id);
 
 delete process.env.COS_OPS_SMOKE_ENABLED;
