@@ -21,6 +21,9 @@ function createMockSupabase(rows) {
     select() {
       return this;
     },
+    in() {
+      return this;
+    },
     eq() {
       return this;
     },

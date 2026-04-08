@@ -35,6 +35,22 @@ function eventRowFromPayload(eventType, payload, evidence) {
 /** @type {Map<string, { event_type: string, payload: Record<string, unknown>, created_at: string }[]>} */
 const memByRun = new Map();
 
+/** Memory-only rows without a durable run id (pre-delegate audit). */
+const memSmokeSummaryOrphans = [];
+
+/** Event types included in ops smoke session summaries (vNext.13.46+). */
+export const SMOKE_SUMMARY_EVENT_TYPES = new Set([
+  'ops_smoke_phase',
+  'cos_pretrigger_tool_call',
+  'cos_pretrigger_tool_call_blocked',
+]);
+
+const SMOKE_SUMMARY_ORPHANS_BASENAME = 'cos_smoke_summary_orphans.jsonl';
+
+function isSmokeSummaryEventType(et) {
+  return SMOKE_SUMMARY_EVENT_TYPES.has(String(et || ''));
+}
+
 function eventsFilePath(runUuid) {
   return path.join(cosRuntimeBaseDir(), 'cos_run_events', `${runUuid}.jsonl`);
 }
@@ -45,6 +61,42 @@ function cosEventsDirForSummary(runtimeStateDir) {
       ? path.resolve(String(runtimeStateDir))
       : cosRuntimeBaseDir();
   return path.join(base, 'cos_run_events');
+}
+
+function smokeSummaryOrphansFilePath(runtimeStateDir) {
+  return path.join(cosEventsDirForSummary(runtimeStateDir ?? null), SMOKE_SUMMARY_ORPHANS_BASENAME);
+}
+
+/**
+ * Pre-run audit rows (no cos_runs row yet). File + memory only; skipped in Supabase (FK).
+ * @param {{ event_type: string, payload: Record<string, unknown>, created_at: string }} row
+ */
+export async function appendSmokeSummaryOrphanRow(row) {
+  const mode = getCosRunStoreMode();
+  const et = String(row.event_type || '');
+  const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  const created_at = row.created_at != null ? String(row.created_at) : new Date().toISOString();
+  if (mode === 'memory') {
+    memSmokeSummaryOrphans.push({
+      run_id: '_orphan',
+      event_type: et,
+      payload: pl,
+      created_at,
+    });
+    return true;
+  }
+  if (mode === 'file') {
+    const fp = smokeSummaryOrphansFilePath(null);
+    await fs.mkdir(path.dirname(fp), { recursive: true });
+    const line = JSON.stringify({
+      event_type: et,
+      payload: pl,
+      created_at,
+    });
+    await fs.appendFile(fp, `${line}\n`, 'utf8');
+    return true;
+  }
+  return false;
 }
 
 async function readEventsJsonlFile(fp) {
@@ -84,9 +136,20 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
     for (const [uuid, arr] of memByRun.entries()) {
       if (runId && uuid !== runId) continue;
       for (const row of arr) {
-        if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+        if (!isSmokeSummaryEventType(row.event_type)) continue;
         out.push({
           run_id: uuid,
+          event_type: String(row.event_type || ''),
+          payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
+          created_at: row.created_at != null ? String(row.created_at) : '',
+        });
+      }
+    }
+    if (!runId) {
+      for (const row of memSmokeSummaryOrphans) {
+        if (!isSmokeSummaryEventType(row.event_type)) continue;
+        out.push({
+          run_id: String(row.run_id || '_orphan'),
           event_type: String(row.event_type || ''),
           payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
           created_at: row.created_at != null ? String(row.created_at) : '',
@@ -109,7 +172,7 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
     const fp = path.join(dir, `${runId}.jsonl`);
     const rows = await readEventsJsonlFile(fp);
     for (const row of rows) {
-      if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+      if (!isSmokeSummaryEventType(row.event_type)) continue;
       out.push({
         run_id: runId,
         event_type: String(row.event_type || ''),
@@ -129,10 +192,11 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
   }
   for (const n of names) {
     if (!n.endsWith('.jsonl')) continue;
+    if (n === SMOKE_SUMMARY_ORPHANS_BASENAME) continue;
     const uuid = path.basename(n, '.jsonl');
     const rows = await readEventsJsonlFile(path.join(dir, n));
     for (const row of rows) {
-      if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+      if (!isSmokeSummaryEventType(row.event_type)) continue;
       out.push({
         run_id: uuid,
         event_type: String(row.event_type || ''),
@@ -140,6 +204,17 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
         created_at: row.created_at != null ? String(row.created_at) : '',
       });
     }
+  }
+  const orphanFp = smokeSummaryOrphansFilePath(opts.runtimeStateDir ?? null);
+  const orphanRows = await readEventsJsonlFile(orphanFp);
+  for (const row of orphanRows) {
+    if (!isSmokeSummaryEventType(row.event_type)) continue;
+    out.push({
+      run_id: '_orphan',
+      event_type: String(row.event_type || ''),
+      payload: row.payload && typeof row.payload === 'object' ? row.payload : {},
+      created_at: row.created_at != null ? String(row.created_at) : '',
+    });
   }
   out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   return out.slice(0, maxRows);
@@ -285,4 +360,5 @@ export async function getLatestExternalRunEventsForThread(threadKey, limit = 20)
 
 export function __resetCosRunEventsMemoryForTests() {
   memByRun.clear();
+  memSmokeSummaryOrphans.length = 0;
 }

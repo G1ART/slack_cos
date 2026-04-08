@@ -24,6 +24,7 @@ import {
   isCursorAutomationSmokeMode,
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
+import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -827,7 +828,7 @@ const TOOL_ADAPTERS = {
 
 /**
  * @param {Record<string, unknown>} spec
- * @param {{ threadKey?: string, packetId?: string, cosRunId?: string }} [ctx]
+ * @param {{ threadKey?: string, packetId?: string, cosRunId?: string, ops_smoke_session_id?: string }} [ctx]
  */
 export async function invokeExternalTool(spec, ctx = {}) {
   const s = spec && typeof spec === 'object' ? spec : {};
@@ -859,9 +860,8 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const adapter = TOOL_ADAPTERS[tool];
   const env = process.env;
   const opsSmokeSessionId =
-    cosRunId && threadKey && isOpsSmokeEnabled(env) && tool === 'cursor' && action === 'emit_patch'
-      ? `smoke_inv_${invocation_id}`
-      : null;
+    String(ctx.ops_smoke_session_id || '').trim() ||
+    (cosRunId && threadKey && isOpsSmokeEnabled(env) ? `smoke_inv_${invocation_id}` : null);
 
   const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
   const snap = {
@@ -872,8 +872,42 @@ export async function invokeExternalTool(spec, ctx = {}) {
     details: readiness_snapshot.details,
   };
 
+  if (opsSmokeSessionId && cosRunId) {
+    try {
+      await recordCosPretriggerAudit({
+        env,
+        threadKey,
+        runId: cosRunId,
+        smoke_session_id: opsSmokeSessionId,
+        call_name: 'invoke_external_tool',
+        args: { tool, action, payload },
+        blocked: false,
+      });
+    } catch (e) {
+      console.error('[pretrigger_audit]', e);
+    }
+  }
+
   const block = toolInvocationBlocked(tool, action, payload, env);
   if (block.blocked) {
+    if (opsSmokeSessionId && cosRunId) {
+      try {
+        await recordCosPretriggerAudit({
+          env,
+          threadKey,
+          runId: cosRunId,
+          smoke_session_id: opsSmokeSessionId,
+          call_name: 'invoke_external_tool',
+          args: { tool, action, payload },
+          blocked: true,
+          blocked_reason: 'tool_invocation_blocked',
+          machine_hint: String(block.blocked_reason || '').slice(0, 300),
+          missing_required_fields: block.next_required_input ? [String(block.next_required_input)] : null,
+        });
+      } catch (e) {
+        console.error('[pretrigger_audit]', e);
+      }
+    }
     const status = 'blocked';
     const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
     const needs_review = true;
@@ -984,6 +1018,23 @@ export async function invokeExternalTool(spec, ctx = {}) {
     if (!emitPatchPrep.cloud_ok) {
       automationLaneActive = false;
       emitPatchCloudSkippedForContract = true;
+      if (opsSmokeSessionId && cosRunId) {
+        try {
+          await recordCosPretriggerAudit({
+            env,
+            threadKey,
+            runId: cosRunId,
+            smoke_session_id: opsSmokeSessionId,
+            call_name: 'invoke_external_tool',
+            args: { tool, action, payload },
+            blocked: true,
+            blocked_reason: 'emit_patch_contract_not_met',
+            missing_required_fields: emitPatchPrep.validation.missing_required_fields,
+          });
+        } catch (e) {
+          console.error('[pretrigger_audit]', e);
+        }
+      }
     }
   }
 
@@ -1288,6 +1339,16 @@ export async function invokeExternalTool(spec, ctx = {}) {
 
   const needs_review = status === 'degraded' || status === 'failed';
 
+  /** @type {{ missing_required_fields: string[], emit_patch_machine_hints: string[] } | null} */
+  let emitPatchFounderExtras = null;
+  if (tool === 'cursor' && action === 'emit_patch' && emitPatchPrep && emitPatchCloudSkippedForContract) {
+    const { formatEmitPatchMachineBlockedHints } = await import('./livePatchPayload.js');
+    emitPatchFounderExtras = {
+      missing_required_fields: (emitPatchPrep.validation.missing_required_fields || []).map(String).slice(0, 24),
+      emit_patch_machine_hints: formatEmitPatchMachineBlockedHints(emitPatchPrep).slice(0, 12),
+    };
+  }
+
   const ledgerPayload = {
     invocation_id,
     tool,
@@ -1328,6 +1389,13 @@ export async function invokeExternalTool(spec, ctx = {}) {
     next_required_input,
     needs_review,
     ...(error_code ? { error_code } : {}),
+    ...(degraded_from ? { degraded_from } : {}),
+    ...(emitPatchFounderExtras
+      ? {
+          missing_required_fields: emitPatchFounderExtras.missing_required_fields,
+          emit_patch_machine_hints: emitPatchFounderExtras.emit_patch_machine_hints,
+        }
+      : {}),
     ...(cursorAutomationAudit
       ? {
           trigger_status: cursorAutomationAudit.trigger_status,

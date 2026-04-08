@@ -149,11 +149,26 @@ const PIPELINE_PHASE_ORDER = [
  * Derive closure summary from ops_smoke_phase event rows (payload shape from this module).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown> }>} rows
  */
+function smokeSummaryPhaseFromRow(r) {
+  const et = String(r.event_type || '');
+  const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+  if (et === 'ops_smoke_phase' && pl.phase) return String(pl.phase);
+  if (et === 'cos_pretrigger_tool_call' || et === 'cos_pretrigger_tool_call_blocked') return et;
+  return '';
+}
+
+/**
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown> }>} rows
+ */
 export function aggregateSmokeSessionProgress(rows) {
   const phases = (rows || [])
-    .filter((r) => String(r.event_type || '') === 'ops_smoke_phase')
-    .map((r) => (r.payload && typeof r.payload === 'object' ? r.payload : {}))
-    .filter((pl) => pl.phase);
+    .map((r) => {
+      const ph = smokeSummaryPhaseFromRow(r);
+      const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+      const at = pl.at != null ? String(pl.at) : '';
+      return ph ? { phase: ph, at } : null;
+    })
+    .filter(Boolean);
 
   const seen = new Set(phases.map((p) => String(p.phase || '')));
   const orderIdx = (ph) => {
@@ -171,7 +186,10 @@ export function aggregateSmokeSessionProgress(rows) {
     };
   }
 
-  if (seen.has('trigger_blocked_invalid_payload') && !seen.has('cursor_trigger_recorded')) {
+  if (
+    (seen.has('trigger_blocked_invalid_payload') || seen.has('cos_pretrigger_tool_call_blocked')) &&
+    !seen.has('cursor_trigger_recorded')
+  ) {
     return {
       phases_seen: [...seen].sort((a, b) => orderIdx(a) - orderIdx(b)),
       ordered_events: sorted.map((pl) => ({ phase: pl.phase, at: pl.at })),
@@ -216,12 +234,18 @@ export function aggregateSmokeSessionProgress(rows) {
  * @param {Array<{ run_id?: string, event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} flatRows
  * @param {{ sessionLimit?: number }} [opts]
  */
+const SMOKE_SESSION_ROW_EVENT_TYPES = new Set([
+  'ops_smoke_phase',
+  'cos_pretrigger_tool_call',
+  'cos_pretrigger_tool_call_blocked',
+]);
+
 export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
   /** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown> }[] }>} */
   const bySession = new Map();
   for (const row of flatRows || []) {
-    if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
+    if (!SMOKE_SESSION_ROW_EVENT_TYPES.has(String(row.event_type || ''))) continue;
     const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
     const sid = String(pl.smoke_session_id || '').trim();
     if (!sid) continue;

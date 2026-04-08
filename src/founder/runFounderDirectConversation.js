@@ -2,6 +2,7 @@
  * Founder 대화: thread raw memory + execution ledger + Responses API tool loop.
  */
 
+import crypto from 'node:crypto';
 import { runHarnessOrchestration } from './harnessBridge.js';
 import {
   invokeExternalTool,
@@ -19,8 +20,11 @@ import {
   persistAcceptedRunShell,
   finalizeRunAfterStarterKickoff,
   persistRunAfterDelegate,
+  getActiveRunForThread,
 } from './executionRunStore.js';
 import { executeStarterKickoffIfEligible } from './starterLadder.js';
+import { isOpsSmokeEnabled } from './smokeOps.js';
+import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -45,7 +49,7 @@ const PREFERRED_TOOL_ENUM = ['cursor', 'github', 'supabase', 'vercel', 'railway'
  * Tool-call 인자의 기계적 스키마 검증만.
  * @param {string} callName
  * @param {Record<string, unknown>} args
- * @returns {{ blocked: boolean, reason?: string, machine_hint?: string }}
+ * @returns {{ blocked: boolean, reason?: string, machine_hint?: string, missing_required_fields?: string[] }}
  */
 export function validateToolCallArgs(callName, args) {
   const a = args && typeof args === 'object' ? args : {};
@@ -422,6 +426,73 @@ export function getDelegateHarnessTeamParametersSnapshot() {
 }
 
 /**
+ * Boot log helper — same keys as app.js `cos_boot_delegate_schema` (without deploy_sha).
+ */
+export function getDelegateBootSchemaSnapshot() {
+  const dhProps = getDelegateHarnessTeamParametersSnapshot()?.properties;
+  const delegateKeys =
+    dhProps && typeof dhProps === 'object' && !Array.isArray(dhProps) ? Object.keys(dhProps).sort() : [];
+  return {
+    delegate_parameter_keys: delegateKeys,
+    delegate_schema_includes_packets: delegateKeys.includes('packets'),
+  };
+}
+
+/**
+ * Founder-facing copy when tools failed validation/contract (machine hints only; no speculation).
+ * @param {unknown[]} parsedToolResults
+ */
+export function formatFounderSafeToolBlockMessage(parsedToolResults) {
+  const lines = [];
+  const arr = Array.isArray(parsedToolResults) ? parsedToolResults : [];
+  for (const r of arr) {
+    if (!r || typeof r !== 'object') continue;
+    const o = /** @type {Record<string, unknown>} */ (r);
+    if (o.blocked === true && o.reason === 'invalid_payload') {
+      if (o.machine_hint) lines.push(String(o.machine_hint));
+      if (Array.isArray(o.missing_required_fields)) {
+        for (const f of o.missing_required_fields.slice(0, 16)) {
+          lines.push(`emit_patch required field missing: ${String(f)}`);
+        }
+      }
+      if (Array.isArray(o.emit_patch_machine_hints)) {
+        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
+      }
+    }
+    if (o.degraded_from === 'emit_patch_cloud_contract_not_met') {
+      if (Array.isArray(o.missing_required_fields)) {
+        for (const f of o.missing_required_fields.slice(0, 16)) {
+          lines.push(`emit_patch required field missing: ${String(f)}`);
+        }
+      }
+      if (Array.isArray(o.emit_patch_machine_hints)) {
+        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
+      }
+    }
+  }
+  const unique = [...new Set(lines.map((x) => String(x).trim()).filter(Boolean))];
+  const detail =
+    unique.length > 0
+      ? unique.map((l) => `· ${l.slice(0, 220)}`).join('\n')
+      : '· invalid_payload (validator rejected; exact missing field not captured)';
+  return `요청을 처리하는 중 도구 입력이 검증에 막혔습니다.\n${detail}\n범위를 좁히거나 필요한 필드를 채운 뒤 다시 보내 주시면 이어서 진행하겠습니다.`;
+}
+
+/**
+ * @param {unknown[]} parsedToolResults
+ */
+export function shouldReplaceFounderTextWithSafeToolBlockMessage(parsedToolResults) {
+  const arr = Array.isArray(parsedToolResults) ? parsedToolResults : [];
+  return arr.some((r) => {
+    if (!r || typeof r !== 'object') return false;
+    const o = /** @type {Record<string, unknown>} */ (r);
+    if (o.blocked === true && o.reason === 'invalid_payload') return true;
+    if (o.degraded_from === 'emit_patch_cloud_contract_not_met') return true;
+    return false;
+  });
+}
+
+/**
  * @param {string} constitutionMarkdown
  */
 export function buildSystemInstructions(constitutionMarkdown) {
@@ -439,6 +510,7 @@ export function buildSystemInstructions(constitutionMarkdown) {
     '채널·스레드 식별자는 이미 입력 블록([최소 메타], [최근 대화])에 있다. channel-context.json 등 가상 경로를 읽었다고 가정하거나 언급하지 마라.',
     'founder에게 내부 artifact·원시 JSON을 직접 보여주지 말고 자연어로만 보고하라.',
     '[Adapter readiness] 블록은 시스템 입력 전용이다. founder 답변에 인용·복붙하지 말 것.',
+    '도구 결과에 blocked·invalid_payload·계약 미충족이 있으면, 원인을 추정하거나 “줄바꿈 때문일 수 있다” 같은 서술을 하지 말고, 도구 출력에 포함된 기계적 설명만 그대로 전달하라. 기계적 설명이 없으면 짧게 막혔음만 알리고 세부 원인을 지어내지 말라.',
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,
@@ -589,6 +661,16 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
   let lastText = '';
+  /** @type {unknown[]} */
+  let lastToolRoundParsedResults = [];
+  let founderTurnSmokeSession = null;
+  const getFounderAuditSmokeSessionId = () => {
+    if (!isOpsSmokeEnabled(process.env)) return null;
+    if (!founderTurnSmokeSession) {
+      founderTurnSmokeSession = `smoke_turn_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    }
+    return founderTurnSmokeSession;
+  };
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     /** @type {Record<string, unknown>} */
@@ -640,10 +722,19 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
 
     if (!calls.length) {
       lastText = String(res.output_text || '').trim();
+      if (shouldReplaceFounderTextWithSafeToolBlockMessage(lastToolRoundParsedResults)) {
+        lastText = formatFounderSafeToolBlockMessage(lastToolRoundParsedResults);
+      }
       break;
     }
 
+    const smTurn = getFounderAuditSmokeSessionId();
+    const activeRun = tk ? await getActiveRunForThread(tk) : null;
+    const auditRunId = activeRun?.id != null ? String(activeRun.id) : '';
+
     const outs = [];
+    /** @type {unknown[]} */
+    const currentRoundResults = [];
     for (const call of calls) {
       let args = {};
       try {
@@ -652,6 +743,24 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
         args = {};
       }
       let result;
+      if (
+        smTurn &&
+        (call.name === 'delegate_harness_team' || call.name === 'invoke_external_tool')
+      ) {
+        try {
+          await recordCosPretriggerAudit({
+            env: process.env,
+            threadKey: tk,
+            runId: auditRunId,
+            smoke_session_id: smTurn,
+            call_name: call.name,
+            args,
+            blocked: false,
+          });
+        } catch (e) {
+          console.error('[pretrigger_audit]', e);
+        }
+      }
       const schema = validateToolCallArgs(call.name, args);
       if (schema.blocked) {
         result = {
@@ -659,7 +768,31 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           blocked: true,
           reason: schema.reason,
           ...(schema.machine_hint ? { machine_hint: schema.machine_hint } : {}),
+          ...(Array.isArray(schema.missing_required_fields)
+            ? { missing_required_fields: schema.missing_required_fields }
+            : {}),
         };
+        if (
+          smTurn &&
+          (call.name === 'delegate_harness_team' || call.name === 'invoke_external_tool')
+        ) {
+          try {
+            await recordCosPretriggerAudit({
+              env: process.env,
+              threadKey: tk,
+              runId: auditRunId,
+              smoke_session_id: smTurn,
+              call_name: call.name,
+              args,
+              blocked: true,
+              machine_hint: schema.machine_hint,
+              blocked_reason: schema.reason,
+              missing_required_fields: schema.missing_required_fields,
+            });
+          } catch (e) {
+            console.error('[pretrigger_audit]', e);
+          }
+        }
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args, { threadKey: tk });
         if (result && result.ok && String(result.status) === 'accepted' && tk) {
@@ -701,7 +834,10 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           }
         }
       } else if (call.name === 'invoke_external_tool') {
-        result = await invokeExternalTool(args, { threadKey: tk });
+        result = await invokeExternalTool(args, {
+          threadKey: tk,
+          ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
+        });
       } else if (call.name === 'record_execution_note') {
         result = await handleRecordExecutionNote(args, tk);
       } else if (call.name === 'read_execution_context') {
@@ -709,12 +845,14 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       } else {
         result = { ok: false, error: 'unknown_tool', name: call.name };
       }
+      currentRoundResults.push(result);
       outs.push({
         type: 'function_call_output',
         call_id: call.call_id,
         output: JSON.stringify(result),
       });
     }
+    lastToolRoundParsedResults = currentRoundResults;
     toolOutputs = outs;
   }
 

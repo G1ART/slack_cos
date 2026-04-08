@@ -32,13 +32,19 @@ export function createCosRuntimeSupabaseForSummary(env = process.env, urlOverrid
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
  * @param {{ runId?: string | null, limit?: number }} p
  */
+const SMOKE_SUMMARY_SUPABASE_EVENT_TYPES = [
+  'ops_smoke_phase',
+  'cos_pretrigger_tool_call',
+  'cos_pretrigger_tool_call_blocked',
+];
+
 export async function supabaseListOpsSmokePhaseEvents(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
   let q = sb
     .from('cos_run_events')
     .select('run_id, event_type, payload, created_at')
-    .eq('event_type', 'ops_smoke_phase');
+    .in('event_type', SMOKE_SUMMARY_SUPABASE_EVENT_TYPES);
   if (rid) q = q.eq('run_id', rid);
   const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
   if (error) return [];

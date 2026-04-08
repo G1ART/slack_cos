@@ -45,4 +45,10 @@ const preBlocked = aggregateSmokeSessionProgress([
 ]);
 assert.equal(preBlocked.final_status, 'pre_trigger_blocked_invalid_payload');
 
+const auditOnly = aggregateSmokeSessionProgress([
+  { event_type: 'cos_pretrigger_tool_call', payload: { phase: 'cos_pretrigger_tool_call', at: 'a' } },
+  { event_type: 'cos_pretrigger_tool_call_blocked', payload: { phase: 'cos_pretrigger_tool_call_blocked', at: 'b' } },
+]);
+assert.equal(auditOnly.final_status, 'pre_trigger_blocked_invalid_payload');
+
 console.log('test-smoke-session-phase-ordering: ok');
