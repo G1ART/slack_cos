@@ -1,15 +1,25 @@
 #!/usr/bin/env node
 /**
- * Ops-only: summarize recent COS ops smoke sessions from local cos_run_events JSONL.
- * Does not connect to Slack or Cursor. Set COS_RUNTIME_STATE_DIR or --state-dir to your runtime dir.
+ * Ops-only: summarize COS ops smoke sessions from cos_run_events (file | memory | supabase).
+ * Read-only. Does not log raw payloads. Optional: COS_RUNTIME_STATE_DIR, COS_RUNTIME_SUPABASE_* or SUPABASE_*.
  */
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { aggregateSmokeSessionProgress } from '../src/founder/smokeOps.js';
+import { createCosRuntimeSupabaseForSummary } from '../src/founder/runStoreSupabase.js';
+import { listOpsSmokePhaseEventsForSummary } from '../src/founder/runCosEvents.js';
+import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
 
 function parseArgs() {
-  const out = { runId: null, limit: 5, stateDir: null };
+  const out = {
+    runId: null,
+    limit: 5,
+    stateDir: null,
+    store: null,
+    compact: false,
+    maxRows: 2000,
+    supabaseUrl: null,
+    supabaseKey: null,
+  };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] === '--run-id' && a[i + 1]) {
@@ -21,9 +31,29 @@ function parseArgs() {
       i += 1;
       continue;
     }
+    if (a[i] === '--max-rows' && a[i + 1]) {
+      out.maxRows = Math.max(1, parseInt(a[i + 1], 10) || 2000);
+      i += 1;
+      continue;
+    }
     if (a[i] === '--state-dir' && a[i + 1]) {
       out.stateDir = a[++i];
       continue;
+    }
+    if (a[i] === '--store' && a[i + 1]) {
+      out.store = String(a[++i] || '').trim().toLowerCase();
+      continue;
+    }
+    if (a[i] === '--supabase-url' && a[i + 1]) {
+      out.supabaseUrl = a[++i];
+      continue;
+    }
+    if (a[i] === '--supabase-key' && a[i + 1]) {
+      out.supabaseKey = a[++i];
+      continue;
+    }
+    if (a[i] === '--compact') {
+      out.compact = true;
     }
   }
   return out;
@@ -34,81 +64,81 @@ function runtimeBase(stateDir) {
   return env ? path.resolve(env) : path.join(os.tmpdir(), 'g1cos-runtime');
 }
 
-async function readJsonl(fp) {
-  try {
-    const raw = await fs.readFile(fp, 'utf8');
-    return raw
-      .split('\n')
-      .filter(Boolean)
-      .map((l) => JSON.parse(l));
-  } catch {
-    return [];
+async function main() {
+  const args = parseArgs();
+  let modeOverride =
+    args.store === 'file' || args.store === 'memory' || args.store === 'supabase' ? args.store : null;
+
+  let supabaseClient = null;
+  if (modeOverride === 'supabase' || (!modeOverride && (args.supabaseUrl || args.supabaseKey))) {
+    supabaseClient = createCosRuntimeSupabaseForSummary(
+      process.env,
+      args.supabaseUrl || undefined,
+      args.supabaseKey || undefined,
+    );
+    if (!supabaseClient) {
+      console.error('Supabase mode requires URL + service role key (env or --supabase-url / --supabase-key).');
+      process.exit(2);
+    }
+    if (!modeOverride) modeOverride = 'supabase';
   }
-}
 
-const args = parseArgs();
-const base = runtimeBase(args.stateDir);
-const eventsDir = path.join(base, 'cos_run_events');
+  const flatRows = await listOpsSmokePhaseEventsForSummary({
+    runId: args.runId,
+    maxRows: args.maxRows,
+    modeOverride,
+    runtimeStateDir: args.stateDir,
+    supabaseClient,
+  });
 
-let files = [];
-if (args.runId) {
-  files = [path.join(eventsDir, `${args.runId}.jsonl`)];
-} else {
-  try {
-    const names = await fs.readdir(eventsDir);
-    files = names.filter((n) => n.endsWith('.jsonl')).map((n) => path.join(eventsDir, n));
-  } catch (e) {
-    console.error(`No cos_run_events directory (or unreadable): ${eventsDir}`);
-    console.error(String(e && e.message ? e.message : e));
-    process.exit(2);
+  const summaries = summarizeOpsSmokeSessionsFromFlatRows(flatRows, { sessionLimit: 500 });
+  const limited = args.runId ? summaries : summaries.slice(0, args.limit);
+
+  if (!limited.length) {
+    console.log('No ops_smoke_phase events found.');
+    process.exit(0);
   }
-}
 
-/** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown> }[] }>} */
-const bySession = new Map();
+  const baseLabel =
+    modeOverride === 'supabase'
+      ? '(supabase)'
+      : modeOverride === 'memory'
+        ? '(memory)'
+        : runtimeBase(args.stateDir);
 
-for (const fp of files) {
-  const runId = path.basename(fp, '.jsonl');
-  const rows = await readJsonl(fp);
-  for (const row of rows) {
-    if (String(row.event_type || '') !== 'ops_smoke_phase') continue;
-    const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
-    const sid = String(pl.smoke_session_id || '').trim();
-    if (!sid) continue;
-    if (!bySession.has(sid)) bySession.set(sid, { run_id: runId, rows: [] });
-    const bucket = bySession.get(sid);
-    bucket.rows.push({ event_type: row.event_type, payload: pl });
-    if (bucket.run_id !== runId) bucket.run_id = `${bucket.run_id}+${runId}`;
+  if (args.compact) {
+    for (const s of limited) {
+      console.log(
+        JSON.stringify({
+          smoke_session_id: s.smoke_session_id,
+          run_id: s.run_id,
+          final_status: s.final_status,
+          breaks_at: s.breaks_at,
+          phases_seen: s.phases_seen,
+          ordered_events: s.ordered_events,
+        }),
+      );
+    }
+    console.log(JSON.stringify({ listed: limited.length, source: baseLabel }));
+    return;
   }
-}
 
-const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
-  const agg = aggregateSmokeSessionProgress(rows);
-  const lastAt = rows.reduce((m, r) => {
-    const t = String(r.payload?.at || '');
-    return t > m ? t : m;
-  }, '');
-  return { smoke_session_id, run_id, lastAt, ...agg };
-});
+  for (const s of limited) {
+    console.log('---');
+    console.log(`smoke_session_id: ${s.smoke_session_id}`);
+    console.log(`run_id:           ${s.run_id}`);
+    console.log(`last_at:          ${s.lastAt || '(unknown)'}`);
+    console.log(`final_status:     ${s.final_status}`);
+    console.log(`breaks_at:        ${s.breaks_at ?? '(none — full pipeline)'}`);
+    console.log(`phases_seen:      ${s.phases_seen.join(', ')}`);
+    console.log(`ordered_events:   ${JSON.stringify(s.ordered_events)}`);
+  }
 
-sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
-
-const limited = args.runId ? sessions : sessions.slice(0, args.limit);
-
-if (!limited.length) {
-  console.log('No ops_smoke_phase events found.');
-  process.exit(0);
-}
-
-for (const s of limited) {
   console.log('---');
-  console.log(`smoke_session_id: ${s.smoke_session_id}`);
-  console.log(`run_id (file):    ${s.run_id}`);
-  console.log(`last_at:          ${s.lastAt || '(unknown)'}`);
-  console.log(`final_status:     ${s.final_status}`);
-  console.log(`breaks_at:        ${s.breaks_at ?? '(none — full pipeline)'}`);
-  console.log(`phases_seen:      ${s.phases_seen.join(', ')}`);
+  console.log(`Listed ${limited.length} session(s). Source: ${baseLabel}`);
 }
 
-console.log('---');
-console.log(`Listed ${limited.length} session(s). Base: ${base}`);
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
