@@ -85,7 +85,11 @@ const out = await handleGithubWebhookIngress({
 assert.equal(out.matched, true);
 
 const r2 = await getActiveRunForThread(tk);
-assert.equal(r2.packet_state_map.pkt_corr_1, 'completed');
+assert.notEqual(
+  r2.packet_state_map.pkt_corr_1,
+  'completed',
+  'GitHub webhook does not patch packet completion (Cursor-primary).',
+);
 
 await upsertExternalCorrelation({
   run_id: String(run.id),

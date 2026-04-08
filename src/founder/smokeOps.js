@@ -4,10 +4,11 @@
  */
 
 import crypto from 'node:crypto';
-import { appendCosRunEventForRun } from './runCosEvents.js';
+import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow, listCosRunEventsForRun } from './runCosEvents.js';
 import { listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
 import { EMIT_PATCH_CONTRACT_NAME } from './livePatchPayload.js';
-import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES } from './runStoreSupabase.js';
+import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES, createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
+import { getCosRunStoreMode } from './executionRunStore.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -86,6 +87,231 @@ export async function recordOpsSmokePhase(p) {
     ...detail,
   };
   await appendCosRunEventForRun(runId, 'ops_smoke_phase', payload, {});
+}
+
+/**
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function getCursorCallbackAbsenceTimeoutSec(env = process.env) {
+  const n = Number(String(env.COS_CURSOR_CALLBACK_ABSENCE_TIMEOUT_SEC || '').trim());
+  return Number.isFinite(n) && n > 0 ? n : 120;
+}
+
+/**
+ * Ops-only: durable cursor webhook ingress (safe subset). vNext.13.52
+ * @param {{
+ *   env?: NodeJS.ProcessEnv,
+ *   smoke_session_id?: string | null,
+ *   run_id?: string | null,
+ *   thread_key?: string | null,
+ *   request_id?: string | null,
+ *   request_received?: boolean,
+ *   signature_verification_ok: boolean,
+ *   json_parse_ok: boolean,
+ *   top_level_keys?: string[] | null,
+ *   observed_callback_schema_snapshot?: Record<string, unknown> | null,
+ *   run_id_candidate_tail?: string | null,
+ *   status_candidate_raw?: string | null,
+ *   thread_hint_present?: boolean,
+ *   packet_hint_present?: boolean,
+ *   correlation_outcome: string,
+ *   rejection_reason?: string | null,
+ *   matched_by?: string | null,
+ * }} p
+ */
+export async function recordCosCursorWebhookIngressSafe(p) {
+  const env = p.env || process.env;
+  if (!isOpsSmokeEnabled(env)) return;
+  const sid = String(p.smoke_session_id || '').trim() || resolveSmokeSessionId(env);
+  if (!sid) return;
+
+  const at = new Date().toISOString();
+  const stRed =
+    p.status_candidate_raw != null
+      ? stripSecretsAndUrlsFromString(String(p.status_candidate_raw), 120)
+      : null;
+  /** @type {Record<string, unknown> | null} */
+  let snap =
+    p.observed_callback_schema_snapshot && typeof p.observed_callback_schema_snapshot === 'object'
+      ? { ...p.observed_callback_schema_snapshot }
+      : null;
+  if (snap && 'status_candidate_raw' in snap) delete snap.status_candidate_raw;
+  const payload = {
+    smoke_session_id: sid,
+    source: 'cursor',
+    at,
+    request_received: p.request_received !== false,
+    signature_verification_ok: Boolean(p.signature_verification_ok),
+    json_parse_ok: Boolean(p.json_parse_ok),
+    top_level_keys: Array.isArray(p.top_level_keys) ? p.top_level_keys.map(String).slice(0, 40) : null,
+    observed_callback_schema_snapshot: snap,
+    run_id_candidate_tail: p.run_id_candidate_tail != null ? String(p.run_id_candidate_tail).slice(0, 32) : null,
+    status_candidate_redacted: stRed,
+    thread_hint_present: Boolean(p.thread_hint_present),
+    packet_hint_present: Boolean(p.packet_hint_present),
+    correlation_outcome: String(p.correlation_outcome || 'unknown').slice(0, 80),
+    rejection_reason: p.rejection_reason != null ? String(p.rejection_reason).slice(0, 120) : null,
+    matched_by: p.matched_by != null ? String(p.matched_by).slice(0, 80) : null,
+    request_id_suffix: p.request_id != null ? String(p.request_id).slice(-12) : null,
+  };
+
+  const runId = String(p.run_id || '').trim();
+  const threadKey = p.thread_key != null ? String(p.thread_key).slice(0, 200) : null;
+  const mode = getCosRunStoreMode();
+
+  if (runId) {
+    await appendCosRunEventForRun(runId, 'cos_cursor_webhook_ingress_safe', payload, {});
+    return;
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (sb) {
+      await supabaseAppendOpsSmokeEvent(sb, {
+        smoke_session_id: sid,
+        run_id: null,
+        thread_key: threadKey,
+        event_type: 'cos_cursor_webhook_ingress_safe',
+        payload,
+      });
+    }
+    return;
+  }
+  await appendSmokeSummaryOrphanRow({
+    event_type: 'cos_cursor_webhook_ingress_safe',
+    payload,
+    created_at: at,
+  });
+}
+
+/**
+ * GitHub check_run / issues etc. as secondary evidence only (vNext.13.52).
+ * @param {{
+ *   env?: NodeJS.ProcessEnv,
+ *   smoke_session_id?: string | null,
+ *   run_id?: string | null,
+ *   thread_key?: string | null,
+ *   match_attempted: boolean,
+ *   matched: boolean,
+ *   github_event_header?: string | null,
+ *   object_type?: string | null,
+ *   object_id?: string | null,
+ * }} p
+ */
+export async function recordOpsSmokeGithubFallbackEvidence(p) {
+  const env = p.env || process.env;
+  if (!isOpsSmokeEnabled(env)) return;
+  const sid = String(p.smoke_session_id || '').trim() || resolveSmokeSessionId(env);
+  if (!sid) return;
+
+  const at = new Date().toISOString();
+  const oid = p.object_id != null ? String(p.object_id).trim() : '';
+  const payload = {
+    smoke_session_id: sid,
+    at,
+    github_fallback_signal_seen: true,
+    github_fallback_match_attempted: Boolean(p.match_attempted),
+    github_fallback_matched: Boolean(p.matched),
+    github_event_header: p.github_event_header != null ? String(p.github_event_header).slice(0, 64) : null,
+    object_type: p.object_type != null ? String(p.object_type).slice(0, 64) : null,
+    object_id_tail: oid.length > 8 ? oid.slice(-8) : oid,
+  };
+
+  const runId = String(p.run_id || '').trim();
+  const mode = getCosRunStoreMode();
+
+  if (runId) {
+    await appendCosRunEventForRun(runId, 'cos_github_fallback_evidence', payload, {});
+    return;
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (sb) {
+      await supabaseAppendOpsSmokeEvent(sb, {
+        smoke_session_id: sid,
+        run_id: null,
+        thread_key: p.thread_key != null ? String(p.thread_key).slice(0, 512) : null,
+        event_type: 'cos_github_fallback_evidence',
+        payload,
+      });
+    }
+    return;
+  }
+  await appendSmokeSummaryOrphanRow({
+    event_type: 'cos_github_fallback_evidence',
+    payload,
+    created_at: at,
+  });
+}
+
+/**
+ * Supervisor backstop: classify "no verified cursor ingress" after accepted trigger + timeout.
+ * @param {{ runId: string, threadKey?: string, env?: NodeJS.ProcessEnv }} p
+ */
+export async function maybeRecordOpsSmokeCursorCallbackAbsence(p) {
+  const env = p.env || process.env;
+  if (!isOpsSmokeEnabled(env)) return;
+  const runId = String(p.runId || '').trim();
+  if (!runId) return;
+
+  const events = await listCosRunEventsForRun(runId, 500);
+  const seenAbsence = events.some((e) => {
+    if (String(e.event_type || '') !== 'ops_smoke_phase') return false;
+    const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
+    return String(pl.phase || '') === 'cursor_callback_absent_within_timeout';
+  });
+  if (seenAbsence) return;
+
+  let pendingAt = '';
+  let smokeSid = '';
+  for (const e of events) {
+    if (String(e.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
+    if (String(pl.phase || '') !== 'trigger_accepted_callback_pending') continue;
+    const at = String(pl.at || e.created_at || '');
+    const sid = String(pl.smoke_session_id || '').trim();
+    if (at && (!pendingAt || at.localeCompare(pendingAt) < 0)) {
+      pendingAt = at;
+      if (sid) smokeSid = sid;
+    }
+  }
+  if (!pendingAt || !smokeSid) return;
+
+  const timeoutSec = getCursorCallbackAbsenceTimeoutSec(env);
+  const deadline = new Date(new Date(pendingAt).getTime() + timeoutSec * 1000).toISOString();
+  const nowIso = new Date().toISOString();
+  if (nowIso < deadline) return;
+
+  let sawVerifiedIngress = false;
+  for (const e of events) {
+    if (String(e.event_type || '') !== 'cos_cursor_webhook_ingress_safe') continue;
+    const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
+    if (String(pl.smoke_session_id || '').trim() !== smokeSid) continue;
+    const at = String(pl.at || e.created_at || '');
+    if (at && at.localeCompare(pendingAt) < 0) continue;
+    if (
+      pl.signature_verification_ok === true &&
+      pl.json_parse_ok === true &&
+      String(pl.correlation_outcome || '') !== 'rejected_invalid_signature' &&
+      String(pl.correlation_outcome || '') !== 'rejected_invalid_json'
+    ) {
+      sawVerifiedIngress = true;
+      break;
+    }
+  }
+  if (sawVerifiedIngress) return;
+
+  await recordOpsSmokePhase({
+    env,
+    runId,
+    threadKey: p.threadKey,
+    smoke_session_id: smokeSid || undefined,
+    phase: 'cursor_callback_absent_within_timeout',
+    detail: {
+      timeout_sec: timeoutSec,
+      pending_since_at: pendingAt,
+      classification: 'no_verified_cursor_callback_within_timeout',
+    },
+  });
 }
 
 /**
@@ -185,8 +411,13 @@ const PHASE_SORT_ORDER = [
   'trigger_accepted_external_id_present',
   'trigger_accepted_external_id_missing',
   'trigger_accepted_external_run_id_absent',
+  'trigger_accepted_callback_pending',
+  'cursor_callback_absent_within_timeout',
+  'cursor_callback_observed_no_match',
+  'cursor_direct_callback_correlated',
   'external_run_id_extracted',
   'external_callback_matched',
+  'github_fallback_evidence',
   'run_packet_progression_patched',
   'supervisor_wake_enqueued',
   'founder_milestone_sent',
@@ -212,6 +443,15 @@ function smokeSummaryPhaseFromRow(r) {
   if (et === 'ops_smoke_phase' && pl.phase) return String(pl.phase);
   if (et === 'cos_pretrigger_tool_call' || et === 'cos_pretrigger_tool_call_blocked') return et;
   if (OPS_PHASE_LIKE_EVENT_TYPES.has(et)) return et;
+  if (et === 'cos_github_fallback_evidence') return 'github_fallback_evidence';
+  if (et === 'cos_cursor_webhook_ingress_safe') {
+    const o = String(pl.correlation_outcome || '');
+    if (o === 'no_match') return 'cursor_callback_observed_no_match';
+    if (o === 'matched') return 'cursor_direct_callback_correlated';
+    if (o === 'ignored_insufficient_payload') return 'cursor_callback_ingress_insufficient_payload';
+    if (o === 'rejected_invalid_signature' || o === 'rejected_invalid_json') return 'cursor_callback_ingress_rejected';
+    return 'cursor_direct_callback_ingress_received';
+  }
   return '';
 }
 
@@ -286,6 +526,14 @@ export function aggregateSmokeSessionProgress(rows) {
       final_status = 'trigger_accepted_external_run_id_missing';
       breaksAt = 'external_run_id_extracted';
     }
+  }
+
+  if (seen.has('cursor_callback_absent_within_timeout')) {
+    final_status = 'cursor_callback_absent_within_timeout';
+    breaksAt = 'external_callback_matched';
+  } else if (seen.has('cursor_callback_observed_no_match') && !seen.has('external_callback_matched')) {
+    final_status = 'cursor_callback_observed_no_match';
+    breaksAt = 'external_callback_matched';
   }
 
   if (final_status === 'unknown') {
@@ -388,6 +636,78 @@ export function extractLatestTriggerEvidenceFromRows(rows) {
   };
 }
 
+/**
+ * Latest direct Cursor webhook ingress row for ops session summary (safe subset only).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractLatestCursorWebhookIngressFromRows(rows) {
+  const empty = {
+    cursor_callback_observed: null,
+    observed_callback_schema_snapshot: null,
+    cursor_ingress_correlation_outcome: null,
+    cursor_ingress_signature_ok: null,
+    cursor_ingress_json_ok: null,
+  };
+  let bestAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let best = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'cos_cursor_webhook_ingress_safe') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const t = String(pl.at || r.created_at || '');
+    if (t >= bestAt) {
+      bestAt = t;
+      best = pl;
+    }
+  }
+  if (!best) return empty;
+  const co = String(best.correlation_outcome || '');
+  const verified =
+    best.signature_verification_ok === true &&
+    best.json_parse_ok === true &&
+    co !== 'rejected_invalid_signature' &&
+    co !== 'rejected_invalid_json';
+  return {
+    cursor_callback_observed: verified,
+    observed_callback_schema_snapshot:
+      best.observed_callback_schema_snapshot && typeof best.observed_callback_schema_snapshot === 'object'
+        ? best.observed_callback_schema_snapshot
+        : null,
+    cursor_ingress_correlation_outcome: co || null,
+    cursor_ingress_signature_ok: best.signature_verification_ok === true,
+    cursor_ingress_json_ok: best.json_parse_ok === true,
+  };
+}
+
+/**
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractGithubFallbackSummaryFromRows(rows) {
+  const empty = {
+    github_fallback_signal_seen: null,
+    github_fallback_match_attempted: null,
+    github_fallback_matched: null,
+  };
+  let bestAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let best = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'cos_github_fallback_evidence') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const t = String(pl.at || r.created_at || '');
+    if (t >= bestAt) {
+      bestAt = t;
+      best = pl;
+    }
+  }
+  if (!best) return empty;
+  return {
+    github_fallback_signal_seen: best.github_fallback_signal_seen === true,
+    github_fallback_match_attempted: best.github_fallback_match_attempted === true,
+    github_fallback_matched: best.github_fallback_matched === true,
+  };
+}
+
 export function extractOpsSmokeMachineSummaryFromRows(rows) {
   const empty = {
     call_name: null,
@@ -481,6 +801,8 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const agg = aggregateSmokeSessionProgress(rows);
     const machine = extractOpsSmokeMachineSummaryFromRows(rows);
     const triggerEv = extractLatestTriggerEvidenceFromRows(rows);
+    const cursorIngress = extractLatestCursorWebhookIngressFromRows(rows);
+    const ghFb = extractGithubFallbackSummaryFromRows(rows);
     const delegateSchemaPass = rows.some((r) => {
       const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
       return (
@@ -507,6 +829,8 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       ...machine,
       delegate_schema_valid,
       ...triggerEv,
+      ...cursorIngress,
+      ...ghFb,
       ...agg,
     };
   });
@@ -575,6 +899,20 @@ export async function recordOpsSmokeCursorTrigger(p) {
         trigger: buildSafeTriggerSmokeDetail(tr, env),
       },
     });
+    if (hasAcc && !ext) {
+      await recordOpsSmokePhase({
+        env,
+        runId,
+        threadKey,
+        smoke_session_id: smokeSid || undefined,
+        phase: 'trigger_accepted_callback_pending',
+        detail: {
+          trigger: buildSafeTriggerSmokeDetail(tr, env),
+          machine_note:
+            'trigger_accepted; awaiting verified direct cursor webhook; github evidence is advisory only',
+        },
+      });
+    }
   }
 
   if (ok && ext) {

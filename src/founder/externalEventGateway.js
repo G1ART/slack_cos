@@ -21,7 +21,9 @@ import {
 import {
   verifyCursorWebhookSignature,
   normalizeCursorWebhookPayload,
+  peekCursorWebhookObservedSchemaSnapshot,
 } from './cursorWebhookIngress.js';
+import { recordCosCursorWebhookIngressSafe, recordOpsSmokeGithubFallbackEvidence } from './smokeOps.js';
 
 /**
  * @param {string} threadKey
@@ -41,7 +43,8 @@ export async function applyExternalPacketTransition(threadKey, packetId, packetS
  * @returns {Promise<{ ok: boolean, httpStatus: number, body: string, duplicate?: boolean, ignored?: boolean, matched?: boolean }>}
  */
 export async function handleGithubWebhookIngress(p) {
-  const env = p.env || process.env;
+  const env =
+    p.env && typeof p.env === 'object' && p.env !== process.env ? { ...process.env, ...p.env } : process.env;
   const secret = String(env.GITHUB_WEBHOOK_SECRET || '').trim();
   if (!secret) {
     return { ok: false, httpStatus: 503, body: 'webhook secret not configured' };
@@ -85,6 +88,16 @@ export async function handleGithubWebhookIngress(p) {
 
   const norm = normalizeGithubWebhookPayload(headers, body);
   if (!norm) {
+    try {
+      await recordOpsSmokeGithubFallbackEvidence({
+        env,
+        match_attempted: false,
+        matched: false,
+        github_event_header: ghEvent,
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
     return { ok: true, httpStatus: 202, body: 'unsupported event', ignored: true };
   }
 
@@ -95,6 +108,23 @@ export async function handleGithubWebhookIngress(p) {
     matched_by: 'github_object',
     payload_fingerprint_prefix: fp,
   });
+
+  const ck = canonical.payload?.correlation_keys;
+  const cko = ck && typeof ck === 'object' ? ck : {};
+  try {
+    await recordOpsSmokeGithubFallbackEvidence({
+      env,
+      match_attempted: true,
+      matched: out.matched,
+      github_event_header: ghEvent,
+      object_type: cko.object_type != null ? String(cko.object_type) : null,
+      object_id: cko.object_id != null ? String(cko.object_id) : null,
+      run_id: corr?.run_id != null ? String(corr.run_id) : null,
+      thread_key: corr?.thread_key != null ? String(corr.thread_key) : null,
+    });
+  } catch (e) {
+    console.error('[ops_smoke]', e);
+  }
 
   return {
     ok: true,
@@ -109,11 +139,14 @@ export async function handleGithubWebhookIngress(p) {
  *   rawBody: Buffer,
  *   headers: Record<string, string | undefined>,
  *   env?: NodeJS.ProcessEnv,
+ *   request_id?: string | null,
  * }} p
  * @returns {Promise<{ ok: boolean, httpStatus: number, body: string, matched?: boolean, ignored?: boolean }>}
  */
 export async function handleCursorWebhookIngress(p) {
-  const env = p.env || process.env;
+  const env =
+    p.env && typeof p.env === 'object' && p.env !== process.env ? { ...process.env, ...p.env } : process.env;
+  const requestId = p.request_id != null ? String(p.request_id) : '';
   const secret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
   if (!secret) {
     return { ok: false, httpStatus: 503, body: 'cursor webhook secret not configured' };
@@ -121,7 +154,20 @@ export async function handleCursorWebhookIngress(p) {
 
   const headers = p.headers || {};
   const sig = headers['x-cursor-signature-256'];
-  if (!verifyCursorWebhookSignature(secret, p.rawBody, sig)) {
+  const sigOk = verifyCursorWebhookSignature(secret, p.rawBody, sig);
+  if (!sigOk) {
+    try {
+      await recordCosCursorWebhookIngressSafe({
+        env,
+        request_id: requestId,
+        signature_verification_ok: false,
+        json_parse_ok: false,
+        correlation_outcome: 'rejected_invalid_signature',
+        rejection_reason: 'signature_verification_failed',
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
     return { ok: false, httpStatus: 401, body: 'invalid signature' };
   }
 
@@ -129,14 +175,44 @@ export async function handleCursorWebhookIngress(p) {
   try {
     body = JSON.parse(p.rawBody.toString('utf8'));
   } catch {
+    try {
+      await recordCosCursorWebhookIngressSafe({
+        env,
+        request_id: requestId,
+        signature_verification_ok: true,
+        json_parse_ok: false,
+        correlation_outcome: 'rejected_invalid_json',
+        rejection_reason: 'json_parse_failed',
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
     return { ok: false, httpStatus: 400, body: 'invalid json' };
   }
 
-  const norm = normalizeCursorWebhookPayload(
-    body && typeof body === 'object' && !Array.isArray(body) ? body : {},
-    env,
-  );
+  const root = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const peek = peekCursorWebhookObservedSchemaSnapshot(root, env);
+  const norm = normalizeCursorWebhookPayload(root, env);
+
   if (!norm) {
+    try {
+      await recordCosCursorWebhookIngressSafe({
+        env,
+        request_id: requestId,
+        signature_verification_ok: true,
+        json_parse_ok: true,
+        top_level_keys: Array.isArray(peek.top_level_keys) ? peek.top_level_keys : null,
+        observed_callback_schema_snapshot: peek,
+        run_id_candidate_tail: peek.run_id_candidate_tail,
+        status_candidate_raw: peek.status_candidate_raw,
+        thread_hint_present: peek.thread_hint_present,
+        packet_hint_present: peek.packet_hint_present,
+        correlation_outcome: 'ignored_insufficient_payload',
+        rejection_reason: 'normalization_requires_run_id_or_thread_or_uuid_packet',
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
     return { ok: true, httpStatus: 202, body: 'ignored: insufficient payload', ignored: true };
   }
 
@@ -153,6 +229,31 @@ export async function handleCursorWebhookIngress(p) {
     payload_fingerprint_prefix: fp,
     ingress_evidence: ingressEvidence,
   });
+
+  const runIdForIngress = corr?.run_id != null ? String(corr.run_id).trim() : '';
+  const threadKeyForIngress = corr?.thread_key != null ? String(corr.thread_key).trim() : '';
+
+  try {
+    await recordCosCursorWebhookIngressSafe({
+      env,
+      request_id: requestId,
+      run_id: runIdForIngress || null,
+      thread_key: threadKeyForIngress || null,
+      signature_verification_ok: true,
+      json_parse_ok: true,
+      top_level_keys: Array.isArray(peek.top_level_keys) ? peek.top_level_keys : null,
+      observed_callback_schema_snapshot: peek,
+      run_id_candidate_tail: peek.run_id_candidate_tail,
+      status_candidate_raw: peek.status_candidate_raw,
+      thread_hint_present: peek.thread_hint_present,
+      packet_hint_present: peek.packet_hint_present,
+      correlation_outcome: out.matched ? 'matched' : 'no_match',
+      rejection_reason: out.matched ? null : 'correlation_store_no_match',
+      matched_by,
+    });
+  } catch (e) {
+    console.error('[ops_smoke]', e);
+  }
 
   if (out.matched) {
     const extId = String(canonical.external_run_id || '');

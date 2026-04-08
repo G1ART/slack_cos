@@ -1,33 +1,36 @@
 import assert from 'node:assert';
-import path from 'node:path';
+import path from 'path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { handleGithubWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
-import { listRecentCosRunEventsForThread } from '../src/founder/runCosEvents.js';
+import { listCosRunEventsForRun, __resetCosRunEventsMemoryForTests } from '../src/founder/runCosEvents.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-github-e2e');
+process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-gh-secondary');
 process.env.COS_RUN_STORE = 'memory';
+process.env.COS_OPS_SMOKE_ENABLED = '1';
+process.env.COS_OPS_SMOKE_SESSION_ID = 'sess_gh_secondary';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 __resetCosRunMemoryStore();
 __resetExternalGatewayTestState();
+__resetCosRunEventsMemoryForTests();
 
-const secret = 'whsec_e2e_smoke_test________________';
-const tk = 'mention:C_e2e:3.3';
+const secret = 'whsec_secondary_evidence_test________';
+const tk = 'mention:gh_secondary:1';
 const run = await persistRunAfterDelegate({
   threadKey: tk,
   dispatch: {
     ok: true,
     status: 'accepted',
-    dispatch_id: 'h_e2e',
-    objective: 'e2e',
+    dispatch_id: 'h_sec',
+    objective: 'sec',
     packets: [
       {
-        packet_id: 'p_e2e',
+        packet_id: 'p_sec',
         packet_status: 'ready',
         preferred_tool: 'github',
         preferred_action: 'create_issue',
@@ -42,41 +45,52 @@ const run = await persistRunAfterDelegate({
 await upsertExternalCorrelation({
   run_id: String(run.id),
   thread_key: tk,
-  packet_id: 'p_e2e',
+  packet_id: 'p_sec',
   provider: 'github',
   object_type: 'issue',
-  object_id: '100',
+  object_id: '2001',
 });
 
 const raw = Buffer.from(
   JSON.stringify({
     action: 'closed',
     repository: { full_name: 'G1ART/slack_cos' },
-    issue: { number: 100, state: 'closed', title: 'e2e' },
+    issue: { number: 2001, state: 'closed', title: 'sec' },
   }),
   'utf8',
 );
 const sig = `sha256=${crypto.createHmac('sha256', secret).update(raw).digest('hex')}`;
 
-await handleGithubWebhookIngress({
+const out = await handleGithubWebhookIngress({
   rawBody: raw,
   headers: {
     'x-github-event': 'issues',
     'x-hub-signature-256': sig,
-    'x-github-delivery': 'del-e2e-smoke',
+    'x-github-delivery': 'del-gh-secondary-1',
   },
-  env: { GITHUB_WEBHOOK_SECRET: secret, GITHUB_REPOSITORY: 'G1ART/slack_cos' },
+  env: {
+    ...process.env,
+    GITHUB_WEBHOOK_SECRET: secret,
+    GITHUB_REPOSITORY: 'G1ART/slack_cos',
+    COS_OPS_SMOKE_ENABLED: '1',
+    COS_OPS_SMOKE_SESSION_ID: 'sess_gh_secondary',
+  },
 });
+assert.equal(out.matched, true);
 
 const r = await getActiveRunForThread(tk);
 assert.notEqual(
-  r.packet_state_map.p_e2e,
+  r.packet_state_map.p_sec,
   'completed',
-  'GitHub issue closed is advisory only; packet must not complete without Cursor callback (vNext.13.52).',
+  'GitHub must not complete the packet without Cursor direct callback',
 );
-assert.notEqual(r.status, 'completed');
 
-const evs = await listRecentCosRunEventsForThread(tk, 20);
+const evs = await listCosRunEventsForRun(String(run.id), 50);
 assert.ok(evs.some((e) => e.event_type === 'external_completed'));
+assert.ok(evs.some((e) => e.event_type === 'cos_github_fallback_evidence'));
+const gh = evs.find((e) => e.event_type === 'cos_github_fallback_evidence');
+assert.equal(gh?.payload?.github_fallback_signal_seen, true);
+assert.equal(gh?.payload?.github_fallback_match_attempted, true);
+assert.equal(gh?.payload?.github_fallback_matched, true);
 
-console.log('test-github-external-e2e-smoke: ok');
+console.log('test-github-check-run-remains-secondary-evidence: ok');

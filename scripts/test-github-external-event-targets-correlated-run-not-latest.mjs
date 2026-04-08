@@ -109,7 +109,11 @@ assert.equal(out.matched, true);
 
 const patchedA = await getRunById(ridA);
 const patchedB = await getRunById(ridB);
-assert.equal(patchedA.packet_state_map.pkt_ga, 'completed');
+assert.notEqual(
+  patchedA.packet_state_map.pkt_ga,
+  'completed',
+  'GitHub correlation must not advance packet terminal state (secondary evidence only).',
+);
 assert.equal(patchedB.packet_state_map.pkt_gb, 'queued');
 
 console.log('test-github-external-event-targets-correlated-run-not-latest: ok');

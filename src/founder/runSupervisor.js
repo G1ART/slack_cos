@@ -308,6 +308,17 @@ export async function tickRunSupervisorForRun(runId, ctx) {
 
     attemptedWork = true;
 
+    try {
+      const { maybeRecordOpsSmokeCursorCallbackAbsence } = await import('./smokeOps.js');
+      await maybeRecordOpsSmokeCursorCallbackAbsence({
+        runId: rid,
+        threadKey: String(run.thread_key || ''),
+        env: process.env,
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
+
     await reconcileRunFromLedgerForRun(rid);
 
     for (let i = 0; i < 6; i += 1) {

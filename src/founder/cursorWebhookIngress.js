@@ -85,11 +85,11 @@ function pickString(root, envKey, env, heuristic, selectedKeysOut) {
 }
 
 /**
+ * Shared field picks for normalization + safe ingress snapshots (vNext.13.52).
  * @param {Record<string, unknown>} body
  * @param {NodeJS.ProcessEnv} [env]
- * @returns {null | { canonical: Record<string, unknown>, evidence: Record<string, unknown> }}
  */
-export function normalizeCursorWebhookPayload(body, env = process.env) {
+function computeCursorWebhookFieldSelection(body, env = process.env) {
   const root = asRecord(body);
   const nested = asRecord(root.payload);
   const context = asRecord(root.context);
@@ -336,9 +336,92 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
   );
   const occurredPickVal = occurredPick.value;
 
+  return {
+    root,
+    eventType,
+    statusPick,
+    runIdPick,
+    threadPick,
+    packetPick,
+    runUuidHint,
+    branchPick,
+    prPick,
+    summaryPick,
+    occurredPickVal,
+    statusRaw,
+    externalRunId,
+    threadKeyHint,
+    packetIdHint,
+    selected_override_keys,
+  };
+}
+
+/**
+ * Safe subset for ops summaries: observed dot-path / env override sources (no raw body).
+ * Prefer env override field names when set and non-empty; otherwise heuristic trace labels.
+ * @param {unknown} body
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function peekCursorWebhookObservedSchemaSnapshot(body, env = process.env) {
+  const rootObj = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const sel = computeCursorWebhookFieldSelection(/** @type {Record<string, unknown>} */ (rootObj), env);
+  const top = sel.root;
+  return {
+    top_level_keys: Object.keys(top).slice(0, 40),
+    observed_run_id_field: String(sel.runIdPick.source || '').slice(0, 120),
+    observed_status_field: String(sel.statusPick.source || '').slice(0, 120),
+    observed_thread_field: String(sel.threadPick.source || '').slice(0, 120),
+    observed_packet_field: String(sel.packetPick.source || '').slice(0, 120),
+    selected_override_keys: sel.selected_override_keys.map((x) => String(x).slice(0, 80)),
+    run_id_candidate_present: Boolean(String(sel.externalRunId || '').trim()),
+    status_candidate_present: Boolean(String(sel.statusPick.value || '').trim()),
+    thread_hint_present: Boolean(String(sel.threadKeyHint || '').trim()),
+    packet_hint_present: Boolean(String(sel.packetIdHint || '').trim()),
+    run_uuid_hint_present: Boolean(String(sel.runUuidHint || '').trim()),
+    normalization_would_accept: Boolean(
+      sel.externalRunId || sel.threadKeyHint || (sel.runUuidHint && sel.packetIdHint),
+    ),
+    run_id_candidate_tail: (() => {
+      const v = String(sel.externalRunId || '').trim();
+      return v.length > 8 ? v.slice(-8) : v;
+    })(),
+    status_candidate_raw: String(sel.statusPick.value || '').trim().slice(0, 200),
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} body
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {null | { canonical: Record<string, unknown>, evidence: Record<string, unknown> }}
+ */
+export function normalizeCursorWebhookPayload(body, env = process.env) {
+  const sel = computeCursorWebhookFieldSelection(body, env);
+  const {
+    root,
+    eventType,
+    statusPick,
+    runIdPick,
+    threadPick,
+    packetPick,
+    runUuidHint,
+    branchPick,
+    prPick,
+    summaryPick,
+    occurredPickVal,
+    statusRaw,
+    externalRunId,
+    threadKeyHint,
+    packetIdHint,
+    selected_override_keys,
+  } = sel;
+
   if (!externalRunId && !threadKeyHint && !(runUuidHint && packetIdHint)) {
     return null;
   }
+
+  const branchRaw = branchPick.value;
+  const prUrlRaw = prPick.value;
+  const summaryRaw = summaryPick.value;
 
   const canon = canonicalizeExternalRunStatus(statusRaw);
   let status_hint = 'external_status_update';

@@ -455,27 +455,24 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   let cursorPacketPatched = false;
   if (canonical.provider === 'cursor' && pkt) {
     cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pkt, canonical);
-  } else if (canonical.provider === 'github' && pkt && (statusHint === 'external_completed' || statusHint === 'external_failed')) {
-    await applyExternalPacketProgressStateForRun(
-      runId,
-      pkt,
-      statusHint === 'external_completed' ? 'completed' : 'failed',
-    );
   }
+  // GitHub webhooks remain secondary evidence only (vNext.13.52): do not advance packets / run terminal state from GitHub alone.
 
   await signalSupervisorWakeForRun(threadKey, runId);
 
   try {
-    await recordOpsSmokeAfterExternalMatch({
-      runId,
-      threadKey,
-      canonical,
-      corr,
-      ingressMeta: meta,
-      canonForOut,
-      ingressEvidence,
-      cursorPacketPatched,
-    });
+    if (String(canonical.provider || '') === 'cursor') {
+      await recordOpsSmokeAfterExternalMatch({
+        runId,
+        threadKey,
+        canonical,
+        corr,
+        ingressMeta: meta,
+        canonForOut,
+        ingressEvidence,
+        cursorPacketPatched,
+      });
+    }
   } catch (e) {
     console.error('[ops_smoke]', e);
   }

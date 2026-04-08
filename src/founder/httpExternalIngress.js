@@ -249,7 +249,12 @@ export async function startCosHttpServer(opts = {}) {
           for (const [k, v] of Object.entries(req.headers)) {
             lower[String(k).toLowerCase()] = Array.isArray(v) ? v[0] : v;
           }
-          const out = await handleCursorWebhookIngress({ rawBody, headers: lower, env });
+          const out = await handleCursorWebhookIngress({
+            rawBody,
+            headers: lower,
+            env,
+            request_id: requestId,
+          });
           sendJson(res, out.httpStatus, {
             ok: out.ok,
             accepted: out.httpStatus >= 200 && out.httpStatus < 300,
