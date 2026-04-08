@@ -159,11 +159,13 @@ export function pickFirstStarterPacket(dispatch, _env, _threadKey) {
  *   threadKey: string,
  *   dispatch: Record<string, unknown>,
  *   env?: NodeJS.ProcessEnv,
+ *   cosRunId?: string,
  * }} ctx
  */
 export async function executeStarterKickoffIfEligible(ctx) {
   const threadKey = String(ctx.threadKey || '');
   const dispatch = ctx.dispatch && typeof ctx.dispatch === 'object' ? ctx.dispatch : {};
+  const cosRunId = ctx.cosRunId != null ? String(ctx.cosRunId).trim() : '';
 
   if (!threadKey) return null;
   if (!dispatch.ok || String(dispatch.status || '') !== 'accepted') return null;
@@ -173,7 +175,10 @@ export async function executeStarterKickoffIfEligible(ctx) {
     return { executed: false, reason: 'no_runnable_packet' };
   }
 
-  const outcome = await executePacketInvocation(pick.packet, { threadKey });
+  const outcome = await executePacketInvocation(pick.packet, {
+    threadKey,
+    ...(cosRunId ? { cosRunId } : {}),
+  });
 
   return {
     executed: true,

@@ -3,7 +3,7 @@
  */
 
 import crypto from 'node:crypto';
-import { readReviewQueue, readExecutionSummary } from './executionLedger.js';
+import { readReviewQueueForRun, readExecutionSummaryForRun } from './executionLedger.js';
 import {
   clearPendingSupervisorWake,
   getActiveRunForThread,
@@ -56,7 +56,7 @@ export async function processRunMilestones(p) {
     if (status === 'completed' || status === 'blocked' || status === 'failed' || status === 'review_required') {
       let text = '';
       if (status === 'completed') {
-        const lines = await readExecutionSummary(threadKey, 4);
+        const lines = await readExecutionSummaryForRun(run, 4);
         text = renderEagerCombinedMilestone({
           objective,
           tool: String(kick.tool || ''),
@@ -65,7 +65,7 @@ export async function processRunMilestones(p) {
           summary_lines: lines,
         });
       } else if (status === 'blocked') {
-        const rq = await readReviewQueue(threadKey, 3);
+        const rq = await readReviewQueueForRun(run, 3);
         const need =
           rq.map((x) => x.next_required_input).find(Boolean) ||
           rq.map((x) => x.blocked_reason).find(Boolean) ||
@@ -78,7 +78,7 @@ export async function processRunMilestones(p) {
           need_line: String(need || ''),
         });
       } else if (status === 'review_required') {
-        const review = await readReviewQueue(threadKey, 5);
+        const review = await readReviewQueueForRun(run, 5);
         const lines = review
           .filter((x) => x.needs_review || x.status === 'degraded')
           .map((x) => x.result_summary || x.blocked_reason || '')
@@ -137,7 +137,7 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'blocked' && !run.founder_notified_blocked_at) {
-    const rq = await readReviewQueue(threadKey, 3);
+    const rq = await readReviewQueueForRun(run, 3);
     const need =
       rq.map((x) => x.next_required_input).find(Boolean) ||
       rq.map((x) => x.blocked_reason).find(Boolean) ||
@@ -158,7 +158,7 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'review_required' && !run.founder_notified_review_required_at) {
-    const review = await readReviewQueue(threadKey, 5);
+    const review = await readReviewQueueForRun(run, 5);
     const lines = review
       .filter((x) => x.needs_review || x.status === 'degraded')
       .map((x) => x.result_summary || x.blocked_reason || '')
@@ -180,7 +180,7 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'completed' && !run.founder_notified_completed_at) {
-    const lines = await readExecutionSummary(threadKey, 5);
+    const lines = await readExecutionSummaryForRun(run, 5);
     const text = renderCompletedMilestone({ objective, summary_lines: lines });
     const r = await sendFounderResponse({
       client: p.client,
