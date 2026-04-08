@@ -4,7 +4,15 @@
 
 import crypto from 'node:crypto';
 import { readReviewQueue, readExecutionSummary } from './executionLedger.js';
-import { getActiveRunForThread, getRunById, listRunThreadKeys, patchRunById } from './executionRunStore.js';
+import {
+  clearPendingSupervisorWake,
+  getActiveRunForThread,
+  getRunById,
+  listNonTerminalRunIds,
+  listPendingSupervisorWakeRunIds,
+  listRunThreadKeys,
+  patchRunById,
+} from './executionRunStore.js';
 import {
   reconcileRunFromLedger,
   reconcileRunFromLedgerForRun,
@@ -276,10 +284,13 @@ export async function tickRunSupervisorForRun(runId, ctx) {
   }
 
   tickInflight.add(inflightKey);
+  let attemptedWork = false;
   try {
     let run = await getRunById(rid);
     if (!run?.run_id) return { skipped: true, reason: 'no_run' };
     if (String(run.status) === 'canceled') return { skipped: true, reason: 'canceled' };
+
+    attemptedWork = true;
 
     await reconcileRunFromLedgerForRun(rid);
 
@@ -300,6 +311,9 @@ export async function tickRunSupervisorForRun(runId, ctx) {
     return { skipped: false };
   } finally {
     tickInflight.delete(inflightKey);
+    if (attemptedWork) {
+      await clearPendingSupervisorWake(rid).catch((e) => console.error('[cos_clear_wake]', e));
+    }
   }
 }
 
@@ -313,6 +327,26 @@ export async function tickRunSupervisor(ctx) {
   const ok = await tryAcquireSupervisorLease(OWNER_ID);
   if (!ok) return { skipped: true, reason: 'lease_held' };
 
+  const pending = await listPendingSupervisorWakeRunIds(50);
+  const nonTerm = await listNonTerminalRunIds({ limit: 120 });
+  const seen = new Set();
+  /** @type {string[]} */
+  const runOrder = [];
+  for (const rid of [...pending, ...nonTerm]) {
+    const r = String(rid || '').trim();
+    if (!r || seen.has(r)) continue;
+    seen.add(r);
+    runOrder.push(r);
+  }
+
+  for (const rid of runOrder) {
+    await tickRunSupervisorForRun(rid, {
+      client: ctx.client,
+      constitutionSha256: ctx.constitutionSha256,
+      skipLease: true,
+    });
+  }
+
   const keys = await listRunThreadKeys();
   for (const threadKey of keys) {
     await tickRunSupervisorForThread(threadKey, {
@@ -322,7 +356,7 @@ export async function tickRunSupervisor(ctx) {
     });
   }
 
-  return { skipped: false, processed: keys.length };
+  return { skipped: false, processed_runs: runOrder.length, processed_threads: keys.length };
 }
 
 /**

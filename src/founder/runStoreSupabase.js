@@ -58,6 +58,8 @@ export function appRunToDbRow(row) {
       row.cursor_external_terminal_by_packet && typeof row.cursor_external_terminal_by_packet === 'object'
         ? row.cursor_external_terminal_by_packet
         : {},
+    pending_supervisor_wake: Boolean(row.pending_supervisor_wake),
+    last_supervisor_wake_request_at: row.last_supervisor_wake_request_at ?? null,
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
@@ -114,6 +116,8 @@ export function dbRowToAppRun(db) {
       db.cursor_external_terminal_by_packet && typeof db.cursor_external_terminal_by_packet === 'object'
         ? db.cursor_external_terminal_by_packet
         : {},
+    pending_supervisor_wake: Boolean(db.pending_supervisor_wake),
+    last_supervisor_wake_request_at: db.last_supervisor_wake_request_at ?? null,
   };
 }
 
@@ -253,6 +257,8 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
       last_progressed_at: dbUp.last_progressed_at,
       last_founder_update_sha: dbUp.last_founder_update_sha,
       cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
+      pending_supervisor_wake: dbUp.pending_supervisor_wake,
+      last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
       updated_at: dbUp.updated_at,
     })
     .eq('id', cur.id);
@@ -305,6 +311,8 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
       last_progressed_at: dbUp.last_progressed_at,
       last_founder_update_sha: dbUp.last_founder_update_sha,
       cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
+      pending_supervisor_wake: dbUp.pending_supervisor_wake,
+      last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
       updated_at: dbUp.updated_at,
     })
     .eq('id', rid);
@@ -324,4 +332,49 @@ export async function supabaseListThreadKeys(sb) {
   const { data, error } = await sb.from('cos_runs').select('thread_key');
   if (error || !data) return [];
   return [...new Set(data.map((r) => String(r.thread_key || '').trim()).filter(Boolean))];
+}
+
+const NON_TERMINAL_STATUSES = ['queued', 'running', 'review_required', 'blocked'];
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {number} [limit]
+ * @param {string | null} [updatedSince] ISO timestamp — runs with updated_at >= this
+ */
+export async function supabaseListNonTerminalRunIds(sb, limit = 80, updatedSince = null) {
+  const lim = Math.min(Math.max(Number(limit) || 80, 1), 500);
+  let q = sb
+    .from('cos_runs')
+    .select('id, updated_at')
+    .in('status', NON_TERMINAL_STATUSES)
+    .order('updated_at', { ascending: false })
+    .limit(lim);
+  if (updatedSince && String(updatedSince).trim()) {
+    q = q.gte('updated_at', String(updatedSince).trim());
+  }
+  const { data, error } = await q;
+  if (error) {
+    console.error('[cos_runs list non-terminal]', error.message);
+    return [];
+  }
+  return (data || []).map((r) => String(r.id || '').trim()).filter(Boolean);
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {number} [limit]
+ */
+export async function supabaseListPendingSupervisorWakeRunIds(sb, limit = 50) {
+  const lim = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const { data, error } = await sb
+    .from('cos_runs')
+    .select('id')
+    .eq('pending_supervisor_wake', true)
+    .order('last_supervisor_wake_request_at', { ascending: false })
+    .limit(lim);
+  if (error) {
+    console.error('[cos_runs list pending wake]', error.message);
+    return [];
+  }
+  return (data || []).map((r) => String(r.id || '').trim()).filter(Boolean);
 }

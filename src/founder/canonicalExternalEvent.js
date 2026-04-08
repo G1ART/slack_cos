@@ -21,9 +21,9 @@ import {
   patchRunById,
   deriveRunTerminalStatus,
   deriveRunStage,
+  signalSupervisorWakeForRun,
 } from './executionRunStore.js';
 import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
-import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
 import { findExternalCorrelation, findExternalCorrelationCursorHints } from './correlationStore.js';
 import {
@@ -451,7 +451,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     );
   }
 
-  notifyRunStateChangedForRun(threadKey, runId);
+  await signalSupervisorWakeForRun(threadKey, runId);
   return {
     matched: true,
     httpBody: 'ok',

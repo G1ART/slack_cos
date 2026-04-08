@@ -826,12 +826,13 @@ const TOOL_ADAPTERS = {
 
 /**
  * @param {Record<string, unknown>} spec
- * @param {{ threadKey?: string }} [ctx]
+ * @param {{ threadKey?: string, packetId?: string, cosRunId?: string }} [ctx]
  */
 export async function invokeExternalTool(spec, ctx = {}) {
   const s = spec && typeof spec === 'object' ? spec : {};
   const threadKey = ctx.threadKey ? String(ctx.threadKey) : '';
   const runPacketId = ctx.packetId != null ? String(ctx.packetId).trim() : '';
+  const cosRunId = ctx.cosRunId != null ? String(ctx.cosRunId).trim() : '';
   const tool = s.tool;
   const action = String(s.action || '').trim();
   const payload = s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload) ? s.payload : {};
@@ -892,6 +893,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
       degraded_from: null,
       needs_review,
       ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+      ...(cosRunId ? { cos_run_id: cosRunId } : {}),
     };
     const result = {
       ok: true,
@@ -1245,6 +1247,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     degraded_from,
     needs_review,
     ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+    ...(cosRunId ? { cos_run_id: cosRunId } : {}),
     ...(cursorAutomationAudit || {}),
   };
 

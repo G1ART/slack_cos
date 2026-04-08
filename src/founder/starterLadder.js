@@ -120,10 +120,11 @@ export const __starterKickoffTestHooks = {
 
 /**
  * @param {object} packet
- * @param {{ threadKey: string }} ctx
+ * @param {{ threadKey: string, cosRunId?: string }} ctx
  */
 export async function executePacketInvocation(packet, ctx) {
   const threadKey = String(ctx.threadKey || '');
+  const cosRunId = ctx.cosRunId != null ? String(ctx.cosRunId).trim() : '';
   const spec = buildInvokeSpecForPacket(packet);
   if (!spec) {
     return { ok: false, blocked: true, reason: 'invalid_packet_spec' };
@@ -132,7 +133,7 @@ export async function executePacketInvocation(packet, ctx) {
   const inv = __starterKickoffTestHooks.invokeFn || invokeExternalTool;
   return inv(
     { tool: spec.tool, action: spec.action, payload: spec.payload },
-    { threadKey, packetId: pid || undefined },
+    { threadKey, packetId: pid || undefined, ...(cosRunId ? { cosRunId } : {}) },
   );
 }
 
