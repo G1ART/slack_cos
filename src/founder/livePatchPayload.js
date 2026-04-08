@@ -152,6 +152,35 @@ export function prepareEmitPatchForCloudAutomation(payload) {
 }
 
 /**
+ * Machine token for ops / founder-safe hints (emit_patch cloud assembly only).
+ * @param {ReturnType<typeof prepareEmitPatchForCloudAutomation>} prep
+ * @param {boolean} mergeFromDelegate
+ */
+export function classifyEmitPatchAssemblyFailureCode(prep, mergeFromDelegate) {
+  if (prep.narrow_incomplete) return 'live_patch_incomplete_after_normalization';
+  if (prep.compilation === 'none' && !mergeFromDelegate) {
+    return 'invoke_payload_missing_narrow_live_patch_or_ops';
+  }
+  if (prep.compilation === 'none' && mergeFromDelegate) {
+    return 'delegate_merge_still_no_contract_source';
+  }
+  const miss = prep.validation?.missing_required_fields || [];
+  if (miss.includes('title')) return 'compiled_payload_missing_title';
+  if (miss.some((m) => String(m).startsWith('ops'))) return 'compiled_payload_missing_or_invalid_ops';
+  return 'emit_patch_contract_validation_failed';
+}
+
+/**
+ * @param {ReturnType<typeof prepareEmitPatchForCloudAutomation>} prep
+ */
+export function builderStageLastReachedForEmitPatchPrep(prep) {
+  if (prep.narrow_incomplete) return 'narrow_live_patch_incomplete';
+  if (prep.compilation === 'none') return 'no_narrow_or_ops_compilation_source';
+  if (!prep.cloud_ok) return 'emit_patch_contract_validate_failed';
+  return 'emit_patch_payload_validated';
+}
+
+/**
  * @param {{ validation: { missing_required_fields: string[] }, compilation: string }} prep
  */
 export function formatEmitPatchCloudGateSummary(prep) {

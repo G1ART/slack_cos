@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
-import { invokeExternalTool } from '../src/founder/toolsBridge.js';
+import { invokeExternalTool, EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD } from '../src/founder/toolsBridge.js';
 
 __resetCosRunMemoryStore();
 
@@ -24,12 +24,14 @@ const r = await invokeExternalTool(
   { threadKey: 'mention:gate:1', packetId: 'pkt_gate' },
 );
 
-assert.equal(r.status, 'degraded');
-assert.ok(String(r.result_summary || '').includes('cursor_automation_emit_patch_v1'), 'contract name in summary');
+assert.equal(r.status, 'blocked');
+assert.equal(r.blocked_reason, EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD);
 assert.ok(
-  String(r.result_summary || '').includes('missing:') || String(r.next_required_input || '').includes('ops'),
-  'missing fields surfaced',
+  String(r.exact_failure_code || '').includes('emit_patch') ||
+    String(r.result_summary || '').includes(EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD),
+  'exact assembly failure surfaced',
 );
+assert.ok(Array.isArray(r.missing_required_fields) && r.missing_required_fields.length > 0, 'missing contract fields');
 
 delete process.env.CURSOR_CLOUD_AGENT_ENABLED;
 delete process.env.CURSOR_AUTOMATION_ENDPOINT;

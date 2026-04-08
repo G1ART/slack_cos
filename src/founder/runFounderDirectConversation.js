@@ -9,6 +9,7 @@ import {
   formatAdapterReadinessCompactLines,
   DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
   DELEGATE_REQUIRED_BEFORE_EMIT_PATCH,
+  EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD,
 } from './toolsBridge.js';
 import {
   appendExecutionArtifact,
@@ -396,7 +397,21 @@ export function formatFounderSafeToolBlockMessage(parsedToolResults) {
         }
       }
     }
+    if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) {
+      if (o.exact_failure_code) lines.push(`stage: ${String(o.exact_failure_code)}`);
+      if (o.payload_provenance) lines.push(`payload_origin: ${String(o.payload_provenance)}`);
+      if (o.builder_stage_last_reached) lines.push(`builder_stage: ${String(o.builder_stage_last_reached)}`);
+      if (Array.isArray(o.emit_patch_machine_hints)) {
+        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
+      }
+      if (Array.isArray(o.missing_required_fields)) {
+        for (const f of o.missing_required_fields.slice(0, 16)) {
+          lines.push(`required: ${String(f)}`);
+        }
+      }
+    }
     if (o.blocked === true && o.reason === 'invalid_payload') {
+      if (o.blocked_reason) lines.push(String(o.blocked_reason));
       if (o.machine_hint) lines.push(String(o.machine_hint));
       if (Array.isArray(o.missing_required_fields)) {
         for (const f of o.missing_required_fields.slice(0, 16)) {
@@ -440,6 +455,7 @@ export function shouldReplaceFounderTextWithSafeToolBlockMessage(parsedToolResul
       (br === DELEGATE_REQUIRED_BEFORE_EMIT_PATCH || br === DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH)
     )
       return true;
+    if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) return true;
     if (o.blocked === true && o.reason === 'invalid_payload') return true;
     if (o.degraded_from === 'emit_patch_cloud_contract_not_met') return true;
     return false;
@@ -800,6 +816,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
         result = await invokeExternalTool(args, {
           threadKey: tk,
           ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
+          ...(auditRunId ? { cosRunId: auditRunId } : {}),
         });
       } else if (call.name === 'record_execution_note') {
         result = await handleRecordExecutionNote(args, tk);

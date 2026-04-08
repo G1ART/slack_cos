@@ -25,7 +25,15 @@ import {
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
-import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
+import {
+  builderStageLastReachedForEmitPatchPrep,
+  classifyEmitPatchAssemblyFailureCode,
+  emitPatchHasCloudContractSource,
+  formatEmitPatchMachineBlockedHints,
+} from './livePatchPayload.js';
+
+/** Cloud lane eligible but emit_patch payload did not compile to automation contract — do not fall through to artifact. */
+export const EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD = 'external_call_blocked_empty_compiled_payload';
 
 const execFileAsync = promisify(execFile);
 
@@ -875,9 +883,12 @@ export async function invokeExternalTool(spec, ctx = {}) {
 
   /** @type {Awaited<ReturnType<typeof loadDelegateEmitPatchStash>> | null} */
   let delegateEmitPatchModule = null;
+  let emitPatchMergedFromDelegate = false;
   if (tool === 'cursor' && action === 'emit_patch' && threadKey) {
     delegateEmitPatchModule = await loadDelegateEmitPatchStash();
-    payload = delegateEmitPatchModule.tryMergeStashedDelegateEmitPatchPayload(threadKey, payload).payload;
+    const merged = delegateEmitPatchModule.tryMergeStashedDelegateEmitPatchPayload(threadKey, payload);
+    payload = merged.payload;
+    emitPatchMergedFromDelegate = merged.mergedFromDelegate;
   }
 
   const invocation_id = `tool_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
@@ -1211,6 +1222,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           threadKey,
           smoke_session_id: opsSmokeSessionId,
           prep: emitPatchPrep,
+          merge_from_delegate: emitPatchMergedFromDelegate,
         });
       } catch (e) {
         console.error('[ops_smoke]', e);
@@ -1219,6 +1231,10 @@ export async function invokeExternalTool(spec, ctx = {}) {
     if (!emitPatchPrep.cloud_ok) {
       automationLaneActive = false;
       emitPatchCloudSkippedForContract = true;
+      const exactFailureCode = classifyEmitPatchAssemblyFailureCode(emitPatchPrep, emitPatchMergedFromDelegate);
+      const builderStage = builderStageLastReachedForEmitPatchPrep(emitPatchPrep);
+      const payloadProvenance = emitPatchMergedFromDelegate ? 'delegate_stash_merged' : 'invoke_external_tool_raw';
+      const machineHints = formatEmitPatchMachineBlockedHints(emitPatchPrep);
       if (opsSmokeSessionId && cosRunId) {
         try {
           await recordCosPretriggerAudit({
@@ -1229,13 +1245,89 @@ export async function invokeExternalTool(spec, ctx = {}) {
             call_name: 'invoke_external_tool',
             args: { tool, action, payload },
             blocked: true,
-            blocked_reason: 'emit_patch_contract_not_met',
+            blocked_reason: EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD,
+            exact_failure_code: exactFailureCode,
+            payload_provenance: payloadProvenance,
+            builder_stage_last_reached: builderStage,
+            machine_hint: machineHints[0] || exactFailureCode,
             missing_required_fields: emitPatchPrep.validation.missing_required_fields,
           });
         } catch (e) {
           console.error('[pretrigger_audit]', e);
         }
       }
+      const status = 'blocked';
+      const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
+      const needs_review = true;
+      const execution_mode = 'artifact';
+      const result_summary = `blocked / artifact / ${tool}:${action} — ${EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD} (${exactFailureCode})`;
+      const ledgerPayload = {
+        invocation_id,
+        tool,
+        action,
+        execution_mode,
+        execution_lane: 'artifact',
+        status,
+        artifact_path: null,
+        next_required_input: null,
+        error_code: 'blocked_missing_input',
+        result_summary,
+        outcome_code,
+        live_attempted: false,
+        readiness_snapshot: snap,
+        fallback_reason: null,
+        blocked_reason: EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD,
+        exact_failure_code: exactFailureCode,
+        payload_provenance: payloadProvenance,
+        builder_stage_last_reached: builderStage,
+        degraded_from: null,
+        needs_review,
+        emit_patch_machine_hints: machineHints,
+        ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+        ...(cosRunId ? { cos_run_id: cosRunId } : {}),
+      };
+      const blockedAssembly = {
+        ok: true,
+        mode: 'external_tool_invocation',
+        invocation_id,
+        tool,
+        action,
+        accepted: true,
+        execution_mode,
+        execution_lane: 'artifact',
+        status,
+        outcome_code,
+        payload,
+        result_summary,
+        artifact_path: null,
+        next_required_input: null,
+        needs_review,
+        error_code: 'blocked_missing_input',
+        blocked_reason: EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD,
+        exact_failure_code: exactFailureCode,
+        payload_provenance: payloadProvenance,
+        builder_stage_last_reached: builderStage,
+        machine_hint: machineHints[0] || exactFailureCode,
+        missing_required_fields: emitPatchPrep.validation.missing_required_fields,
+        emit_patch_machine_hints: machineHints,
+      };
+      if (threadKey) {
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_invocation',
+          summary: result_summary.slice(0, 500),
+          status,
+          needs_review,
+          payload: ledgerPayload,
+        });
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_result',
+          summary: result_summary.slice(0, 500),
+          status,
+          needs_review,
+          payload: ledgerPayload,
+        });
+      }
+      return blockedAssembly;
     }
   }
 

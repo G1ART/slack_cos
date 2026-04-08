@@ -6,7 +6,11 @@
 import crypto from 'node:crypto';
 import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow, listCosRunEventsForRun } from './runCosEvents.js';
 import { describeTriggerCallbackContractForOps, listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
-import { EMIT_PATCH_CONTRACT_NAME } from './livePatchPayload.js';
+import {
+  EMIT_PATCH_CONTRACT_NAME,
+  builderStageLastReachedForEmitPatchPrep,
+  classifyEmitPatchAssemblyFailureCode,
+} from './livePatchPayload.js';
 import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES, createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
 
@@ -863,11 +867,74 @@ export function extractSecondaryBlockedActionsFromRows(rows) {
         selected_action: pl.selected_action != null ? String(pl.selected_action) : null,
         blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason).slice(0, 120) : null,
         machine_hint: pl.machine_hint != null ? String(pl.machine_hint).slice(0, 200) : null,
+        exact_failure_code: pl.exact_failure_code != null ? String(pl.exact_failure_code).slice(0, 120) : null,
+        payload_provenance: pl.payload_provenance != null ? String(pl.payload_provenance).slice(0, 120) : null,
+        builder_stage_last_reached:
+          pl.builder_stage_last_reached != null ? String(pl.builder_stage_last_reached).slice(0, 120) : null,
       },
     });
   }
   tmp.sort((a, b) => a.at.localeCompare(b.at));
   return tmp.map((t) => t.entry);
+}
+
+/**
+ * Latest emit_patch lineage fields from ops_smoke_phase rows (payload_origin on phase payload).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractLatestEmitPatchLineageFromOpsRows(rows) {
+  let bestAt = '';
+  /** @type {{ payload_origin: string | null, builder_stage_last_reached: string | null, exact_failure_code: string | null }} */
+  const out = {
+    payload_origin: null,
+    builder_stage_last_reached: null,
+    exact_failure_code: null,
+  };
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (
+      pl.payload_origin == null &&
+      pl.builder_stage_last_reached == null &&
+      pl.exact_failure_code == null
+    )
+      continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      if (pl.payload_origin != null) out.payload_origin = String(pl.payload_origin).slice(0, 120);
+      if (pl.builder_stage_last_reached != null) {
+        out.builder_stage_last_reached = String(pl.builder_stage_last_reached).slice(0, 120);
+      }
+      if (pl.exact_failure_code != null) out.exact_failure_code = String(pl.exact_failure_code).slice(0, 120);
+    }
+  }
+  return out;
+}
+
+/**
+ * @param {{ phases_seen?: string[], final_status?: string }} agg
+ */
+export function inferSelectedExecutionLaneFromAgg(agg) {
+  const seen = new Set(Array.isArray(agg?.phases_seen) ? agg.phases_seen : []);
+  if (seen.has('cursor_trigger_recorded')) return 'cloud_trigger_attempted';
+  if (seen.has('emit_patch_payload_validated')) return 'cloud_emit_patch_contract_ok';
+  if (seen.has('trigger_blocked_invalid_payload')) return 'cloud_emit_patch_assembly_failed';
+  if (seen.has('live_payload_compilation_started')) return 'cloud_emit_patch_compilation_observed';
+  const fs = String(agg?.final_status || '');
+  if (fs === 'pre_trigger_blocked_invalid_payload') return 'pre_trigger_validation';
+  return 'unknown';
+}
+
+/**
+ * @param {string | null | undefined} final_status
+ */
+export function callbackAbsenceClassificationFromFinalStatus(final_status) {
+  const fs = String(final_status || '');
+  if (fs === 'cursor_callback_absent_despite_callback_contract') return 'absent_despite_contract';
+  if (fs === 'cursor_callback_absent_without_callback_contract') return 'absent_without_contract';
+  if (fs === 'cursor_callback_absent_within_timeout') return 'absent_timeout_legacy_unknown';
+  return 'not_callback_absence';
 }
 
 export function extractOpsSmokeMachineSummaryFromRows(rows) {
@@ -886,6 +953,9 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
     delegate_schema_valid: null,
     delegate_schema_error_fields: null,
     parent_smoke_session_id: null,
+    exact_failure_code: null,
+    payload_provenance: null,
+    builder_stage_last_reached: null,
   };
   /** @type {{ _rank: number, _t: string, pl: Record<string, unknown> } | null} */
   let best = null;
@@ -937,6 +1007,10 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
     delegate_schema_error_fields: dErr,
     parent_smoke_session_id:
       pl.parent_smoke_session_id != null ? String(pl.parent_smoke_session_id).slice(0, 120) : null,
+    exact_failure_code: pl.exact_failure_code != null ? String(pl.exact_failure_code).slice(0, 120) : null,
+    payload_provenance: pl.payload_provenance != null ? String(pl.payload_provenance).slice(0, 120) : null,
+    builder_stage_last_reached:
+      pl.builder_stage_last_reached != null ? String(pl.builder_stage_last_reached).slice(0, 120) : null,
   };
 }
 
@@ -969,6 +1043,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(rows);
     const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(rows);
     const secondary_blocked_actions = extractSecondaryBlockedActionsFromRows(rows);
+    const opsLineage = extractLatestEmitPatchLineageFromOpsRows(rows);
     const primary_selected_tool =
       primaryInvoke?.trigger_ok === true && primaryInvoke.invoked_tool
         ? primaryInvoke.invoked_tool
@@ -1011,6 +1086,11 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       primary_selected_action: primary_selected_action ?? machine.selected_action,
       primary_trigger_state: agg.final_status,
       secondary_blocked_actions,
+      selected_execution_lane: inferSelectedExecutionLaneFromAgg(agg),
+      payload_origin: machine.payload_provenance ?? opsLineage.payload_origin,
+      builder_stage_last_reached: machine.builder_stage_last_reached ?? opsLineage.builder_stage_last_reached,
+      exact_failure_code: machine.exact_failure_code ?? opsLineage.exact_failure_code,
+      callback_absence_classification: callbackAbsenceClassificationFromFinalStatus(agg.final_status),
       delegate_schema_valid,
       ...cbContract,
       ...triggerEv,
@@ -1268,6 +1348,7 @@ export async function recordOpsSmokeFounderMilestone(p) {
  *   threadKey: string,
  *   smoke_session_id?: string | null,
  *   prep: ReturnType<import('./livePatchPayload.js').prepareEmitPatchForCloudAutomation>,
+ *   merge_from_delegate?: boolean,
  * }} p
  */
 export async function recordOpsSmokeEmitPatchCloudGate(p) {
@@ -1278,6 +1359,10 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
   if (!runId) return;
   const prep = p.prep;
   const smokeSid = String(p.smoke_session_id || '').trim() || null;
+  const mergeFromDelegate = p.merge_from_delegate === true;
+  const exact_failure_code = classifyEmitPatchAssemblyFailureCode(prep, mergeFromDelegate);
+  const builder_stage_last_reached = builderStageLastReachedForEmitPatchPrep(prep);
+  const payload_origin = mergeFromDelegate ? 'delegate_stash_merged' : 'invoke_external_tool_raw';
 
   await recordOpsSmokePhase({
     env,
@@ -1288,6 +1373,8 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
     detail: {
       selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
       compilation_mode: prep.compilation,
+      payload_origin,
+      builder_stage_last_reached,
     },
   });
 
@@ -1301,6 +1388,8 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
         compilation_mode: prep.compilation,
+        payload_origin,
+        builder_stage_last_reached,
       },
     });
   }
@@ -1315,6 +1404,9 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
         blocked_reason_code: 'narrow_live_patch_incomplete',
+        exact_failure_code,
+        payload_origin,
+        builder_stage_last_reached,
       },
     });
   }
@@ -1329,6 +1421,8 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
         compilation_mode: prep.compilation,
+        payload_origin,
+        builder_stage_last_reached,
       },
     });
   }
@@ -1342,9 +1436,12 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       phase: 'trigger_blocked_invalid_payload',
       detail: {
         blocked_reason_code: 'emit_patch_contract_not_met',
+        exact_failure_code,
         missing_required_fields: (prep.validation.missing_required_fields || []).slice(0, 24),
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
         compilation_mode: prep.compilation,
+        payload_origin,
+        builder_stage_last_reached,
       },
     });
   }

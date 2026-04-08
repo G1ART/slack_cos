@@ -168,7 +168,7 @@ export function validateDelegateHarnessTeamToolArgs(args) {
     return {
       blocked: true,
       reason: 'invalid_payload',
-      blocked_reason: 'delegate_schema_invalid',
+      blocked_reason: 'delegate_schema_invalid_missing_objective',
       machine_hint: 'objective required',
       missing_required_fields: ['objective'],
       invalid_enum_fields: [],
@@ -186,7 +186,7 @@ export function validateDelegateHarnessTeamToolArgs(args) {
     return {
       blocked: true,
       reason: 'invalid_payload',
-      blocked_reason: 'delegate_schema_invalid',
+      blocked_reason: 'delegate_schema_invalid_packets_not_array',
       machine_hint: 'packets must be array or null',
       missing_required_fields: [],
       invalid_enum_fields: [],
@@ -216,10 +216,16 @@ export function validateDelegateHarnessTeamToolArgs(args) {
       ...invalid_enum_fields,
       ...invalid_nested_fields,
     ].slice(0, 48);
+    const allLivePatchShaped =
+      delegate_schema_error_fields.length > 0 &&
+      delegate_schema_error_fields.every((f) => String(f).includes('.live_patch'));
+    const blocked_reason = allLivePatchShaped
+      ? 'delegate_schema_invalid_live_patch_shape'
+      : 'delegate_schema_invalid_packet_envelope';
     return {
       blocked: true,
       reason: 'invalid_payload',
-      blocked_reason: 'delegate_schema_invalid',
+      blocked_reason,
       machine_hint: 'delegate packet schema mismatch',
       missing_required_fields: missing_required_fields.slice(0, 24),
       invalid_enum_fields: invalid_enum_fields.slice(0, 24),

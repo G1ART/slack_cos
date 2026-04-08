@@ -1,5 +1,5 @@
 /**
- * vNext.13.49 — Delegate schema failures → blocked_reason delegate_schema_invalid + field paths (machine-only).
+ * vNext.13.54 — Delegate schema failures → precise blocked_reason + field paths (machine-only).
  */
 import assert from 'node:assert';
 import { validateToolCallArgs } from '../src/founder/runFounderDirectConversation.js';
@@ -37,7 +37,7 @@ const base = {
 const r = validateToolCallArgs('delegate_harness_team', base);
 assert.equal(r.blocked, true);
 assert.equal(r.reason, 'invalid_payload');
-assert.equal(r.blocked_reason, 'delegate_schema_invalid');
+assert.equal(r.blocked_reason, 'delegate_schema_invalid_packet_envelope');
 assert.ok(Array.isArray(r.invalid_enum_fields));
 assert.ok(r.invalid_enum_fields.some((x) => String(x).includes('persona')));
 assert.ok(Array.isArray(r.delegate_schema_error_fields));

@@ -72,6 +72,9 @@ export function summarizeToolArgsForAudit(callName, args) {
  *   delegate_schema_valid?: boolean | null,
  *   delegate_schema_error_fields?: string[] | null,
  *   parent_smoke_session_id?: string | null,
+ *   exact_failure_code?: string | null,
+ *   payload_provenance?: string | null,
+ *   builder_stage_last_reached?: string | null,
  * }} p
  */
 export async function recordCosPretriggerAudit(p) {
@@ -125,6 +128,10 @@ export async function recordCosPretriggerAudit(p) {
       : null,
     parent_smoke_session_id:
       p.parent_smoke_session_id != null ? String(p.parent_smoke_session_id).slice(0, 120) : null,
+    exact_failure_code: p.exact_failure_code != null ? String(p.exact_failure_code).slice(0, 120) : null,
+    payload_provenance: p.payload_provenance != null ? String(p.payload_provenance).slice(0, 120) : null,
+    builder_stage_last_reached:
+      p.builder_stage_last_reached != null ? String(p.builder_stage_last_reached).slice(0, 120) : null,
   };
 
   if (runId) {
