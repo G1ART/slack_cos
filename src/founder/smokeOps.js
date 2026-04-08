@@ -6,6 +6,7 @@
 import crypto from 'node:crypto';
 import { appendCosRunEventForRun } from './runCosEvents.js';
 import { listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
+import { EMIT_PATCH_CONTRACT_NAME } from './livePatchPayload.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -166,6 +167,15 @@ export function aggregateSmokeSessionProgress(rows) {
       ordered_events: [],
       breaks_at: null,
       final_status: 'no_ops_smoke_events',
+    };
+  }
+
+  if (seen.has('trigger_blocked_invalid_payload') && !seen.has('cursor_trigger_recorded')) {
+    return {
+      phases_seen: [...seen].sort((a, b) => orderIdx(a) - orderIdx(b)),
+      ordered_events: sorted.map((pl) => ({ phase: pl.phase, at: pl.at })),
+      breaks_at: 'cursor_trigger_recorded',
+      final_status: 'pre_trigger_blocked_invalid_payload',
     };
   }
 
@@ -345,6 +355,63 @@ export async function recordOpsSmokeFounderMilestone(p) {
     phase: 'founder_milestone_sent',
     detail: { milestone: String(p.milestone || '').slice(0, 80) },
   });
+}
+
+/**
+ * Pre-trigger emit_patch cloud contract gate (vNext.13.44).
+ * @param {{
+ *   env?: NodeJS.ProcessEnv,
+ *   runId: string,
+ *   threadKey: string,
+ *   prep: ReturnType<import('./livePatchPayload.js').prepareEmitPatchForCloudAutomation>,
+ * }} p
+ */
+export async function recordOpsSmokeEmitPatchCloudGate(p) {
+  const env = p.env || process.env;
+  if (!isOpsSmokeEnabled(env)) return;
+  const runId = String(p.runId || '').trim();
+  const threadKey = String(p.threadKey || '').trim();
+  if (!runId) return;
+  const prep = p.prep;
+
+  await recordOpsSmokePhase({
+    env,
+    runId,
+    threadKey,
+    phase: 'live_payload_compilation_started',
+    detail: {
+      selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
+      compilation_mode: prep.compilation,
+    },
+  });
+
+  if (prep.narrow_incomplete) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      phase: 'live_payload_compilation_failed',
+      detail: {
+        selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
+        blocked_reason_code: 'narrow_live_patch_incomplete',
+      },
+    });
+  }
+
+  if (!prep.cloud_ok) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      phase: 'trigger_blocked_invalid_payload',
+      detail: {
+        blocked_reason_code: 'emit_patch_contract_not_met',
+        missing_required_fields: (prep.validation.missing_required_fields || []).slice(0, 24),
+        selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
+        compilation_mode: prep.compilation,
+      },
+    });
+  }
 }
 
 export function __resetOpsSmokeSessionCacheForTests() {

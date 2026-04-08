@@ -5,6 +5,11 @@
  */
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 import { createCosRuntimeSupabaseForSummary } from '../src/founder/runStoreSupabase.js';
 import { listOpsSmokePhaseEventsForSummary } from '../src/founder/runCosEvents.js';
 import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
@@ -77,7 +82,12 @@ async function main() {
       args.supabaseKey || undefined,
     );
     if (!supabaseClient) {
-      console.error('Supabase mode requires URL + service role key (env or --supabase-url / --supabase-key).');
+      console.error(
+        'Supabase mode needs URL + service role key: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or COS_RUNTIME_*),',
+      );
+      console.error(
+        'or pass --supabase-url / --supabase-key. This script loads .env from the repo root next to package.json.',
+      );
       process.exit(2);
     }
     if (!modeOverride) modeOverride = 'supabase';

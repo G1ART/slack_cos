@@ -835,7 +835,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const cosRunId = ctx.cosRunId != null ? String(ctx.cosRunId).trim() : '';
   const tool = s.tool;
   const action = String(s.action || '').trim();
-  const payload = s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload) ? s.payload : {};
+  let payload = s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload) ? s.payload : {};
 
   if (!TOOL_ENUM.has(tool)) {
     return {
@@ -953,6 +953,34 @@ export async function invokeExternalTool(spec, ctx = {}) {
     isCursorCloudAgentLaneReady(env) &&
     __invokeToolTestHooks.failArtifactForTool !== tool;
 
+  let automationLaneActive = automationLane;
+  /** @type {null | ReturnType<import('./livePatchPayload.js').prepareEmitPatchForCloudAutomation>} */
+  let emitPatchPrep = null;
+  let emitPatchCloudSkippedForContract = false;
+
+  if (tool === 'cursor' && action === 'emit_patch' && automationLane) {
+    const { prepareEmitPatchForCloudAutomation } = await import('./livePatchPayload.js');
+    emitPatchPrep = prepareEmitPatchForCloudAutomation(payload);
+    payload = emitPatchPrep.payload;
+    if (cosRunId && threadKey) {
+      try {
+        const { recordOpsSmokeEmitPatchCloudGate } = await import('./smokeOps.js');
+        await recordOpsSmokeEmitPatchCloudGate({
+          env,
+          runId: cosRunId,
+          threadKey,
+          prep: emitPatchPrep,
+        });
+      } catch (e) {
+        console.error('[ops_smoke]', e);
+      }
+    }
+    if (!emitPatchPrep.cloud_ok) {
+      automationLaneActive = false;
+      emitPatchCloudSkippedForContract = true;
+    }
+  }
+
   const canLive =
     tool === 'cursor'
       ? await adapter.canExecuteLive(action, payload, env)
@@ -971,11 +999,11 @@ export async function invokeExternalTool(spec, ctx = {}) {
     return adapter.buildArtifact(action, payload, invocation_id);
   }
 
-  const tr = automationLane
+  const tr = automationLaneActive
     ? await triggerCursorAutomation({ action, payload, env, invocation_id })
     : null;
 
-  if (automationLane && tr && threadKey && cosRunId) {
+  if (automationLaneActive && tr && threadKey && cosRunId) {
     try {
       const { recordOpsSmokeCursorTrigger } = await import('./smokeOps.js');
       await recordOpsSmokeCursorTrigger({
@@ -991,7 +1019,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
 
   /** @type {Record<string, unknown> | null} */
   let cursorAutomationAudit = null;
-  if (automationLane && tr) {
+  if (automationLaneActive && tr) {
     cursorAutomationAudit = {
       trigger_status: tr.trigger_status,
       trigger_response_preview: tr.trigger_response_preview,
@@ -1004,7 +1032,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
     };
   }
 
-  if (automationLane && tr?.ok) {
+  if (automationLaneActive && tr?.ok) {
     live_attempted = true;
     execution_lane = 'cloud_agent';
     try {
@@ -1056,7 +1084,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         error_code = 'cloud_dispatch_exception';
       }
     }
-  } else if (automationLane && tr && !tr.ok) {
+  } else if (automationLaneActive && tr && !tr.ok) {
     live_attempted = true;
     fallback_reason = String(
       tr.error_code || tr.trigger_response_preview || tr.trigger_status || 'cursor_automation_failed',
@@ -1227,11 +1255,22 @@ export async function invokeExternalTool(spec, ctx = {}) {
     const ar = await runBuildArtifact();
     if (ar.ok) {
       execution_mode = 'artifact';
-      status = 'completed';
-      outcome_code = TOOL_OUTCOME_CODES.ARTIFACT_PREPARED;
-      result_summary = `completed / artifact / ${tool}:${action} — ${String(ar.result_summary || '').slice(0, 300)}`;
-      artifact_path = ar.artifact_path ?? null;
-      next_required_input = ar.next_required_input ?? null;
+      if (tool === 'cursor' && action === 'emit_patch' && emitPatchCloudSkippedForContract && emitPatchPrep) {
+        const { formatEmitPatchCloudGateSummary } = await import('./livePatchPayload.js');
+        status = 'degraded';
+        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+        degraded_from = 'emit_patch_cloud_contract_not_met';
+        const mis = emitPatchPrep.validation.missing_required_fields || [];
+        result_summary = `${formatEmitPatchCloudGateSummary(emitPatchPrep)} — ${String(ar.result_summary || '').slice(0, 220)}`;
+        artifact_path = ar.artifact_path ?? null;
+        next_required_input = mis.length ? mis.slice(0, 8).join(',') : ar.next_required_input ?? null;
+      } else {
+        status = 'completed';
+        outcome_code = TOOL_OUTCOME_CODES.ARTIFACT_PREPARED;
+        result_summary = `completed / artifact / ${tool}:${action} — ${String(ar.result_summary || '').slice(0, 300)}`;
+        artifact_path = ar.artifact_path ?? null;
+        next_required_input = ar.next_required_input ?? null;
+      }
     } else {
       execution_mode = 'artifact';
       status = 'failed';

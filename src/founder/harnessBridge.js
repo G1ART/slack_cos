@@ -136,6 +136,9 @@ function normalizeCosPackets(raw, handoff_order, team_plan, deliverables, constr
       review_required: p.review_required,
       review_focus: p.review_focus,
       packet_status: p.packet_status,
+      ...(p.live_patch != null && typeof p.live_patch === 'object' && !Array.isArray(p.live_patch)
+        ? { live_patch: p.live_patch }
+        : {}),
     };
     out.push(specializePacket(base, persona));
   }

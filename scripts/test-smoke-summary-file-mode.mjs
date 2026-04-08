@@ -1,11 +1,15 @@
 import assert from 'node:assert';
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendCosRunEventForRun, listOpsSmokePhaseEventsForSummary, __resetCosRunEventsMemoryForTests } from '../src/founder/runCosEvents.js';
 import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const tmp = path.join(__dirname, '..', '.runtime', 'test-smoke-summary-file');
+const suffix = crypto.randomBytes(6).toString('hex');
+const tmp = path.join(__dirname, '..', '.runtime', `test-smoke-summary-file-${suffix}`);
+await fs.mkdir(tmp, { recursive: true });
 
 process.env.COS_RUN_STORE = 'file';
 process.env.COS_RUNTIME_STATE_DIR = tmp;
@@ -14,7 +18,7 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 __resetCosRunEventsMemoryForTests();
 
-const runId = 'run-smoke-file-1';
+const runId = `run-smoke-file-${suffix}`;
 await appendCosRunEventForRun(runId, 'ops_smoke_phase', {
   smoke_session_id: 'sess_f1',
   phase: 'cursor_trigger_recorded',

@@ -92,6 +92,18 @@ export function validateToolCallArgs(callName, args) {
         ) {
           return { blocked: true, reason: 'invalid_payload' };
         }
+        if (pkt.live_patch != null) {
+          const lp = pkt.live_patch;
+          if (!lp || typeof lp !== 'object' || Array.isArray(lp)) {
+            return { blocked: true, reason: 'invalid_payload' };
+          }
+          const fpath = String(lp.path || '').trim();
+          const op = String(lp.operation || '').trim().toLowerCase();
+          const c = lp.content != null ? String(lp.content) : '';
+          if (!fpath || (op !== 'create' && op !== 'replace') || !c.trim()) {
+            return { blocked: true, reason: 'invalid_payload' };
+          }
+        }
       }
     }
     return { blocked: false };
