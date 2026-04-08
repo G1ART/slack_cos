@@ -39,4 +39,10 @@ const failed = aggregateSmokeSessionProgress([
 assert.equal(failed.final_status, 'trigger_failed');
 assert.equal(failed.breaks_at, 'cursor_trigger_recorded');
 
+const preBlocked = aggregateSmokeSessionProgress([
+  row('live_payload_compilation_started', 'a'),
+  row('trigger_blocked_invalid_payload', 'b'),
+]);
+assert.equal(preBlocked.final_status, 'pre_trigger_blocked_invalid_payload');
+
 console.log('test-smoke-session-phase-ordering: ok');

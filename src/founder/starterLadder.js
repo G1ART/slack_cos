@@ -42,12 +42,24 @@ export function buildInvokePayloadForPacket(pkt) {
     return { title: mission.slice(0, 200) || 'COS spec', body: dels || mission || '(empty)' };
   }
   if (tool === 'cursor' && action === 'emit_patch') {
-    return {
+    const base = {
       title: mission.slice(0, 200) || 'patch',
       body: `# Patch context\n\n${mission}\n\n${dels}`,
       content: `${mission}\n${dels}`,
       markdown: `${mission}\n${dels}`,
     };
+    const lp = pkt.live_patch;
+    if (lp && typeof lp === 'object' && !Array.isArray(lp)) {
+      return {
+        ...base,
+        live_patch: {
+          path: lp.path != null ? String(lp.path).trim() : '',
+          operation: lp.operation != null ? String(lp.operation).trim().toLowerCase() : '',
+          content: lp.content != null ? String(lp.content) : '',
+        },
+      };
+    }
+    return base;
   }
   if (tool === 'github' && action === 'create_issue') {
     return { title: mission.slice(0, 200) || 'issue', body: `${mission}\n\n${dels}` };
