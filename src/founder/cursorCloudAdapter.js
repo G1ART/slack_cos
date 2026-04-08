@@ -181,6 +181,7 @@ export async function triggerCursorAutomation(opts) {
       external_run_id: null,
       external_url: null,
       error_code: 'cursor_automation_not_configured',
+      response_top_level_keys: null,
     };
   }
 
@@ -237,6 +238,10 @@ export async function triggerCursorAutomation(opts) {
       automation_branch_raw,
       automation_status_raw,
       error_code: ok ? null : `cursor_automation_http_${res.status}`,
+      response_top_level_keys:
+        parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? Object.keys(parsed).slice(0, 60)
+          : null,
     };
   } catch (e) {
     clearTimeout(timer);
@@ -250,6 +255,7 @@ export async function triggerCursorAutomation(opts) {
       external_run_id: null,
       external_url: null,
       error_code: aborted ? 'cursor_automation_timeout' : 'cursor_automation_fetch_error',
+      response_top_level_keys: null,
     };
   }
 }

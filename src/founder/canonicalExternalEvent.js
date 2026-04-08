@@ -25,6 +25,7 @@ import {
 } from './executionRunStore.js';
 import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
+import { recordOpsSmokeAfterExternalMatch } from './smokeOps.js';
 import { findExternalCorrelation, findExternalCorrelationCursorHints } from './correlationStore.js';
 import {
   canonicalizeExternalRunStatus,
@@ -282,12 +283,15 @@ export async function applyExternalCursorPacketProgress(threadKey, packetId, can
  * @param {string} packetId
  * @param {CanonicalExternalEvent} canonical
  */
+/**
+ * @returns {Promise<boolean>} true if run row was patched
+ */
 export async function applyExternalCursorPacketProgressForRun(runId, packetId, canonical) {
   const rid = String(runId || '').trim();
   const pid = String(packetId || '').trim();
-  if (!rid || !pid) return;
+  if (!rid || !pid) return false;
   const run = await getRunById(rid);
-  if (!run) return;
+  if (!run) return false;
 
   const statusRaw = String(
     canonical.payload && typeof canonical.payload === 'object'
@@ -323,7 +327,7 @@ export async function applyExternalCursorPacketProgressForRun(runId, packetId, c
       : null;
 
   const res = resolveCursorPacketStateAuthority(existing, desired, canonical.occurred_at, lastRec);
-  if (res.skipPatch) return;
+  if (res.skipPatch) return false;
 
   psm[pid] = res.state;
   if (res.terminalRecord) {
@@ -351,12 +355,17 @@ export async function applyExternalCursorPacketProgressForRun(runId, packetId, c
     last_progressed_at: now,
     cursor_external_terminal_by_packet: termMap,
   });
+  return true;
 }
 
 /**
  * @param {CanonicalExternalEvent} canonical
  * @param {Record<string, unknown> | null} corr
- * @param {{ matched_by?: string | null, payload_fingerprint_prefix?: string | null }} [ingressMeta]
+ * @param {{
+ *   matched_by?: string | null,
+ *   payload_fingerprint_prefix?: string | null,
+ *   ingress_evidence?: Record<string, unknown>,
+ * }} [ingressMeta]
  * @returns {Promise<{ matched: boolean, httpBody: string, canonical_status?: string }>}
  */
 export async function processCanonicalExternalEvent(canonical, corr, ingressMeta) {
@@ -422,6 +431,8 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   }
 
   const meta = ingressMeta && typeof ingressMeta === 'object' ? ingressMeta : {};
+  const ingressEvidence =
+    meta.ingress_evidence && typeof meta.ingress_evidence === 'object' ? meta.ingress_evidence : {};
   const cs = evidenceCanonicalStatus(canonical, statusHint, canonForOut);
 
   await appendCosRunEventForRun(runId, eventType, {
@@ -441,8 +452,9 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
 
   const pkt = corr.packet_id != null ? String(corr.packet_id).trim() : '';
 
+  let cursorPacketPatched = false;
   if (canonical.provider === 'cursor' && pkt) {
-    await applyExternalCursorPacketProgressForRun(runId, pkt, canonical);
+    cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pkt, canonical);
   } else if (canonical.provider === 'github' && pkt && (statusHint === 'external_completed' || statusHint === 'external_failed')) {
     await applyExternalPacketProgressStateForRun(
       runId,
@@ -452,6 +464,22 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   }
 
   await signalSupervisorWakeForRun(threadKey, runId);
+
+  try {
+    await recordOpsSmokeAfterExternalMatch({
+      runId,
+      threadKey,
+      canonical,
+      corr,
+      ingressMeta: meta,
+      canonForOut,
+      ingressEvidence,
+      cursorPacketPatched,
+    });
+  } catch (e) {
+    console.error('[ops_smoke]', e);
+  }
+
   return {
     matched: true,
     httpBody: 'ok',

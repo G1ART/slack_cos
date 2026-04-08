@@ -44,8 +44,18 @@ export async function processRunMilestones(p) {
   const run = p.run;
   if (!run || run.id == null || !String(run.id).trim()) return null;
   const threadKey = String(run.thread_key || '');
+  const runIdStr = String(run.id).trim();
   const routing = await getSlackRouting(threadKey);
   if (!routing) return null;
+
+  const recordOpsSmokeMilestone = async (milestone) => {
+    try {
+      const { recordOpsSmokeFounderMilestone } = await import('./smokeOps.js');
+      await recordOpsSmokeFounderMilestone({ runId: runIdStr, threadKey, milestone });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
+  };
 
   const objective = String(run.objective || '');
   const kick = run.starter_kickoff && typeof run.starter_kickoff === 'object' ? run.starter_kickoff : null;
@@ -112,6 +122,7 @@ export async function processRunMilestones(p) {
         if (status === 'review_required') patch.founder_notified_review_required_at = now;
         if (status === 'failed') patch.founder_notified_failed_at = now;
         await patchRunById(String(run.id), patch);
+        await recordOpsSmokeMilestone('eager_combined');
         return 'eager_combined';
       }
       return null;
@@ -131,6 +142,7 @@ export async function processRunMilestones(p) {
     });
     if (r.ok) {
       await patchRunById(String(run.id), { founder_notified_started_at: now });
+      await recordOpsSmokeMilestone('started');
       return 'started';
     }
     return null;
@@ -152,6 +164,7 @@ export async function processRunMilestones(p) {
     });
     if (r.ok) {
       await patchRunById(String(run.id), { founder_notified_blocked_at: now });
+      await recordOpsSmokeMilestone('blocked');
       return 'blocked';
     }
     return null;
@@ -174,6 +187,7 @@ export async function processRunMilestones(p) {
     });
     if (r.ok) {
       await patchRunById(String(run.id), { founder_notified_review_required_at: now });
+      await recordOpsSmokeMilestone('review_required');
       return 'review_required';
     }
     return null;
@@ -191,6 +205,7 @@ export async function processRunMilestones(p) {
     });
     if (r.ok) {
       await patchRunById(String(run.id), { founder_notified_completed_at: now });
+      await recordOpsSmokeMilestone('completed');
       return 'completed';
     }
     return null;
@@ -207,6 +222,7 @@ export async function processRunMilestones(p) {
     });
     if (r.ok) {
       await patchRunById(String(run.id), { founder_notified_failed_at: now });
+      await recordOpsSmokeMilestone('failed');
       return 'failed';
     }
   }

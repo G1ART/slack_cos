@@ -975,6 +975,20 @@ export async function invokeExternalTool(spec, ctx = {}) {
     ? await triggerCursorAutomation({ action, payload, env, invocation_id })
     : null;
 
+  if (automationLane && tr && threadKey && cosRunId) {
+    try {
+      const { recordOpsSmokeCursorTrigger } = await import('./smokeOps.js');
+      await recordOpsSmokeCursorTrigger({
+        env,
+        runId: cosRunId,
+        threadKey,
+        tr: tr && typeof tr === 'object' ? /** @type {Record<string, unknown>} */ (tr) : null,
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
+  }
+
   /** @type {Record<string, unknown> | null} */
   let cursorAutomationAudit = null;
   if (automationLane && tr) {
