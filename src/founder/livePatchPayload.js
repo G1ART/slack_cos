@@ -1,6 +1,6 @@
 /**
- * vNext.13.44 — Deterministic emit_patch payload for Cursor Automation (cloud lane).
- * Only narrows already-closed tasks (live_patch or valid ops[]); does not infer open-world intent.
+ * vNext.13.45 — Deterministic emit_patch payload for Cursor Automation (cloud lane).
+ * Narrow path requires live_patch.live_only + live_patch.no_fallback (delegate / invoke payload only).
  */
 
 /** Matches automation body.payload expected by in-repo validation (trigger sends { action, payload, request_id, source }). */
@@ -18,6 +18,15 @@ export function isNarrowLivePatchIncomplete(pl) {
 }
 
 /**
+ * @param {unknown} lp
+ * @returns {boolean}
+ */
+function narrowConstraintFlagsOk(lp) {
+  if (!lp || typeof lp !== 'object' || Array.isArray(lp)) return false;
+  return lp.live_only === true && lp.no_fallback === true;
+}
+
+/**
  * @param {Record<string, unknown> | null | undefined} payload
  * @returns {{ path: string, operation: 'create'|'replace', content: string } | null}
  */
@@ -25,6 +34,7 @@ export function detectNarrowLivePatchFromPayload(payload) {
   const pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
   const lp = pl.live_patch;
   if (!lp || typeof lp !== 'object' || Array.isArray(lp)) return null;
+  if (!narrowConstraintFlagsOk(lp)) return null;
   const filePath = String(lp.path ?? lp.target_path ?? '').trim();
   const operation = String(lp.operation ?? lp.op ?? '').trim().toLowerCase();
   const content = lp.content != null ? String(lp.content) : '';
@@ -32,6 +42,25 @@ export function detectNarrowLivePatchFromPayload(payload) {
   if (operation !== 'create' && operation !== 'replace') return null;
   if (!content.length) return null;
   return { path: filePath, operation: operation === 'create' ? 'create' : 'replace', content };
+}
+
+/**
+ * Compiler entry: structured harness packet only (no founder raw text).
+ * @param {Record<string, unknown> | null | undefined} delegatePacket
+ * @returns {ReturnType<typeof prepareEmitPatchForCloudAutomation>}
+ */
+export function prepareEmitPatchFromStructuredDelegatePacket(delegatePacket) {
+  const pkt = delegatePacket && typeof delegatePacket === 'object' && !Array.isArray(delegatePacket) ? delegatePacket : {};
+  const titleBase = String(pkt.mission || '').trim().slice(0, 200);
+  const pl = {
+    title: titleBase || 'patch',
+    live_patch:
+      pkt.live_patch && typeof pkt.live_patch === 'object' && !Array.isArray(pkt.live_patch) ? { ...pkt.live_patch } : undefined,
+  };
+  if (!pl.live_patch) {
+    return prepareEmitPatchForCloudAutomation({ title: pl.title });
+  }
+  return prepareEmitPatchForCloudAutomation(pl);
 }
 
 /**
@@ -116,5 +145,29 @@ export function prepareEmitPatchForCloudAutomation(payload) {
  */
 export function formatEmitPatchCloudGateSummary(prep) {
   const fields = (prep.validation?.missing_required_fields || []).slice(0, 12).join(', ');
-  return `emit_patch automation: contract ${EMIT_PATCH_CONTRACT_NAME} not met (compilation=${prep.compilation}); missing: ${fields || '(none listed)'}`;
+  const machine = formatEmitPatchMachineBlockedHints(prep);
+  const tail = machine.length ? ` ${machine.join(' ')}` : '';
+  return `emit_patch automation: contract ${EMIT_PATCH_CONTRACT_NAME} not met (compilation=${prep.compilation}); missing: ${fields || '(none listed)'}${tail}`;
+}
+
+/**
+ * Short, log-safe hints (no secrets / raw payload).
+ * @param {ReturnType<typeof prepareEmitPatchForCloudAutomation>} prep
+ * @returns {string[]}
+ */
+export function formatEmitPatchMachineBlockedHints(prep) {
+  const out = [];
+  const miss = prep?.validation?.missing_required_fields || [];
+  for (const f of miss.slice(0, 8)) {
+    out.push(`emit_patch required field missing: ${f}`);
+  }
+  if (prep?.narrow_incomplete) {
+    const lp = prep.payload?.live_patch;
+    const o = lp && typeof lp === 'object' && !Array.isArray(lp) ? lp : {};
+    if (!String(o.path ?? '').trim()) out.push('target path unresolved');
+    else if (!(o.content != null && String(o.content).trim())) out.push('exact content unresolved');
+    else if (o.live_only !== true || o.no_fallback !== true) out.push('live-only / no-fallback constraints missing');
+    else out.push('narrow live patch incomplete');
+  }
+  return out;
 }

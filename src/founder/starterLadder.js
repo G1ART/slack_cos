@@ -56,6 +56,8 @@ export function buildInvokePayloadForPacket(pkt) {
           path: lp.path != null ? String(lp.path).trim() : '',
           operation: lp.operation != null ? String(lp.operation).trim().toLowerCase() : '',
           content: lp.content != null ? String(lp.content) : '',
+          live_only: lp.live_only === true,
+          no_fallback: lp.no_fallback === true,
         },
       };
     }

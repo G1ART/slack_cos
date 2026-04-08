@@ -45,7 +45,7 @@ const PREFERRED_TOOL_ENUM = ['cursor', 'github', 'supabase', 'vercel', 'railway'
  * Tool-call 인자의 기계적 스키마 검증만.
  * @param {string} callName
  * @param {Record<string, unknown>} args
- * @returns {{ blocked: boolean, reason?: string }}
+ * @returns {{ blocked: boolean, reason?: string, machine_hint?: string }}
  */
 export function validateToolCallArgs(callName, args) {
   const a = args && typeof args === 'object' ? args : {};
@@ -100,8 +100,21 @@ export function validateToolCallArgs(callName, args) {
           const fpath = String(lp.path || '').trim();
           const op = String(lp.operation || '').trim().toLowerCase();
           const c = lp.content != null ? String(lp.content) : '';
-          if (!fpath || (op !== 'create' && op !== 'replace') || !c.trim()) {
+          if (!fpath) {
+            return { blocked: true, reason: 'invalid_payload', machine_hint: 'target path unresolved' };
+          }
+          if (op !== 'create' && op !== 'replace') {
             return { blocked: true, reason: 'invalid_payload' };
+          }
+          if (!c.trim()) {
+            return { blocked: true, reason: 'invalid_payload', machine_hint: 'exact content unresolved' };
+          }
+          if (lp.live_only !== true || lp.no_fallback !== true) {
+            return {
+              blocked: true,
+              reason: 'invalid_payload',
+              machine_hint: 'live-only / no-fallback constraints missing',
+            };
           }
         }
       }
@@ -159,14 +172,102 @@ const DELEGATE_HARNESS_REQUIRED_KEYS = [
   'risks',
   'review_checkpoints',
   'open_questions',
+  'packets',
 ];
+
+const DELEGATE_PACKET_ITEM_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    packet_id: {
+      anyOf: [{ type: 'string' }, { type: 'null' }],
+      description: 'optional stable packet id',
+    },
+    persona: {
+      type: 'string',
+      enum: PERSONA_ENUM_ARR,
+      description: 'packet owner persona',
+    },
+    mission: { type: 'string', description: 'packet mission' },
+    inputs: {
+      anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+      description: 'inputs; null for defaults',
+    },
+    deliverables: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'deliverables',
+    },
+    definition_of_done: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'definition of done',
+    },
+    handoff_to: { type: 'string', description: 'next persona or empty string' },
+    artifact_format: { type: 'string', description: 'artifact format key' },
+    preferred_tool: {
+      anyOf: [{ type: 'string', enum: PREFERRED_TOOL_ENUM }, { type: 'null' }],
+      description: 'preferred tool or null',
+    },
+    preferred_action: {
+      anyOf: [{ type: 'string', enum: INVOKE_ACTION_ENUM }, { type: 'null' }],
+      description: 'preferred action or null',
+    },
+    review_required: {
+      anyOf: [{ type: 'boolean' }, { type: 'null' }],
+      description: 'review gate or null',
+    },
+    review_focus: {
+      anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+      description: 'review focus topics or null',
+    },
+    packet_status: {
+      anyOf: [{ type: 'string', enum: ['draft', 'ready'] }, { type: 'null' }],
+      description: 'draft|ready or null',
+    },
+    live_patch: {
+      anyOf: [
+        {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            path: { type: 'string', description: 'single repo-relative path' },
+            operation: { type: 'string', enum: ['create', 'replace'], description: 'file operation' },
+            content: { type: 'string', description: 'full exact file content' },
+            live_only: { type: 'boolean', description: 'must be true for narrow automation' },
+            no_fallback: { type: 'boolean', description: 'must be true for narrow automation' },
+          },
+          required: ['path', 'operation', 'content', 'live_only', 'no_fallback'],
+        },
+        { type: 'null' },
+      ],
+      description: 'closed single-file patch or null',
+    },
+  },
+  required: [
+    'packet_id',
+    'persona',
+    'mission',
+    'inputs',
+    'deliverables',
+    'definition_of_done',
+    'handoff_to',
+    'artifact_format',
+    'preferred_tool',
+    'preferred_action',
+    'review_required',
+    'review_focus',
+    'packet_status',
+    'live_patch',
+  ],
+};
 
 const COS_TOOLS = [
   {
     type: 'function',
     name: 'delegate_harness_team',
     description:
-      'Harness 내부 실행 조직·work packet. 패킷 envelope는 인자로 넘기지 말 것(서버가 objective·페르소나 등으로 자동 생성). founder에게 원시 artifact를 보이지 말 것.',
+      'Harness 내부 실행 조직·work packet. 대부분은 packets=null로 두고 서버가 objective·페르소나로 envelope를 만든다. 아주 좁게 닫힌 단일 파일 live patch(create|replace, exact content, live_only+no_fallback)만 packets에 live_patch를 실을 수 있다. founder에게 원시 artifact를 보이지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -183,6 +284,11 @@ const COS_TOOLS = [
         risks: { ...NULLABLE_STRING_ARRAY, description: '리스크; 없으면 null' },
         review_checkpoints: { ...NULLABLE_STRING_ARRAY, description: '리뷰 체크포인트; 없으면 null' },
         open_questions: { ...NULLABLE_STRING_ARRAY, description: '미결 질문; 없으면 null' },
+        packets: {
+          anyOf: [{ type: 'array', items: DELEGATE_PACKET_ITEM_SCHEMA }, { type: 'null' }],
+          description:
+            '선택 패킷 배열 또는 null. live_patch 사용 시 단일 경로·exact content·live_only·no_fallback 필수.',
+        },
       },
       required: DELEGATE_HARNESS_REQUIRED_KEYS,
       additionalProperties: false,
@@ -548,7 +654,12 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       let result;
       const schema = validateToolCallArgs(call.name, args);
       if (schema.blocked) {
-        result = { ok: false, blocked: true, reason: schema.reason };
+        result = {
+          ok: false,
+          blocked: true,
+          reason: schema.reason,
+          ...(schema.machine_hint ? { machine_hint: schema.machine_hint } : {}),
+        };
       } else if (call.name === 'delegate_harness_team') {
         result = await runHarnessOrchestration(args, { threadKey: tk });
         if (result && result.ok && String(result.status) === 'accepted' && tk) {

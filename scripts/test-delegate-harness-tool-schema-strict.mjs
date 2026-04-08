@@ -1,5 +1,5 @@
 /**
- * vNext.13.28a — OpenAI strict 도구 스키마 회귀 (delegate_harness_team에 packets 비노출).
+ * vNext.13.45 — OpenAI strict 도구 스키마 회귀 (delegate_harness_team에 packets 노출).
  */
 import assert from 'node:assert';
 import path from 'node:path';
@@ -25,8 +25,8 @@ assert.ok(snap && snap.properties && typeof snap.properties === 'object');
 const props = /** @type {Record<string, unknown>} */ (snap.properties);
 assert.equal(
   Object.prototype.hasOwnProperty.call(props, 'packets'),
-  false,
-  'delegate_harness_team must not expose packets in OpenAI tool schema (Option A hotfix)',
+  true,
+  'delegate_harness_team must expose packets for narrow live_patch delegate contract',
 );
 
 const h = await runHarnessOrchestration({

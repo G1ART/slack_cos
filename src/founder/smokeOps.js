@@ -54,6 +54,7 @@ export function resolveSmokeSessionId(env = process.env) {
  * @param {{
  *   runId: string,
  *   threadKey?: string,
+ *   smoke_session_id?: string | null,
  *   phase: string,
  *   detail?: Record<string, unknown>,
  *   env?: NodeJS.ProcessEnv,
@@ -62,7 +63,7 @@ export function resolveSmokeSessionId(env = process.env) {
 export async function recordOpsSmokePhase(p) {
   const env = p.env || process.env;
   if (!isOpsSmokeEnabled(env)) return;
-  const sid = resolveSmokeSessionId(env);
+  const sid = String(p.smoke_session_id || '').trim() || resolveSmokeSessionId(env);
   const runId = String(p.runId || '').trim();
   if (!sid || !runId) return;
 
@@ -247,6 +248,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
  *   env?: NodeJS.ProcessEnv,
  *   runId: string,
  *   threadKey: string,
+ *   smoke_session_id?: string | null,
  *   tr: Record<string, unknown> | null,
  * }} p
  */
@@ -259,11 +261,13 @@ export async function recordOpsSmokeCursorTrigger(p) {
   const tr = p.tr;
   const ok = Boolean(tr && tr.ok);
   const ext = tr && tr.external_run_id != null ? String(tr.external_run_id).trim() : '';
+  const smokeSid = String(p.smoke_session_id || '').trim() || null;
 
   await recordOpsSmokePhase({
     env,
     runId,
     threadKey,
+    smoke_session_id: smokeSid || undefined,
     phase: ok ? 'cursor_trigger_recorded' : 'cursor_trigger_failed',
     detail: {
       trigger: buildSafeTriggerSmokeDetail(tr, env),
@@ -276,6 +280,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
       env,
       runId,
       threadKey,
+      smoke_session_id: smokeSid || undefined,
       phase: 'external_run_id_extracted',
       detail: { external_run_id_tail: tailExternalRunId(ext) },
     });
@@ -358,11 +363,12 @@ export async function recordOpsSmokeFounderMilestone(p) {
 }
 
 /**
- * Pre-trigger emit_patch cloud contract gate (vNext.13.44).
+ * Pre-trigger emit_patch cloud contract gate (vNext.13.44+).
  * @param {{
  *   env?: NodeJS.ProcessEnv,
  *   runId: string,
  *   threadKey: string,
+ *   smoke_session_id?: string | null,
  *   prep: ReturnType<import('./livePatchPayload.js').prepareEmitPatchForCloudAutomation>,
  * }} p
  */
@@ -373,11 +379,13 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
   const threadKey = String(p.threadKey || '').trim();
   if (!runId) return;
   const prep = p.prep;
+  const smokeSid = String(p.smoke_session_id || '').trim() || null;
 
   await recordOpsSmokePhase({
     env,
     runId,
     threadKey,
+    smoke_session_id: smokeSid || undefined,
     phase: 'live_payload_compilation_started',
     detail: {
       selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
@@ -385,15 +393,44 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
     },
   });
 
+  if (prep.compilation === 'narrow') {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      smoke_session_id: smokeSid || undefined,
+      phase: 'delegate_packets_ready',
+      detail: {
+        selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
+        compilation_mode: prep.compilation,
+      },
+    });
+  }
+
   if (prep.narrow_incomplete) {
     await recordOpsSmokePhase({
       env,
       runId,
       threadKey,
+      smoke_session_id: smokeSid || undefined,
       phase: 'live_payload_compilation_failed',
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
         blocked_reason_code: 'narrow_live_patch_incomplete',
+      },
+    });
+  }
+
+  if (prep.cloud_ok) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      smoke_session_id: smokeSid || undefined,
+      phase: 'emit_patch_payload_validated',
+      detail: {
+        selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
+        compilation_mode: prep.compilation,
       },
     });
   }
@@ -403,6 +440,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       env,
       runId,
       threadKey,
+      smoke_session_id: smokeSid || undefined,
       phase: 'trigger_blocked_invalid_payload',
       detail: {
         blocked_reason_code: 'emit_patch_contract_not_met',

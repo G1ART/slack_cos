@@ -23,6 +23,7 @@ import {
   automationEndpointHostOnly,
   isCursorAutomationSmokeMode,
 } from './cursorCloudAdapter.js';
+import { isOpsSmokeEnabled } from './smokeOps.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -857,6 +858,10 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const invocation_id = `tool_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const adapter = TOOL_ADAPTERS[tool];
   const env = process.env;
+  const opsSmokeSessionId =
+    cosRunId && threadKey && isOpsSmokeEnabled(env) && tool === 'cursor' && action === 'emit_patch'
+      ? `smoke_inv_${invocation_id}`
+      : null;
 
   const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
   const snap = {
@@ -969,6 +974,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           env,
           runId: cosRunId,
           threadKey,
+          smoke_session_id: opsSmokeSessionId,
           prep: emitPatchPrep,
         });
       } catch (e) {
@@ -1010,6 +1016,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         env,
         runId: cosRunId,
         threadKey,
+        smoke_session_id: opsSmokeSessionId,
         tr: tr && typeof tr === 'object' ? /** @type {Record<string, unknown>} */ (tr) : null,
       });
     } catch (e) {
