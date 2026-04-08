@@ -80,7 +80,17 @@ function specializePacket(pkt, persona) {
   const pa0 = pkt.preferred_action != null ? String(pkt.preferred_action) : null;
   const fromFmt = preferredToolActionFromFormat(String(pkt.artifact_format || 'spec_markdown'));
   const preferred_tool = pt0 || fromFmt.preferred_tool;
-  const preferred_action = pa0 || fromFmt.preferred_action;
+  let preferred_action = pa0 || fromFmt.preferred_action;
+  const lp0 = pkt.live_patch && typeof pkt.live_patch === 'object' && !Array.isArray(pkt.live_patch) ? pkt.live_patch : null;
+  const narrowLive =
+    lp0 &&
+    lp0.live_only === true &&
+    lp0.no_fallback === true &&
+    String(lp0.path || '').trim() &&
+    String(lp0.content || '').trim();
+  if (preferred_tool === 'cursor' && preferred_action === 'create_spec' && narrowLive) {
+    preferred_action = 'emit_patch';
+  }
   let review_required = typeof pkt.review_required === 'boolean' ? pkt.review_required : persona === 'qa';
   const review_focus = Array.isArray(pkt.review_focus)
     ? pkt.review_focus.map((x) => String(x))

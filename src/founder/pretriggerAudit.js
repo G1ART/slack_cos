@@ -80,6 +80,17 @@ export async function recordCosPretriggerAudit(p) {
   const smoke_session_id = String(p.smoke_session_id || '').trim();
   if (!smoke_session_id) return;
 
+  const args = p.args && typeof p.args === 'object' && !Array.isArray(p.args) ? p.args : {};
+  if (
+    String(p.call_name || '') === 'invoke_external_tool' &&
+    String(args.tool || '') === 'cursor' &&
+    String(args.action || '') === 'create_spec' &&
+    p.threadKey
+  ) {
+    const { isThreadLiveOnlyNoFallbackSmoke } = await import('./delegateEmitPatchStash.js');
+    if (isThreadLiveOnlyNoFallbackSmoke(String(p.threadKey))) return;
+  }
+
   let runId = String(p.runId || '').trim();
   if (!runId && p.threadKey) {
     const run = await getActiveRunForThread(String(p.threadKey));

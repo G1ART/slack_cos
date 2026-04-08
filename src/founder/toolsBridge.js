@@ -900,24 +900,6 @@ export async function invokeExternalTool(spec, ctx = {}) {
   if (tool === 'cursor' && action === 'create_spec' && threadKey) {
     const sm = await loadDelegateEmitPatchStash();
     if (sm.isThreadLiveOnlyNoFallbackSmoke(threadKey)) {
-      if (opsSmokeSessionId && cosRunId) {
-        try {
-          await recordCosPretriggerAudit({
-            env,
-            threadKey,
-            runId: cosRunId,
-            smoke_session_id: opsSmokeSessionId,
-            call_name: 'invoke_external_tool',
-            args: { tool, action, payload },
-            blocked: true,
-            blocked_reason: CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE,
-            missing_required_fields: [],
-            machine_hint: 'live_only_no_fallback_create_spec_forbidden',
-          });
-        } catch (e) {
-          console.error('[pretrigger_audit]', e);
-        }
-      }
       const status = 'blocked';
       const outcome_code = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
       const needs_review = true;
@@ -1275,6 +1257,26 @@ export async function invokeExternalTool(spec, ctx = {}) {
     return adapter.buildArtifact(action, payload, invocation_id);
   }
 
+  /** @type {Record<string, unknown> | null} */
+  let callbackContractSnapshot = null;
+  if (automationLaneActive && threadKey && cosRunId) {
+    try {
+      const { describeTriggerCallbackContractForOps } = await import('./cursorCloudAdapter.js');
+      callbackContractSnapshot = describeTriggerCallbackContractForOps(env);
+      const { recordOpsSmokeTriggerCallbackContract } = await import('./smokeOps.js');
+      await recordOpsSmokeTriggerCallbackContract({
+        env,
+        runId: cosRunId,
+        threadKey,
+        smoke_session_id: opsSmokeSessionId,
+        invoked_tool: tool,
+        invoked_action: action,
+      });
+    } catch (e) {
+      console.error('[ops_smoke]', e);
+    }
+  }
+
   const tr = automationLaneActive
     ? await triggerCursorAutomation({ action, payload, env, invocation_id })
     : null;
@@ -1288,6 +1290,9 @@ export async function invokeExternalTool(spec, ctx = {}) {
         threadKey,
         smoke_session_id: opsSmokeSessionId,
         tr: tr && typeof tr === 'object' ? /** @type {Record<string, unknown>} */ (tr) : null,
+        invoked_tool: tool,
+        invoked_action: action,
+        callback_contract: callbackContractSnapshot,
       });
     } catch (e) {
       console.error('[ops_smoke]', e);

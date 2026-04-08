@@ -5,7 +5,7 @@
 
 import crypto from 'node:crypto';
 import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow, listCosRunEventsForRun } from './runCosEvents.js';
-import { listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
+import { describeTriggerCallbackContractForOps, listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
 import { EMIT_PATCH_CONTRACT_NAME } from './livePatchPayload.js';
 import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES, createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
@@ -247,6 +247,12 @@ export async function recordOpsSmokeGithubFallbackEvidence(p) {
  * Supervisor backstop: classify "no verified cursor ingress" after accepted trigger + timeout.
  * @param {{ runId: string, threadKey?: string, env?: NodeJS.ProcessEnv }} p
  */
+const CALLBACK_ABSENCE_PHASES = new Set([
+  'cursor_callback_absent_within_timeout',
+  'cursor_callback_absent_despite_callback_contract',
+  'cursor_callback_absent_without_callback_contract',
+]);
+
 export async function maybeRecordOpsSmokeCursorCallbackAbsence(p) {
   const env = p.env || process.env;
   if (!isOpsSmokeEnabled(env)) return;
@@ -257,12 +263,14 @@ export async function maybeRecordOpsSmokeCursorCallbackAbsence(p) {
   const seenAbsence = events.some((e) => {
     if (String(e.event_type || '') !== 'ops_smoke_phase') return false;
     const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
-    return String(pl.phase || '') === 'cursor_callback_absent_within_timeout';
+    return CALLBACK_ABSENCE_PHASES.has(String(pl.phase || ''));
   });
   if (seenAbsence) return;
 
   let pendingAt = '';
   let smokeSid = '';
+  /** @type {boolean | null} */
+  let contractPresent = null;
   for (const e of events) {
     if (String(e.event_type || '') !== 'ops_smoke_phase') continue;
     const pl = e.payload && typeof e.payload === 'object' ? e.payload : {};
@@ -272,6 +280,14 @@ export async function maybeRecordOpsSmokeCursorCallbackAbsence(p) {
     if (at && (!pendingAt || at.localeCompare(pendingAt) < 0)) {
       pendingAt = at;
       if (sid) smokeSid = sid;
+      const det = pl.detail && typeof pl.detail === 'object' ? pl.detail : {};
+      const ccp =
+        typeof pl.callback_contract_present === 'boolean'
+          ? pl.callback_contract_present
+          : typeof det.callback_contract_present === 'boolean'
+            ? det.callback_contract_present
+            : null;
+      contractPresent = ccp;
     }
   }
   if (!pendingAt || !smokeSid) return;
@@ -300,16 +316,28 @@ export async function maybeRecordOpsSmokeCursorCallbackAbsence(p) {
   }
   if (sawVerifiedIngress) return;
 
+  const phase =
+    contractPresent === true
+      ? 'cursor_callback_absent_despite_callback_contract'
+      : contractPresent === false
+        ? 'cursor_callback_absent_without_callback_contract'
+        : 'cursor_callback_absent_within_timeout';
   await recordOpsSmokePhase({
     env,
     runId,
     threadKey: p.threadKey,
     smoke_session_id: smokeSid || undefined,
-    phase: 'cursor_callback_absent_within_timeout',
+    phase,
     detail: {
       timeout_sec: timeoutSec,
       pending_since_at: pendingAt,
-      classification: 'no_verified_cursor_callback_within_timeout',
+      classification:
+        phase === 'cursor_callback_absent_despite_callback_contract'
+          ? 'no_verified_cursor_callback_despite_outbound_callback_contract'
+          : phase === 'cursor_callback_absent_without_callback_contract'
+            ? 'no_verified_cursor_callback_trigger_had_no_callback_contract'
+            : 'no_verified_cursor_callback_within_timeout',
+      callback_contract_present: contractPresent,
     },
   });
 }
@@ -333,6 +361,7 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
     (t.accepted_external_id != null && String(t.accepted_external_id).trim() !== '');
   return {
     response_top_level_keys: keys,
+    accepted_response_top_level_keys: keys,
     http_status: typeof t.status === 'number' ? t.status : null,
     trigger_status: t.trigger_status != null ? String(t.trigger_status).slice(0, 80) : null,
     external_run_id_tail: tailExternalRunId(t.external_run_id),
@@ -407,11 +436,15 @@ const PIPELINE_BREAK_ORDER = [
 
 /** Sort order for phases_seen / ordered_events. */
 const PHASE_SORT_ORDER = [
+  'trigger_outbound_callback_contract',
   'cursor_trigger_recorded',
+  'trigger_sent_without_callback_contract',
   'trigger_accepted_external_id_present',
   'trigger_accepted_external_id_missing',
   'trigger_accepted_external_run_id_absent',
   'trigger_accepted_callback_pending',
+  'cursor_callback_absent_despite_callback_contract',
+  'cursor_callback_absent_without_callback_contract',
   'cursor_callback_absent_within_timeout',
   'cursor_callback_observed_no_match',
   'cursor_direct_callback_correlated',
@@ -528,7 +561,13 @@ export function aggregateSmokeSessionProgress(rows) {
     }
   }
 
-  if (seen.has('cursor_callback_absent_within_timeout')) {
+  if (seen.has('cursor_callback_absent_despite_callback_contract')) {
+    final_status = 'cursor_callback_absent_despite_callback_contract';
+    breaksAt = 'external_callback_matched';
+  } else if (seen.has('cursor_callback_absent_without_callback_contract')) {
+    final_status = 'cursor_callback_absent_without_callback_contract';
+    breaksAt = 'external_callback_matched';
+  } else if (seen.has('cursor_callback_absent_within_timeout')) {
     final_status = 'cursor_callback_absent_within_timeout';
     breaksAt = 'external_callback_matched';
   } else if (seen.has('cursor_callback_observed_no_match') && !seen.has('external_callback_matched')) {
@@ -708,6 +747,129 @@ export function extractGithubFallbackSummaryFromRows(rows) {
   };
 }
 
+/**
+ * Latest trigger_outbound_callback_contract row (safe subset fields on payload).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractLatestCallbackContractEvidenceFromRows(rows) {
+  const empty = {
+    callback_contract_present: null,
+    callback_url_field_name: null,
+    callback_secret_field_name: null,
+    callback_hints_field_names: null,
+    callback_url_path_only: null,
+    callback_secret_present: null,
+    selected_trigger_endpoint_family: null,
+  };
+  let bestAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let best = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (String(pl.phase || '') !== 'trigger_outbound_callback_contract') continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      best = pl;
+    }
+  }
+  if (!best) return empty;
+  const hints = Array.isArray(best.callback_hints_field_names)
+    ? best.callback_hints_field_names.map(String).slice(0, 12)
+    : null;
+  return {
+    callback_contract_present:
+      best.callback_contract_present === true ? true : best.callback_contract_present === false ? false : null,
+    callback_url_field_name:
+      best.callback_url_field_name != null ? String(best.callback_url_field_name).slice(0, 120) : null,
+    callback_secret_field_name:
+      best.callback_secret_field_name != null ? String(best.callback_secret_field_name).slice(0, 120) : null,
+    callback_hints_field_names: hints,
+    callback_url_path_only:
+      best.callback_url_path_only != null ? String(best.callback_url_path_only).slice(0, 200) : null,
+    callback_secret_present: best.callback_secret_present === true ? true : best.callback_secret_present === false ? false : null,
+    selected_trigger_endpoint_family:
+      best.selected_trigger_endpoint_family != null
+        ? String(best.selected_trigger_endpoint_family).slice(0, 80)
+        : null,
+  };
+}
+
+/**
+ * Latest successful cursor_trigger_recorded invoke (primary accepted automation path).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractPrimaryAcceptedTriggerInvokeFromRows(rows) {
+  let bestAt = '';
+  /** @type {{ invoked_tool: string | null, invoked_action: string | null, trigger_ok: boolean } | null} */
+  let best = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (String(pl.phase || '') !== 'cursor_trigger_recorded') continue;
+    if (pl.trigger_ok !== true) continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      best = {
+        invoked_tool: pl.invoked_tool != null ? String(pl.invoked_tool) : null,
+        invoked_action: pl.invoked_action != null ? String(pl.invoked_action) : null,
+        trigger_ok: true,
+      };
+    }
+  }
+  return best;
+}
+
+/**
+ * Latest non-blocked pretrigger observe row (secondary to accepted trigger when both exist).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractLatestNonBlockedPretriggerSummaryFromRows(rows) {
+  let bestAt = '';
+  /** @type {{ selected_tool: string | null, selected_action: string | null } | null} */
+  let best = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'cos_pretrigger_tool_call') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      best = {
+        selected_tool: pl.selected_tool != null ? String(pl.selected_tool) : null,
+        selected_action: pl.selected_action != null ? String(pl.selected_action) : null,
+      };
+    }
+  }
+  return best;
+}
+
+/**
+ * All blocked pretrigger rows in session (chronological).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractSecondaryBlockedActionsFromRows(rows) {
+  /** @type {{ at: string, entry: Record<string, unknown> }[]} */
+  const tmp = [];
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'cos_pretrigger_tool_call_blocked') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const at = String(pl.at || r.created_at || '');
+    tmp.push({
+      at,
+      entry: {
+        selected_tool: pl.selected_tool != null ? String(pl.selected_tool) : null,
+        selected_action: pl.selected_action != null ? String(pl.selected_action) : null,
+        blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason).slice(0, 120) : null,
+        machine_hint: pl.machine_hint != null ? String(pl.machine_hint).slice(0, 200) : null,
+      },
+    });
+  }
+  tmp.sort((a, b) => a.at.localeCompare(b.at));
+  return tmp.map((t) => t.entry);
+}
+
 export function extractOpsSmokeMachineSummaryFromRows(rows) {
   const empty = {
     call_name: null,
@@ -803,6 +965,20 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const triggerEv = extractLatestTriggerEvidenceFromRows(rows);
     const cursorIngress = extractLatestCursorWebhookIngressFromRows(rows);
     const ghFb = extractGithubFallbackSummaryFromRows(rows);
+    const cbContract = extractLatestCallbackContractEvidenceFromRows(rows);
+    const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(rows);
+    const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(rows);
+    const secondary_blocked_actions = extractSecondaryBlockedActionsFromRows(rows);
+    const primary_selected_tool =
+      primaryInvoke?.trigger_ok === true && primaryInvoke.invoked_tool
+        ? primaryInvoke.invoked_tool
+        : preNonBlocked?.selected_tool ?? machine.selected_tool;
+    const primary_selected_action =
+      primaryInvoke?.trigger_ok === true && primaryInvoke.invoked_action
+        ? primaryInvoke.invoked_action
+        : preNonBlocked?.selected_action ?? machine.selected_action;
+    const emitPatchPrimary =
+      primaryInvoke?.trigger_ok === true && String(primaryInvoke?.invoked_action || '') === 'emit_patch';
     const delegateSchemaPass = rows.some((r) => {
       const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
       return (
@@ -827,7 +1003,16 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       run_id,
       lastAt,
       ...machine,
+      selected_tool: primary_selected_tool ?? machine.selected_tool,
+      selected_action: primary_selected_action ?? machine.selected_action,
+      blocked_reason: emitPatchPrimary ? null : machine.blocked_reason,
+      machine_hint: emitPatchPrimary ? null : machine.machine_hint,
+      primary_selected_tool: primary_selected_tool ?? machine.selected_tool,
+      primary_selected_action: primary_selected_action ?? machine.selected_action,
+      primary_trigger_state: agg.final_status,
+      secondary_blocked_actions,
       delegate_schema_valid,
+      ...cbContract,
       ...triggerEv,
       ...cursorIngress,
       ...ghFb,
@@ -839,12 +1024,50 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
 }
 
 /**
+ * Ops evidence: safe subset of outbound callback contract immediately before Cursor automation POST.
+ * @param {{
+ *   env?: NodeJS.ProcessEnv,
+ *   runId: string,
+ *   threadKey: string,
+ *   smoke_session_id?: string | null,
+ *   invoked_tool?: string | null,
+ *   invoked_action?: string | null,
+ * }} p
+ */
+export async function recordOpsSmokeTriggerCallbackContract(p) {
+  const env = p.env || process.env;
+  if (!isOpsSmokeEnabled(env)) return;
+  const runId = String(p.runId || '').trim();
+  const threadKey = String(p.threadKey || '').trim();
+  if (!runId || !threadKey) return;
+  const smokeSid = String(p.smoke_session_id || '').trim() || null;
+  const contract = describeTriggerCallbackContractForOps(env);
+  await recordOpsSmokePhase({
+    env,
+    runId,
+    threadKey,
+    smoke_session_id: smokeSid || undefined,
+    phase: 'trigger_outbound_callback_contract',
+    detail: {
+      invoked_tool: p.invoked_tool != null ? String(p.invoked_tool).slice(0, 32) : null,
+      invoked_action: p.invoked_action != null ? String(p.invoked_action).slice(0, 48) : null,
+      ...contract,
+      cursor_automation_side_effects_policy:
+        'git_reflection_branch_push_pr_are_secondary; primary_completion_is_cos_callback_delivery_or_callback_metadata_unavailable_proof',
+    },
+  });
+}
+
+/**
  * @param {{
  *   env?: NodeJS.ProcessEnv,
  *   runId: string,
  *   threadKey: string,
  *   smoke_session_id?: string | null,
  *   tr: Record<string, unknown> | null,
+ *   invoked_tool?: string | null,
+ *   invoked_action?: string | null,
+ *   callback_contract?: Record<string, unknown> | null,
  * }} p
  */
 export async function recordOpsSmokeCursorTrigger(p) {
@@ -857,6 +1080,11 @@ export async function recordOpsSmokeCursorTrigger(p) {
   const ok = Boolean(tr && tr.ok);
   const ext = tr && tr.external_run_id != null ? String(tr.external_run_id).trim() : '';
   const smokeSid = String(p.smoke_session_id || '').trim() || null;
+  const cc =
+    p.callback_contract && typeof p.callback_contract === 'object' && !Array.isArray(p.callback_contract)
+      ? /** @type {Record<string, unknown>} */ (p.callback_contract)
+      : describeTriggerCallbackContractForOps(env);
+  const ccPresent = cc.callback_contract_present === true;
 
   await recordOpsSmokePhase({
     env,
@@ -867,6 +1095,22 @@ export async function recordOpsSmokeCursorTrigger(p) {
     detail: {
       trigger: buildSafeTriggerSmokeDetail(tr, env),
       trigger_ok: ok,
+      invoked_tool: p.invoked_tool != null ? String(p.invoked_tool).slice(0, 32) : null,
+      invoked_action: p.invoked_action != null ? String(p.invoked_action).slice(0, 48) : null,
+      callback_contract: {
+        callback_contract_present: Boolean(cc.callback_contract_present),
+        callback_url_field_name: cc.callback_url_field_name != null ? String(cc.callback_url_field_name) : null,
+        callback_secret_field_name:
+          cc.callback_secret_field_name != null ? String(cc.callback_secret_field_name) : null,
+        callback_hints_field_names: Array.isArray(cc.callback_hints_field_names)
+          ? cc.callback_hints_field_names.map(String).slice(0, 12)
+          : null,
+        callback_url_path_only:
+          cc.callback_url_path_only != null ? String(cc.callback_url_path_only).slice(0, 200) : null,
+        callback_secret_present: cc.callback_secret_present === true,
+        selected_trigger_endpoint_family:
+          cc.selected_trigger_endpoint_family != null ? String(cc.selected_trigger_endpoint_family) : null,
+      },
     },
   });
 
@@ -908,10 +1152,24 @@ export async function recordOpsSmokeCursorTrigger(p) {
         phase: 'trigger_accepted_callback_pending',
         detail: {
           trigger: buildSafeTriggerSmokeDetail(tr, env),
+          callback_contract_present: ccPresent,
           machine_note:
             'trigger_accepted; awaiting verified direct cursor webhook; github evidence is advisory only',
         },
       });
+      if (!ccPresent) {
+        await recordOpsSmokePhase({
+          env,
+          runId,
+          threadKey,
+          smoke_session_id: smokeSid || undefined,
+          phase: 'trigger_sent_without_callback_contract',
+          detail: {
+            callback_contract_present: false,
+            classification: 'trigger_sent_without_callback_contract',
+          },
+        });
+      }
     }
   }
 

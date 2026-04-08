@@ -26,6 +26,7 @@ const json = JSON.stringify(d);
 
 const allowedKeys = new Set([
   'response_top_level_keys',
+  'accepted_response_top_level_keys',
   'http_status',
   'trigger_status',
   'external_run_id_tail',

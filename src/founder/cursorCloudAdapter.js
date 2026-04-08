@@ -295,6 +295,100 @@ export function isCursorAutomationSmokeMode(env = process.env) {
 }
 
 /**
+ * Resolve callback URL for outbound trigger (full string; never log in ops — use describeTriggerCallbackContractForOps).
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function resolveCursorAutomationCallbackUrl(env = process.env) {
+  const explicit = String(env.CURSOR_AUTOMATION_CALLBACK_URL || '').trim();
+  if (explicit) return explicit;
+  const publicBase = String(env.PUBLIC_BASE_URL || '').trim();
+  const pathFrag = String(env.CURSOR_AUTOMATION_CALLBACK_PATH || '/webhooks/cursor').trim() || '/webhooks/cursor';
+  if (!publicBase) return '';
+  try {
+    const base = publicBase.endsWith('/') ? publicBase.slice(0, -1) : publicBase;
+    const path = pathFrag.startsWith('/') ? pathFrag : `/${pathFrag}`;
+    return new URL(path, `${base}/`).href;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Safe subset for ops: outbound callback contract shape (vNext.13.53). No raw URLs, no secret values.
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function describeTriggerCallbackContractForOps(env = process.env) {
+  const enabled = String(env.CURSOR_AUTOMATION_CALLBACK_CONTRACT_ENABLED || '').trim() === '1';
+  const urlField = String(env.CURSOR_AUTOMATION_CALLBACK_URL_FIELD || 'callbackUrl').trim() || 'callbackUrl';
+  const secretField = String(env.CURSOR_AUTOMATION_CALLBACK_SECRET_FIELD || 'webhookSecret').trim() || 'webhookSecret';
+  const policyField =
+    String(env.CURSOR_AUTOMATION_COMPLETION_POLICY_FIELD || 'execution_completion_policy').trim() ||
+    'execution_completion_policy';
+  const secondaryFxField =
+    String(env.CURSOR_AUTOMATION_SECONDARY_EFFECTS_FIELD || 'side_effects_are_non_primary').trim() ||
+    'side_effects_are_non_primary';
+
+  const fullUrl = resolveCursorAutomationCallbackUrl(env);
+  const webhookSecret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
+  const endpoint = String(env.CURSOR_AUTOMATION_ENDPOINT || '').trim();
+
+  const callback_contract_present = enabled && Boolean(fullUrl && webhookSecret);
+
+  let callback_url_path_only = null;
+  if (fullUrl) {
+    try {
+      const u = new URL(fullUrl);
+      callback_url_path_only = `${u.pathname}${u.search ? '?[redacted]' : ''}`.slice(0, 200);
+    } catch {
+      callback_url_path_only = '[unparseable]';
+    }
+  }
+
+  let selected_trigger_endpoint_family = 'unknown';
+  if (endpoint) {
+    const h = (automationEndpointHostOnly(endpoint) || '').toLowerCase();
+    if (h.includes('cursor')) selected_trigger_endpoint_family = 'cursor_automation_host';
+    else if (h.includes('railway')) selected_trigger_endpoint_family = 'railway_custom';
+    else selected_trigger_endpoint_family = 'http_json_post';
+  }
+
+  return {
+    callback_contract_enabled_flag: enabled,
+    callback_contract_present,
+    callback_url_field_name: urlField,
+    callback_secret_field_name: secretField,
+    callback_hints_field_names: [policyField, secondaryFxField].filter(Boolean),
+    callback_url_path_only,
+    callback_secret_present: Boolean(webhookSecret),
+    selected_trigger_endpoint_family,
+    completion_policy_field: policyField,
+    secondary_effects_field: secondaryFxField,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} base
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function mergeCallbackContractIntoTriggerBody(base, env = process.env) {
+  const d = describeTriggerCallbackContractForOps(env);
+  const out = { ...base };
+  if (!d.callback_contract_present) return out;
+  const fullUrl = resolveCursorAutomationCallbackUrl(env);
+  const secret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
+  out[d.callback_url_field_name] = fullUrl;
+  out[d.callback_secret_field_name] = secret;
+  out[d.completion_policy_field] = 'cos_webhook_primary';
+  out[d.secondary_effects_field] = true;
+  const noteField =
+    String(env.CURSOR_AUTOMATION_COMPLETION_POLICY_NOTE_FIELD || 'cos_completion_policy_note').trim() ||
+    'cos_completion_policy_note';
+  out[noteField] =
+    'Primary completion is COS webhook delivery (or proof callback metadata unavailable). Git, branch, push, and PR are secondary side effects, not the primary completion signal.';
+  return out;
+}
+
+/**
  * @param {{
  *   action: string,
  *   payload: Record<string, unknown>,
@@ -335,12 +429,16 @@ export async function triggerCursorAutomation(opts) {
     };
   }
 
-  const body = JSON.stringify({
-    action: String(opts.action || ''),
-    payload: opts.payload && typeof opts.payload === 'object' && !Array.isArray(opts.payload) ? opts.payload : {},
-    request_id,
-    source: 'g1_cos_slack',
-  });
+  const bodyObj = mergeCallbackContractIntoTriggerBody(
+    {
+      action: String(opts.action || ''),
+      payload: opts.payload && typeof opts.payload === 'object' && !Array.isArray(opts.payload) ? opts.payload : {},
+      request_id,
+      source: 'g1_cos_slack',
+    },
+    env,
+  );
+  const body = JSON.stringify(bodyObj);
 
   const authHeaders = headersFromAutomationAuth(authRaw);
   const headers = {
