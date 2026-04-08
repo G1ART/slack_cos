@@ -1,5 +1,6 @@
 /**
- * vNext.13.45 — Each emit_patch tool invocation gets a distinct ops smoke session id (summary visibility).
+ * vNext.13.45+ — Multiple emit_patch pretrigger paths produce ops_smoke_phase rows (summary visibility).
+ * vNext.13.49 — Without COS_OPS_SMOKE_SESSION_ID, invocations share one cached parent smoke_* session id (affinity).
  */
 import assert from 'node:assert';
 import path from 'node:path';
@@ -59,7 +60,14 @@ await invokeExternalTool(
 const evs = await listCosRunEventsForRun(rid, 80);
 const smokeRows = evs.filter((e) => e.event_type === 'ops_smoke_phase');
 const sids = [...new Set(smokeRows.map((e) => String(e.payload?.smoke_session_id || '').trim()).filter(Boolean))];
-assert.ok(sids.length >= 2, `expected 2+ distinct smoke_session_id, got: ${sids.join(', ')}`);
+assert.ok(smokeRows.length >= 2, 'expected multiple ops_smoke_phase rows for two invocations');
+assert.ok(sids.length >= 1, 'expected smoke_session_id on rows');
+assert.equal(
+  sids.length,
+  1,
+  `single parent smoke_session_id for unconfigured smoke (cached smoke_*), got: ${sids.join(', ')}`,
+);
+assert.ok(sids[0].startsWith('smoke_'), `expected smoke_* session, got ${sids[0]}`);
 
 delete process.env.COS_OPS_SMOKE_ENABLED;
 delete process.env.CURSOR_CLOUD_AGENT_ENABLED;

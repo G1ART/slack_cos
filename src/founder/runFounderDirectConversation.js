@@ -2,7 +2,6 @@
  * Founder 대화: thread raw memory + execution ledger + Responses API tool loop.
  */
 
-import crypto from 'node:crypto';
 import { runHarnessOrchestration } from './harnessBridge.js';
 import {
   invokeExternalTool,
@@ -24,8 +23,9 @@ import {
 } from './executionRunStore.js';
 import { executeStarterKickoffIfEligible } from './starterLadder.js';
 import { stashDelegateEmitPatchContext } from './delegateEmitPatchStash.js';
-import { isOpsSmokeEnabled } from './smokeOps.js';
+import { resolveOpsSmokeSessionIdForToolAudit } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
+import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -56,75 +56,7 @@ export function validateToolCallArgs(callName, args) {
   const a = args && typeof args === 'object' ? args : {};
 
   if (callName === 'delegate_harness_team') {
-    const objective = a.objective;
-    if (typeof objective !== 'string' || !objective.trim()) {
-      return { blocked: true, reason: 'invalid_payload' };
-    }
-    if (a.packets != null) {
-      if (!Array.isArray(a.packets)) return { blocked: true, reason: 'invalid_payload' };
-      for (const pkt of a.packets) {
-        if (!pkt || typeof pkt !== 'object' || Array.isArray(pkt)) {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        const persona = String(pkt.persona || '').toLowerCase();
-        if (!PERSONA_ENUM_ARR.includes(persona)) return { blocked: true, reason: 'invalid_payload' };
-        if (typeof pkt.mission !== 'string' || !pkt.mission.trim()) return { blocked: true, reason: 'invalid_payload' };
-        if (!Array.isArray(pkt.deliverables) || !Array.isArray(pkt.definition_of_done)) {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (typeof pkt.handoff_to !== 'string') return { blocked: true, reason: 'invalid_payload' };
-        if (typeof pkt.artifact_format !== 'string' || !pkt.artifact_format.trim()) {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (pkt.preferred_tool != null) {
-          const pt = String(pkt.preferred_tool);
-          if (!PREFERRED_TOOL_ENUM.includes(pt)) return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (pkt.preferred_action != null) {
-          const pa = String(pkt.preferred_action);
-          if (!INVOKE_ACTION_ENUM.includes(pa)) return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (pkt.review_required !== undefined && typeof pkt.review_required !== 'boolean') {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (pkt.review_focus !== undefined && !Array.isArray(pkt.review_focus)) {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (
-          pkt.packet_status !== undefined &&
-          pkt.packet_status !== 'draft' &&
-          pkt.packet_status !== 'ready'
-        ) {
-          return { blocked: true, reason: 'invalid_payload' };
-        }
-        if (pkt.live_patch != null) {
-          const lp = pkt.live_patch;
-          if (!lp || typeof lp !== 'object' || Array.isArray(lp)) {
-            return { blocked: true, reason: 'invalid_payload' };
-          }
-          const fpath = String(lp.path || '').trim();
-          const op = String(lp.operation || '').trim().toLowerCase();
-          const c = lp.content != null ? String(lp.content) : '';
-          if (!fpath) {
-            return { blocked: true, reason: 'invalid_payload', machine_hint: 'target path unresolved' };
-          }
-          if (op !== 'create' && op !== 'replace') {
-            return { blocked: true, reason: 'invalid_payload' };
-          }
-          if (!c.trim()) {
-            return { blocked: true, reason: 'invalid_payload', machine_hint: 'exact content unresolved' };
-          }
-          if (lp.live_only !== true || lp.no_fallback !== true) {
-            return {
-              blocked: true,
-              reason: 'invalid_payload',
-              machine_hint: 'live-only / no-fallback constraints missing',
-            };
-          }
-        }
-      }
-    }
-    return { blocked: false };
+    return validateDelegateHarnessTeamToolArgs(a);
   }
 
   if (callName === 'invoke_external_tool') {
@@ -664,15 +596,6 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
   let lastText = '';
   /** @type {unknown[]} */
   let lastToolRoundParsedResults = [];
-  let founderTurnSmokeSession = null;
-  const getFounderAuditSmokeSessionId = () => {
-    if (!isOpsSmokeEnabled(process.env)) return null;
-    if (!founderTurnSmokeSession) {
-      founderTurnSmokeSession = `smoke_turn_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    }
-    return founderTurnSmokeSession;
-  };
-
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     /** @type {Record<string, unknown>} */
     const req = {
@@ -729,7 +652,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       break;
     }
 
-    const smTurn = getFounderAuditSmokeSessionId();
+    const smTurn = resolveOpsSmokeSessionIdForToolAudit(process.env);
     const activeRun = tk ? await getActiveRunForThread(tk) : null;
     const auditRunId = activeRun?.id != null ? String(activeRun.id) : '';
 
@@ -768,9 +691,19 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           ok: false,
           blocked: true,
           reason: schema.reason,
+          ...(schema.blocked_reason ? { blocked_reason: schema.blocked_reason } : {}),
           ...(schema.machine_hint ? { machine_hint: schema.machine_hint } : {}),
           ...(Array.isArray(schema.missing_required_fields)
             ? { missing_required_fields: schema.missing_required_fields }
+            : {}),
+          ...(Array.isArray(schema.invalid_enum_fields)
+            ? { invalid_enum_fields: schema.invalid_enum_fields }
+            : {}),
+          ...(Array.isArray(schema.invalid_nested_fields)
+            ? { invalid_nested_fields: schema.invalid_nested_fields }
+            : {}),
+          ...(Array.isArray(schema.delegate_schema_error_fields)
+            ? { delegate_schema_error_fields: schema.delegate_schema_error_fields }
             : {}),
         };
         if (
@@ -787,8 +720,15 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
               args,
               blocked: true,
               machine_hint: schema.machine_hint,
-              blocked_reason: schema.reason,
+              blocked_reason: schema.blocked_reason || schema.reason,
               missing_required_fields: schema.missing_required_fields,
+              invalid_enum_fields: schema.invalid_enum_fields,
+              invalid_nested_fields: schema.invalid_nested_fields,
+              delegate_schema_valid:
+                schema.delegate_schema_valid === true || schema.delegate_schema_valid === false
+                  ? schema.delegate_schema_valid
+                  : false,
+              delegate_schema_error_fields: schema.delegate_schema_error_fields,
             });
           } catch (e) {
             console.error('[pretrigger_audit]', e);

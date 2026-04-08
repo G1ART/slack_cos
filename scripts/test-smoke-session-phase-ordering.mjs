@@ -58,4 +58,14 @@ const acceptedNoRunId = aggregateSmokeSessionProgress([
 assert.equal(acceptedNoRunId.final_status, 'trigger_accepted_external_run_id_missing');
 assert.equal(acceptedNoRunId.breaks_at, 'external_run_id_extracted');
 
+const acceptedComposerId = aggregateSmokeSessionProgress([
+  { event_type: 'ops_smoke_phase', payload: { phase: 'cursor_trigger_recorded', at: '2026-04-02T10:00:00Z' } },
+  {
+    event_type: 'ops_smoke_phase',
+    payload: { phase: 'trigger_accepted_external_id_present', at: '2026-04-02T10:00:01Z' },
+  },
+]);
+assert.equal(acceptedComposerId.final_status, 'trigger_accepted_external_id_present');
+assert.equal(acceptedComposerId.breaks_at, 'external_run_id_extracted');
+
 console.log('test-smoke-session-phase-ordering: ok');

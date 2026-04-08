@@ -69,6 +69,7 @@ export function getByDotPath(obj, pathStr) {
 
 const RESPONSE_PATH_ENVS = [
   'CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH',
+  'CURSOR_AUTOMATION_RESPONSE_ACCEPTED_ID_PATH',
   'CURSOR_AUTOMATION_RESPONSE_URL_PATH',
   'CURSOR_AUTOMATION_RESPONSE_STATUS_PATH',
   'CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH',
@@ -114,6 +115,9 @@ const DEFAULT_STATUS_DOT_PATHS = ['status', 'state', 'result.status', 'data.stat
 
 const DEFAULT_BRANCH_DOT_PATHS = ['branch', 'branch_name', 'branchName', 'result.branch', 'data.branch'];
 
+/** Acceptance / correlation id from provider — not canonical COS external_run_id until callback matches. */
+const DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS = ['backgroundComposerId', 'composerId', 'background_composer_id'];
+
 /**
  * @param {Record<string, unknown> | null} parsed
  * @param {NodeJS.ProcessEnv} env
@@ -125,16 +129,20 @@ export function extractAutomationResponseFields(parsed, env) {
       external_url: null,
       automation_status_raw: null,
       automation_branch_raw: null,
+      accepted_external_id: null,
       selected_run_id_field_name: null,
+      selected_accepted_id_field_name: null,
       selected_url_field_name: null,
       selected_status_field_name: null,
       has_run_id: false,
+      has_accepted_external_id: false,
       has_status: false,
       has_url: false,
     };
   }
 
   const runIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH || '').trim();
+  const acceptedIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_ACCEPTED_ID_PATH || '').trim();
   const urlPath = String(env.CURSOR_AUTOMATION_RESPONSE_URL_PATH || '').trim();
   const statusPath = String(env.CURSOR_AUTOMATION_RESPONSE_STATUS_PATH || '').trim();
   const branchPath = String(env.CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH || '').trim();
@@ -233,19 +241,50 @@ export function extractAutomationResponseFields(parsed, env) {
     }
   }
 
+  /** @type {string | null} */
+  let selected_accepted_id_field_name = null;
+  let accepted_external_id = '';
+  if (acceptedIdPath) {
+    const v = getByDotPath(parsed, acceptedIdPath);
+    if (v != null) {
+      const s = String(v).trim();
+      if (s) {
+        accepted_external_id = s;
+        selected_accepted_id_field_name = acceptedIdPath;
+      }
+    }
+  }
+  if (!accepted_external_id) {
+    for (const p of DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS) {
+      if (!Object.prototype.hasOwnProperty.call(parsed, p)) continue;
+      const v = getByDotPath(parsed, p);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) {
+        accepted_external_id = s;
+        selected_accepted_id_field_name = p;
+        break;
+      }
+    }
+  }
+
   const has_run_id = !!external_run_id;
   const has_url = !!external_url;
   const has_status = automation_status_raw != null && String(automation_status_raw).trim() !== '';
+  const has_accepted_external_id = !!accepted_external_id;
 
   return {
     external_run_id: external_run_id || null,
     external_url: external_url || null,
     automation_status_raw,
     automation_branch_raw,
+    accepted_external_id: accepted_external_id || null,
     selected_run_id_field_name,
+    selected_accepted_id_field_name,
     selected_url_field_name,
     selected_status_field_name,
     has_run_id,
+    has_accepted_external_id,
     has_status,
     has_url,
   };
@@ -282,12 +321,15 @@ export async function triggerCursorAutomation(opts) {
       request_id,
       external_run_id: null,
       external_url: null,
+      accepted_external_id: null,
       error_code: 'cursor_automation_not_configured',
       response_top_level_keys: null,
       selected_run_id_field_name: null,
+      selected_accepted_id_field_name: null,
       selected_url_field_name: null,
       selected_status_field_name: null,
       has_run_id: false,
+      has_accepted_external_id: false,
       has_status: false,
       has_url: false,
     };
@@ -343,6 +385,7 @@ export async function triggerCursorAutomation(opts) {
       request_id,
       external_run_id,
       external_url,
+      accepted_external_id: extracted.accepted_external_id,
       automation_branch_raw,
       automation_status_raw,
       error_code: ok ? null : `cursor_automation_http_${res.status}`,
@@ -351,9 +394,11 @@ export async function triggerCursorAutomation(opts) {
           ? Object.keys(parsed).slice(0, 60)
           : null,
       selected_run_id_field_name: extracted.selected_run_id_field_name,
+      selected_accepted_id_field_name: extracted.selected_accepted_id_field_name,
       selected_url_field_name: extracted.selected_url_field_name,
       selected_status_field_name: extracted.selected_status_field_name,
       has_run_id: extracted.has_run_id,
+      has_accepted_external_id: extracted.has_accepted_external_id,
       has_status: extracted.has_status,
       has_url: extracted.has_url,
     };
@@ -368,12 +413,15 @@ export async function triggerCursorAutomation(opts) {
       request_id,
       external_run_id: null,
       external_url: null,
+      accepted_external_id: null,
       error_code: aborted ? 'cursor_automation_timeout' : 'cursor_automation_fetch_error',
       response_top_level_keys: null,
       selected_run_id_field_name: null,
+      selected_accepted_id_field_name: null,
       selected_url_field_name: null,
       selected_status_field_name: null,
       has_run_id: false,
+      has_accepted_external_id: false,
       has_status: false,
       has_url: false,
     };

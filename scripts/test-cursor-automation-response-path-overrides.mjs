@@ -20,6 +20,7 @@ assert.equal(withPath.selected_url_field_name, 'data.run.url');
 const noPath = extractAutomationResponseFields(nested, {});
 assert.equal(noPath.external_run_id, 'wrong-top');
 assert.equal(noPath.selected_run_id_field_name, 'id');
+assert.equal(noPath.has_accepted_external_id, false);
 
 const statusEnv = {
   CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH: 'result.agentRunId',

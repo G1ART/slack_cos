@@ -76,6 +76,7 @@ __cursorAutomationFetchForTests.fn = async () =>
 const mal = await triggerCursorAutomation({ action: 'create_spec', payload: {}, env: process.env });
 assert.equal(mal.ok, true);
 assert.equal(mal.external_run_id, null);
+assert.equal(mal.has_accepted_external_id, false);
 
 __cursorAutomationFetchForTests.fn = null;
 delete process.env.CURSOR_AUTOMATION_ENDPOINT;

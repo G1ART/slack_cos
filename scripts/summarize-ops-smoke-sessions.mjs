@@ -135,13 +135,21 @@ async function main() {
           blocked_reason: s.blocked_reason,
           machine_hint: s.machine_hint,
           missing_required_fields: s.missing_required_fields,
+          invalid_enum_fields: s.invalid_enum_fields,
+          invalid_nested_fields: s.invalid_nested_fields,
+          delegate_schema_valid: s.delegate_schema_valid,
+          delegate_schema_error_fields: s.delegate_schema_error_fields,
+          parent_smoke_session_id: s.parent_smoke_session_id,
           response_top_level_keys: s.response_top_level_keys,
           selected_run_id_field_name: s.selected_run_id_field_name,
           selected_status_field_name: s.selected_status_field_name,
           selected_url_field_name: s.selected_url_field_name,
+          selected_accepted_id_field_name: s.selected_accepted_id_field_name,
           has_run_id: s.has_run_id,
           has_status: s.has_status,
           has_url: s.has_url,
+          has_accepted_external_id: s.has_accepted_external_id,
+          accepted_external_id: s.accepted_external_id,
         }),
       );
     }
@@ -172,14 +180,30 @@ async function main() {
       `missing_required_fields:  ${s.missing_required_fields != null ? JSON.stringify(s.missing_required_fields) : '(n/a)'}`,
     );
     console.log(
+      `invalid_enum_fields:      ${s.invalid_enum_fields != null ? JSON.stringify(s.invalid_enum_fields) : '(n/a)'}`,
+    );
+    console.log(
+      `invalid_nested_fields:    ${s.invalid_nested_fields != null ? JSON.stringify(s.invalid_nested_fields) : '(n/a)'}`,
+    );
+    console.log(`delegate_schema_valid:      ${s.delegate_schema_valid ?? '(n/a)'}`);
+    console.log(
+      `delegate_schema_error_fields: ${s.delegate_schema_error_fields != null ? JSON.stringify(s.delegate_schema_error_fields) : '(n/a)'}`,
+    );
+    console.log(`parent_smoke_session_id:    ${s.parent_smoke_session_id ?? '(n/a)'}`);
+    console.log(
       `response_top_level_keys:    ${s.response_top_level_keys != null ? JSON.stringify(s.response_top_level_keys) : '(n/a)'}`,
     );
     console.log(`selected_run_id_field_name: ${s.selected_run_id_field_name ?? '(n/a)'}`);
     console.log(`selected_status_field_name: ${s.selected_status_field_name ?? '(n/a)'}`);
     console.log(`selected_url_field_name:    ${s.selected_url_field_name ?? '(n/a)'}`);
+    console.log(
+      `selected_accepted_id_field_name: ${s.selected_accepted_id_field_name ?? '(n/a)'}`,
+    );
     console.log(`has_run_id:                   ${s.has_run_id ?? '(n/a)'}`);
     console.log(`has_status:                   ${s.has_status ?? '(n/a)'}`);
     console.log(`has_url:                      ${s.has_url ?? '(n/a)'}`);
+    console.log(`has_accepted_external_id:   ${s.has_accepted_external_id ?? '(n/a)'}`);
+    console.log(`accepted_external_id:         ${s.accepted_external_id ?? '(n/a)'}`);
   }
 
   console.log('---');

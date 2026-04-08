@@ -52,6 +52,15 @@ export function resolveSmokeSessionId(env = process.env) {
 }
 
 /**
+ * Founder tool-loop ops smoke audit: stable session id (env COS_OPS_SMOKE_SESSION_ID or cached smoke_*), never smoke_turn_*.
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function resolveOpsSmokeSessionIdForToolAudit(env = process.env) {
+  if (!isOpsSmokeEnabled(env)) return null;
+  return resolveSmokeSessionId(env);
+}
+
+/**
  * @param {{
  *   runId: string,
  *   threadKey?: string,
@@ -93,11 +102,15 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
     t.has_status === true ||
     (t.automation_status_raw != null && String(t.automation_status_raw).trim() !== '');
   const hasUrl = t.has_url === true || Boolean(extUrl);
+  const hasAcc =
+    t.has_accepted_external_id === true ||
+    (t.accepted_external_id != null && String(t.accepted_external_id).trim() !== '');
   return {
     response_top_level_keys: keys,
     http_status: typeof t.status === 'number' ? t.status : null,
     trigger_status: t.trigger_status != null ? String(t.trigger_status).slice(0, 80) : null,
     external_run_id_tail: tailExternalRunId(t.external_run_id),
+    accepted_external_id_tail: tailExternalRunId(t.accepted_external_id),
     status_extracted:
       t.automation_status_raw != null
         ? stripSecretsAndUrlsFromString(String(t.automation_status_raw), 120)
@@ -107,12 +120,17 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
     has_run_id: Boolean(hasRun),
     has_status: Boolean(hasStat),
     has_url: Boolean(hasUrl),
+    has_accepted_external_id: Boolean(hasAcc),
     selected_run_id_field_name:
       t.selected_run_id_field_name != null ? String(t.selected_run_id_field_name).slice(0, 120) : null,
     selected_status_field_name:
       t.selected_status_field_name != null ? String(t.selected_status_field_name).slice(0, 120) : null,
     selected_url_field_name:
       t.selected_url_field_name != null ? String(t.selected_url_field_name).slice(0, 120) : null,
+    selected_accepted_id_field_name:
+      t.selected_accepted_id_field_name != null
+        ? String(t.selected_accepted_id_field_name).slice(0, 120)
+        : null,
     override_keys_used: listAutomationResponseOverrideKeys(env),
   };
 }
@@ -164,6 +182,8 @@ const PIPELINE_BREAK_ORDER = [
 /** Sort order for phases_seen / ordered_events. */
 const PHASE_SORT_ORDER = [
   'cursor_trigger_recorded',
+  'trigger_accepted_external_id_present',
+  'trigger_accepted_external_id_missing',
   'trigger_accepted_external_run_id_absent',
   'external_run_id_extracted',
   'external_callback_matched',
@@ -182,6 +202,8 @@ const OPS_PHASE_LIKE_EVENT_TYPES = new Set([
   'delegate_packets_ready',
   'emit_patch_payload_validated',
   'trigger_accepted_external_run_id_absent',
+  'trigger_accepted_external_id_present',
+  'trigger_accepted_external_id_missing',
 ]);
 
 function smokeSummaryPhaseFromRow(r) {
@@ -253,16 +275,24 @@ export function aggregateSmokeSessionProgress(rows) {
   }
 
   let final_status = 'unknown';
-  if (
-    seen.has('cursor_trigger_recorded') &&
-    seen.has('trigger_accepted_external_run_id_absent') &&
-    !seen.has('external_run_id_extracted')
-  ) {
-    final_status = 'trigger_accepted_external_run_id_missing';
-    breaksAt = 'external_run_id_extracted';
-  } else if (!breaksAt) final_status = 'full_pipeline_observed';
-  else if (breaksAt === 'cursor_trigger_recorded') final_status = 'before_trigger';
-  else final_status = `partial_stopped_before_${breaksAt}`;
+  if (seen.has('cursor_trigger_recorded') && !seen.has('external_run_id_extracted')) {
+    if (seen.has('trigger_accepted_external_id_present')) {
+      final_status = 'trigger_accepted_external_id_present';
+      breaksAt = 'external_run_id_extracted';
+    } else if (seen.has('trigger_accepted_external_id_missing')) {
+      final_status = 'trigger_accepted_external_id_missing';
+      breaksAt = 'external_run_id_extracted';
+    } else if (seen.has('trigger_accepted_external_run_id_absent')) {
+      final_status = 'trigger_accepted_external_run_id_missing';
+      breaksAt = 'external_run_id_extracted';
+    }
+  }
+
+  if (final_status === 'unknown') {
+    if (!breaksAt) final_status = 'full_pipeline_observed';
+    else if (breaksAt === 'cursor_trigger_recorded') final_status = 'before_trigger';
+    else final_status = `partial_stopped_before_${breaksAt}`;
+  }
 
   return {
     phases_seen: [...seen].sort((a, b) => orderIdx(a) - orderIdx(b)),
@@ -293,9 +323,12 @@ export function extractLatestTriggerEvidenceFromRows(rows) {
     selected_run_id_field_name: null,
     selected_status_field_name: null,
     selected_url_field_name: null,
+    selected_accepted_id_field_name: null,
     has_run_id: null,
     has_status: null,
     has_url: null,
+    has_accepted_external_id: null,
+    accepted_external_id: null,
   };
   let bestAt = '';
   /** @type {Record<string, unknown> | null} */
@@ -304,7 +337,13 @@ export function extractLatestTriggerEvidenceFromRows(rows) {
     if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
     const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
     const ph = String(pl.phase || '');
-    if (ph !== 'cursor_trigger_recorded' && ph !== 'trigger_accepted_external_run_id_absent') continue;
+    if (
+      ph !== 'cursor_trigger_recorded' &&
+      ph !== 'trigger_accepted_external_run_id_absent' &&
+      ph !== 'trigger_accepted_external_id_present' &&
+      ph !== 'trigger_accepted_external_id_missing'
+    )
+      continue;
     const det = pl.detail && typeof pl.detail === 'object' ? pl.detail : {};
     const trg =
       (det.trigger && typeof det.trigger === 'object' ? det.trigger : null) ||
@@ -336,6 +375,16 @@ export function extractLatestTriggerEvidenceFromRows(rows) {
     has_run_id: bestTrigger.has_run_id != null ? Boolean(bestTrigger.has_run_id) : null,
     has_status: bestTrigger.has_status != null ? Boolean(bestTrigger.has_status) : null,
     has_url: bestTrigger.has_url != null ? Boolean(bestTrigger.has_url) : null,
+    has_accepted_external_id:
+      bestTrigger.has_accepted_external_id != null ? Boolean(bestTrigger.has_accepted_external_id) : null,
+    selected_accepted_id_field_name:
+      bestTrigger.selected_accepted_id_field_name != null
+        ? String(bestTrigger.selected_accepted_id_field_name).slice(0, 120)
+        : null,
+    accepted_external_id:
+      bestTrigger.accepted_external_id_tail != null
+        ? String(bestTrigger.accepted_external_id_tail).slice(0, 32)
+        : null,
   };
 }
 
@@ -350,6 +399,11 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
     blocked_reason: null,
     machine_hint: null,
     missing_required_fields: null,
+    invalid_enum_fields: null,
+    invalid_nested_fields: null,
+    delegate_schema_valid: null,
+    delegate_schema_error_fields: null,
+    parent_smoke_session_id: null,
   };
   /** @type {{ _rank: number, _t: string, pl: Record<string, unknown> } | null} */
   let best = null;
@@ -376,6 +430,13 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
   const pl = best.pl;
   const keys = Array.isArray(pl.payload_top_level_keys) ? pl.payload_top_level_keys.map(String) : null;
   const miss = Array.isArray(pl.missing_required_fields) ? pl.missing_required_fields.map(String) : null;
+  const invE = Array.isArray(pl.invalid_enum_fields) ? pl.invalid_enum_fields.map(String) : null;
+  const invN = Array.isArray(pl.invalid_nested_fields) ? pl.invalid_nested_fields.map(String) : null;
+  const dErr = Array.isArray(pl.delegate_schema_error_fields)
+    ? pl.delegate_schema_error_fields.map(String).slice(0, 48)
+    : null;
+  const dValid =
+    pl.delegate_schema_valid === true || pl.delegate_schema_valid === false ? pl.delegate_schema_valid : null;
   return {
     call_name: pl.call_name != null ? String(pl.call_name) : null,
     selected_tool: pl.selected_tool != null ? String(pl.selected_tool) : null,
@@ -388,6 +449,12 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
     blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason) : null,
     machine_hint: pl.machine_hint != null ? String(pl.machine_hint) : null,
     missing_required_fields: miss,
+    invalid_enum_fields: invE,
+    invalid_nested_fields: invN,
+    delegate_schema_valid: dValid,
+    delegate_schema_error_fields: dErr,
+    parent_smoke_session_id:
+      pl.parent_smoke_session_id != null ? String(pl.parent_smoke_session_id).slice(0, 120) : null,
   };
 }
 
@@ -414,13 +481,34 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const agg = aggregateSmokeSessionProgress(rows);
     const machine = extractOpsSmokeMachineSummaryFromRows(rows);
     const triggerEv = extractLatestTriggerEvidenceFromRows(rows);
+    const delegateSchemaPass = rows.some((r) => {
+      const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+      return (
+        String(r.event_type || '') === 'ops_smoke_phase' &&
+        (pl.phase === 'emit_patch_payload_validated' || pl.phase === 'delegate_packets_ready')
+      );
+    });
+    const delegate_schema_valid =
+      machine.delegate_schema_valid === false
+        ? false
+        : delegateSchemaPass
+          ? true
+          : machine.delegate_schema_valid;
     const lastAt = rows.reduce((m, r) => {
       const t1 = String(r.payload?.at || '');
       const t2 = String(r.created_at || '');
       const best = t1 > t2 ? t1 : t2;
       return best > m ? best : m;
     }, '');
-    return { smoke_session_id, run_id, lastAt, ...machine, ...triggerEv, ...agg };
+    return {
+      smoke_session_id,
+      run_id,
+      lastAt,
+      ...machine,
+      delegate_schema_valid,
+      ...triggerEv,
+      ...agg,
+    };
   });
   sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
   return sessions.slice(0, sessionLimit);
@@ -465,6 +553,24 @@ export async function recordOpsSmokeCursorTrigger(p) {
       threadKey,
       smoke_session_id: smokeSid || undefined,
       phase: 'trigger_accepted_external_run_id_absent',
+      detail: {
+        trigger: buildSafeTriggerSmokeDetail(tr, env),
+      },
+    });
+  }
+
+  if (ok) {
+    const hasAcc = Boolean(
+      tr &&
+        (tr.has_accepted_external_id === true ||
+          (tr.accepted_external_id != null && String(tr.accepted_external_id).trim() !== '')),
+    );
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      smoke_session_id: smokeSid || undefined,
+      phase: hasAcc ? 'trigger_accepted_external_id_present' : 'trigger_accepted_external_id_missing',
       detail: {
         trigger: buildSafeTriggerSmokeDetail(tr, env),
       },

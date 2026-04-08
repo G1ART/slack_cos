@@ -65,6 +65,11 @@ export function summarizeToolArgsForAudit(callName, args) {
  *   machine_hint?: string | null,
  *   blocked_reason?: string | null,
  *   missing_required_fields?: string[] | null,
+ *   invalid_enum_fields?: string[] | null,
+ *   invalid_nested_fields?: string[] | null,
+ *   delegate_schema_valid?: boolean | null,
+ *   delegate_schema_error_fields?: string[] | null,
+ *   parent_smoke_session_id?: string | null,
  * }} p
  */
 export async function recordCosPretriggerAudit(p) {
@@ -94,6 +99,19 @@ export async function recordCosPretriggerAudit(p) {
     missing_required_fields: Array.isArray(p.missing_required_fields)
       ? p.missing_required_fields.map((x) => String(x).slice(0, 120)).slice(0, 24)
       : null,
+    invalid_enum_fields: Array.isArray(p.invalid_enum_fields)
+      ? p.invalid_enum_fields.map((x) => String(x).slice(0, 120)).slice(0, 24)
+      : null,
+    invalid_nested_fields: Array.isArray(p.invalid_nested_fields)
+      ? p.invalid_nested_fields.map((x) => String(x).slice(0, 120)).slice(0, 24)
+      : null,
+    delegate_schema_valid:
+      p.delegate_schema_valid === true || p.delegate_schema_valid === false ? p.delegate_schema_valid : null,
+    delegate_schema_error_fields: Array.isArray(p.delegate_schema_error_fields)
+      ? p.delegate_schema_error_fields.map((x) => String(x).slice(0, 120)).slice(0, 48)
+      : null,
+    parent_smoke_session_id:
+      p.parent_smoke_session_id != null ? String(p.parent_smoke_session_id).slice(0, 120) : null,
   };
 
   if (runId) {

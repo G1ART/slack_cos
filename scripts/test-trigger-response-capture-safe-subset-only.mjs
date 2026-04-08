@@ -29,15 +29,18 @@ const allowedKeys = new Set([
   'http_status',
   'trigger_status',
   'external_run_id_tail',
+  'accepted_external_id_tail',
   'status_extracted',
   'branch_present',
   'url_present',
   'has_run_id',
   'has_status',
   'has_url',
+  'has_accepted_external_id',
   'selected_run_id_field_name',
   'selected_status_field_name',
   'selected_url_field_name',
+  'selected_accepted_id_field_name',
   'override_keys_used',
 ]);
 assert.deepEqual(new Set(Object.keys(d)), allowedKeys, 'only safe trigger fields');

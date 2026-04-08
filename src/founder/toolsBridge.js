@@ -23,7 +23,7 @@ import {
   automationEndpointHostOnly,
   isCursorAutomationSmokeMode,
 } from './cursorCloudAdapter.js';
-import { isOpsSmokeEnabled } from './smokeOps.js';
+import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
 
@@ -880,6 +880,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const env = process.env;
   const opsSmokeSessionId =
     String(ctx.ops_smoke_session_id || '').trim() ||
+    (isOpsSmokeEnabled(env) ? resolveSmokeSessionId(env) : null) ||
     (cosRunId && threadKey && isOpsSmokeEnabled(env) ? `smoke_inv_${invocation_id}` : null);
 
   const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
