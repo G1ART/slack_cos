@@ -397,10 +397,23 @@ export function formatFounderSafeToolBlockMessage(parsedToolResults) {
         }
       }
     }
+    if (o.status === 'blocked' && o.policy_rejection === true) {
+      lines.push(`policy: ${String(o.blocked_reason || 'execution_profile')}`);
+      if (o.execution_profile_id) lines.push(`profile: ${String(o.execution_profile_id)}`);
+      if (o.policy_rejection_code) lines.push(`code: ${String(o.policy_rejection_code)}`);
+    }
+    if (o.status === 'blocked' && o.rejection_kind === 'missing_contract_source') {
+      if (o.exact_failure_code) lines.push(`stage: ${String(o.exact_failure_code)}`);
+      if (o.execution_profile_id) lines.push(`profile: ${String(o.execution_profile_id)}`);
+      lines.push(String(o.blocked_reason || 'missing_contract_source'));
+      if (o.machine_hint) lines.push(String(o.machine_hint));
+      if (o.attempt_seq != null) lines.push(`attempt_seq: ${String(o.attempt_seq)}`);
+    }
     if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) {
       if (o.exact_failure_code) lines.push(`stage: ${String(o.exact_failure_code)}`);
       if (o.payload_provenance) lines.push(`payload_origin: ${String(o.payload_provenance)}`);
       if (o.builder_stage_last_reached) lines.push(`builder_stage: ${String(o.builder_stage_last_reached)}`);
+      if (o.attempt_seq != null) lines.push(`attempt_seq: ${String(o.attempt_seq)}`);
       if (Array.isArray(o.emit_patch_machine_hints)) {
         for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
       }
@@ -456,6 +469,8 @@ export function shouldReplaceFounderTextWithSafeToolBlockMessage(parsedToolResul
     )
       return true;
     if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) return true;
+    if (o.status === 'blocked' && o.policy_rejection === true) return true;
+    if (o.status === 'blocked' && o.rejection_kind === 'missing_contract_source') return true;
     if (o.blocked === true && o.reason === 'invalid_payload') return true;
     if (o.degraded_from === 'emit_patch_cloud_contract_not_met') return true;
     return false;
@@ -704,10 +719,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
         args = {};
       }
       let result;
-      if (
-        smTurn &&
-        (call.name === 'delegate_harness_team' || call.name === 'invoke_external_tool')
-      ) {
+      if (smTurn && call.name === 'delegate_harness_team') {
         try {
           await recordCosPretriggerAudit({
             env: process.env,
@@ -813,6 +825,21 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           }
         }
       } else if (call.name === 'invoke_external_tool') {
+        if (smTurn && auditRunId) {
+          try {
+            await recordCosPretriggerAudit({
+              env: process.env,
+              threadKey: tk,
+              runId: auditRunId,
+              smoke_session_id: smTurn,
+              call_name: call.name,
+              args,
+              blocked: false,
+            });
+          } catch (e) {
+            console.error('[pretrigger_audit]', e);
+          }
+        }
         result = await invokeExternalTool(args, {
           threadKey: tk,
           ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
