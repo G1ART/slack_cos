@@ -24,6 +24,7 @@ import {
   peekCursorWebhookObservedSchemaSnapshot,
 } from './cursorWebhookIngress.js';
 import { recordCosCursorWebhookIngressSafe, recordOpsSmokeGithubFallbackEvidence } from './smokeOps.js';
+import { __resetRecoveryEnvelopeStoreForTests } from './recoveryEnvelopeStore.js';
 
 /**
  * @param {string} threadKey
@@ -109,28 +110,54 @@ export async function handleGithubWebhookIngress(p) {
     payload_fingerprint_prefix: fp,
   });
 
+  /** @type {{ recovered?: boolean, run_id?: string, outcome?: string } | null} */
+  let secondaryRecovery = null;
+  if (!out.matched && ghEvent === 'push' && norm) {
+    try {
+      const { tryGithubPushSecondaryRecovery } = await import('./resultRecoveryBridge.js');
+      secondaryRecovery = await tryGithubPushSecondaryRecovery(norm, env, fp);
+    } catch (e) {
+      console.error('[result_recovery_bridge]', e);
+    }
+  }
+
   const ck = canonical.payload?.correlation_keys;
   const cko = ck && typeof ck === 'object' ? ck : {};
+  const secondaryRecovered = Boolean(secondaryRecovery && secondaryRecovery.recovered);
   try {
     await recordOpsSmokeGithubFallbackEvidence({
       env,
       match_attempted: true,
-      matched: out.matched,
+      matched: out.matched || secondaryRecovered,
       github_event_header: ghEvent,
       object_type: cko.object_type != null ? String(cko.object_type) : null,
       object_id: cko.object_id != null ? String(cko.object_id) : null,
-      run_id: corr?.run_id != null ? String(corr.run_id) : null,
+      run_id:
+        corr?.run_id != null
+          ? String(corr.run_id)
+          : secondaryRecovery?.run_id != null
+            ? String(secondaryRecovery.run_id)
+            : null,
       thread_key: corr?.thread_key != null ? String(corr.thread_key) : null,
+      ...(secondaryRecovered
+        ? {
+            github_secondary_recovery: true,
+            secondary_recovery_outcome:
+              secondaryRecovery?.outcome != null ? String(secondaryRecovery.outcome) : null,
+          }
+        : {}),
     });
   } catch (e) {
     console.error('[ops_smoke]', e);
   }
 
+  const httpMatched = out.matched || secondaryRecovered;
   return {
     ok: true,
-    httpStatus: out.matched ? 200 : 202,
-    body: out.httpBody,
-    matched: out.matched,
+    httpStatus: httpMatched ? 200 : 202,
+    body: secondaryRecovered ? 'ok: github push secondary recovery' : out.httpBody,
+    matched: httpMatched,
+    ...(secondaryRecovered ? { secondary_recovery: true } : {}),
   };
 }
 
@@ -296,4 +323,5 @@ export function __resetExternalGatewayTestState() {
   __resetCorrelationMemoryForTests();
   __resetGithubDeliveryMemoryForTests();
   __resetCosRunEventsMemoryForTests();
+  __resetRecoveryEnvelopeStoreForTests();
 }

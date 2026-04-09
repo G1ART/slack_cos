@@ -198,7 +198,12 @@ export function formatOpsSmokeFounderFacingLines(s) {
       ? '부가(2차): 저장소/깃허브 반사 신호 있음 — 1차 완료로 취급하지 않음.'
       : '부가(2차): 저장소 반사 신호 없음.',
   );
-  return lines.slice(0, 5);
+  lines.push(
+    s.github_secondary_recovery_observed
+      ? `회복(2차·GitHub 푸시): 있음 — ${String(s.github_secondary_recovery_outcome || 'outcome_unknown').slice(0, 120)}`
+      : '회복(2차·GitHub 푸시): 없음.',
+  );
+  return lines.slice(0, 6);
 }
 
 /**
@@ -339,6 +344,8 @@ export async function recordCosCursorWebhookIngressSafe(p) {
  *   github_event_header?: string | null,
  *   object_type?: string | null,
  *   object_id?: string | null,
+ *   github_secondary_recovery?: boolean,
+ *   secondary_recovery_outcome?: string | null,
  * }} p
  */
 export async function recordOpsSmokeGithubFallbackEvidence(p) {
@@ -358,6 +365,13 @@ export async function recordOpsSmokeGithubFallbackEvidence(p) {
     github_event_header: p.github_event_header != null ? String(p.github_event_header).slice(0, 64) : null,
     object_type: p.object_type != null ? String(p.object_type).slice(0, 64) : null,
     object_id_tail: oid.length > 8 ? oid.slice(-8) : oid,
+    ...(p.github_secondary_recovery === true
+      ? {
+          github_secondary_recovery: true,
+          secondary_recovery_outcome:
+            p.secondary_recovery_outcome != null ? String(p.secondary_recovery_outcome).slice(0, 120) : null,
+        }
+      : {}),
   };
 
   const runId = String(p.run_id || '').trim();
@@ -892,6 +906,34 @@ export function extractGithubFallbackSummaryFromRows(rows) {
 }
 
 /**
+ * vNext.13.58 — GitHub push secondary result recovery (distinct from generic github_fallback advisory rows).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function extractResultRecoveryGithubSecondaryFromRows(rows) {
+  const empty = {
+    github_secondary_recovery_observed: false,
+    github_secondary_recovery_outcome: null,
+  };
+  let bestAt = '';
+  /** @type {string | null} */
+  let outcome = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'result_recovery_github_secondary') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const t = String(pl.at || r.created_at || '');
+    if (t >= bestAt) {
+      bestAt = t;
+      outcome = pl.recovery_outcome != null ? String(pl.recovery_outcome) : null;
+    }
+  }
+  if (!bestAt) return empty;
+  return {
+    github_secondary_recovery_observed: true,
+    github_secondary_recovery_outcome: outcome,
+  };
+}
+
+/**
  * Latest trigger_outbound_callback_contract row (safe subset fields on payload).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
  */
@@ -1196,6 +1238,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const triggerEv = extractLatestTriggerEvidenceFromRows(primaryRows);
     const cursorIngress = extractLatestCursorWebhookIngressFromRows(rows);
     const ghFb = extractGithubFallbackSummaryFromRows(rows);
+    const recoveryGh = extractResultRecoveryGithubSecondaryFromRows(rows);
     const cbContract = extractLatestCallbackContractEvidenceFromRows(primaryRows);
     const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(primaryRows);
     const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(primaryRows);
@@ -1299,6 +1342,8 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       acceptance_response_has_callback_metadata,
       inbound_callback_observed,
       repository_reflection_observed,
+      github_secondary_recovery_observed: recoveryGh.github_secondary_recovery_observed,
+      github_secondary_recovery_outcome: recoveryGh.github_secondary_recovery_outcome,
       secondary_attempts,
     };
     return {

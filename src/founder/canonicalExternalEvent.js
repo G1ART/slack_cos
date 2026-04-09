@@ -435,6 +435,15 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     meta.ingress_evidence && typeof meta.ingress_evidence === 'object' ? meta.ingress_evidence : {};
   const cs = evidenceCanonicalStatus(canonical, statusHint, canonForOut);
 
+  if (String(canonical.provider || '') === 'cursor') {
+    try {
+      const { markRecoveryEnvelopePrimaryCallbackObserved } = await import('./resultRecoveryBridge.js');
+      markRecoveryEnvelopePrimaryCallbackObserved(runId);
+    } catch (e) {
+      console.error('[result_recovery_bridge]', e);
+    }
+  }
+
   await appendCosRunEventForRun(runId, eventType, {
     canonical_provider: canonical.provider,
     canonical_event_type: canonical.event_type,

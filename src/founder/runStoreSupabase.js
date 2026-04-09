@@ -38,6 +38,7 @@ const SMOKE_SUMMARY_SUPABASE_EVENT_TYPES = [
   'cos_pretrigger_tool_call_blocked',
   'cos_cursor_webhook_ingress_safe',
   'cos_github_fallback_evidence',
+  'result_recovery_github_secondary',
 ];
 
 /** Included in ops smoke session summaries (cos_ops_smoke_events + cos_run_events merge). */
@@ -51,6 +52,7 @@ export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
   'trigger_blocked_invalid_payload',
   'cos_cursor_webhook_ingress_safe',
   'cos_github_fallback_evidence',
+  'result_recovery_github_secondary',
 ];
 
 export async function supabaseListOpsSmokePhaseEvents(sb, p) {

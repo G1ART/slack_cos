@@ -10,6 +10,7 @@ export const GITHUB_WEBHOOK_ALLOWED_EVENTS = new Set([
   'check_suite',
   'check_run',
   'workflow_run',
+  'push',
 ]);
 
 /**
@@ -154,6 +155,41 @@ export function normalizeGithubWebhookPayload(headers, body) {
       status_hint: 'external_status_update',
       raw_summary: `workflow_run.${action}`,
       payload: { action, workflow_run: { id: wr.id, status: wr.status, conclusion: wr.conclusion } },
+      received_at,
+    };
+  }
+
+  if (event === 'push') {
+    const head = body.head_commit && typeof body.head_commit === 'object' ? body.head_commit : {};
+    const sha = String(head.id || body.after || '').trim();
+    if (!sha) return null;
+    const ref = String(body.ref || '').trim();
+    const commits = Array.isArray(body.commits) ? body.commits : [];
+    /** @type {Set<string>} */
+    const pathsTouched = new Set();
+    for (const c of commits) {
+      if (!c || typeof c !== 'object') continue;
+      for (const k of /** @type {const} */ (['added', 'modified', 'removed'])) {
+        const arr = Array.isArray(c[k]) ? c[k] : [];
+        for (const p of arr) pathsTouched.add(String(p));
+      }
+    }
+    return {
+      provider: 'github',
+      event_type: 'push',
+      external_id: `${fullName}:push:${sha.slice(0, 12)}`,
+      correlation_keys: {
+        repository_full_name: fullName,
+        object_type: 'push',
+        object_id: sha,
+      },
+      status_hint: 'external_status_update',
+      raw_summary: `push ${ref || '(no ref)'} ${sha.slice(0, 7)}`,
+      payload: {
+        ref: ref || null,
+        head_sha: sha,
+        paths_touched: [...pathsTouched],
+      },
       received_at,
     };
   }

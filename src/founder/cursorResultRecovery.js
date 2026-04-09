@@ -34,3 +34,16 @@ export function summarizeRecoveryFromGithubSecondaryEvidence(githubEvidencePaylo
     is_primary_completion_authority: false,
   };
 }
+
+/**
+ * vNext.13.58 — Push-path secondary bridge row (cos_run_events), distinct from cos_github_fallback_evidence.
+ * @param {Record<string, unknown> | null | undefined} rowPayload
+ */
+export function summarizeRecoveryFromGithubPushSecondaryBridge(rowPayload) {
+  const p = rowPayload && typeof rowPayload === 'object' ? rowPayload : {};
+  return {
+    recovery_path: 'github_push_secondary_bridge',
+    recovery_outcome: p.recovery_outcome != null ? String(p.recovery_outcome) : null,
+    is_primary_completion_authority: p.is_primary_completion_authority === true,
+  };
+}

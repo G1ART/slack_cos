@@ -1476,6 +1476,24 @@ export async function invokeExternalTool(spec, ctx = {}) {
           }),
         );
       }
+      if (tool === 'cursor' && action === 'emit_patch' && cosRunId && threadKey) {
+        try {
+          const { registerRecoveryEnvelopeFromEmitPatchAccept } = await import('./resultRecoveryBridge.js');
+          await registerRecoveryEnvelopeFromEmitPatchAccept({
+            env,
+            runId: cosRunId,
+            threadKey,
+            packetId: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
+            acceptedExternalId: String(tr.external_run_id || '').trim() || null,
+            smoke_session_id: opsSmokeSessionId != null && String(opsSmokeSessionId).trim()
+              ? String(opsSmokeSessionId).trim()
+              : null,
+            payload,
+          });
+        } catch (e) {
+          console.error('[result_recovery_bridge]', e);
+        }
+      }
       execution_mode = 'live';
       status = 'running';
       outcome_code = TOOL_OUTCOME_CODES.CLOUD_AGENT_DISPATCH_ACCEPTED;

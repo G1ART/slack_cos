@@ -45,6 +45,7 @@ export const SMOKE_SUMMARY_EVENT_TYPES = new Set([
   'cos_pretrigger_tool_call_blocked',
   'cos_cursor_webhook_ingress_safe',
   'cos_github_fallback_evidence',
+  'result_recovery_github_secondary',
 ]);
 
 const SMOKE_SUMMARY_ORPHANS_BASENAME = 'cos_smoke_summary_orphans.jsonl';
