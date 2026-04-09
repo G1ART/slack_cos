@@ -75,6 +75,7 @@ export function summarizeToolArgsForAudit(callName, args) {
  *   exact_failure_code?: string | null,
  *   payload_provenance?: string | null,
  *   builder_stage_last_reached?: string | null,
+ *   attempt_seq?: number | null,
  * }} p
  */
 export async function recordCosPretriggerAudit(p) {
@@ -132,6 +133,7 @@ export async function recordCosPretriggerAudit(p) {
     payload_provenance: p.payload_provenance != null ? String(p.payload_provenance).slice(0, 120) : null,
     builder_stage_last_reached:
       p.builder_stage_last_reached != null ? String(p.builder_stage_last_reached).slice(0, 120) : null,
+    ...(p.attempt_seq != null && Number(p.attempt_seq) > 0 ? { attempt_seq: Math.floor(Number(p.attempt_seq)) } : {}),
   };
 
   if (runId) {

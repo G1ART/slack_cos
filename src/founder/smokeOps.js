@@ -5,7 +5,11 @@
 
 import crypto from 'node:crypto';
 import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow, listCosRunEventsForRun } from './runCosEvents.js';
-import { describeTriggerCallbackContractForOps, listAutomationResponseOverrideKeys } from './cursorCloudAdapter.js';
+import {
+  acceptanceResponseHasCallbackMetadataKeys,
+  describeTriggerCallbackContractForOps,
+  listAutomationResponseOverrideKeys,
+} from './cursorCloudAdapter.js';
 import {
   EMIT_PATCH_CONTRACT_NAME,
   builderStageLastReachedForEmitPatchPrep,
@@ -13,6 +17,7 @@ import {
 } from './livePatchPayload.js';
 import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES, createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
+import { __resetOpsSmokeAttemptSeqForTests } from './opsSmokeAttemptSeq.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -66,6 +71,137 @@ export function resolveOpsSmokeSessionIdForToolAudit(env = process.env) {
 }
 
 /**
+ * @param {{ payload?: Record<string, unknown> }} row
+ */
+export function getRowAttemptSeq(row) {
+  const pl = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const n = Number(pl.attempt_seq);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * @param {Array<{ payload?: Record<string, unknown> }>} rows
+ */
+export function sessionRowsUseAttemptLineage(rows) {
+  return (rows || []).some((r) => getRowAttemptSeq(r) > 0);
+}
+
+/**
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+export function partitionSmokeSessionRowsByAttempt(rows) {
+  const useLineage = sessionRowsUseAttemptLineage(rows);
+  /** @type {Map<number, Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>>} */
+  const byAttempt = new Map();
+  for (const r of rows || []) {
+    let seq = getRowAttemptSeq(r);
+    if (!useLineage) seq = 1;
+    else if (seq <= 0) seq = 0;
+    if (!byAttempt.has(seq)) byAttempt.set(seq, []);
+    byAttempt.get(seq).push(r);
+  }
+  return { byAttempt, useLineage };
+}
+
+function attemptRowsHaveAcceptedTrigger(rows) {
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (String(pl.phase || '') === 'cursor_trigger_recorded' && pl.trigger_ok === true) return true;
+  }
+  return false;
+}
+
+/**
+ * @param {Map<number, Array<{ event_type?: string, payload?: Record<string, unknown> }>>} byAttempt
+ * @param {boolean} useLineage
+ */
+export function choosePrimaryAttemptSeqFromPartition(byAttempt, useLineage) {
+  if (!useLineage) return 1;
+  const seqs = [...byAttempt.keys()].filter((s) => s > 0).sort((a, b) => a - b);
+  if (!seqs.length) return 0;
+  const accepted = seqs.filter((s) => attemptRowsHaveAcceptedTrigger(byAttempt.get(s) || []));
+  if (accepted.length) return accepted[accepted.length - 1];
+  return seqs[seqs.length - 1];
+}
+
+function primaryRowsLookBlocked(rows) {
+  return (rows || []).some((r) => {
+    const et = String(r.event_type || '');
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const ph = String(pl.phase || '');
+    return (
+      et === 'cos_pretrigger_tool_call_blocked' ||
+      ph === 'trigger_blocked_invalid_payload' ||
+      ph === 'cursor_trigger_failed'
+    );
+  });
+}
+
+/**
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} primaryRows
+ */
+export function derivePrimaryAttemptStatus(primaryRows) {
+  if (attemptRowsHaveAcceptedTrigger(primaryRows)) return 'accepted_trigger';
+  if (primaryRowsLookBlocked(primaryRows)) return 'blocked';
+  return 'in_progress_or_unknown';
+}
+
+/**
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ */
+function extractAcceptanceCallbackMetadataFromRows(rows) {
+  let bestAt = '';
+  /** @type {boolean | null} */
+  let val = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (String(pl.phase || '') !== 'cursor_trigger_recorded') continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      val = typeof pl.acceptance_response_has_callback_metadata === 'boolean' ? pl.acceptance_response_has_callback_metadata : null;
+    }
+  }
+  return val;
+}
+
+/**
+ * Founder-facing compact lines from a session summary row (primary attempt only; vNext.13.56).
+ * @param {Record<string, unknown>} s
+ */
+export function formatOpsSmokeFounderFacingLines(s) {
+  const sid = String(s.smoke_session_id || '').slice(0, 48);
+  const pa = s.primary_attempt_seq != null ? String(s.primary_attempt_seq) : '?';
+  const ac = s.attempt_count != null ? String(s.attempt_count) : '?';
+  const st = String(s.primary_attempt_status || 'unknown');
+  const tool = String(s.primary_selected_tool || s.selected_tool || 'n/a');
+  const act = String(s.primary_selected_action || s.selected_action || 'n/a');
+  const lines = [
+    `세션 ${sid} — 주 시도 ${pa}/${ac} (${st})`,
+    `실행: ${tool} / ${act}`,
+  ];
+  if (st === 'accepted_trigger') {
+    const ext = s.accepted_external_id != null ? String(s.accepted_external_id) : '';
+    lines.push(`트리거 수락 · 외부 식별자: ${ext || '(없음/미추출)'}`);
+  } else {
+    lines.push(
+      `차단·실패: ${String(s.primary_blocked_reason || s.blocked_reason || s.primary_trigger_state || 'n/a').slice(0, 200)}`,
+    );
+  }
+  lines.push(
+    `콜백: 아웃바운드_계약=${s.outbound_callback_contract_attached} · 응답_메타=${s.acceptance_response_has_callback_metadata} · 인바운드_관측=${s.inbound_callback_observed}`,
+  );
+  lines.push(
+    s.repository_reflection_observed
+      ? '부가(2차): 저장소/깃허브 반사 신호 있음 — 1차 완료로 취급하지 않음.'
+      : '부가(2차): 저장소 반사 신호 없음.',
+  );
+  return lines.slice(0, 5);
+}
+
+/**
  * @param {{
  *   runId: string,
  *   threadKey?: string,
@@ -73,6 +209,7 @@ export function resolveOpsSmokeSessionIdForToolAudit(env = process.env) {
  *   phase: string,
  *   detail?: Record<string, unknown>,
  *   env?: NodeJS.ProcessEnv,
+ *   attempt_seq?: number | null,
  * }} p
  */
 export async function recordOpsSmokePhase(p) {
@@ -83,12 +220,15 @@ export async function recordOpsSmokePhase(p) {
   if (!sid || !runId) return;
 
   const detail = p.detail && typeof p.detail === 'object' ? p.detail : {};
+  const attemptSeq =
+    p.attempt_seq != null && Number(p.attempt_seq) > 0 ? Math.floor(Number(p.attempt_seq)) : null;
   const payload = {
     smoke_session_id: sid,
     phase: String(p.phase || 'unknown'),
     at: new Date().toISOString(),
     thread_key: p.threadKey != null ? String(p.threadKey).slice(0, 200) : null,
     ...detail,
+    ...(attemptSeq != null ? { attempt_seq: attemptSeq } : {}),
   };
   await appendCosRunEventForRun(runId, 'ops_smoke_phase', payload, {});
 }
@@ -852,17 +992,25 @@ export function extractLatestNonBlockedPretriggerSummaryFromRows(rows) {
 /**
  * All blocked pretrigger rows in session (chronological).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ * @param {{ useLineage?: boolean, primaryAttemptSeq?: number }} [opts]
  */
-export function extractSecondaryBlockedActionsFromRows(rows) {
+export function extractSecondaryBlockedActionsFromRows(rows, opts = {}) {
+  const useLineage = opts.useLineage === true;
+  const primaryAttemptSeq = opts.primaryAttemptSeq > 0 ? opts.primaryAttemptSeq : 0;
   /** @type {{ at: string, entry: Record<string, unknown> }[]} */
   const tmp = [];
   for (const r of rows || []) {
     if (String(r.event_type || '') !== 'cos_pretrigger_tool_call_blocked') continue;
     const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    const seq = getRowAttemptSeq(r);
+    if (useLineage && primaryAttemptSeq > 0) {
+      if (seq === primaryAttemptSeq || seq <= 0) continue;
+    }
     const at = String(pl.at || r.created_at || '');
     tmp.push({
       at,
       entry: {
+        attempt_seq: seq > 0 ? seq : null,
         selected_tool: pl.selected_tool != null ? String(pl.selected_tool) : null,
         selected_action: pl.selected_action != null ? String(pl.selected_action) : null,
         blocked_reason: pl.blocked_reason != null ? String(pl.blocked_reason).slice(0, 120) : null,
@@ -1035,15 +1183,27 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   }
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
     const agg = aggregateSmokeSessionProgress(rows);
-    const machine = extractOpsSmokeMachineSummaryFromRows(rows);
-    const triggerEv = extractLatestTriggerEvidenceFromRows(rows);
+    const { byAttempt, useLineage } = partitionSmokeSessionRowsByAttempt(rows);
+    const primarySeq = choosePrimaryAttemptSeqFromPartition(byAttempt, useLineage);
+    const primaryRows =
+      useLineage && primarySeq > 0
+        ? byAttempt.get(primarySeq) || []
+        : !useLineage
+          ? byAttempt.get(1) || rows
+          : rows;
+
+    const machine = extractOpsSmokeMachineSummaryFromRows(primaryRows);
+    const triggerEv = extractLatestTriggerEvidenceFromRows(primaryRows);
     const cursorIngress = extractLatestCursorWebhookIngressFromRows(rows);
     const ghFb = extractGithubFallbackSummaryFromRows(rows);
-    const cbContract = extractLatestCallbackContractEvidenceFromRows(rows);
-    const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(rows);
-    const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(rows);
-    const secondary_blocked_actions = extractSecondaryBlockedActionsFromRows(rows);
-    const opsLineage = extractLatestEmitPatchLineageFromOpsRows(rows);
+    const cbContract = extractLatestCallbackContractEvidenceFromRows(primaryRows);
+    const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(primaryRows);
+    const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(primaryRows);
+    const secondary_blocked_actions = extractSecondaryBlockedActionsFromRows(rows, {
+      useLineage,
+      primaryAttemptSeq: primarySeq,
+    });
+    const opsLineage = extractLatestEmitPatchLineageFromOpsRows(primaryRows);
     const primary_selected_tool =
       primaryInvoke?.trigger_ok === true && primaryInvoke.invoked_tool
         ? primaryInvoke.invoked_tool
@@ -1054,7 +1214,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
         : preNonBlocked?.selected_action ?? machine.selected_action;
     const emitPatchPrimary =
       primaryInvoke?.trigger_ok === true && String(primaryInvoke?.invoked_action || '') === 'emit_patch';
-    const delegateSchemaPass = rows.some((r) => {
+    const delegateSchemaPass = primaryRows.some((r) => {
       const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
       return (
         String(r.event_type || '') === 'ops_smoke_phase' &&
@@ -1067,13 +1227,43 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
         : delegateSchemaPass
           ? true
           : machine.delegate_schema_valid;
+
+    const attempt_count = useLineage ? [...byAttempt.keys()].filter((s) => s > 0).length || 1 : 1;
+    const acceptanceMeta = extractAcceptanceCallbackMetadataFromRows(primaryRows);
+    const outbound_callback_contract_attached = cbContract.callback_contract_present === true;
+    const acceptance_response_has_callback_metadata = acceptanceMeta === true;
+    const inbound_callback_observed = cursorIngress.cursor_callback_observed === true;
+    const repository_reflection_observed = ghFb.github_fallback_signal_seen === true;
+
+    /** @type {{ attempt_seq: number, status: string }[]} */
+    const secondary_attempts = [];
+    if (useLineage && primarySeq > 0) {
+      for (const s of [...byAttempt.keys()].filter((x) => x > 0).sort((a, b) => a - b)) {
+        if (s === primarySeq) continue;
+        const sub = byAttempt.get(s) || [];
+        let status = 'other';
+        if (attemptRowsHaveAcceptedTrigger(sub)) status = 'accepted_trigger';
+        else if (primaryRowsLookBlocked(sub)) status = 'blocked';
+        secondary_attempts.push({ attempt_seq: s, status });
+      }
+    }
+
+    const primary_attempt_status = derivePrimaryAttemptStatus(primaryRows);
+    const primary_payload_origin = machine.payload_provenance ?? opsLineage.payload_origin ?? null;
+    const primary_payload_top_level_keys = machine.payload_top_level_keys ?? null;
+    const primary_delegate_schema_valid = delegate_schema_valid;
+    const primary_missing_required_fields = machine.missing_required_fields ?? null;
+    const primary_blocked_reason =
+      emitPatchPrimary ? null : machine.blocked_reason != null ? machine.blocked_reason : null;
+
     const lastAt = rows.reduce((m, r) => {
       const t1 = String(r.payload?.at || '');
       const t2 = String(r.created_at || '');
       const best = t1 > t2 ? t1 : t2;
       return best > m ? best : m;
     }, '');
-    return {
+
+    const base = {
       smoke_session_id,
       run_id,
       lastAt,
@@ -1087,7 +1277,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       primary_trigger_state: agg.final_status,
       secondary_blocked_actions,
       selected_execution_lane: inferSelectedExecutionLaneFromAgg(agg),
-      payload_origin: machine.payload_provenance ?? opsLineage.payload_origin,
+      payload_origin: primary_payload_origin,
       builder_stage_last_reached: machine.builder_stage_last_reached ?? opsLineage.builder_stage_last_reached,
       exact_failure_code: machine.exact_failure_code ?? opsLineage.exact_failure_code,
       callback_absence_classification: callbackAbsenceClassificationFromFinalStatus(agg.final_status),
@@ -1097,6 +1287,23 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       ...cursorIngress,
       ...ghFb,
       ...agg,
+      primary_attempt_seq: primarySeq > 0 ? primarySeq : null,
+      attempt_count,
+      primary_attempt_status,
+      primary_payload_top_level_keys,
+      primary_payload_origin,
+      primary_delegate_schema_valid,
+      primary_missing_required_fields,
+      primary_blocked_reason,
+      outbound_callback_contract_attached,
+      acceptance_response_has_callback_metadata,
+      inbound_callback_observed,
+      repository_reflection_observed,
+      secondary_attempts,
+    };
+    return {
+      ...base,
+      founder_facing_report_lines: formatOpsSmokeFounderFacingLines(base),
     };
   });
   sessions.sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)));
@@ -1112,6 +1319,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
  *   smoke_session_id?: string | null,
  *   invoked_tool?: string | null,
  *   invoked_action?: string | null,
+ *   attempt_seq?: number | null,
  * }} p
  */
 export async function recordOpsSmokeTriggerCallbackContract(p) {
@@ -1127,6 +1335,7 @@ export async function recordOpsSmokeTriggerCallbackContract(p) {
     runId,
     threadKey,
     smoke_session_id: smokeSid || undefined,
+    attempt_seq: p.attempt_seq,
     phase: 'trigger_outbound_callback_contract',
     detail: {
       invoked_tool: p.invoked_tool != null ? String(p.invoked_tool).slice(0, 32) : null,
@@ -1148,6 +1357,7 @@ export async function recordOpsSmokeTriggerCallbackContract(p) {
  *   invoked_tool?: string | null,
  *   invoked_action?: string | null,
  *   callback_contract?: Record<string, unknown> | null,
+ *   attempt_seq?: number | null,
  * }} p
  */
 export async function recordOpsSmokeCursorTrigger(p) {
@@ -1165,16 +1375,19 @@ export async function recordOpsSmokeCursorTrigger(p) {
       ? /** @type {Record<string, unknown>} */ (p.callback_contract)
       : describeTriggerCallbackContractForOps(env);
   const ccPresent = cc.callback_contract_present === true;
+  const acceptance_response_has_callback_metadata = ok ? acceptanceResponseHasCallbackMetadataKeys(tr, env) : false;
 
   await recordOpsSmokePhase({
     env,
     runId,
     threadKey,
     smoke_session_id: smokeSid || undefined,
+    attempt_seq: p.attempt_seq,
     phase: ok ? 'cursor_trigger_recorded' : 'cursor_trigger_failed',
     detail: {
       trigger: buildSafeTriggerSmokeDetail(tr, env),
       trigger_ok: ok,
+      acceptance_response_has_callback_metadata,
       invoked_tool: p.invoked_tool != null ? String(p.invoked_tool).slice(0, 32) : null,
       invoked_action: p.invoked_action != null ? String(p.invoked_action).slice(0, 48) : null,
       callback_contract: {
@@ -1200,6 +1413,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'trigger_accepted_external_run_id_absent',
       detail: {
         trigger: buildSafeTriggerSmokeDetail(tr, env),
@@ -1218,6 +1432,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: hasAcc ? 'trigger_accepted_external_id_present' : 'trigger_accepted_external_id_missing',
       detail: {
         trigger: buildSafeTriggerSmokeDetail(tr, env),
@@ -1229,6 +1444,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
         runId,
         threadKey,
         smoke_session_id: smokeSid || undefined,
+        attempt_seq: p.attempt_seq,
         phase: 'trigger_accepted_callback_pending',
         detail: {
           trigger: buildSafeTriggerSmokeDetail(tr, env),
@@ -1243,6 +1459,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
           runId,
           threadKey,
           smoke_session_id: smokeSid || undefined,
+          attempt_seq: p.attempt_seq,
           phase: 'trigger_sent_without_callback_contract',
           detail: {
             callback_contract_present: false,
@@ -1259,6 +1476,7 @@ export async function recordOpsSmokeCursorTrigger(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'external_run_id_extracted',
       detail: { external_run_id_tail: tailExternalRunId(ext) },
     });
@@ -1349,6 +1567,7 @@ export async function recordOpsSmokeFounderMilestone(p) {
  *   smoke_session_id?: string | null,
  *   prep: ReturnType<import('./livePatchPayload.js').prepareEmitPatchForCloudAutomation>,
  *   merge_from_delegate?: boolean,
+ *   attempt_seq?: number | null,
  * }} p
  */
 export async function recordOpsSmokeEmitPatchCloudGate(p) {
@@ -1369,6 +1588,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
     runId,
     threadKey,
     smoke_session_id: smokeSid || undefined,
+    attempt_seq: p.attempt_seq,
     phase: 'live_payload_compilation_started',
     detail: {
       selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
@@ -1384,6 +1604,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'delegate_packets_ready',
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
@@ -1400,6 +1621,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'live_payload_compilation_failed',
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
@@ -1417,6 +1639,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'emit_patch_payload_validated',
       detail: {
         selected_live_contract_name: EMIT_PATCH_CONTRACT_NAME,
@@ -1433,6 +1656,7 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
       runId,
       threadKey,
       smoke_session_id: smokeSid || undefined,
+      attempt_seq: p.attempt_seq,
       phase: 'trigger_blocked_invalid_payload',
       detail: {
         blocked_reason_code: 'emit_patch_contract_not_met',
@@ -1449,4 +1673,5 @@ export async function recordOpsSmokeEmitPatchCloudGate(p) {
 
 export function __resetOpsSmokeSessionCacheForTests() {
   cachedSessionId = null;
+  __resetOpsSmokeAttemptSeqForTests();
 }

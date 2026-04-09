@@ -899,6 +899,18 @@ export async function invokeExternalTool(spec, ctx = {}) {
     (isOpsSmokeEnabled(env) ? resolveSmokeSessionId(env) : null) ||
     (cosRunId && threadKey && isOpsSmokeEnabled(env) ? `smoke_inv_${invocation_id}` : null);
 
+  let opsAttemptSeq = null;
+  if (
+    isOpsSmokeEnabled(env) &&
+    opsSmokeSessionId &&
+    cosRunId &&
+    tool === 'cursor' &&
+    (action === 'emit_patch' || action === 'create_spec')
+  ) {
+    const { bumpOpsSmokeAttemptSeq } = await import('./opsSmokeAttemptSeq.js');
+    opsAttemptSeq = bumpOpsSmokeAttemptSeq(opsSmokeSessionId);
+  }
+
   const readiness_snapshot = await getAdapterReadiness(tool, env, { threadKey });
   const snap = {
     tool: readiness_snapshot.tool,
@@ -1013,6 +1025,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           blocked_reason: blockedEmitReason,
           machine_hint: blockedEmitMachineHint,
           missing_required_fields: ['packets', 'live_patch'],
+          ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
         });
       } catch (e) {
         console.error('[pretrigger_audit]', e);
@@ -1094,6 +1107,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         call_name: 'invoke_external_tool',
         args: { tool, action, payload },
         blocked: false,
+        ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
       });
     } catch (e) {
       console.error('[pretrigger_audit]', e);
@@ -1115,6 +1129,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           blocked_reason: 'tool_invocation_blocked',
           machine_hint: String(block.blocked_reason || '').slice(0, 300),
           missing_required_fields: block.next_required_input ? [String(block.next_required_input)] : null,
+          ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
         });
       } catch (e) {
         console.error('[pretrigger_audit]', e);
@@ -1223,6 +1238,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           smoke_session_id: opsSmokeSessionId,
           prep: emitPatchPrep,
           merge_from_delegate: emitPatchMergedFromDelegate,
+          ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
         });
       } catch (e) {
         console.error('[ops_smoke]', e);
@@ -1251,6 +1267,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
             builder_stage_last_reached: builderStage,
             machine_hint: machineHints[0] || exactFailureCode,
             missing_required_fields: emitPatchPrep.validation.missing_required_fields,
+            ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
           });
         } catch (e) {
           console.error('[pretrigger_audit]', e);
@@ -1363,6 +1380,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         smoke_session_id: opsSmokeSessionId,
         invoked_tool: tool,
         invoked_action: action,
+        ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
       });
     } catch (e) {
       console.error('[ops_smoke]', e);
@@ -1385,6 +1403,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         invoked_tool: tool,
         invoked_action: action,
         callback_contract: callbackContractSnapshot,
+        ...(opsAttemptSeq != null ? { attempt_seq: opsAttemptSeq } : {}),
       });
     } catch (e) {
       console.error('[ops_smoke]', e);

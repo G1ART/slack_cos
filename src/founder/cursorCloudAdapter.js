@@ -367,6 +367,32 @@ export function describeTriggerCallbackContractForOps(env = process.env) {
 }
 
 /**
+ * Truth plane: acceptance response included callback-contract-related top-level keys (not outbound/inbound).
+ * @param {Record<string, unknown> | null | undefined} tr
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function acceptanceResponseHasCallbackMetadataKeys(tr, env = process.env) {
+  const keys = Array.isArray(tr?.response_top_level_keys)
+    ? tr.response_top_level_keys.map((k) => String(k))
+    : [];
+  if (!keys.length) return false;
+  const lower = new Set(keys.map((k) => k.toLowerCase()));
+  const d = describeTriggerCallbackContractForOps(env);
+  const noteField =
+    String(env.CURSOR_AUTOMATION_COMPLETION_POLICY_NOTE_FIELD || 'cos_completion_policy_note').trim() ||
+    'cos_completion_policy_note';
+  const candidates = [
+    d.callback_url_field_name,
+    d.callback_secret_field_name,
+    d.completion_policy_field,
+    d.secondary_effects_field,
+    noteField,
+    ...(Array.isArray(d.callback_hints_field_names) ? d.callback_hints_field_names : []),
+  ].filter(Boolean);
+  return candidates.some((c) => lower.has(String(c).toLowerCase()));
+}
+
+/**
  * @param {Record<string, unknown>} base
  * @param {NodeJS.ProcessEnv} [env]
  */
