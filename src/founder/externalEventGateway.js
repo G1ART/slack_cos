@@ -28,6 +28,10 @@ import {
   buildCursorCallbackInsufficientDiagnostics,
   pickCursorWebhookInsufficientRejectionReason,
 } from './cursorCallbackGate.js';
+import {
+  deriveCursorCallbackSourceKindFromHeaders,
+  mapMatchedByToCallbackMatchBasis,
+} from './cursorCallbackTruth.js';
 import { recordCosCursorWebhookIngressSafe, recordOpsSmokeGithubFallbackEvidence } from './smokeOps.js';
 import { __resetRecoveryEnvelopeStoreForTests } from './recoveryEnvelopeStore.js';
 
@@ -194,6 +198,7 @@ export async function handleCursorWebhookIngress(p) {
   }
 
   const headers = p.headers || {};
+  const callback_source_kind = deriveCursorCallbackSourceKindFromHeaders(headers);
   const sig = headers['x-cursor-signature-256'];
   const sigOk = verifyCursorWebhookSignature(secret, p.rawBody, sig);
   if (!sigOk) {
@@ -205,6 +210,9 @@ export async function handleCursorWebhookIngress(p) {
         json_parse_ok: false,
         correlation_outcome: 'rejected_invalid_signature',
         rejection_reason: 'signature_verification_failed',
+        callback_source_kind,
+        callback_verification_kind: 'invalid_signature',
+        callback_match_basis: 'none',
       });
     } catch (e) {
       console.error('[ops_smoke]', e);
@@ -224,6 +232,9 @@ export async function handleCursorWebhookIngress(p) {
         json_parse_ok: false,
         correlation_outcome: 'rejected_invalid_json',
         rejection_reason: 'json_parse_failed',
+        callback_source_kind,
+        callback_verification_kind: 'verified_signature',
+        callback_match_basis: 'none',
       });
     } catch (e) {
       console.error('[ops_smoke]', e);
@@ -253,6 +264,9 @@ export async function handleCursorWebhookIngress(p) {
         correlation_outcome: 'ignored_insufficient_payload',
         rejection_reason: pickCursorWebhookInsufficientRejectionReason(ingress_callback_gate),
         ingress_callback_gate,
+        callback_source_kind,
+        callback_verification_kind: 'verified_signature',
+        callback_match_basis: 'none',
       });
     } catch (e) {
       console.error('[ops_smoke]', e);
@@ -271,10 +285,14 @@ export async function handleCursorWebhookIngress(p) {
     callback_path_fingerprint: canonical.callback_path_fingerprint_hint,
   });
   const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
+  const callback_match_basis = mapMatchedByToCallbackMatchBasis(matched_by);
   const out = await processCanonicalExternalEvent(canonical, corr, {
     matched_by,
     payload_fingerprint_prefix: fp,
     ingress_evidence: ingressEvidence,
+    callback_source_kind,
+    callback_verification_kind: 'verified_signature',
+    callback_match_basis,
   });
 
   const runIdForIngress = corr?.run_id != null ? String(corr.run_id).trim() : '';
@@ -298,6 +316,9 @@ export async function handleCursorWebhookIngress(p) {
       rejection_reason: out.matched ? null : 'correlation_store_no_match',
       matched_by,
       ingress_callback_gate,
+      callback_source_kind,
+      callback_verification_kind: 'verified_signature',
+      callback_match_basis: out.matched ? callback_match_basis : 'none',
     });
   } catch (e) {
     console.error('[ops_smoke]', e);

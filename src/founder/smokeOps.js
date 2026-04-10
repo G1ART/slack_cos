@@ -214,8 +214,10 @@ export function formatOpsSmokeFounderFacingLines(s) {
       `차단·실패: ${String(s.primary_blocked_reason || s.blocked_reason || s.primary_trigger_state || 'n/a').slice(0, 200)}`,
     );
   }
+  const provIn = s.provider_callback_ingress_observed === true;
+  const manIn = s.manual_probe_callback_ingress_observed === true;
   lines.push(
-    `콜백: 아웃바운드_계약=${s.outbound_callback_contract_attached} · 응답_메타=${s.acceptance_response_has_callback_metadata} · 인바운드_관측=${s.inbound_callback_observed}`,
+    `콜백: 아웃바운드_계약=${s.outbound_callback_contract_attached} · 응답_메타=${s.acceptance_response_has_callback_metadata} · 프로바이더_인바운드=${provIn} · 수동프로브_인바운드=${manIn}`,
   );
   lines.push(
     s.repository_reflection_observed
@@ -291,6 +293,9 @@ export function getCursorCallbackAbsenceTimeoutSec(env = process.env) {
  *   rejection_reason?: string | null,
  *   matched_by?: string | null,
  *   ingress_callback_gate?: Record<string, unknown> | null,
+ *   callback_source_kind?: string | null,
+ *   callback_verification_kind?: string | null,
+ *   callback_match_basis?: string | null,
  * }} p
  */
 export async function recordCosCursorWebhookIngressSafe(p) {
@@ -331,6 +336,12 @@ export async function recordCosCursorWebhookIngressSafe(p) {
       p.ingress_callback_gate && typeof p.ingress_callback_gate === 'object'
         ? p.ingress_callback_gate
         : null,
+    callback_source_kind:
+      p.callback_source_kind != null ? String(p.callback_source_kind).slice(0, 32) : null,
+    callback_verification_kind:
+      p.callback_verification_kind != null ? String(p.callback_verification_kind).slice(0, 32) : null,
+    callback_match_basis:
+      p.callback_match_basis != null ? String(p.callback_match_basis).slice(0, 40) : null,
   };
 
   const runId = String(p.run_id || '').trim();
@@ -628,6 +639,9 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
  *   canonical_status: string | null | undefined,
  *   payload_fingerprint_prefix: string | null | undefined,
  *   ingressEvidence: Record<string, unknown>,
+ *   callback_source_kind?: string | null | undefined,
+ *   callback_match_basis?: string | null | undefined,
+ *   callback_verification_kind?: string | null | undefined,
  * }} p
  */
 export function buildSafeCursorCallbackSmokeDetail(p) {
@@ -652,6 +666,12 @@ export function buildSafeCursorCallbackSmokeDetail(p) {
     has_pr_url: Boolean(pl.pr_url),
     has_summary: Boolean(pl.summary),
     occurred_at_present: Boolean(c.occurred_at),
+    callback_source_kind:
+      p.callback_source_kind != null ? String(p.callback_source_kind).slice(0, 32) : null,
+    callback_match_basis:
+      p.callback_match_basis != null ? String(p.callback_match_basis).slice(0, 40) : null,
+    callback_verification_kind:
+      p.callback_verification_kind != null ? String(p.callback_verification_kind).slice(0, 32) : null,
   };
 }
 
@@ -678,9 +698,16 @@ const PHASE_SORT_ORDER = [
   'cursor_callback_absent_without_callback_contract',
   'cursor_callback_absent_within_timeout',
   'cursor_callback_observed_no_match',
+  'cursor_callback_ingress_insufficient_payload',
+  'cursor_callback_ingress_rejected',
+  'cursor_direct_callback_ingress_received',
+  'cursor_provider_callback_correlated',
+  'cursor_manual_probe_callback_correlated',
   'cursor_direct_callback_correlated',
   'external_run_id_extracted',
+  'manual_probe_external_callback_matched',
   'external_callback_matched',
+  'github_secondary_recovery_matched',
   'github_fallback_evidence',
   'run_packet_progression_patched',
   'supervisor_wake_enqueued',
@@ -708,15 +735,102 @@ function smokeSummaryPhaseFromRow(r) {
   if (et === 'cos_pretrigger_tool_call' || et === 'cos_pretrigger_tool_call_blocked') return et;
   if (OPS_PHASE_LIKE_EVENT_TYPES.has(et)) return et;
   if (et === 'cos_github_fallback_evidence') return 'github_fallback_evidence';
+  if (et === 'result_recovery_github_secondary') return 'github_secondary_recovery_matched';
   if (et === 'cos_cursor_webhook_ingress_safe') {
     const o = String(pl.correlation_outcome || '');
+    const src = String(pl.callback_source_kind || '').trim().toLowerCase();
     if (o === 'no_match') return 'cursor_callback_observed_no_match';
-    if (o === 'matched') return 'cursor_direct_callback_correlated';
+    if (o === 'matched') {
+      if (src === 'manual_probe') return 'cursor_manual_probe_callback_correlated';
+      return 'cursor_provider_callback_correlated';
+    }
     if (o === 'ignored_insufficient_payload') return 'cursor_callback_ingress_insufficient_payload';
     if (o === 'rejected_invalid_signature' || o === 'rejected_invalid_json') return 'cursor_callback_ingress_rejected';
     return 'cursor_direct_callback_ingress_received';
   }
   return '';
+}
+
+/**
+ * Break pointer: external_run_id_extracted is strict (phase row only); later gates accept ingress aliases.
+ * @param {string} step
+ * @param {Set<string>} seen
+ */
+function strictPipelineBreak(step, seen) {
+  switch (step) {
+    case 'cursor_trigger_recorded':
+      return seen.has('cursor_trigger_recorded');
+    case 'external_run_id_extracted':
+      return seen.has('external_run_id_extracted');
+    case 'external_callback_matched':
+      return (
+        seen.has('external_callback_matched') ||
+        seen.has('cursor_provider_callback_correlated') ||
+        seen.has('cursor_direct_callback_correlated') ||
+        seen.has('github_secondary_recovery_matched')
+      );
+    case 'run_packet_progression_patched':
+      return seen.has('run_packet_progression_patched');
+    case 'supervisor_wake_enqueued':
+      return seen.has('supervisor_wake_enqueued');
+    case 'founder_milestone_sent':
+      return seen.has('founder_milestone_sent');
+    default:
+      return false;
+  }
+}
+
+/**
+ * Relaxed gates for recomputing breaks_at after provider/GitHub closure (vNext.13.67).
+ * @param {string} step
+ * @param {Set<string>} seen
+ */
+function relaxedPipelineBreak(step, seen) {
+  switch (step) {
+    case 'cursor_trigger_recorded':
+      return seen.has('cursor_trigger_recorded');
+    case 'external_run_id_extracted':
+      return (
+        seen.has('external_run_id_extracted') || seen.has('trigger_accepted_external_id_present')
+      );
+    case 'external_callback_matched':
+      return (
+        seen.has('external_callback_matched') ||
+        seen.has('cursor_provider_callback_correlated') ||
+        seen.has('cursor_direct_callback_correlated') ||
+        seen.has('github_secondary_recovery_matched')
+      );
+    case 'run_packet_progression_patched':
+      return seen.has('run_packet_progression_patched');
+    case 'supervisor_wake_enqueued':
+      return seen.has('supervisor_wake_enqueued');
+    case 'founder_milestone_sent':
+      return seen.has('founder_milestone_sent');
+    default:
+      return false;
+  }
+}
+
+/**
+ * @param {Set<string>} seen
+ */
+function recomputeBreaksAtRelaxed(seen) {
+  for (let i = 0; i < PIPELINE_BREAK_ORDER.length; i += 1) {
+    const step = PIPELINE_BREAK_ORDER[i];
+    if (!relaxedPipelineBreak(step, seen)) return step;
+  }
+  return null;
+}
+
+/**
+ * @param {Set<string>} seen
+ */
+function providerCallbackClosureSeen(seen) {
+  return (
+    seen.has('external_callback_matched') ||
+    seen.has('cursor_provider_callback_correlated') ||
+    seen.has('cursor_direct_callback_correlated')
+  );
 }
 
 /**
@@ -772,14 +886,45 @@ export function aggregateSmokeSessionProgress(rows) {
   let breaksAt = null;
   for (let i = 0; i < PIPELINE_BREAK_ORDER.length; i += 1) {
     const step = PIPELINE_BREAK_ORDER[i];
-    if (!seen.has(step)) {
+    if (!strictPipelineBreak(step, seen)) {
       breaksAt = step;
       break;
     }
   }
 
   let final_status = 'unknown';
-  if (seen.has('cursor_trigger_recorded') && !seen.has('external_run_id_extracted')) {
+  const provClosed = providerCallbackClosureSeen(seen);
+  const ghClosed = seen.has('github_secondary_recovery_matched');
+  const manualOnlyClosed =
+    !provClosed &&
+    (seen.has('cursor_manual_probe_callback_correlated') || seen.has('manual_probe_external_callback_matched'));
+
+  if (provClosed) {
+    breaksAt = recomputeBreaksAtRelaxed(seen);
+    const staleAcceptPending =
+      seen.has('trigger_accepted_external_id_present') && !seen.has('external_run_id_extracted');
+    if (!breaksAt) {
+      final_status = 'unknown';
+    } else if (staleAcceptPending) {
+      final_status = 'cursor_callback_correlated';
+    } else {
+      final_status = `partial_stopped_before_${breaksAt}`;
+    }
+  } else if (ghClosed) {
+    breaksAt = recomputeBreaksAtRelaxed(seen);
+    const staleAcceptPending =
+      seen.has('trigger_accepted_external_id_present') && !seen.has('external_run_id_extracted');
+    if (!breaksAt) {
+      final_status = 'unknown';
+    } else if (staleAcceptPending) {
+      final_status = 'github_secondary_recovery_closed';
+    } else {
+      final_status = `partial_stopped_before_${breaksAt}`;
+    }
+  } else if (manualOnlyClosed) {
+    final_status = 'manual_probe_callback_matched_without_provider_closure';
+    breaksAt = 'external_callback_matched';
+  } else if (seen.has('cursor_trigger_recorded') && !seen.has('external_run_id_extracted')) {
     if (seen.has('trigger_accepted_external_id_present')) {
       final_status = 'trigger_accepted_external_id_present';
       breaksAt = 'external_run_id_extracted';
@@ -792,18 +937,23 @@ export function aggregateSmokeSessionProgress(rows) {
     }
   }
 
-  if (seen.has('cursor_callback_absent_despite_callback_contract')) {
-    final_status = 'cursor_callback_absent_despite_callback_contract';
-    breaksAt = 'external_callback_matched';
-  } else if (seen.has('cursor_callback_absent_without_callback_contract')) {
-    final_status = 'cursor_callback_absent_without_callback_contract';
-    breaksAt = 'external_callback_matched';
-  } else if (seen.has('cursor_callback_absent_within_timeout')) {
-    final_status = 'cursor_callback_absent_within_timeout';
-    breaksAt = 'external_callback_matched';
-  } else if (seen.has('cursor_callback_observed_no_match') && !seen.has('external_callback_matched')) {
-    final_status = 'cursor_callback_observed_no_match';
-    breaksAt = 'external_callback_matched';
+  if (!provClosed && !ghClosed && !manualOnlyClosed) {
+    if (seen.has('cursor_callback_absent_despite_callback_contract')) {
+      final_status = 'cursor_callback_absent_despite_callback_contract';
+      breaksAt = 'external_callback_matched';
+    } else if (seen.has('cursor_callback_absent_without_callback_contract')) {
+      final_status = 'cursor_callback_absent_without_callback_contract';
+      breaksAt = 'external_callback_matched';
+    } else if (seen.has('cursor_callback_absent_within_timeout')) {
+      final_status = 'cursor_callback_absent_within_timeout';
+      breaksAt = 'external_callback_matched';
+    } else if (
+      seen.has('cursor_callback_observed_no_match') &&
+      !relaxedPipelineBreak('external_callback_matched', seen)
+    ) {
+      final_status = 'cursor_callback_observed_no_match';
+      breaksAt = 'external_callback_matched';
+    }
   }
 
   if (final_status === 'unknown') {
@@ -917,10 +1067,20 @@ export function extractLatestCursorWebhookIngressFromRows(rows) {
     cursor_ingress_correlation_outcome: null,
     cursor_ingress_signature_ok: null,
     cursor_ingress_json_ok: null,
+    provider_callback_ingress_observed: null,
+    manual_probe_callback_ingress_observed: null,
+    cursor_ingress_provider_match_basis: null,
+    cursor_ingress_manual_probe_match_basis: null,
   };
   let bestAt = '';
   /** @type {Record<string, unknown> | null} */
   let best = null;
+  let bestProvAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let bestProv = null;
+  let bestManAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let bestMan = null;
   for (const r of rows || []) {
     if (String(r.event_type || '') !== 'cos_cursor_webhook_ingress_safe') continue;
     const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
@@ -928,6 +1088,25 @@ export function extractLatestCursorWebhookIngressFromRows(rows) {
     if (t >= bestAt) {
       bestAt = t;
       best = pl;
+    }
+    const co = String(pl.correlation_outcome || '');
+    const verifiedMatch =
+      pl.signature_verification_ok === true &&
+      pl.json_parse_ok === true &&
+      co !== 'rejected_invalid_signature' &&
+      co !== 'rejected_invalid_json' &&
+      co === 'matched';
+    if (verifiedMatch) {
+      const sk = String(pl.callback_source_kind || '').trim().toLowerCase();
+      if (sk === 'manual_probe') {
+        if (t >= bestManAt) {
+          bestManAt = t;
+          bestMan = pl;
+        }
+      } else if (t >= bestProvAt) {
+        bestProvAt = t;
+        bestProv = pl;
+      }
     }
   }
   if (!best) return empty;
@@ -946,6 +1125,12 @@ export function extractLatestCursorWebhookIngressFromRows(rows) {
     cursor_ingress_correlation_outcome: co || null,
     cursor_ingress_signature_ok: best.signature_verification_ok === true,
     cursor_ingress_json_ok: best.json_parse_ok === true,
+    provider_callback_ingress_observed: bestProv != null,
+    manual_probe_callback_ingress_observed: bestMan != null,
+    cursor_ingress_provider_match_basis:
+      bestProv?.callback_match_basis != null ? String(bestProv.callback_match_basis).slice(0, 40) : null,
+    cursor_ingress_manual_probe_match_basis:
+      bestMan?.callback_match_basis != null ? String(bestMan.callback_match_basis).slice(0, 40) : null,
   };
 }
 
@@ -1241,11 +1426,14 @@ export function extractLatestEmitPatchLineageFromOpsRows(rows) {
  */
 export function inferSelectedExecutionLaneFromAgg(agg) {
   const seen = new Set(Array.isArray(agg?.phases_seen) ? agg.phases_seen : []);
+  const fs = String(agg?.final_status || '');
+  if (fs === 'cursor_callback_correlated' || fs === 'github_secondary_recovery_closed') {
+    return 'cloud_trigger_attempted';
+  }
   if (seen.has('cursor_trigger_recorded')) return 'cloud_trigger_attempted';
   if (seen.has('emit_patch_payload_validated')) return 'cloud_emit_patch_contract_ok';
   if (seen.has('trigger_blocked_invalid_payload')) return 'cloud_emit_patch_assembly_failed';
   if (seen.has('live_payload_compilation_started')) return 'cloud_emit_patch_compilation_observed';
-  const fs = String(agg?.final_status || '');
   if (fs === 'pre_trigger_blocked_invalid_payload') return 'pre_trigger_validation';
   return 'unknown';
 }
@@ -1340,7 +1528,7 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
 
 export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
-  /** @type {Map<string, { run_id: string, rows: { event_type: string, payload: Record<string, unknown>, created_at: string }[] }>} */
+  /** @type {Map<string, { run_ids: string[], rows: { event_type: string, payload: Record<string, unknown>, created_at: string }[] }>} */
   const bySession = new Map();
   for (const row of flatRows || []) {
     if (!SMOKE_SESSION_ROW_EVENT_TYPES.has(String(row.event_type || ''))) continue;
@@ -1348,16 +1536,18 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const sid = String(pl.smoke_session_id || '').trim();
     if (!sid) continue;
     const runId = String(row.run_id || '').trim() || 'unknown';
-    if (!bySession.has(sid)) bySession.set(sid, { run_id: runId, rows: [] });
+    if (!bySession.has(sid)) bySession.set(sid, { run_ids: [], rows: [] });
     const bucket = bySession.get(sid);
     bucket.rows.push({
       event_type: String(row.event_type || ''),
       payload: pl,
       created_at: row.created_at != null ? String(row.created_at) : '',
     });
-    if (bucket.run_id !== runId) bucket.run_id = `${bucket.run_id}+${runId}`;
+    if (runId && runId !== 'unknown' && !bucket.run_ids.includes(runId)) bucket.run_ids.push(runId);
   }
-  const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
+  const sessions = [...bySession.entries()].map(([smoke_session_id, { run_ids, rows }]) => {
+    const primary_run_id = run_ids[0] || 'unknown';
+    const related_run_ids = run_ids.slice(1);
     const { byAttempt, useLineage } = partitionSmokeSessionRowsByAttempt(rows);
     const primarySeq = choosePrimaryAttemptSeqFromPartition(byAttempt, useLineage);
     const primaryRows =
@@ -1415,7 +1605,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const acceptanceMeta = extractAcceptanceCallbackMetadataFromRows(primaryRows);
     const outbound_callback_contract_attached = cbContract.callback_contract_present === true;
     const acceptance_response_has_callback_metadata = acceptanceMeta === true;
-    const inbound_callback_observed = cursorIngress.cursor_callback_observed === true;
+    const inbound_callback_observed = cursorIngress.provider_callback_ingress_observed === true;
     const repository_reflection_observed = ghFb.github_fallback_signal_seen === true;
 
     /** @type {{ attempt_seq: number, status: string }[]} */
@@ -1448,7 +1638,9 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
 
     const base = {
       smoke_session_id,
-      run_id,
+      run_id: primary_run_id,
+      primary_run_id,
+      related_run_ids,
       lastAt,
       ...machine,
       selected_tool: primary_selected_tool ?? machine.selected_tool,
@@ -1720,18 +1912,26 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
   const threadKey = String(p.threadKey || '').trim();
   if (!runId) return;
 
+  const meta = p.ingressMeta && typeof p.ingressMeta === 'object' ? p.ingressMeta : {};
+  const src = String(meta.callback_source_kind || '').trim().toLowerCase();
+  const phaseMatch = src === 'manual_probe' ? 'manual_probe_external_callback_matched' : 'external_callback_matched';
+
   await recordOpsSmokePhase({
     env,
     runId,
     threadKey,
-    phase: 'external_callback_matched',
+    phase: phaseMatch,
     detail: {
       callback: buildSafeCursorCallbackSmokeDetail({
         canonical: p.canonical,
-        matched_by: p.ingressMeta?.matched_by,
+        matched_by: meta.matched_by,
         canonical_status: p.canonForOut?.bucket != null ? String(p.canonForOut.bucket) : null,
-        payload_fingerprint_prefix: p.ingressMeta?.payload_fingerprint_prefix,
+        payload_fingerprint_prefix: meta.payload_fingerprint_prefix,
         ingressEvidence: p.ingressEvidence,
+        callback_source_kind: meta.callback_source_kind != null ? String(meta.callback_source_kind) : null,
+        callback_match_basis: meta.callback_match_basis != null ? String(meta.callback_match_basis) : null,
+        callback_verification_kind:
+          meta.callback_verification_kind != null ? String(meta.callback_verification_kind) : null,
       }),
     },
   });

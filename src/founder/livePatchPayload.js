@@ -135,7 +135,17 @@ export function prepareEmitPatchForCloudAutomation(payload) {
   let compilation = 'none';
   if (narrow) {
     const compiled = compileNarrowLivePatchToContractPayload(narrow, String(pl.title || pl.name || ''));
-    merged = { ...pl, ...compiled };
+    merged = {
+      ...pl,
+      ...compiled,
+      cos_execution_scope_hint: {
+        kind: 'narrow_single_file',
+        path: String(narrow.path).slice(0, 512),
+        operation: narrow.operation,
+        live_only: true,
+        no_fallback: true,
+      },
+    };
     compilation = 'narrow';
   } else if (hadOps) {
     compilation = 'already_has_ops';

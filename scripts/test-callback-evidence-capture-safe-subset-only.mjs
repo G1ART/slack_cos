@@ -39,6 +39,9 @@ const allowedKeys = new Set([
   'has_pr_url',
   'has_summary',
   'occurred_at_present',
+  'callback_source_kind',
+  'callback_match_basis',
+  'callback_verification_kind',
 ]);
 assert.deepEqual(new Set(Object.keys(d)), allowedKeys, 'only safe callback fields');
 
