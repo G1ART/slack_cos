@@ -138,6 +138,9 @@ export async function findExternalCorrelation(provider, objectType, objectId) {
 }
 
 /**
+ * Cursor callback correlation order (v13.64): external_run_id → accepted_external_id →
+ * automation_request_path_fp → run_uuid+packet → thread_key+packet.
+ *
  * @param {{
  *   external_run_id?: string | null,
  *   run_id?: string | null,

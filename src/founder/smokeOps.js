@@ -609,6 +609,15 @@ export function buildSafeTriggerSmokeDetail(tr, env = process.env) {
         ? String(t.selected_accepted_id_field_name).slice(0, 120)
         : null,
     override_keys_used: listAutomationResponseOverrideKeys(env),
+    run_id_source: t.run_id_source != null ? String(t.run_id_source).slice(0, 24) : null,
+    accepted_external_id_source:
+      t.accepted_external_id_source != null ? String(t.accepted_external_id_source).slice(0, 24) : null,
+    status_source: t.status_source != null ? String(t.status_source).slice(0, 24) : null,
+    url_source: t.url_source != null ? String(t.url_source).slice(0, 24) : null,
+    branch_source: t.branch_source != null ? String(t.branch_source).slice(0, 24) : null,
+    automation_response_env_absent_notes: Array.isArray(t.automation_response_env_absent_notes)
+      ? t.automation_response_env_absent_notes.map((x) => String(x).slice(0, 160)).slice(0, 12)
+      : null,
   };
 }
 
@@ -1385,8 +1394,9 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       primaryInvoke?.trigger_ok === true && primaryInvoke.invoked_action
         ? primaryInvoke.invoked_action
         : preNonBlocked?.selected_action ?? machine.selected_action;
+    const acceptedAutomationPrimary = primaryInvoke?.trigger_ok === true;
     const emitPatchPrimary =
-      primaryInvoke?.trigger_ok === true && String(primaryInvoke?.invoked_action || '') === 'emit_patch';
+      acceptedAutomationPrimary && String(primaryInvoke?.invoked_action || '') === 'emit_patch';
     const delegateSchemaPass = primaryRows.some((r) => {
       const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
       return (
@@ -1427,7 +1437,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const primary_delegate_schema_valid = delegate_schema_valid;
     const primary_missing_required_fields = machine.missing_required_fields ?? null;
     const primary_blocked_reason =
-      emitPatchPrimary ? null : machine.blocked_reason != null ? machine.blocked_reason : null;
+      acceptedAutomationPrimary ? null : machine.blocked_reason != null ? machine.blocked_reason : null;
 
     const lastAt = rows.reduce((m, r) => {
       const t1 = String(r.payload?.at || '');
@@ -1443,8 +1453,8 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       ...machine,
       selected_tool: primary_selected_tool ?? machine.selected_tool,
       selected_action: primary_selected_action ?? machine.selected_action,
-      blocked_reason: emitPatchPrimary ? null : machine.blocked_reason,
-      machine_hint: emitPatchPrimary ? null : machine.machine_hint,
+      blocked_reason: acceptedAutomationPrimary ? null : machine.blocked_reason,
+      machine_hint: acceptedAutomationPrimary ? null : machine.machine_hint,
       primary_selected_tool: primary_selected_tool ?? machine.selected_tool,
       primary_selected_action: primary_selected_action ?? machine.selected_action,
       primary_trigger_state: agg.final_status,

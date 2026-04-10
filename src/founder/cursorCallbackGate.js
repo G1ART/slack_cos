@@ -1,5 +1,5 @@
 /**
- * vNext.13.62 — Callback gate helpers: emit_patch path fingerprint, ingress diagnostics.
+ * vNext.13.62–13.64 — Callback gate: emit_patch path fingerprint, ingress diagnostics.
  * Intentionally does not import cursorWebhookIngress (avoid cycles).
  */
 
@@ -39,8 +39,14 @@ export function computeEmitPatchPayloadPathFingerprint(payload) {
   return computePathsArrayFingerprint(collectEmitPatchPathsForFingerprint(payload));
 }
 
+/** Normalized emit_patch paths (same set as fingerprint); for durable run anchor + GitHub recovery. */
+export function listNormalizedEmitPatchPathsForAnchor(payload) {
+  return collectEmitPatchPathsForFingerprint(payload);
+}
+
 /**
  * Safe diagnostics when normalization returns null (ops smoke / ledger).
+ * v13.64: request_id alone is never sufficient; request_id+path_fp is a separate closeable pair.
  * @param {Record<string, unknown>} sel — return shape of computeCursorWebhookFieldSelection
  */
 export function buildCursorCallbackInsufficientDiagnostics(sel) {
@@ -53,9 +59,38 @@ export function buildCursorCallbackInsufficientDiagnostics(sel) {
   const path_fp = Boolean(String(sel.callbackPathFingerprintHint || '').trim());
   const status = Boolean(String(sel.statusPick?.value || '').trim());
 
-  const would_accept = Boolean(run_id || thread || (run_uuid && packet) || accepted);
+  const request_id_paired_with_path_fp = Boolean(request_id && path_fp);
+  const would_accept = Boolean(
+    run_id ||
+      thread ||
+      (run_uuid && packet) ||
+      accepted ||
+      request_id_paired_with_path_fp,
+  );
+
+  /** @type {string[]} */
+  const callback_missing_basis = [];
+  if (!run_id) callback_missing_basis.push('external_run_id');
+  if (!thread) callback_missing_basis.push('thread_key');
+  if (!(run_uuid && packet)) callback_missing_basis.push('run_uuid_and_packet_id_pair');
+  if (!accepted) callback_missing_basis.push('accepted_external_id');
+  if (!request_id_paired_with_path_fp) {
+    if (request_id && !path_fp) callback_missing_basis.push('path_fingerprint_required_with_request_id');
+    else if (!request_id && !path_fp) callback_missing_basis.push('request_id_and_path_fingerprint_pair');
+    else if (!request_id && path_fp) callback_missing_basis.push('request_id_required_with_path_fingerprint');
+  }
 
   return {
+    request_id_present: request_id,
+    path_fingerprint_present: path_fp,
+    accepted_external_id_present: accepted,
+    run_id_present: run_id,
+    thread_key_present: thread,
+    packet_id_present: packet,
+    run_uuid_present: run_uuid,
+    status_present: status,
+    normalization_would_accept: would_accept,
+    request_id_without_path_fingerprint: Boolean(request_id && !path_fp),
     callback_normalization_candidate_fields_present: {
       run_id,
       thread,
@@ -67,6 +102,18 @@ export function buildCursorCallbackInsufficientDiagnostics(sel) {
       status,
     },
     callback_minimum_match_basis_failed: !would_accept,
-    normalization_requires_one_of: 'external_run_id|thread_key|run_uuid+packet|accepted_external_id',
+    callback_missing_basis,
+    normalization_requires_one_of:
+      'external_run_id|thread_key|run_uuid+packet|accepted_external_id|request_id+path_fingerprint(+durable_row)',
   };
+}
+
+/**
+ * @param {ReturnType<typeof buildCursorCallbackInsufficientDiagnostics>} gate
+ */
+export function pickCursorWebhookInsufficientRejectionReason(gate) {
+  if (gate.request_id_without_path_fingerprint) {
+    return 'callback_request_id_requires_path_fingerprint_pair';
+  }
+  return 'normalization_requires_closeable_callback_basis';
 }

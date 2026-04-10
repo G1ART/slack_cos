@@ -24,7 +24,10 @@ import {
   peekCursorWebhookObservedSchemaSnapshot,
   computeCursorWebhookFieldSelection,
 } from './cursorWebhookIngress.js';
-import { buildCursorCallbackInsufficientDiagnostics } from './cursorCallbackGate.js';
+import {
+  buildCursorCallbackInsufficientDiagnostics,
+  pickCursorWebhookInsufficientRejectionReason,
+} from './cursorCallbackGate.js';
 import { recordCosCursorWebhookIngressSafe, recordOpsSmokeGithubFallbackEvidence } from './smokeOps.js';
 import { __resetRecoveryEnvelopeStoreForTests } from './recoveryEnvelopeStore.js';
 
@@ -248,7 +251,7 @@ export async function handleCursorWebhookIngress(p) {
         thread_hint_present: peek.thread_hint_present,
         packet_hint_present: peek.packet_hint_present,
         correlation_outcome: 'ignored_insufficient_payload',
-        rejection_reason: 'normalization_requires_run_id_or_thread_or_uuid_packet_or_accepted_id',
+        rejection_reason: pickCursorWebhookInsufficientRejectionReason(ingress_callback_gate),
         ingress_callback_gate,
       });
     } catch (e) {

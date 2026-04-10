@@ -19,6 +19,12 @@ const tr = {
   has_run_id: true,
   has_status: true,
   has_url: true,
+  run_id_source: 'override',
+  accepted_external_id_source: 'absent',
+  status_source: 'override',
+  url_source: 'heuristic',
+  branch_source: 'heuristic',
+  automation_response_env_absent_notes: [],
 };
 
 const d = buildSafeTriggerSmokeDetail(tr);
@@ -43,6 +49,12 @@ const allowedKeys = new Set([
   'selected_url_field_name',
   'selected_accepted_id_field_name',
   'override_keys_used',
+  'run_id_source',
+  'accepted_external_id_source',
+  'status_source',
+  'url_source',
+  'branch_source',
+  'automation_response_env_absent_notes',
 ]);
 assert.deepEqual(new Set(Object.keys(d)), allowedKeys, 'only safe trigger fields');
 

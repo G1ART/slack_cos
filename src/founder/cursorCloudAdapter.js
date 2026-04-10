@@ -4,6 +4,7 @@
  */
 
 import crypto from 'node:crypto';
+import { deriveAutomationResponseWinningSource } from './cursorEnvParsingTruth.js';
 
 /** @type {{ fn: typeof fetch | null }} */
 export const __cursorAutomationFetchForTests = { fn: null };
@@ -123,22 +124,29 @@ const DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS = ['backgroundComposerId', 'composerId'
  * @param {NodeJS.ProcessEnv} env
  */
 export function extractAutomationResponseFields(parsed, env) {
+  const absentBase = {
+    external_run_id: null,
+    external_url: null,
+    automation_status_raw: null,
+    automation_branch_raw: null,
+    accepted_external_id: null,
+    selected_run_id_field_name: null,
+    selected_accepted_id_field_name: null,
+    selected_url_field_name: null,
+    selected_status_field_name: null,
+    has_run_id: false,
+    has_accepted_external_id: false,
+    has_status: false,
+    has_url: false,
+    run_id_source: /** @type {const} */ ('absent'),
+    accepted_external_id_source: /** @type {const} */ ('absent'),
+    status_source: /** @type {const} */ ('absent'),
+    url_source: /** @type {const} */ ('absent'),
+    branch_source: /** @type {const} */ ('absent'),
+    automation_response_env_absent_notes: /** @type {string[]} */ ([]),
+  };
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return {
-      external_run_id: null,
-      external_url: null,
-      automation_status_raw: null,
-      automation_branch_raw: null,
-      accepted_external_id: null,
-      selected_run_id_field_name: null,
-      selected_accepted_id_field_name: null,
-      selected_url_field_name: null,
-      selected_status_field_name: null,
-      has_run_id: false,
-      has_accepted_external_id: false,
-      has_status: false,
-      has_url: false,
-    };
+    return absentBase;
   }
 
   const runIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH || '').trim();
@@ -150,6 +158,7 @@ export function extractAutomationResponseFields(parsed, env) {
   /** @type {string | null} */
   let selected_run_id_field_name = null;
   let external_run_id = '';
+  let runWonOverride = false;
   if (runIdPath) {
     const v = getByDotPath(parsed, runIdPath);
     if (v != null) {
@@ -157,9 +166,11 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         external_run_id = s;
         selected_run_id_field_name = runIdPath;
+        runWonOverride = true;
       }
     }
   }
+  let runWonHeuristic = false;
   if (!external_run_id) {
     for (const p of DEFAULT_RUN_ID_DOT_PATHS) {
       const v = getByDotPath(parsed, p);
@@ -168,6 +179,7 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         external_run_id = s;
         selected_run_id_field_name = p;
+        runWonHeuristic = true;
         break;
       }
     }
@@ -176,6 +188,7 @@ export function extractAutomationResponseFields(parsed, env) {
   /** @type {string | null} */
   let selected_url_field_name = null;
   let external_url = '';
+  let urlWonOverride = false;
   if (urlPath) {
     const v = getByDotPath(parsed, urlPath);
     if (v != null) {
@@ -183,9 +196,11 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         external_url = s;
         selected_url_field_name = urlPath;
+        urlWonOverride = true;
       }
     }
   }
+  let urlWonHeuristic = false;
   if (!external_url) {
     for (const p of DEFAULT_URL_DOT_PATHS) {
       const v = getByDotPath(parsed, p);
@@ -194,6 +209,7 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         external_url = s;
         selected_url_field_name = p;
+        urlWonHeuristic = true;
         break;
       }
     }
@@ -202,14 +218,17 @@ export function extractAutomationResponseFields(parsed, env) {
   /** @type {string | null} */
   let selected_status_field_name = null;
   let automation_status_raw = null;
+  let statusWonOverride = false;
   if (statusPath) {
     const v = getByDotPath(parsed, statusPath);
     if (v != null) {
       const s = String(v).trim();
       automation_status_raw = s || null;
       selected_status_field_name = s ? statusPath : null;
+      if (s) statusWonOverride = true;
     }
   }
+  let statusWonHeuristic = false;
   if (automation_status_raw == null) {
     for (const p of DEFAULT_STATUS_DOT_PATHS) {
       const v = getByDotPath(parsed, p);
@@ -218,6 +237,7 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         automation_status_raw = s;
         selected_status_field_name = p;
+        statusWonHeuristic = true;
         break;
       }
     }
@@ -225,10 +245,13 @@ export function extractAutomationResponseFields(parsed, env) {
 
   /** @type {string | null} */
   let automation_branch_raw = null;
+  let branchWonOverride = false;
   if (branchPath) {
     const v = getByDotPath(parsed, branchPath);
     automation_branch_raw = v != null ? String(v).trim() || null : null;
+    if (automation_branch_raw) branchWonOverride = true;
   }
+  let branchWonHeuristic = false;
   if (automation_branch_raw == null) {
     for (const p of DEFAULT_BRANCH_DOT_PATHS) {
       const v = getByDotPath(parsed, p);
@@ -236,6 +259,7 @@ export function extractAutomationResponseFields(parsed, env) {
       const s = String(v).trim();
       if (s) {
         automation_branch_raw = s;
+        branchWonHeuristic = true;
         break;
       }
     }
@@ -244,6 +268,7 @@ export function extractAutomationResponseFields(parsed, env) {
   /** @type {string | null} */
   let selected_accepted_id_field_name = null;
   let accepted_external_id = '';
+  let accWonOverride = false;
   if (acceptedIdPath) {
     const v = getByDotPath(parsed, acceptedIdPath);
     if (v != null) {
@@ -251,9 +276,11 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         accepted_external_id = s;
         selected_accepted_id_field_name = acceptedIdPath;
+        accWonOverride = true;
       }
     }
   }
+  let accWonHeuristic = false;
   if (!accepted_external_id) {
     for (const p of DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS) {
       if (!Object.prototype.hasOwnProperty.call(parsed, p)) continue;
@@ -263,6 +290,7 @@ export function extractAutomationResponseFields(parsed, env) {
       if (s) {
         accepted_external_id = s;
         selected_accepted_id_field_name = p;
+        accWonHeuristic = true;
         break;
       }
     }
@@ -272,6 +300,27 @@ export function extractAutomationResponseFields(parsed, env) {
   const has_url = !!external_url;
   const has_status = automation_status_raw != null && String(automation_status_raw).trim() !== '';
   const has_accepted_external_id = !!accepted_external_id;
+  const has_branch = automation_branch_raw != null && String(automation_branch_raw).trim() !== '';
+
+  const run_id_source = deriveAutomationResponseWinningSource(runWonOverride, has_run_id, runWonHeuristic);
+  const url_source = deriveAutomationResponseWinningSource(urlWonOverride, has_url, urlWonHeuristic);
+  const status_source = deriveAutomationResponseWinningSource(statusWonOverride, has_status, statusWonHeuristic);
+  const branch_source = deriveAutomationResponseWinningSource(branchWonOverride, has_branch, branchWonHeuristic);
+  const accepted_external_id_source = deriveAutomationResponseWinningSource(
+    accWonOverride,
+    has_accepted_external_id,
+    accWonHeuristic,
+  );
+
+  /** @type {string[]} */
+  const automation_response_env_absent_notes = [];
+  if (!runIdPath && !has_run_id) automation_response_env_absent_notes.push('run_id:CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH_unset_and_absent');
+  if (!statusPath && !has_status) automation_response_env_absent_notes.push('status:CURSOR_AUTOMATION_RESPONSE_STATUS_PATH_unset_and_absent');
+  if (!urlPath && !has_url) automation_response_env_absent_notes.push('url:CURSOR_AUTOMATION_RESPONSE_URL_PATH_unset_and_absent');
+  if (!branchPath && !has_branch) automation_response_env_absent_notes.push('branch:CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH_unset_and_absent');
+  if (!acceptedIdPath && !has_accepted_external_id) {
+    automation_response_env_absent_notes.push('accepted_id:CURSOR_AUTOMATION_RESPONSE_ACCEPTED_ID_PATH_unset_and_absent');
+  }
 
   return {
     external_run_id: external_run_id || null,
@@ -287,6 +336,12 @@ export function extractAutomationResponseFields(parsed, env) {
     has_accepted_external_id,
     has_status,
     has_url,
+    run_id_source,
+    accepted_external_id_source,
+    status_source,
+    url_source,
+    branch_source,
+    automation_response_env_absent_notes,
   };
 }
 
@@ -468,6 +523,12 @@ export async function triggerCursorAutomation(opts) {
       has_accepted_external_id: false,
       has_status: false,
       has_url: false,
+      run_id_source: 'absent',
+      accepted_external_id_source: 'absent',
+      status_source: 'absent',
+      url_source: 'absent',
+      branch_source: 'absent',
+      automation_response_env_absent_notes: [],
     };
   }
 
@@ -541,6 +602,12 @@ export async function triggerCursorAutomation(opts) {
       has_accepted_external_id: extracted.has_accepted_external_id,
       has_status: extracted.has_status,
       has_url: extracted.has_url,
+      run_id_source: extracted.run_id_source,
+      accepted_external_id_source: extracted.accepted_external_id_source,
+      status_source: extracted.status_source,
+      url_source: extracted.url_source,
+      branch_source: extracted.branch_source,
+      automation_response_env_absent_notes: extracted.automation_response_env_absent_notes,
     };
   } catch (e) {
     clearTimeout(timer);
@@ -564,6 +631,12 @@ export async function triggerCursorAutomation(opts) {
       has_accepted_external_id: false,
       has_status: false,
       has_url: false,
+      run_id_source: 'absent',
+      accepted_external_id_source: 'absent',
+      status_source: 'absent',
+      url_source: 'absent',
+      branch_source: 'absent',
+      automation_response_env_absent_notes: [],
     };
   }
 }

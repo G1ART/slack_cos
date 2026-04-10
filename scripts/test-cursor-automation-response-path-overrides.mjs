@@ -16,11 +16,14 @@ assert.equal(withPath.external_run_id, 'deep-id');
 assert.equal(withPath.external_url, 'https://run.example/internal');
 assert.equal(withPath.selected_run_id_field_name, 'data.run.id');
 assert.equal(withPath.selected_url_field_name, 'data.run.url');
+assert.equal(withPath.run_id_source, 'override');
+assert.equal(withPath.url_source, 'override');
 
 const noPath = extractAutomationResponseFields(nested, {});
 assert.equal(noPath.external_run_id, 'wrong-top');
 assert.equal(noPath.selected_run_id_field_name, 'id');
 assert.equal(noPath.has_accepted_external_id, false);
+assert.equal(noPath.run_id_source, 'heuristic');
 
 const statusEnv = {
   CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH: 'result.agentRunId',
@@ -34,5 +37,8 @@ const st = extractAutomationResponseFields(
 assert.equal(st.external_run_id, 'ag-1');
 assert.equal(st.automation_status_raw, 'running');
 assert.equal(st.automation_branch_raw, 'feature/smoke');
+assert.equal(st.run_id_source, 'override');
+assert.equal(st.status_source, 'override');
+assert.equal(st.branch_source, 'override');
 
 console.log('test-cursor-automation-response-path-overrides: ok');

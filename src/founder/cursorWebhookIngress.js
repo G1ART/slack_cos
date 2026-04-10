@@ -6,7 +6,7 @@
 import crypto from 'node:crypto';
 import { getByDotPath } from './cursorCloudAdapter.js';
 import { canonicalizeExternalRunStatus } from './externalRunStatus.js';
-import { computePathsArrayFingerprint } from './cursorCallbackGate.js';
+import { buildCursorCallbackInsufficientDiagnostics, computePathsArrayFingerprint } from './cursorCallbackGate.js';
 
 export const CURSOR_WEBHOOK_OVERRIDE_ENV_KEYS = [
   'CURSOR_WEBHOOK_RUN_ID_PATH',
@@ -427,6 +427,7 @@ export function computeCursorWebhookFieldSelection(body, env = process.env) {
 export function peekCursorWebhookObservedSchemaSnapshot(body, env = process.env) {
   const rootObj = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
   const sel = computeCursorWebhookFieldSelection(/** @type {Record<string, unknown>} */ (rootObj), env);
+  const gate = buildCursorCallbackInsufficientDiagnostics(sel);
   const top = sel.root;
   return {
     top_level_keys: Object.keys(top).slice(0, 40),
@@ -440,15 +441,10 @@ export function peekCursorWebhookObservedSchemaSnapshot(body, env = process.env)
     thread_hint_present: Boolean(String(sel.threadKeyHint || '').trim()),
     packet_hint_present: Boolean(String(sel.packetIdHint || '').trim()),
     run_uuid_hint_present: Boolean(String(sel.runUuidHint || '').trim()),
-    accepted_id_candidate_present: Boolean(String(sel.acceptedExternalIdHint || '').trim()),
-    callback_request_id_present: Boolean(String(sel.callbackRequestIdHint || '').trim()),
-    path_fingerprint_candidate_present: Boolean(String(sel.callbackPathFingerprintHint || '').trim()),
-    normalization_would_accept: Boolean(
-      sel.externalRunId ||
-        sel.threadKeyHint ||
-        (sel.runUuidHint && sel.packetIdHint) ||
-        sel.acceptedExternalIdHint,
-    ),
+    accepted_id_candidate_present: gate.accepted_external_id_present,
+    callback_request_id_present: gate.request_id_present,
+    path_fingerprint_candidate_present: gate.path_fingerprint_present,
+    normalization_would_accept: gate.normalization_would_accept,
     run_id_candidate_tail: (() => {
       const v = String(sel.externalRunId || '').trim();
       return v.length > 8 ? v.slice(-8) : v;
@@ -487,13 +483,8 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
     selected_override_keys,
   } = sel;
 
-  const hasMinBasis = Boolean(
-    externalRunId ||
-      threadKeyHint ||
-      (runUuidHint && packetIdHint) ||
-      acceptedExternalIdHint,
-  );
-  if (!hasMinBasis) {
+  const gate = buildCursorCallbackInsufficientDiagnostics(sel);
+  if (!gate.normalization_would_accept) {
     return null;
   }
 

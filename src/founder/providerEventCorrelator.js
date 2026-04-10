@@ -6,7 +6,10 @@
 import { getActiveRunForThread, patchRunById } from './executionRunStore.js';
 import { upsertExternalCorrelation } from './correlationStore.js';
 import { appendCosRunEvent } from './runCosEvents.js';
-import { computeEmitPatchPayloadPathFingerprint } from './cursorCallbackGate.js';
+import {
+  computeEmitPatchPayloadPathFingerprint,
+  listNormalizedEmitPatchPathsForAnchor,
+} from './cursorCallbackGate.js';
 
 /**
  * @param {{
@@ -59,6 +62,7 @@ export async function recordGithubInvocationCorrelation(ctx) {
  *   automationRequestId?: string | null,
  *   emitPatchPathFingerprint?: string | null,
  *   payload?: Record<string, unknown>,
+ *   automationBranchRaw?: string | null,
  * }} ctx
  */
 export async function recordCursorCloudCorrelation(ctx) {
@@ -123,6 +127,15 @@ export async function recordCursorCloudCorrelation(ctx) {
   const anchorKind =
     anchorParts.length === 0 ? 'none' : anchorParts.length === 1 ? anchorParts[0] : 'mixed';
 
+  const emitPaths =
+    cursorAction === 'emit_patch' && ctx.payload && typeof ctx.payload === 'object'
+      ? listNormalizedEmitPatchPathsForAnchor(ctx.payload).slice(0, 48)
+      : [];
+  const automationBranchRaw =
+    ctx.automationBranchRaw != null && String(ctx.automationBranchRaw).trim()
+      ? String(ctx.automationBranchRaw).trim().slice(0, 200)
+      : null;
+
   const anchor = {
     captured_at: new Date().toISOString(),
     cloud_run_id: cloudRunId || null,
@@ -130,6 +143,8 @@ export async function recordCursorCloudCorrelation(ctx) {
     accepted_anchor_kind: anchorKind,
     automation_request_id: automationRequestId || null,
     emit_patch_path_fingerprint: emitFp || null,
+    emit_patch_requested_paths: emitPaths.length ? emitPaths : null,
+    automation_branch_raw: automationBranchRaw,
     action: cursorAction,
   };
   try {

@@ -1465,6 +1465,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
           action,
           acceptedExternalId: String(tr.accepted_external_id || '').trim() || null,
           automationRequestId: String(tr.request_id || '').trim() || null,
+          automationBranchRaw: tr.automation_branch_raw != null ? String(tr.automation_branch_raw) : null,
           payload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {},
         });
       }

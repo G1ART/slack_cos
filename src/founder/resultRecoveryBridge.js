@@ -24,6 +24,14 @@ export const SECONDARY_OUTCOME_PATH_MATCH_ONLY = 'repository_reflection_path_mat
 
 const RECOVERY_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
+/** When both trigger anchor and push carry a branch/ref, require loose compatibility (v13.64). */
+function githubRecoveryBranchCompatible(triggerBranch, pushRefBranch) {
+  const a = String(triggerBranch || '').replace(/^refs\/heads\//i, '').trim().toLowerCase();
+  const b = String(pushRefBranch || '').replace(/^refs\/heads\//i, '').trim().toLowerCase();
+  if (!a || !b) return true;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 /**
  * @param {string} runId
  */
@@ -187,11 +195,13 @@ export async function markRecoveryEnvelopePrimaryCallbackObserved(runId) {
  *   touched: Set<string>,
  *   headSha: string,
  *   recvMs: number,
+ *   fp?: string | null,
+ *   refBranch?: string,
  * }} ctx
  * @returns {{ recovered: boolean, run_id?: string, outcome?: string, matched_paths?: string[], diagnostics?: Record<string, unknown> }}
  */
 async function runGithubPushRecoveryLoop(norm, ctx) {
-  const { pending, repo, touched, headSha, recvMs } = ctx;
+  const { pending, repo, touched, headSha, recvMs, fp, refBranch = '' } = ctx;
   const shaPrefix = headSha ? headSha.slice(0, 12) : '';
 
   /** @type {Record<string, unknown>} */
@@ -231,7 +241,18 @@ async function runGithubPushRecoveryLoop(norm, ctx) {
     diagnostics.recovery_candidate_count = Number(diagnostics.recovery_candidate_count) + 1;
     if (String(envRow.repository_full_name || '').toLowerCase() !== repo.toLowerCase()) continue;
     repoMatch += 1;
-    const reqPaths = Array.isArray(envRow.requested_paths) ? envRow.requested_paths.map(String) : [];
+
+    const runIdProbe = String(envRow.run_id || '').trim();
+    const runRow = runIdProbe ? await getRunById(runIdProbe) : null;
+    const ca =
+      runRow?.cursor_callback_anchor && typeof runRow.cursor_callback_anchor === 'object'
+        ? runRow.cursor_callback_anchor
+        : null;
+
+    let reqPaths = Array.isArray(envRow.requested_paths) ? envRow.requested_paths.map(String) : [];
+    if (!reqPaths.length && ca && Array.isArray(ca.emit_patch_requested_paths)) {
+      reqPaths = ca.emit_patch_requested_paths.map(String);
+    }
     if (!reqPaths.length) {
       diagnostics.recovery_no_match_reason = 'missing_requested_paths';
       sampleReq = [];
@@ -267,6 +288,13 @@ async function runGithubPushRecoveryLoop(norm, ctx) {
     bestOverlap = Math.max(bestOverlap, matched_paths.length);
 
     if (!matched_paths.length) continue;
+
+    const trigBranch = ca?.automation_branch_raw != null ? String(ca.automation_branch_raw) : '';
+    const refB = String(refBranch || '').trim();
+    if (refB && trigBranch && !githubRecoveryBranchCompatible(trigBranch, refB)) {
+      diagnostics.recovery_no_match_reason = 'branch_mismatch_with_anchor';
+      continue;
+    }
 
     const runId = String(envRow.run_id || '').trim();
     const threadKey = String(envRow.thread_key || '').trim();
@@ -305,7 +333,7 @@ async function runGithubPushRecoveryLoop(norm, ctx) {
       },
       {
         matched_by: 'github_push_secondary_recovery',
-        payload_fingerprint_prefix: ctx.fp,
+        payload_fingerprint_prefix: fp,
       },
     );
 
@@ -357,6 +385,8 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
   const headSha = pay.head_sha != null ? String(pay.head_sha) : '';
   const receivedAt = String(n.received_at || new Date().toISOString());
   const recvMs = Date.parse(receivedAt);
+  const refRaw = pay.ref != null ? String(pay.ref) : '';
+  const refBranch = refRaw.replace(/^refs\/heads\//i, '').replace(/^refs\/tags\//i, '').trim().slice(0, 200);
 
   const pending = await listAllPendingRecoveryEnvelopesMerged();
   const out = await runGithubPushRecoveryLoop(n, {
@@ -366,6 +396,7 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
     headSha,
     recvMs,
     fp: payloadFingerprintPrefix,
+    refBranch,
   });
   if (out.recovered) return { recovered: true, run_id: out.run_id, outcome: out.outcome, matched_paths: out.matched_paths, diagnostics: null };
   return {
