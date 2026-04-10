@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { appendCosRunEventForRun, appendSmokeSummaryOrphanRow, listCosRunEventsForRun } from './runCosEvents.js';
 import {
   acceptanceResponseHasCallbackMetadataKeys,
+  deriveOutboundCallbackContractReason,
   describeTriggerCallbackContractForOps,
   listAutomationResponseOverrideKeys,
 } from './cursorCloudAdapter.js';
@@ -101,6 +102,29 @@ export function partitionSmokeSessionRowsByAttempt(rows) {
     byAttempt.get(seq).push(r);
   }
   return { byAttempt, useLineage };
+}
+
+/**
+ * vNext.13.59a — Session aggregate for top-line status: primary attempt + cross-attempt ingress/GitHub only.
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ * @param {number} primarySeq
+ */
+export function filterRowsForSessionAggregateTopline(rows, primarySeq) {
+  const ps = primarySeq > 0 ? primarySeq : 0;
+  if (!ps) return rows;
+  return (rows || []).filter((r) => {
+    const et = String(r.event_type || '');
+    if (
+      et === 'cos_cursor_webhook_ingress_safe' ||
+      et === 'cos_github_fallback_evidence' ||
+      et === 'result_recovery_github_secondary'
+    ) {
+      return true;
+    }
+    const seq = getRowAttemptSeq(r);
+    if (seq <= 0) return false;
+    return seq === ps;
+  });
 }
 
 function attemptRowsHaveAcceptedTrigger(rows) {
@@ -333,6 +357,35 @@ export async function recordCosCursorWebhookIngressSafe(p) {
 }
 
 /**
+ * vNext.13.59a — Safe subset for cos_github_fallback_evidence recovery_diagnostics.
+ * @param {Record<string, unknown>} d
+ */
+function sanitizeRecoveryDiagnosticsForOps(d) {
+  const o = d && typeof d === 'object' ? d : {};
+  const sample = (v) =>
+    Array.isArray(v) ? v.map((x) => String(x).slice(0, 120)).slice(0, 12) : [];
+  return {
+    recovery_candidate_count:
+      o.recovery_candidate_count != null ? Math.min(9999, Math.max(0, Number(o.recovery_candidate_count) || 0)) : 0,
+    recovery_pending_envelope_count:
+      o.recovery_pending_envelope_count != null
+        ? Math.min(9999, Math.max(0, Number(o.recovery_pending_envelope_count) || 0))
+        : 0,
+    recovery_repo_match_count:
+      o.recovery_repo_match_count != null ? Math.min(9999, Math.max(0, Number(o.recovery_repo_match_count) || 0)) : 0,
+    recovery_requested_paths_sample: sample(o.recovery_requested_paths_sample),
+    recovery_paths_touched_sample: sample(o.recovery_paths_touched_sample),
+    recovery_matched_paths_sample: sample(o.recovery_matched_paths_sample),
+    recovery_head_sha_prefix:
+      o.recovery_head_sha_prefix != null ? String(o.recovery_head_sha_prefix).slice(0, 16) : '',
+    recovery_no_match_reason:
+      o.recovery_no_match_reason != null ? String(o.recovery_no_match_reason).slice(0, 80) : 'unknown',
+    recovery_anchor_run_id:
+      o.recovery_anchor_run_id != null ? String(o.recovery_anchor_run_id).trim().slice(0, 64) : null,
+  };
+}
+
+/**
  * GitHub check_run / issues etc. as secondary evidence only (vNext.13.52).
  * @param {{
  *   env?: NodeJS.ProcessEnv,
@@ -346,6 +399,7 @@ export async function recordCosCursorWebhookIngressSafe(p) {
  *   object_id?: string | null,
  *   github_secondary_recovery?: boolean,
  *   secondary_recovery_outcome?: string | null,
+ *   recovery_diagnostics?: Record<string, unknown> | null,
  * }} p
  */
 export async function recordOpsSmokeGithubFallbackEvidence(p) {
@@ -370,6 +424,11 @@ export async function recordOpsSmokeGithubFallbackEvidence(p) {
           github_secondary_recovery: true,
           secondary_recovery_outcome:
             p.secondary_recovery_outcome != null ? String(p.secondary_recovery_outcome).slice(0, 120) : null,
+        }
+      : {}),
+    ...(p.recovery_diagnostics && typeof p.recovery_diagnostics === 'object'
+      ? {
+          recovery_diagnostics: sanitizeRecoveryDiagnosticsForOps(p.recovery_diagnostics),
         }
       : {}),
   };
@@ -906,6 +965,67 @@ export function extractGithubFallbackSummaryFromRows(rows) {
 }
 
 /**
+ * vNext.13.59a — Callback contract proof on the same accepted attempt as cursor_trigger_recorded (not session-wide trigger_outbound row).
+ * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
+ * @returns {Record<string, unknown> | null} null → caller falls back to extractLatestCallbackContractEvidenceFromRows
+ */
+export function extractLatestAcceptedAttemptCallbackContractFromRows(rows) {
+  let bestAt = '';
+  /** @type {Record<string, unknown> | null} */
+  let bestPl = null;
+  for (const r of rows || []) {
+    if (String(r.event_type || '') !== 'ops_smoke_phase') continue;
+    const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+    if (String(pl.phase || '') !== 'cursor_trigger_recorded' || pl.trigger_ok !== true) continue;
+    if (pl.outbound_callback_contract_present === undefined) continue;
+    const at = String(pl.at || r.created_at || '');
+    if (at >= bestAt) {
+      bestAt = at;
+      bestPl = pl;
+    }
+  }
+  if (!bestPl) return null;
+  const pres = bestPl.outbound_callback_contract_present === true;
+  const hints = Array.isArray(bestPl.outbound_callback_field_names)
+    ? bestPl.outbound_callback_field_names.map(String).slice(0, 16)
+    : typeof bestPl.outbound_callback_field_names === 'string'
+      ? String(bestPl.outbound_callback_field_names)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 16)
+      : null;
+  return {
+    callback_contract_present: pres,
+    callback_url_field_name: bestPl.callback_url_field_name != null ? String(bestPl.callback_url_field_name).slice(0, 120) : null,
+    callback_secret_field_name:
+      bestPl.callback_secret_field_name != null ? String(bestPl.callback_secret_field_name).slice(0, 120) : null,
+    callback_hints_field_names: hints,
+    callback_url_path_only:
+      bestPl.outbound_callback_url_path_only != null
+        ? String(bestPl.outbound_callback_url_path_only).slice(0, 200)
+        : null,
+    callback_secret_present:
+      typeof bestPl.callback_secret_present === 'boolean' ? bestPl.callback_secret_present : null,
+    selected_trigger_endpoint_family:
+      bestPl.selected_trigger_endpoint_family != null
+        ? String(bestPl.selected_trigger_endpoint_family).slice(0, 80)
+        : null,
+    outbound_callback_contract_reason:
+      bestPl.outbound_callback_contract_reason != null
+        ? String(bestPl.outbound_callback_contract_reason).slice(0, 80)
+        : null,
+    accepted_attempt_accepted_external_id:
+      bestPl.accepted_attempt_accepted_external_id != null
+        ? String(bestPl.accepted_attempt_accepted_external_id).slice(0, 64)
+        : null,
+    accepted_attempt_response_top_level_keys: Array.isArray(bestPl.accepted_attempt_response_top_level_keys)
+      ? bestPl.accepted_attempt_response_top_level_keys.map(String).slice(0, 60)
+      : null,
+  };
+}
+
+/**
  * vNext.13.58 — GitHub push secondary result recovery (distinct from generic github_fallback advisory rows).
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
  */
@@ -1224,7 +1344,6 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     if (bucket.run_id !== runId) bucket.run_id = `${bucket.run_id}+${runId}`;
   }
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_id, rows }]) => {
-    const agg = aggregateSmokeSessionProgress(rows);
     const { byAttempt, useLineage } = partitionSmokeSessionRowsByAttempt(rows);
     const primarySeq = choosePrimaryAttemptSeqFromPartition(byAttempt, useLineage);
     const primaryRows =
@@ -1234,12 +1353,18 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
           ? byAttempt.get(1) || rows
           : rows;
 
+    const rowsForAgg =
+      useLineage && primarySeq > 0 ? filterRowsForSessionAggregateTopline(rows, primarySeq) : rows;
+    const agg = aggregateSmokeSessionProgress(rowsForAgg);
+
     const machine = extractOpsSmokeMachineSummaryFromRows(primaryRows);
     const triggerEv = extractLatestTriggerEvidenceFromRows(primaryRows);
     const cursorIngress = extractLatestCursorWebhookIngressFromRows(rows);
     const ghFb = extractGithubFallbackSummaryFromRows(rows);
     const recoveryGh = extractResultRecoveryGithubSecondaryFromRows(rows);
-    const cbContract = extractLatestCallbackContractEvidenceFromRows(primaryRows);
+    const cbAccept = extractLatestAcceptedAttemptCallbackContractFromRows(primaryRows);
+    const cbLegacy = extractLatestCallbackContractEvidenceFromRows(primaryRows);
+    const cbContract = cbAccept || cbLegacy;
     const primaryInvoke = extractPrimaryAcceptedTriggerInvokeFromRows(primaryRows);
     const preNonBlocked = extractLatestNonBlockedPretriggerSummaryFromRows(primaryRows);
     const secondary_blocked_actions = extractSecondaryBlockedActionsFromRows(rows, {
@@ -1421,6 +1546,16 @@ export async function recordOpsSmokeCursorTrigger(p) {
       : describeTriggerCallbackContractForOps(env);
   const ccPresent = cc.callback_contract_present === true;
   const acceptance_response_has_callback_metadata = ok ? acceptanceResponseHasCallbackMetadataKeys(tr, env) : false;
+  const outboundReason = deriveOutboundCallbackContractReason(env);
+  const nameList = [
+    cc.callback_url_field_name,
+    cc.callback_secret_field_name,
+    ...(Array.isArray(cc.callback_hints_field_names) ? cc.callback_hints_field_names.map(String) : []),
+  ].filter((x) => x != null && String(x).trim());
+  const trObj = tr && typeof tr === 'object' ? tr : {};
+  const accKeys = Array.isArray(trObj.response_top_level_keys)
+    ? trObj.response_top_level_keys.map(String).slice(0, 60)
+    : null;
 
   await recordOpsSmokePhase({
     env,
@@ -1435,6 +1570,28 @@ export async function recordOpsSmokeCursorTrigger(p) {
       acceptance_response_has_callback_metadata,
       invoked_tool: p.invoked_tool != null ? String(p.invoked_tool).slice(0, 32) : null,
       invoked_action: p.invoked_action != null ? String(p.invoked_action).slice(0, 48) : null,
+      ...(ok
+        ? {
+            outbound_callback_contract_present: ccPresent,
+            outbound_callback_contract_reason: outboundReason,
+            outbound_callback_url_path_only:
+              cc.callback_url_path_only != null ? String(cc.callback_url_path_only).slice(0, 200) : null,
+            outbound_callback_field_names: nameList.slice(0, 16),
+            callback_url_field_name: cc.callback_url_field_name != null ? String(cc.callback_url_field_name) : null,
+            callback_secret_field_name:
+              cc.callback_secret_field_name != null ? String(cc.callback_secret_field_name) : null,
+            callback_secret_present: cc.callback_secret_present === true,
+            selected_trigger_endpoint_family:
+              cc.selected_trigger_endpoint_family != null ? String(cc.selected_trigger_endpoint_family) : null,
+            accepted_attempt_accepted_external_id:
+              trObj.accepted_external_id != null
+                ? tailExternalRunId(trObj.accepted_external_id)
+                : trObj.has_accepted_external_id === true
+                  ? '(present)'
+                  : null,
+            accepted_attempt_response_top_level_keys: accKeys,
+          }
+        : {}),
       callback_contract: {
         callback_contract_present: Boolean(cc.callback_contract_present),
         callback_url_field_name: cc.callback_url_field_name != null ? String(cc.callback_url_field_name) : null,

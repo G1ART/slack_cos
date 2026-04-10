@@ -438,7 +438,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   if (String(canonical.provider || '') === 'cursor') {
     try {
       const { markRecoveryEnvelopePrimaryCallbackObserved } = await import('./resultRecoveryBridge.js');
-      markRecoveryEnvelopePrimaryCallbackObserved(runId);
+      await markRecoveryEnvelopePrimaryCallbackObserved(runId);
     } catch (e) {
       console.error('[result_recovery_bridge]', e);
     }

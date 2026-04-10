@@ -367,6 +367,22 @@ export function describeTriggerCallbackContractForOps(env = process.env) {
 }
 
 /**
+ * vNext.13.59a — Safe enum for ops: why outbound callback contract was or was not inserted.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {'enabled_and_inserted'|'disabled_by_env'|'callback_url_unavailable'|'callback_secret_unavailable'|'field_merge_skipped'}
+ */
+export function deriveOutboundCallbackContractReason(env = process.env) {
+  const d = describeTriggerCallbackContractForOps(env);
+  if (!d.callback_contract_enabled_flag) return 'disabled_by_env';
+  if (d.callback_contract_present) return 'enabled_and_inserted';
+  const fullUrl = resolveCursorAutomationCallbackUrl(env);
+  const secret = String(env.CURSOR_WEBHOOK_SECRET || '').trim();
+  if (!fullUrl) return 'callback_url_unavailable';
+  if (!secret) return 'callback_secret_unavailable';
+  return 'field_merge_skipped';
+}
+
+/**
  * Truth plane: acceptance response included callback-contract-related top-level keys (not outbound/inbound).
  * @param {Record<string, unknown> | null | undefined} tr
  * @param {NodeJS.ProcessEnv} [env]

@@ -23,6 +23,7 @@ import {
   supabaseListThreadKeys,
   supabaseListNonTerminalRunIds,
   supabaseListPendingSupervisorWakeRunIds,
+  supabaseListRunsWithRecoveryEnvelopePending,
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
 import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
@@ -574,6 +575,53 @@ export async function listPendingSupervisorWakeRunIds(limit = 50) {
   }
   rows.sort((a, b) => String(b.last_supervisor_wake_request_at || '').localeCompare(String(a.last_supervisor_wake_request_at || '')));
   return rows.slice(0, lim).map((r) => String(r.id || '').trim()).filter(Boolean);
+}
+
+function runRowPendingRecoveryEnvelope(r) {
+  const e = r?.recovery_envelope_pending;
+  return Boolean(e && typeof e === 'object' && String(e.recovery_status || '') === 'pending_callback');
+}
+
+/**
+ * Run rows with recovery_envelope_pending.recovery_status === pending_callback (memory | file scan | Supabase).
+ * @param {number} [limit]
+ * @returns {Promise<Record<string, unknown>[]>}
+ */
+export async function listRunsWithPendingRecoveryEnvelope(limit = 200) {
+  const lim = Math.min(Math.max(Number(limit) || 200, 1), 500);
+  const mode = storeMode();
+
+  if (mode === 'memory') {
+    return [...memRunsById.values()].filter(runRowPendingRecoveryEnvelope).slice(0, lim).map((r) => structuredClone(r));
+  }
+  if (mode === 'supabase') {
+    const sb = createCosRuntimeSupabase();
+    if (!sb) return [];
+    const rows = await supabaseListRunsWithRecoveryEnvelopePending(sb, lim * 3);
+    return rows.filter(runRowPendingRecoveryEnvelope).slice(0, lim);
+  }
+
+  const dir = runsByIdDir();
+  let names = [];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+  /** @type {Record<string, unknown>[]} */
+  const rows = [];
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue;
+    try {
+      const raw = await fs.readFile(path.join(dir, n), 'utf8');
+      const j = JSON.parse(raw);
+      if (j && typeof j === 'object' && runRowPendingRecoveryEnvelope(j)) rows.push(j);
+    } catch {
+      /* skip */
+    }
+  }
+  rows.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+  return rows.slice(0, lim).map((r) => structuredClone(r));
 }
 
 /**

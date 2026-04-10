@@ -192,6 +192,10 @@ export function appRunToDbRow(row) {
         : {},
     pending_supervisor_wake: Boolean(row.pending_supervisor_wake),
     last_supervisor_wake_request_at: row.last_supervisor_wake_request_at ?? null,
+    recovery_envelope_pending:
+      row.recovery_envelope_pending && typeof row.recovery_envelope_pending === 'object'
+        ? row.recovery_envelope_pending
+        : null,
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
@@ -250,6 +254,10 @@ export function dbRowToAppRun(db) {
         : {},
     pending_supervisor_wake: Boolean(db.pending_supervisor_wake),
     last_supervisor_wake_request_at: db.last_supervisor_wake_request_at ?? null,
+    recovery_envelope_pending:
+      db.recovery_envelope_pending && typeof db.recovery_envelope_pending === 'object'
+        ? db.recovery_envelope_pending
+        : null,
   };
 }
 
@@ -391,6 +399,7 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
       cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
       pending_supervisor_wake: dbUp.pending_supervisor_wake,
       last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
+      recovery_envelope_pending: dbUp.recovery_envelope_pending,
       updated_at: dbUp.updated_at,
     })
     .eq('id', cur.id);
@@ -445,6 +454,7 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
       cursor_external_terminal_by_packet: dbUp.cursor_external_terminal_by_packet,
       pending_supervisor_wake: dbUp.pending_supervisor_wake,
       last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
+      recovery_envelope_pending: dbUp.recovery_envelope_pending,
       updated_at: dbUp.updated_at,
     })
     .eq('id', rid);
@@ -454,6 +464,26 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
   }
   const again = await supabaseSelectRunById(sb, rid);
   return dbRowToAppRun(again);
+}
+
+/**
+ * Runs that may still need GitHub push secondary recovery (client-filters jsonb).
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {number} [limit]
+ */
+export async function supabaseListRunsWithRecoveryEnvelopePending(sb, limit = 200) {
+  const lim = Math.min(Math.max(Number(limit) || 200, 1), 500);
+  const { data, error } = await sb
+    .from('cos_runs')
+    .select('*')
+    .not('recovery_envelope_pending', 'is', null)
+    .order('updated_at', { ascending: false })
+    .limit(lim);
+  if (error) {
+    console.error('[cos_runs recovery envelope list]', error.message);
+    return [];
+  }
+  return (data || []).map((r) => dbRowToAppRun(r)).filter(Boolean);
 }
 
 /**

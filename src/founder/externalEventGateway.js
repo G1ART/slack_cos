@@ -135,9 +135,11 @@ export async function handleGithubWebhookIngress(p) {
       run_id:
         corr?.run_id != null
           ? String(corr.run_id)
-          : secondaryRecovery?.run_id != null
+          : secondaryRecovered && secondaryRecovery?.run_id != null
             ? String(secondaryRecovery.run_id)
-            : null,
+            : secondaryRecovery?.diagnostics?.recovery_anchor_run_id != null
+              ? String(secondaryRecovery.diagnostics.recovery_anchor_run_id)
+              : null,
       thread_key: corr?.thread_key != null ? String(corr.thread_key) : null,
       ...(secondaryRecovered
         ? {
@@ -145,6 +147,13 @@ export async function handleGithubWebhookIngress(p) {
             secondary_recovery_outcome:
               secondaryRecovery?.outcome != null ? String(secondaryRecovery.outcome) : null,
           }
+        : {}),
+      ...(!secondaryRecovered &&
+      ghEvent === 'push' &&
+      secondaryRecovery &&
+      secondaryRecovery.diagnostics &&
+      typeof secondaryRecovery.diagnostics === 'object'
+        ? { recovery_diagnostics: secondaryRecovery.diagnostics }
         : {}),
     });
   } catch (e) {

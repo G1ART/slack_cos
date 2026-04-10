@@ -1,5 +1,5 @@
 /**
- * vNext.13.58 — Register recovery envelopes on emit_patch acceptance; conservative GitHub push secondary match.
+ * vNext.13.58–13.59a — Recovery envelopes (durable run row + memory), GitHub push secondary match + diagnostics.
  */
 
 import crypto from 'node:crypto';
@@ -12,12 +12,49 @@ import {
   normalizeRecoveryEnvelopePath,
 } from './recoveryEnvelopeStore.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
-import { patchRunById, signalSupervisorWakeForRun } from './executionRunStore.js';
+import {
+  patchRunById,
+  signalSupervisorWakeForRun,
+  getRunById,
+  listRunsWithPendingRecoveryEnvelope,
+} from './executionRunStore.js';
 import { applyExternalPacketProgressStateForRun } from './canonicalExternalEvent.js';
 
 export const SECONDARY_OUTCOME_PATH_MATCH_ONLY = 'repository_reflection_path_match_only';
 
 const RECOVERY_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * @param {string} runId
+ */
+export async function syncRecoveryEnvelopeToRunRow(runId) {
+  const rid = String(runId || '').trim();
+  if (!rid) return;
+  const e = getRecoveryEnvelopeForRun(rid);
+  await patchRunById(rid, { recovery_envelope_pending: e ? { ...e } : null });
+}
+
+/**
+ * @returns {Promise<import('./recoveryEnvelopeStore.js').RecoveryEnvelope[]>}
+ */
+async function listAllPendingRecoveryEnvelopesMerged() {
+  /** @type {Map<string, Record<string, unknown>>} */
+  const byRun = new Map();
+  for (const e of listRecoveryEnvelopesPendingGithubSecondary()) {
+    const rid = String(e.run_id || '').trim();
+    if (rid) byRun.set(rid, /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (e)));
+  }
+  const runs = await listRunsWithPendingRecoveryEnvelope(280);
+  for (const r of runs) {
+    const rid = String(r.id || '').trim();
+    if (!rid || byRun.has(rid)) continue;
+    const raw = r.recovery_envelope_pending;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw) && String(raw.recovery_status) === 'pending_callback') {
+      byRun.set(rid, { ...raw, run_id: rid });
+    }
+  }
+  return /** @type {import('./recoveryEnvelopeStore.js').RecoveryEnvelope[]} */ ([...byRun.values()]);
+}
 
 /**
  * @param {Record<string, unknown>} payload
@@ -112,57 +149,123 @@ export async function registerRecoveryEnvelopeFromEmitPatchAccept(p) {
     },
     secondary_recovery_outcome: null,
   });
+  await syncRecoveryEnvelopeToRunRow(runId);
 }
 
 /**
  * @param {string} runId
  */
-export function markRecoveryEnvelopePrimaryCallbackObserved(runId) {
+export async function markRecoveryEnvelopePrimaryCallbackObserved(runId) {
   const rid = String(runId || '').trim();
   if (!rid) return;
-  const cur = getRecoveryEnvelopeForRun(rid);
+  let cur = getRecoveryEnvelopeForRun(rid);
+  if (!cur) {
+    const run = await getRunById(rid);
+    const raw = run?.recovery_envelope_pending;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      upsertRecoveryEnvelope(
+        /** @type {import('./recoveryEnvelopeStore.js').RecoveryEnvelope} */ (
+          /** @type {unknown} */ ({ ...raw, run_id: rid })
+        ),
+      );
+      cur = getRecoveryEnvelopeForRun(rid);
+    }
+  }
   if (!cur) return;
   patchRecoveryEnvelope(rid, {
     recovery_status: 'primary_callback_observed',
     truth: { callback_observed: true },
   });
+  await syncRecoveryEnvelopeToRunRow(rid);
 }
 
 /**
- * @param {Record<string, unknown>} norm normalizeGithubWebhookPayload result for push
- * @param {NodeJS.ProcessEnv} env
- * @param {string | null} payloadFingerprintPrefix
- * @returns {Promise<{ recovered: boolean, run_id?: string, outcome?: string, matched_paths?: string[] }>}
+ * @param {Record<string, unknown>} norm
+ * @param {{
+ *   pending: import('./recoveryEnvelopeStore.js').RecoveryEnvelope[],
+ *   repo: string,
+ *   touched: Set<string>,
+ *   headSha: string,
+ *   recvMs: number,
+ * }} ctx
+ * @returns {{ recovered: boolean, run_id?: string, outcome?: string, matched_paths?: string[], diagnostics?: Record<string, unknown> }}
  */
-export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerprintPrefix) {
-  const n = norm && typeof norm === 'object' ? norm : {};
-  if (String(n.event_type || '') !== 'push') return { recovered: false };
+async function runGithubPushRecoveryLoop(norm, ctx) {
+  const { pending, repo, touched, headSha, recvMs } = ctx;
+  const shaPrefix = headSha ? headSha.slice(0, 12) : '';
 
-  const ck = n.correlation_keys && typeof n.correlation_keys === 'object' ? n.correlation_keys : {};
-  const repo = String(ck.repository_full_name || '').trim();
-  if (!repo) return { recovered: false };
+  /** @type {Record<string, unknown>} */
+  const diagnostics = {
+    recovery_candidate_count: 0,
+    recovery_pending_envelope_count: pending.length,
+    recovery_repo_match_count: 0,
+    recovery_requested_paths_sample: [],
+    recovery_paths_touched_sample: [...touched].slice(0, 8).map((s) => String(s).slice(0, 120)),
+    recovery_matched_paths_sample: [],
+    recovery_head_sha_prefix: shaPrefix,
+    recovery_no_match_reason: 'no_pending_envelope',
+    recovery_anchor_run_id:
+      pending[0]?.run_id != null ? String(pending[0].run_id).trim().slice(0, 64) : null,
+  };
 
-  const pay = n.payload && typeof n.payload === 'object' ? /** @type {Record<string, unknown>} */ (n.payload) : {};
-  const pathsRaw = Array.isArray(pay.paths_touched) ? pay.paths_touched : [];
-  const touched = new Set(pathsRaw.map((x) => normalizeRecoveryEnvelopePath(String(x))));
+  if (!pending.length) {
+    return { recovered: false, diagnostics };
+  }
 
-  const receivedAt = String(n.received_at || new Date().toISOString());
-  const recvMs = Date.parse(receivedAt);
+  if (!touched.size) {
+    diagnostics.recovery_no_match_reason = 'missing_paths_touched';
+    return { recovered: false, diagnostics };
+  }
 
-  const candidates = listRecoveryEnvelopesPendingGithubSecondary();
-  for (const envRow of candidates) {
+  let repoMatch = 0;
+  let bestOverlap = 0;
+  /** @type {string[]} */
+  let sampleReq = [];
+
+  for (const envRow of pending) {
+    upsertRecoveryEnvelope(
+      /** @type {import('./recoveryEnvelopeStore.js').RecoveryEnvelope} */ (
+        /** @type {unknown} */ (envRow)
+      ),
+    );
+    diagnostics.recovery_candidate_count = Number(diagnostics.recovery_candidate_count) + 1;
     if (String(envRow.repository_full_name || '').toLowerCase() !== repo.toLowerCase()) continue;
+    repoMatch += 1;
+    const reqPaths = Array.isArray(envRow.requested_paths) ? envRow.requested_paths.map(String) : [];
+    if (!reqPaths.length) {
+      diagnostics.recovery_no_match_reason = 'missing_requested_paths';
+      sampleReq = [];
+      continue;
+    }
+    sampleReq = reqPaths.slice(0, 8).map((s) => normalizeRecoveryEnvelopePath(s).slice(0, 120));
+
     const createdMs = Date.parse(String(envRow.created_at || ''));
-    if (!Number.isFinite(createdMs) || !Number.isFinite(recvMs)) continue;
-    if (recvMs < createdMs) continue;
-    if (recvMs - createdMs > RECOVERY_MAX_AGE_MS) continue;
+    if (!Number.isFinite(createdMs) || !Number.isFinite(recvMs)) {
+      diagnostics.recovery_no_match_reason = 'outside_time_window';
+      continue;
+    }
+    if (recvMs < createdMs) {
+      diagnostics.recovery_no_match_reason = 'outside_time_window';
+      continue;
+    }
+    if (recvMs - createdMs > RECOVERY_MAX_AGE_MS) {
+      diagnostics.recovery_no_match_reason = 'outside_time_window';
+      continue;
+    }
+
+    if (String(envRow.recovery_status || '') !== 'pending_callback') {
+      diagnostics.recovery_no_match_reason = 'candidate_not_pending_callback';
+      continue;
+    }
 
     /** @type {string[]} */
     const matched_paths = [];
-    for (const rp of envRow.requested_paths) {
+    for (const rp of reqPaths) {
       const np = normalizeRecoveryEnvelopePath(rp);
       if (np && touched.has(np)) matched_paths.push(np);
     }
+    bestOverlap = Math.max(bestOverlap, matched_paths.length);
+
     if (!matched_paths.length) continue;
 
     const runId = String(envRow.run_id || '').trim();
@@ -174,8 +277,9 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
       secondary_recovery_outcome: outcome,
       truth: { github_secondary_recovered: true },
     });
+    await syncRecoveryEnvelopeToRunRow(runId);
 
-    const external_id = String(n.external_id || 'github:push:unknown');
+    const external_id = String(norm.external_id || 'github:push:unknown');
     const now = new Date().toISOString();
 
     await appendCosRunEventForRun(
@@ -187,8 +291,11 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
         recovery_outcome: outcome,
         matched_paths,
         github_external_id: external_id,
-        head_sha: pay.head_sha != null ? String(pay.head_sha).slice(0, 40) : null,
-        ref: pay.ref != null ? String(pay.ref).slice(0, 200) : null,
+        head_sha: headSha ? headSha.slice(0, 40) : null,
+        ref:
+          norm.payload && typeof norm.payload === 'object' && norm.payload.ref != null
+            ? String(norm.payload.ref).slice(0, 200)
+            : null,
         is_primary_completion_authority: false,
         envelope_id: envRow.envelope_id,
         accepted_external_id_tail:
@@ -198,7 +305,7 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
       },
       {
         matched_by: 'github_push_secondary_recovery',
-        payload_fingerprint_prefix: payloadFingerprintPrefix,
+        payload_fingerprint_prefix: ctx.fp,
       },
     );
 
@@ -221,8 +328,48 @@ export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerpri
       await signalSupervisorWakeForRun(threadKey, runId);
     }
 
-    return { recovered: true, run_id: runId, outcome, matched_paths };
+    return { recovered: true, run_id: runId, outcome, matched_paths, diagnostics: null };
   }
 
-  return { recovered: false };
+  diagnostics.recovery_repo_match_count = repoMatch;
+  diagnostics.recovery_requested_paths_sample = sampleReq;
+  if (repoMatch === 0) diagnostics.recovery_no_match_reason = 'repo_mismatch';
+  else if (bestOverlap === 0) diagnostics.recovery_no_match_reason = 'no_path_overlap';
+
+  return { recovered: false, diagnostics };
+}
+
+/**
+ * @param {Record<string, unknown>} norm normalizeGithubWebhookPayload result for push
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string | null} payloadFingerprintPrefix
+ * @returns {Promise<{ recovered: boolean, run_id?: string, outcome?: string, matched_paths?: string[], diagnostics?: Record<string, unknown> | null }>}
+ */
+export async function tryGithubPushSecondaryRecovery(norm, env, payloadFingerprintPrefix) {
+  const n = norm && typeof norm === 'object' ? norm : {};
+  if (String(n.event_type || '') !== 'push') return { recovered: false, diagnostics: null };
+
+  const ck = n.correlation_keys && typeof n.correlation_keys === 'object' ? n.correlation_keys : {};
+  const repo = String(ck.repository_full_name || '').trim();
+  const pay = n.payload && typeof n.payload === 'object' ? /** @type {Record<string, unknown>} */ (n.payload) : {};
+  const pathsRaw = Array.isArray(pay.paths_touched) ? pay.paths_touched : [];
+  const touched = new Set(pathsRaw.map((x) => normalizeRecoveryEnvelopePath(String(x))));
+  const headSha = pay.head_sha != null ? String(pay.head_sha) : '';
+  const receivedAt = String(n.received_at || new Date().toISOString());
+  const recvMs = Date.parse(receivedAt);
+
+  const pending = await listAllPendingRecoveryEnvelopesMerged();
+  const out = await runGithubPushRecoveryLoop(n, {
+    pending,
+    repo,
+    touched,
+    headSha,
+    recvMs,
+    fp: payloadFingerprintPrefix,
+  });
+  if (out.recovered) return { recovered: true, run_id: out.run_id, outcome: out.outcome, matched_paths: out.matched_paths, diagnostics: null };
+  return {
+    recovered: false,
+    diagnostics: out.diagnostics || null,
+  };
 }
