@@ -143,6 +143,9 @@ export async function findExternalCorrelation(provider, objectType, objectId) {
  *   run_id?: string | null,
  *   packet_id?: string | null,
  *   thread_key?: string | null,
+ *   accepted_external_id?: string | null,
+ *   callback_request_id?: string | null,
+ *   callback_path_fingerprint?: string | null,
  * }} hints
  * @returns {Promise<{ corr: Record<string, unknown> | null, matched_by: string }>}
  */
@@ -151,6 +154,20 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
   if (ext) {
     const hit = await findExternalCorrelation('cursor', 'cloud_agent_run', ext);
     if (hit) return { corr: hit, matched_by: 'external_run_id' };
+  }
+
+  const acc = String(hints.accepted_external_id || '').trim();
+  if (acc) {
+    const hit = await findExternalCorrelation('cursor', 'accepted_external_id', acc);
+    if (hit) return { corr: hit, matched_by: 'accepted_external_id' };
+  }
+
+  const req = String(hints.callback_request_id || '').trim();
+  const fp = String(hints.callback_path_fingerprint || '').trim();
+  if (req && fp) {
+    const composite = `${req}|${fp}`;
+    const hit = await findExternalCorrelation('cursor', 'automation_request_path_fp', composite);
+    if (hit) return { corr: hit, matched_by: 'automation_request_path_fp' };
   }
 
   const rid = String(hints.run_id || '').trim();
@@ -212,6 +229,9 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
  *   run_id?: string | null,
  *   packet_id?: string | null,
  *   thread_key?: string | null,
+ *   accepted_external_id?: string | null,
+ *   callback_request_id?: string | null,
+ *   callback_path_fingerprint?: string | null,
  * }} hints
  */
 export async function findExternalCorrelationCursorHints(hints) {

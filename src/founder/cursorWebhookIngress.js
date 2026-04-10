@@ -6,12 +6,14 @@
 import crypto from 'node:crypto';
 import { getByDotPath } from './cursorCloudAdapter.js';
 import { canonicalizeExternalRunStatus } from './externalRunStatus.js';
+import { computePathsArrayFingerprint } from './cursorCallbackGate.js';
 
 export const CURSOR_WEBHOOK_OVERRIDE_ENV_KEYS = [
   'CURSOR_WEBHOOK_RUN_ID_PATH',
   'CURSOR_WEBHOOK_STATUS_PATH',
   'CURSOR_WEBHOOK_THREAD_KEY_PATH',
   'CURSOR_WEBHOOK_PACKET_ID_PATH',
+  'CURSOR_WEBHOOK_ACCEPTED_ID_PATH',
   'CURSOR_WEBHOOK_BRANCH_PATH',
   'CURSOR_WEBHOOK_PR_URL_PATH',
   'CURSOR_WEBHOOK_SUMMARY_PATH',
@@ -85,11 +87,11 @@ function pickString(root, envKey, env, heuristic, selectedKeysOut) {
 }
 
 /**
- * Shared field picks for normalization + safe ingress snapshots (vNext.13.52).
+ * Shared field picks for normalization + safe ingress snapshots (vNext.13.52+).
  * @param {Record<string, unknown>} body
  * @param {NodeJS.ProcessEnv} [env]
  */
-function computeCursorWebhookFieldSelection(body, env = process.env) {
+export function computeCursorWebhookFieldSelection(body, env = process.env) {
   const root = asRecord(body);
   const nested = asRecord(root.payload);
   const context = asRecord(root.context);
@@ -236,6 +238,61 @@ function computeCursorWebhookFieldSelection(body, env = process.env) {
   );
   const packetIdHint = packetPick.value;
 
+  const acceptedIdPathEnv = String(env.CURSOR_WEBHOOK_ACCEPTED_ID_PATH || '').trim();
+  /** @type {string} */
+  let acceptedExternalIdHint = '';
+  /** @type {string} */
+  let acceptedIdSource = '';
+  if (acceptedIdPathEnv) {
+    const v = getByDotPath(root, acceptedIdPathEnv);
+    if (v != null && String(v).trim()) {
+      acceptedExternalIdHint = String(v).trim();
+      acceptedIdSource = acceptedIdPathEnv;
+      selected_override_keys.push('CURSOR_WEBHOOK_ACCEPTED_ID_PATH');
+    }
+  }
+  if (!acceptedExternalIdHint) {
+    const v = firstNonEmptyString([
+      root.backgroundComposerId,
+      root.composerId,
+      root.background_composer_id,
+      data.backgroundComposerId,
+      data.composerId,
+      data.background_composer_id,
+      nested.backgroundComposerId,
+      nested.composerId,
+      job.backgroundComposerId,
+      job.composerId,
+      agent.backgroundComposerId,
+      agent.composerId,
+    ]);
+    if (v) {
+      acceptedExternalIdHint = v;
+      acceptedIdSource = 'heuristic:accepted_external_id';
+    }
+  }
+
+  const callbackRequestIdHint = firstNonEmptyString([
+    root.request_id,
+    nested.request_id,
+    data.request_id,
+    context.request_id,
+    job.request_id,
+    root.correlationRequestId,
+    data.correlationRequestId,
+  ]);
+
+  const pathsTouchedRaw = (() => {
+    const lists = [data.paths_touched, nested.paths_touched, job.paths_touched, root.paths_touched];
+    for (const L of lists) {
+      if (Array.isArray(L)) return L;
+    }
+    return [];
+  })();
+  const callbackPathFingerprintHint = pathsTouchedRaw.length
+    ? computePathsArrayFingerprint(pathsTouchedRaw)
+    : '';
+
   const runUuidHint = firstNonEmptyString([
     context.cos_run_id,
     context.run_uuid,
@@ -352,6 +409,11 @@ function computeCursorWebhookFieldSelection(body, env = process.env) {
     externalRunId,
     threadKeyHint,
     packetIdHint,
+    acceptedExternalIdHint,
+    acceptedIdSource,
+    callbackRequestIdHint,
+    callbackPathFingerprintHint,
+    paths_touched_count: pathsTouchedRaw.length,
     selected_override_keys,
   };
 }
@@ -378,8 +440,14 @@ export function peekCursorWebhookObservedSchemaSnapshot(body, env = process.env)
     thread_hint_present: Boolean(String(sel.threadKeyHint || '').trim()),
     packet_hint_present: Boolean(String(sel.packetIdHint || '').trim()),
     run_uuid_hint_present: Boolean(String(sel.runUuidHint || '').trim()),
+    accepted_id_candidate_present: Boolean(String(sel.acceptedExternalIdHint || '').trim()),
+    callback_request_id_present: Boolean(String(sel.callbackRequestIdHint || '').trim()),
+    path_fingerprint_candidate_present: Boolean(String(sel.callbackPathFingerprintHint || '').trim()),
     normalization_would_accept: Boolean(
-      sel.externalRunId || sel.threadKeyHint || (sel.runUuidHint && sel.packetIdHint),
+      sel.externalRunId ||
+        sel.threadKeyHint ||
+        (sel.runUuidHint && sel.packetIdHint) ||
+        sel.acceptedExternalIdHint,
     ),
     run_id_candidate_tail: (() => {
       const v = String(sel.externalRunId || '').trim();
@@ -412,10 +480,20 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
     externalRunId,
     threadKeyHint,
     packetIdHint,
+    acceptedExternalIdHint,
+    acceptedIdSource,
+    callbackRequestIdHint,
+    callbackPathFingerprintHint,
     selected_override_keys,
   } = sel;
 
-  if (!externalRunId && !threadKeyHint && !(runUuidHint && packetIdHint)) {
+  const hasMinBasis = Boolean(
+    externalRunId ||
+      threadKeyHint ||
+      (runUuidHint && packetIdHint) ||
+      acceptedExternalIdHint,
+  );
+  if (!hasMinBasis) {
     return null;
   }
 
@@ -429,15 +507,21 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
   else if (canon.bucket === 'negative_terminal') status_hint = 'external_failed';
 
   const occurred_at = occurredPickVal || new Date().toISOString();
+  const accTrim = String(acceptedExternalIdHint || '').trim();
   const external_id = externalRunId
     ? `cursor:cloud_run:${externalRunId}`
-    : `cursor:hint:${runUuidHint || threadKeyHint || 'unknown'}`;
+    : accTrim
+      ? `cursor:accepted:${accTrim}`
+      : `cursor:hint:${runUuidHint || threadKeyHint || 'unknown'}`;
 
   const canonical = {
     provider: 'cursor',
     event_type: eventType || 'statusChange',
     external_id,
     external_run_id: externalRunId || null,
+    accepted_external_id_hint: accTrim || null,
+    callback_request_id_hint: String(callbackRequestIdHint || '').trim() || null,
+    callback_path_fingerprint_hint: String(callbackPathFingerprintHint || '').trim() || null,
     status_hint,
     thread_key_hint: threadKeyHint || null,
     packet_id_hint: packetIdHint || null,
@@ -453,6 +537,7 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
       canonical_status_label: canon.canonical_label,
       source_status_field: statusPick.source,
       source_run_id_field: runIdPick.source,
+      source_accepted_id_field: acceptedIdSource || null,
     },
   };
 
@@ -460,6 +545,7 @@ export function normalizeCursorWebhookPayload(body, env = process.env) {
     selected_override_keys,
     source_status_field_name: statusPick.source,
     source_run_id_field_name: runIdPick.source,
+    source_accepted_id_field_name: acceptedIdSource || null,
     canonical_status: canon.bucket,
     canonical_status_label: canon.canonical_label,
   };

@@ -1463,6 +1463,9 @@ export async function invokeExternalTool(spec, ctx = {}) {
           packetId: runPacketId || undefined,
           cloudRunId,
           action,
+          acceptedExternalId: String(tr.accepted_external_id || '').trim() || null,
+          automationRequestId: String(tr.request_id || '').trim() || null,
+          payload: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {},
         });
       }
       if (isCursorAutomationSmokeMode(env)) {
@@ -1484,7 +1487,10 @@ export async function invokeExternalTool(spec, ctx = {}) {
             runId: cosRunId,
             threadKey,
             packetId: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
-            acceptedExternalId: String(tr.external_run_id || '').trim() || null,
+            acceptedExternalId:
+              String(tr.accepted_external_id || '').trim() ||
+              String(tr.external_run_id || '').trim() ||
+              null,
             smoke_session_id: opsSmokeSessionId != null && String(opsSmokeSessionId).trim()
               ? String(opsSmokeSessionId).trim()
               : null,

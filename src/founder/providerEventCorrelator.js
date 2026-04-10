@@ -3,9 +3,10 @@
  * Cursor callbacks resolve via `object_type: cloud_agent_run` + `object_id` (= Automation 응답 run id).
  */
 
-import { getActiveRunForThread } from './executionRunStore.js';
+import { getActiveRunForThread, patchRunById } from './executionRunStore.js';
 import { upsertExternalCorrelation } from './correlationStore.js';
 import { appendCosRunEvent } from './runCosEvents.js';
+import { computeEmitPatchPayloadPathFingerprint } from './cursorCallbackGate.js';
 
 /**
  * @param {{
@@ -54,34 +55,101 @@ export async function recordGithubInvocationCorrelation(ctx) {
  *   packetId?: string,
  *   cloudRunId: string,
  *   action?: string,
+ *   acceptedExternalId?: string | null,
+ *   automationRequestId?: string | null,
+ *   emitPatchPathFingerprint?: string | null,
+ *   payload?: Record<string, unknown>,
  * }} ctx
  */
 export async function recordCursorCloudCorrelation(ctx) {
   const threadKey = String(ctx.threadKey || '').trim();
   const cloudRunId = String(ctx.cloudRunId || '').trim();
   const cursorAction = String(ctx.action || 'create_spec').trim() || 'create_spec';
-  if (!threadKey || !cloudRunId) return false;
+  const acceptedExternalId = String(ctx.acceptedExternalId || '').trim();
+  const automationRequestId = String(ctx.automationRequestId || '').trim();
+  let emitFp = String(ctx.emitPatchPathFingerprint || '').trim();
+  if (!emitFp && ctx.payload && typeof ctx.payload === 'object' && cursorAction === 'emit_patch') {
+    emitFp = computeEmitPatchPayloadPathFingerprint(ctx.payload);
+  }
+
+  if (!threadKey) return false;
+  if (!cloudRunId && !acceptedExternalId && !(automationRequestId && emitFp)) return false;
+
   const run = await getActiveRunForThread(threadKey);
   if (!run?.id) return false;
   const packetId = ctx.packetId != null ? String(ctx.packetId).trim() : '';
 
-  const ok = await upsertExternalCorrelation({
-    run_id: String(run.id),
-    thread_key: threadKey,
-    packet_id: packetId || null,
-    provider: 'cursor',
-    object_type: 'cloud_agent_run',
-    object_id: cloudRunId,
-  });
-  if (!ok) return false;
+  let anyOk = false;
+  if (cloudRunId) {
+    const ok = await upsertExternalCorrelation({
+      run_id: String(run.id),
+      thread_key: threadKey,
+      packet_id: packetId || null,
+      provider: 'cursor',
+      object_type: 'cloud_agent_run',
+      object_id: cloudRunId,
+    });
+    if (ok) anyOk = true;
+  }
+  if (acceptedExternalId) {
+    const ok = await upsertExternalCorrelation({
+      run_id: String(run.id),
+      thread_key: threadKey,
+      packet_id: packetId || null,
+      provider: 'cursor',
+      object_type: 'accepted_external_id',
+      object_id: acceptedExternalId,
+    });
+    if (ok) anyOk = true;
+  }
+  if (automationRequestId && emitFp) {
+    const ok = await upsertExternalCorrelation({
+      run_id: String(run.id),
+      thread_key: threadKey,
+      packet_id: packetId || null,
+      provider: 'cursor',
+      object_type: 'automation_request_path_fp',
+      object_id: `${automationRequestId}|${emitFp}`,
+    });
+    if (ok) anyOk = true;
+  }
+  if (!anyOk) return false;
+
+  /** @type {string[]} */
+  const anchorParts = [];
+  if (cloudRunId) anchorParts.push('cloud_agent_run');
+  if (acceptedExternalId) anchorParts.push('accepted_external_id');
+  if (automationRequestId && emitFp) anchorParts.push('automation_request_path_fp');
+  const anchorKind =
+    anchorParts.length === 0 ? 'none' : anchorParts.length === 1 ? anchorParts[0] : 'mixed';
+
+  const anchor = {
+    captured_at: new Date().toISOString(),
+    cloud_run_id: cloudRunId || null,
+    accepted_external_id: acceptedExternalId || null,
+    accepted_anchor_kind: anchorKind,
+    automation_request_id: automationRequestId || null,
+    emit_patch_path_fingerprint: emitFp || null,
+    action: cursorAction,
+  };
+  try {
+    await patchRunById(String(run.id), { cursor_callback_anchor: anchor });
+  } catch (e) {
+    console.error('[record_cursor_cloud_correlation]', e);
+  }
 
   await appendCosRunEvent(threadKey, 'tool_invoked', {
     tool: 'cursor',
     action: cursorAction,
     object_type: 'cloud_agent_run',
-    object_id: cloudRunId,
+    object_id: cloudRunId || acceptedExternalId || `${automationRequestId}|${emitFp}`,
     correlation_registered: true,
     execution_lane: 'cloud_agent',
+    cursor_correlation_anchors: {
+      has_cloud_agent_run: Boolean(cloudRunId),
+      has_accepted_external_id: Boolean(acceptedExternalId),
+      has_request_path_fp: Boolean(automationRequestId && emitFp),
+    },
   });
   return true;
 }

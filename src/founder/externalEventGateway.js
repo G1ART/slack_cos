@@ -22,7 +22,9 @@ import {
   verifyCursorWebhookSignature,
   normalizeCursorWebhookPayload,
   peekCursorWebhookObservedSchemaSnapshot,
+  computeCursorWebhookFieldSelection,
 } from './cursorWebhookIngress.js';
+import { buildCursorCallbackInsufficientDiagnostics } from './cursorCallbackGate.js';
 import { recordCosCursorWebhookIngressSafe, recordOpsSmokeGithubFallbackEvidence } from './smokeOps.js';
 import { __resetRecoveryEnvelopeStoreForTests } from './recoveryEnvelopeStore.js';
 
@@ -229,6 +231,8 @@ export async function handleCursorWebhookIngress(p) {
   const root = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
   const peek = peekCursorWebhookObservedSchemaSnapshot(root, env);
   const norm = normalizeCursorWebhookPayload(root, env);
+  const gateSel = computeCursorWebhookFieldSelection(root, env);
+  const ingress_callback_gate = buildCursorCallbackInsufficientDiagnostics(gateSel);
 
   if (!norm) {
     try {
@@ -244,7 +248,8 @@ export async function handleCursorWebhookIngress(p) {
         thread_hint_present: peek.thread_hint_present,
         packet_hint_present: peek.packet_hint_present,
         correlation_outcome: 'ignored_insufficient_payload',
-        rejection_reason: 'normalization_requires_run_id_or_thread_or_uuid_packet',
+        rejection_reason: 'normalization_requires_run_id_or_thread_or_uuid_packet_or_accepted_id',
+        ingress_callback_gate,
       });
     } catch (e) {
       console.error('[ops_smoke]', e);
@@ -258,6 +263,9 @@ export async function handleCursorWebhookIngress(p) {
     run_id: canonical.run_id_hint,
     packet_id: canonical.packet_id_hint,
     thread_key: canonical.thread_key_hint,
+    accepted_external_id: canonical.accepted_external_id_hint,
+    callback_request_id: canonical.callback_request_id_hint,
+    callback_path_fingerprint: canonical.callback_path_fingerprint_hint,
   });
   const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
   const out = await processCanonicalExternalEvent(canonical, corr, {
@@ -286,6 +294,7 @@ export async function handleCursorWebhookIngress(p) {
       correlation_outcome: out.matched ? 'matched' : 'no_match',
       rejection_reason: out.matched ? null : 'correlation_store_no_match',
       matched_by,
+      ingress_callback_gate,
     });
   } catch (e) {
     console.error('[ops_smoke]', e);

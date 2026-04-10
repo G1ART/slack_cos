@@ -146,4 +146,22 @@ assert.equal(cOut.matched, true);
 const rCursor = await getActiveRunForThread(tk);
 assert.equal(rCursor.packet_state_map.pkt_cursor_hint, 'running');
 
+await upsertExternalCorrelation({
+  run_id: String(run.id),
+  thread_key: tk,
+  packet_id: 'pkt_cursor_hint',
+  provider: 'cursor',
+  object_type: 'accepted_external_id',
+  object_id: 'composer_anchor_x',
+});
+const accBody = JSON.stringify({ backgroundComposerId: 'composer_anchor_x', status: 'completed' });
+const accRaw = Buffer.from(accBody, 'utf8');
+const accSig = `sha256=${crypto.createHmac('sha256', cursorSecret).update(accRaw).digest('hex')}`;
+const accOut = await handleCursorWebhookIngress({
+  rawBody: accRaw,
+  headers: { 'x-cursor-signature-256': accSig },
+  env: { CURSOR_WEBHOOK_SECRET: cursorSecret },
+});
+assert.equal(accOut.matched, true);
+
 console.log('test-external-event-correlation: ok');

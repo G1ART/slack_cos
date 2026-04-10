@@ -290,6 +290,7 @@ export function getCursorCallbackAbsenceTimeoutSec(env = process.env) {
  *   correlation_outcome: string,
  *   rejection_reason?: string | null,
  *   matched_by?: string | null,
+ *   ingress_callback_gate?: Record<string, unknown> | null,
  * }} p
  */
 export async function recordCosCursorWebhookIngressSafe(p) {
@@ -326,6 +327,10 @@ export async function recordCosCursorWebhookIngressSafe(p) {
     rejection_reason: p.rejection_reason != null ? String(p.rejection_reason).slice(0, 120) : null,
     matched_by: p.matched_by != null ? String(p.matched_by).slice(0, 80) : null,
     request_id_suffix: p.request_id != null ? String(p.request_id).slice(-12) : null,
+    ingress_callback_gate:
+      p.ingress_callback_gate && typeof p.ingress_callback_gate === 'object'
+        ? p.ingress_callback_gate
+        : null,
   };
 
   const runId = String(p.run_id || '').trim();
