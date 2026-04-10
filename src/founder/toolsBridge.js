@@ -22,6 +22,7 @@ import {
   triggerCursorAutomation,
   automationEndpointHostOnly,
   isCursorAutomationSmokeMode,
+  acceptanceResponseHasCallbackMetadataKeys,
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
@@ -89,6 +90,29 @@ export const TOOL_OUTCOME_CODES = {
 
 /** 테스트: 특정 도구의 artifact 빌드만 실패시키기 */
 export const __invokeToolTestHooks = { failArtifactForTool: /** @type {string | null} */ (null) };
+
+/**
+ * @param {string} status
+ * @returns {'delivered'|'pending'|'timeout'|'unavailable'|'unknown'}
+ */
+function mapOrchestratorStatusToDeliveryState(status) {
+  const s = String(status || '').trim();
+  if (!s) return 'unknown';
+  if (s === 'provider_callback_matched' || s === 'synthetic_callback_matched' || s === 'manual_probe_closure_observed') {
+    return 'delivered';
+  }
+  if (s === 'callback_timeout') return 'timeout';
+  if (
+    s === 'skipped_no_contract' ||
+    s === 'skipped_url_not_allowlisted' ||
+    s === 'skipped_no_fetch' ||
+    s === 'skipped_missing_inputs'
+  ) {
+    return 'unavailable';
+  }
+  if (s === 'skipped_idempotent') return 'delivered';
+  return 'pending';
+}
 
 /**
  * 호출 전 차단 — credential/필수 payload 없으면 live·artifact 시도 없이 blocked.
@@ -1393,10 +1417,18 @@ export async function invokeExternalTool(spec, ctx = {}) {
 
   /** @type {Record<string, unknown> | null} */
   let callbackContractSnapshot = null;
+  let callbackMetadataPresent = false;
+  /** @type {boolean | 'unknown'} */
+  let callbackCapabilityObserved = 'unknown';
+  let callbackOrchestratorStatus = null;
+  let callbackOrchestratorAttempts = null;
+  let callbackOrchestratorSyntheticPosts = null;
+  let callbackDeliveryState = 'unknown';
   if (automationLaneActive && threadKey && cosRunId) {
     try {
       const { describeTriggerCallbackContractForOps } = await import('./cursorCloudAdapter.js');
       callbackContractSnapshot = describeTriggerCallbackContractForOps(env);
+      callbackMetadataPresent = callbackContractSnapshot?.callback_contract_present === true;
       const { recordOpsSmokeTriggerCallbackContract } = await import('./smokeOps.js');
       await recordOpsSmokeTriggerCallbackContract({
         env,
@@ -1438,6 +1470,9 @@ export async function invokeExternalTool(spec, ctx = {}) {
   /** @type {Record<string, unknown> | null} */
   let cursorAutomationAudit = null;
   if (automationLaneActive && tr) {
+    const acceptanceEchoHasCallbackMetadata = acceptanceResponseHasCallbackMetadataKeys(tr, env);
+    callbackMetadataPresent = callbackMetadataPresent || acceptanceEchoHasCallbackMetadata;
+    if (callbackMetadataPresent) callbackCapabilityObserved = true;
     cursorAutomationAudit = {
       trigger_status: tr.trigger_status,
       trigger_response_preview: tr.trigger_response_preview,
@@ -1447,6 +1482,8 @@ export async function invokeExternalTool(spec, ctx = {}) {
       cursor_automation_http_status: tr.status,
       automation_status_raw: tr.automation_status_raw ?? null,
       automation_branch_raw: tr.automation_branch_raw ?? null,
+      callback_metadata_present: callbackMetadataPresent,
+      callback_capability_observed: callbackCapabilityObserved,
     };
   }
 
@@ -1508,7 +1545,13 @@ export async function invokeExternalTool(spec, ctx = {}) {
           );
           const plForOrch =
             payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
-          if (shouldRunCallbackCompletionOrchestrator(tool, action, plForOrch, env)) {
+          const shouldRunByLegacyRule = shouldRunCallbackCompletionOrchestrator(tool, action, plForOrch, env);
+          const shouldRunByPrimaryCallbackPolicy =
+            tool === 'cursor' &&
+            action === 'emit_patch' &&
+            callbackMetadataPresent &&
+            (String(tr.request_id || '').trim().length > 0 || String(tr.accepted_external_id || '').trim().length > 0);
+          if (shouldRunByLegacyRule || shouldRunByPrimaryCallbackPolicy) {
             const orch = await awaitOrForceCallbackCompletion({
               runId: cosRunId,
               threadKey,
@@ -1520,6 +1563,13 @@ export async function invokeExternalTool(spec, ctx = {}) {
               payload: plForOrch,
               env,
             });
+            callbackOrchestratorStatus = String(orch.status || '').trim() || null;
+            callbackOrchestratorAttempts = orch.attempts != null ? Number(orch.attempts) : null;
+            callbackOrchestratorSyntheticPosts =
+              orch.synthetic_posts != null ? Number(orch.synthetic_posts) : null;
+            callbackDeliveryState = mapOrchestratorStatusToDeliveryState(callbackOrchestratorStatus || '');
+            if (callbackDeliveryState === 'unavailable') callbackCapabilityObserved = false;
+            else if (callbackMetadataPresent) callbackCapabilityObserved = true;
             console.info(
               JSON.stringify({
                 event: 'cos_cursor_callback_orchestrator',
@@ -1529,10 +1579,56 @@ export async function invokeExternalTool(spec, ctx = {}) {
                 synthetic_posts: orch.synthetic_posts,
               }),
             );
+            try {
+              const { recordOpsSmokePhase } = await import('./smokeOps.js');
+              await recordOpsSmokePhase({
+                env,
+                runId: cosRunId,
+                threadKey,
+                smoke_session_id: opsSmokeSessionId,
+                attempt_seq: opsAttemptSeq,
+                phase:
+                  callbackDeliveryState === 'delivered'
+                    ? 'callback_orchestrator_delivery_observed'
+                    : callbackDeliveryState === 'timeout'
+                      ? 'callback_orchestrator_timeout'
+                      : callbackDeliveryState === 'unavailable'
+                        ? 'callback_orchestrator_unavailable'
+                        : 'callback_orchestrator_pending',
+                detail: {
+                  callback_orchestrator_status: callbackOrchestratorStatus,
+                  callback_delivery_state: callbackDeliveryState,
+                  callback_metadata_present: callbackMetadataPresent,
+                  callback_capability_observed: callbackCapabilityObserved,
+                  callback_attempts: callbackOrchestratorAttempts,
+                  callback_synthetic_posts: callbackOrchestratorSyntheticPosts,
+                },
+              });
+            } catch (e) {
+              console.error('[ops_smoke]', e);
+            }
+          } else if (callbackMetadataPresent) {
+            callbackOrchestratorStatus = 'skipped_policy_gate';
+            callbackDeliveryState = 'pending';
           }
         } catch (e) {
           console.error('[cursor_callback_orchestrator]', e);
+          callbackOrchestratorStatus = 'orchestrator_exception';
+          callbackDeliveryState = 'unknown';
+          if (callbackMetadataPresent) callbackCapabilityObserved = true;
         }
+      }
+      if (cursorAutomationAudit) {
+        cursorAutomationAudit = {
+          ...cursorAutomationAudit,
+          callback_metadata_present: callbackMetadataPresent,
+          callback_capability_observed: callbackCapabilityObserved,
+          callback_metadata_unavailable: !callbackMetadataPresent,
+          callback_delivery_state: callbackDeliveryState,
+          callback_orchestrator_status: callbackOrchestratorStatus,
+          callback_orchestrator_attempts: callbackOrchestratorAttempts,
+          callback_orchestrator_synthetic_posts: callbackOrchestratorSyntheticPosts,
+        };
       }
       execution_mode = 'live';
       status = 'running';
@@ -1822,6 +1918,13 @@ export async function invokeExternalTool(spec, ctx = {}) {
           cursor_automation_request_id: cursorAutomationAudit.cursor_automation_request_id,
           automation_status_raw: cursorAutomationAudit.automation_status_raw,
           automation_branch_raw: cursorAutomationAudit.automation_branch_raw,
+          callback_metadata_present: cursorAutomationAudit.callback_metadata_present,
+          callback_capability_observed: cursorAutomationAudit.callback_capability_observed,
+          callback_metadata_unavailable: cursorAutomationAudit.callback_metadata_unavailable,
+          callback_delivery_state: cursorAutomationAudit.callback_delivery_state,
+          callback_orchestrator_status: cursorAutomationAudit.callback_orchestrator_status,
+          callback_orchestrator_attempts: cursorAutomationAudit.callback_orchestrator_attempts,
+          callback_orchestrator_synthetic_posts: cursorAutomationAudit.callback_orchestrator_synthetic_posts,
         }
       : {}),
   };

@@ -14,6 +14,12 @@ await clearExecutionArtifacts(tk);
 
 const prevBin = process.env.CURSOR_CLI_BIN;
 const prevDir = process.env.CURSOR_PROJECT_DIR;
+const prevCloudEnabled = process.env.CURSOR_CLOUD_AGENT_ENABLED;
+const prevAutomationEndpoint = process.env.CURSOR_AUTOMATION_ENDPOINT;
+const prevAutomationAuth = process.env.CURSOR_AUTOMATION_AUTH_HEADER;
+process.env.CURSOR_CLOUD_AGENT_ENABLED = '0';
+delete process.env.CURSOR_AUTOMATION_ENDPOINT;
+delete process.env.CURSOR_AUTOMATION_AUTH_HEADER;
 process.env.CURSOR_CLI_BIN = '/nonexistent/cursor-bin-xyz-123';
 process.env.CURSOR_PROJECT_DIR = process.cwd();
 
@@ -75,6 +81,12 @@ if (prevBin === undefined) delete process.env.CURSOR_CLI_BIN;
 else process.env.CURSOR_CLI_BIN = prevBin;
 if (prevDir === undefined) delete process.env.CURSOR_PROJECT_DIR;
 else process.env.CURSOR_PROJECT_DIR = prevDir;
+if (prevCloudEnabled === undefined) delete process.env.CURSOR_CLOUD_AGENT_ENABLED;
+else process.env.CURSOR_CLOUD_AGENT_ENABLED = prevCloudEnabled;
+if (prevAutomationEndpoint === undefined) delete process.env.CURSOR_AUTOMATION_ENDPOINT;
+else process.env.CURSOR_AUTOMATION_ENDPOINT = prevAutomationEndpoint;
+if (prevAutomationAuth === undefined) delete process.env.CURSOR_AUTOMATION_AUTH_HEADER;
+else process.env.CURSOR_AUTOMATION_AUTH_HEADER = prevAutomationAuth;
 
 await fs.rm(tmp, { recursive: true, force: true });
 await clearExecutionArtifacts(tk);
