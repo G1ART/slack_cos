@@ -144,6 +144,7 @@ export function prepareEmitPatchForCloudAutomation(payload) {
         operation: narrow.operation,
         live_only: true,
         no_fallback: true,
+        handoff_scan_policy: 'target_path_and_parent_only',
       },
     };
     compilation = 'narrow';

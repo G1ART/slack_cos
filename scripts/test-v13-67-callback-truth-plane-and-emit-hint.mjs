@@ -36,7 +36,7 @@ const flatPromoted = [
       smoke_session_id: sid,
       at: '2026-04-10T10:00:03Z',
       correlation_outcome: 'matched',
-      callback_source_kind: 'unknown',
+      callback_source_kind: 'provider_runtime',
       signature_verification_ok: true,
       json_parse_ok: true,
     },
@@ -99,5 +99,6 @@ assert.equal(hint.kind, 'narrow_single_file');
 assert.equal(hint.path, 'src/a.txt');
 assert.equal(hint.live_only, true);
 assert.equal(hint.no_fallback, true);
+assert.equal(hint.handoff_scan_policy, 'target_path_and_parent_only');
 
 console.log('test-v13-67-callback-truth-plane-and-emit-hint: ok');

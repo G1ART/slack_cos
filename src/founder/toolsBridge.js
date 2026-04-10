@@ -1501,6 +1501,39 @@ export async function invokeExternalTool(spec, ctx = {}) {
           console.error('[result_recovery_bridge]', e);
         }
       }
+      if (tool === 'cursor' && cosRunId && threadKey) {
+        try {
+          const { awaitOrForceCallbackCompletion, shouldRunCallbackCompletionOrchestrator } = await import(
+            './cursorCallbackCompletionOrchestrator.js'
+          );
+          const plForOrch =
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+          if (shouldRunCallbackCompletionOrchestrator(tool, action, plForOrch, env)) {
+            const orch = await awaitOrForceCallbackCompletion({
+              runId: cosRunId,
+              threadKey,
+              packetId: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
+              action,
+              requestId: String(tr.request_id || '').trim(),
+              acceptedExternalId: String(tr.accepted_external_id || '').trim() || null,
+              externalRunId: String(tr.external_run_id || '').trim() || null,
+              payload: plForOrch,
+              env,
+            });
+            console.info(
+              JSON.stringify({
+                event: 'cos_cursor_callback_orchestrator',
+                status: orch.status,
+                attempts: orch.attempts,
+                waited_ms: orch.waited_ms,
+                synthetic_posts: orch.synthetic_posts,
+              }),
+            );
+          }
+        } catch (e) {
+          console.error('[cursor_callback_orchestrator]', e);
+        }
+      }
       execution_mode = 'live';
       status = 'running';
       outcome_code = TOOL_OUTCOME_CODES.CLOUD_AGENT_DISPATCH_ACCEPTED;

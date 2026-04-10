@@ -453,6 +453,8 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     occurred_at: canonical.occurred_at,
     correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
     payload: canonical.payload,
+    cos_callback_closure_source:
+      meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'unknown',
   }, {
     matched_by: meta.matched_by ?? null,
     canonical_status: cs,

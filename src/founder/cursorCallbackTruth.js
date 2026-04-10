@@ -2,7 +2,7 @@
  * vNext.13.67 — Callback truth plane: provider vs manual probe vs unknown.
  */
 
-/** @typedef {'provider_runtime' | 'manual_probe' | 'unknown'} CursorCallbackSourceKind */
+/** @typedef {'provider_runtime' | 'synthetic_orchestrator' | 'manual_probe' | 'unknown'} CursorCallbackSourceKind */
 /** @typedef {'verified_signature' | 'invalid_signature' | 'unsigned'} CursorCallbackVerificationKind */
 /** @typedef {'external_run_id' | 'accepted_external_id' | 'automation_request_path_fp' | 'thread_key_packet' | 'run_uuid_packet' | 'none'} CursorCallbackMatchBasis */
 
@@ -13,6 +13,7 @@ export function deriveCursorCallbackSourceKindFromHeaders(headers) {
   const h = headers && typeof headers === 'object' ? headers : {};
   const v = String(h['x-cos-callback-probe'] || h['x-cos-callback-source'] || '').trim().toLowerCase();
   if (v === '1' || v === 'true' || v === 'manual' || v === 'manual_probe') return 'manual_probe';
+  if (v === 'synthetic_orchestrator' || v === 'synthetic') return 'synthetic_orchestrator';
   if (v === 'provider' || v === 'provider_runtime') return 'provider_runtime';
   return 'unknown';
 }
