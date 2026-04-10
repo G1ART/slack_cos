@@ -45,7 +45,8 @@ const flatPromoted = [
 const sum = summarizeOpsSmokeSessionsFromFlatRows(flatPromoted, { sessionLimit: 5 })[0];
 assert.equal(sum.primary_run_id, 'r67a');
 assert.deepEqual(sum.related_run_ids, ['r67b']);
-assert.equal(sum.final_status, 'cursor_callback_correlated');
+assert.equal(sum.final_status, 'callback_correlated_without_progression_patch');
+assert.equal(sum.authoritative_closure_source, 'provider_runtime');
 assert.equal(sum.inbound_callback_observed, true);
 assert.equal(sum.manual_probe_callback_ingress_observed, false);
 

@@ -720,6 +720,10 @@ const PHASE_SORT_ORDER = [
   'external_callback_matched',
   'github_secondary_recovery_matched',
   'github_fallback_evidence',
+  'callback_orchestrator_pending',
+  'callback_orchestrator_delivery_observed',
+  'callback_orchestrator_timeout',
+  'callback_orchestrator_unavailable',
   'run_packet_progression_patched',
   'supervisor_wake_enqueued',
   'founder_milestone_sent',
@@ -880,6 +884,38 @@ function computeCallbackCompletionState(seen) {
   return null;
 }
 
+const AGG_EXTRA_KEYS = {
+  authoritative_closure_source: null,
+  emit_patch_structural_closure_complete: false,
+};
+
+/**
+ * Single authority tier for ops aggregate (manual probe never ranks as provider).
+ * @param {Set<string>} seen
+ * @param {{
+ *   provOnly: boolean,
+ *   synOnly: boolean,
+ *   ghClosed: boolean,
+ *   manualOnlyClosed: boolean,
+ *   callback_completion_state: string | null,
+ * }} ctx
+ */
+export function computeAuthoritativeClosureSource(seen, ctx) {
+  if (ctx.manualOnlyClosed) return 'manual_probe';
+  if (ctx.provOnly) return 'provider_runtime';
+  if (ctx.synOnly) return 'synthetic_orchestrator';
+  if (ctx.ghClosed) return 'github_secondary_recovery';
+  if (seen.has('callback_orchestrator_unavailable')) return 'callback_unavailable';
+  if (
+    seen.has('callback_orchestrator_timeout') ||
+    seen.has('cursor_callback_absent_within_timeout') ||
+    ctx.callback_completion_state === 'callback_timeout_or_absent'
+  ) {
+    return 'callback_timeout_or_failed';
+  }
+  return null;
+}
+
 /**
  * @param {Array<{ event_type?: string, payload?: Record<string, unknown> }>} rows
  */
@@ -907,6 +943,7 @@ export function aggregateSmokeSessionProgress(rows) {
       breaks_at: null,
       final_status: 'no_ops_smoke_events',
       callback_completion_state: null,
+      ...AGG_EXTRA_KEYS,
     };
   }
 
@@ -920,6 +957,7 @@ export function aggregateSmokeSessionProgress(rows) {
       breaks_at: 'cursor_trigger_recorded',
       final_status: 'pre_trigger_blocked_invalid_payload',
       callback_completion_state: computeCallbackCompletionState(seen),
+      ...AGG_EXTRA_KEYS,
     };
   }
 
@@ -930,6 +968,7 @@ export function aggregateSmokeSessionProgress(rows) {
       breaks_at: 'cursor_trigger_recorded',
       final_status: 'trigger_failed',
       callback_completion_state: computeCallbackCompletionState(seen),
+      ...AGG_EXTRA_KEYS,
     };
   }
 
@@ -1037,12 +1076,35 @@ export function aggregateSmokeSessionProgress(rows) {
     }
   }
 
+  if ((provOnly || synOnly) && !seen.has('run_packet_progression_patched')) {
+    if (final_status === 'cursor_callback_correlated') {
+      final_status = 'callback_correlated_without_progression_patch';
+    } else if (final_status === 'synthetic_callback_correlated') {
+      final_status = 'synthetic_callback_correlated_without_progression_patch';
+    }
+  }
+
+  const authoritative_closure_source = computeAuthoritativeClosureSource(seen, {
+    provOnly,
+    synOnly,
+    ghClosed,
+    manualOnlyClosed,
+    callback_completion_state: cbState,
+  });
+  const emit_patch_structural_closure_complete = Boolean(
+    (provOnly || synOnly || ghClosed) &&
+      seen.has('run_packet_progression_patched') &&
+      seen.has('supervisor_wake_enqueued'),
+  );
+
   return {
     phases_seen: [...seen].sort((a, b) => orderIdx(a) - orderIdx(b)),
     ordered_events: sorted.map((pl) => ({ phase: pl.phase, at: pl.at })),
     breaks_at: breaksAt,
     final_status: final_status,
     callback_completion_state: cbState,
+    authoritative_closure_source,
+    emit_patch_structural_closure_complete,
   };
 }
 
@@ -1531,7 +1593,9 @@ export function inferSelectedExecutionLaneFromAgg(agg) {
   const fs = String(agg?.final_status || '');
   if (
     fs === 'cursor_callback_correlated' ||
+    fs === 'callback_correlated_without_progression_patch' ||
     fs === 'synthetic_callback_correlated' ||
+    fs === 'synthetic_callback_correlated_without_progression_patch' ||
     fs === 'github_secondary_recovery_closed'
   ) {
     return 'cloud_trigger_attempted';

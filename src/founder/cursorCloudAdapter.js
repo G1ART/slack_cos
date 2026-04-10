@@ -5,6 +5,7 @@
 
 import crypto from 'node:crypto';
 import { deriveAutomationResponseWinningSource } from './cursorEnvParsingTruth.js';
+import { buildEmitPatchCompletionContractBlock, EMIT_PATCH_COMPLETION_CONTRACT_KEY } from './cursorCompletionContract.js';
 
 /** @type {{ fn: typeof fetch | null }} */
 export const __cursorAutomationFetchForTests = { fn: null };
@@ -541,6 +542,22 @@ export async function triggerCursorAutomation(opts) {
     },
     env,
   );
+  const act = String(opts.action || '').trim();
+  if (act === 'emit_patch') {
+    const d = describeTriggerCallbackContractForOps(env);
+    const fullUrl = resolveCursorAutomationCallbackUrl(env);
+    const pl =
+      bodyObj.payload && typeof bodyObj.payload === 'object' && !Array.isArray(bodyObj.payload)
+        ? /** @type {Record<string, unknown>} */ (bodyObj.payload)
+        : {};
+    const block = buildEmitPatchCompletionContractBlock({
+      callbackDescribe: d,
+      fullCallbackUrl: fullUrl,
+      requestId: request_id,
+      payload: pl,
+    });
+    if (block) bodyObj[EMIT_PATCH_COMPLETION_CONTRACT_KEY] = block;
+  }
   const body = JSON.stringify(bodyObj);
 
   const authHeaders = headersFromAutomationAuth(authRaw);

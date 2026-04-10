@@ -1636,6 +1636,32 @@ export async function invokeExternalTool(spec, ctx = {}) {
       result_summary = `running / cloud_agent / cursor:${action} — dispatch accepted (${cloudRunId}); webhook completes`;
       artifact_path = null;
       next_required_input = null;
+
+      const emitPatchClosureOrchestratorRan =
+        tool === 'cursor' &&
+        action === 'emit_patch' &&
+        callbackOrchestratorStatus != null &&
+        callbackOrchestratorStatus !== 'skipped_policy_gate';
+      if (emitPatchClosureOrchestratorRan) {
+        if (callbackDeliveryState === 'timeout') {
+          status = 'degraded';
+          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+          degraded_from = 'emit_patch_callback_timeout';
+          error_code = 'emit_patch_callback_timeout';
+          result_summary = `degraded / cloud_agent / cursor:emit_patch — dispatch accepted; signed callback not resolved within orchestrator window`;
+        } else if (
+          callbackDeliveryState === 'unavailable' &&
+          ['skipped_no_contract', 'skipped_url_not_allowlisted', 'skipped_no_fetch'].includes(
+            String(callbackOrchestratorStatus || ''),
+          )
+        ) {
+          status = 'degraded';
+          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+          degraded_from = 'emit_patch_callback_contract_unsatisfied';
+          error_code = 'emit_patch_callback_contract_unsatisfied';
+          result_summary = `degraded / cloud_agent / cursor:emit_patch — dispatch accepted but webhook closure contract cannot be satisfied`;
+        }
+      }
     } catch (e) {
       fallback_reason = String(e?.message || e).slice(0, 300);
       execution_lane = 'artifact';
