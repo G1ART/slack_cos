@@ -151,12 +151,6 @@ export async function computeExecutionOutcomeCounts(threadKey, lookback = 200) {
 }
 
 /**
- * COS 모델 입력용 한 줄 요약 — REVIEW·상태 우선 정렬 후 상위 limit개.
- * @param {string} threadKey
- * @param {number} limit
- * @returns {Promise<string[]>}
- */
-/**
  * @param {string[]} lines
  */
 export function filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines) {
@@ -170,9 +164,32 @@ export function filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines
 }
 
 /**
+ * live_only emit_patch founder-facing execution summary — drop internal ops tokens (no i18n strings).
+ * @param {string[]} lines
+ */
+export function filterLiveOnlyEmitPatchTechnicalLeakFromExecutionSummaryLines(lines) {
+  return (lines || []).filter((line) => {
+    const s = String(line);
+    if (/callback_timeout/i.test(s)) return false;
+    if (/emit_patch_callback/i.test(s)) return false;
+    if (/create_spec_disallowed/i.test(s)) return false;
+    if (/live_only_no_fallback_create_spec_forbidden/i.test(s)) return false;
+    if (/github_fallback/i.test(s)) return false;
+    if (/cos_github_fallback_evidence/i.test(s)) return false;
+    if (/policy_reject/i.test(s)) return false;
+    if (/\bdegraded\b/i.test(s) && /cloud_agent/i.test(s)) return false;
+    if (/CURSOR_AUTOMATION|CURSOR_WEBHOOK/i.test(s)) return false;
+    return true;
+  });
+}
+
+/**
  * @param {Record<string, unknown>} run — needs thread_key, id, dispatch_id, required_packet_ids
  * @param {number} limit
- * @param {{ suppressStaleLiveOnlyCreateSpecLeak?: boolean }} [opts]
+ * @param {{
+ *   suppressStaleLiveOnlyCreateSpecLeak?: boolean,
+ *   suppressLiveOnlyEmitPatchFounderTechnicalLeak?: boolean,
+ * }} [opts]
  * @returns {Promise<string[]>}
  */
 export async function readExecutionSummaryForRun(run, limit = 5, opts = {}) {
@@ -181,7 +198,13 @@ export async function readExecutionSummaryForRun(run, limit = 5, opts = {}) {
   const list = await readAll(threadKey);
   const mapped = list.map((r) => normalizeArtifactRow(r));
   const tail = mapped.slice(-Math.max(120, limit * 24));
-  const pool = tail.filter((row) => executionArtifactMatchesRun(row, run));
+  let pool = tail.filter((row) => executionArtifactMatchesRun(row, run));
+  if (opts.suppressLiveOnlyEmitPatchFounderTechnicalLeak === true) {
+    pool = pool.filter((row) => {
+      const pl = payloadOfRow(row);
+      return pl.suppress_from_founder_execution_summary !== true;
+    });
+  }
   const sorted = [...pool].sort((a, b) => {
     const na = Boolean(a.needs_review);
     const nb = Boolean(b.needs_review);
@@ -192,13 +215,23 @@ export async function readExecutionSummaryForRun(run, limit = 5, opts = {}) {
     if (sa !== sb) return sa - sb;
     return String(b.ts || '').localeCompare(String(a.ts || ''));
   });
-  const lines = sorted.slice(0, limit).map(formatExecutionSummaryLine);
+  let lines = sorted.slice(0, limit).map(formatExecutionSummaryLine);
   if (opts.suppressStaleLiveOnlyCreateSpecLeak === true) {
-    return filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines);
+    lines = filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines);
+  }
+  if (opts.suppressLiveOnlyEmitPatchFounderTechnicalLeak === true) {
+    lines = filterLiveOnlyEmitPatchTechnicalLeakFromExecutionSummaryLines(lines);
   }
   return lines;
 }
 
+
+/**
+ * COS thread-scoped execution summary lines (not run-filtered).
+ * @param {string} threadKey
+ * @param {number} limit
+ * @returns {Promise<string[]>}
+ */
 export async function readExecutionSummary(threadKey, limit = 5) {
   const list = await readAll(threadKey);
   const mapped = list.map((r) => normalizeArtifactRow(r));
@@ -303,6 +336,7 @@ export async function readReviewQueueForRun(run, limit = 10) {
     if (row.type !== 'tool_result') return false;
     if (!executionArtifactMatchesRun(row, run)) return false;
     const pl = payloadOfRow(row);
+    if (pl.suppress_from_founder_review_queue === true) return false;
     const st = String(row.status || pl.status || '');
     const nr = row.needs_review || pl.needs_review;
     if (nr) return true;

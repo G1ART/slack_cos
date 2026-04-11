@@ -1,5 +1,6 @@
 /**
- * vNext.13.71 — emit_patch completion contract on trigger body, aggregate authority, toolsBridge timeout → degraded.
+ * vNext.13.71 — emit_patch completion contract on trigger body, aggregate authority, toolsBridge orchestrator timeout markers.
+ * v13.75: timeout keeps founder-visible `status` running; internal `error_code` / `degraded_from` retain timeout semantics.
  */
 import assert from 'node:assert';
 import path from 'path';
@@ -176,7 +177,7 @@ function row(phase, at) {
   assert.equal(agg.emit_patch_structural_closure_complete, true);
 }
 
-// 6) invokeExternalTool emit_patch + orchestrator timeout → degraded
+// 6) invokeExternalTool emit_patch + orchestrator timeout → internal markers; status stays running (v13.75 founder-silent window)
 {
   __resetCosRunMemoryStore();
   __resetCorrelationMemoryForTests();
@@ -263,7 +264,7 @@ function row(phase, at) {
     { threadKey: tk, cosRunId: rid, packetId: 'p_v71' },
   );
 
-  assert.equal(inv.status, 'degraded');
+  assert.equal(inv.status, 'running');
   assert.equal(inv.error_code, 'emit_patch_callback_timeout');
   assert.ok(String(inv.degraded_from || '').includes('emit_patch_callback_timeout'));
 

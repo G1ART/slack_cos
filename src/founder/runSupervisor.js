@@ -3,7 +3,11 @@
  */
 
 import crypto from 'node:crypto';
-import { readReviewQueueForRun, readExecutionSummaryForRun } from './executionLedger.js';
+import {
+  readReviewQueueForRun,
+  readExecutionSummaryForRun,
+  filterLiveOnlyEmitPatchTechnicalLeakFromExecutionSummaryLines,
+} from './executionLedger.js';
 import {
   clearPendingSupervisorWake,
   getActiveRunForThread,
@@ -113,6 +117,7 @@ export async function processRunMilestones(p) {
       if (status === 'completed') {
         const lines = await readExecutionSummaryForRun(run, 4, {
           suppressStaleLiveOnlyCreateSpecLeak: starterKickWasCloudEmitPatch(run),
+          suppressLiveOnlyEmitPatchFounderTechnicalLeak: starterKickWasCloudEmitPatch(run),
         });
         text = renderEagerCombinedMilestone({
           objective,
@@ -136,10 +141,13 @@ export async function processRunMilestones(p) {
         });
       } else if (status === 'review_required') {
         const review = await readReviewQueueForRun(run, 5);
-        const lines = review
+        let lines = review
           .filter((x) => x.needs_review || x.status === 'degraded')
           .map((x) => x.result_summary || x.blocked_reason || '')
           .filter(Boolean);
+        if (starterKickWasCloudEmitPatch(run)) {
+          lines = filterLiveOnlyEmitPatchTechnicalLeakFromExecutionSummaryLines(lines);
+        }
         text = renderEagerCombinedMilestone({
           objective,
           tool: String(kick.tool || ''),
@@ -204,6 +212,9 @@ export async function processRunMilestones(p) {
       rq.map((x) => x.next_required_input).find(Boolean) ||
       rq.map((x) => x.blocked_reason).find(Boolean) ||
       '';
+    if (starterKickWasCloudEmitPatch(run) && !String(need || '').trim()) {
+      return null;
+    }
     const text = renderBlockedMilestone({ objective, need_line: String(need || '') });
     const r = await sendFounderResponse({
       client: p.client,
@@ -222,10 +233,13 @@ export async function processRunMilestones(p) {
 
   if (status === 'review_required' && !run.founder_notified_review_required_at) {
     const review = await readReviewQueueForRun(run, 5);
-    const lines = review
+    let lines = review
       .filter((x) => x.needs_review || x.status === 'degraded')
       .map((x) => x.result_summary || x.blocked_reason || '')
       .filter(Boolean);
+    if (starterKickWasCloudEmitPatch(run)) {
+      lines = filterLiveOnlyEmitPatchTechnicalLeakFromExecutionSummaryLines(lines);
+    }
     if (!lines.length) return null;
     const text = renderReviewMilestone({ objective, lines });
     const r = await sendFounderResponse({
@@ -249,6 +263,7 @@ export async function processRunMilestones(p) {
     }
     const lines = await readExecutionSummaryForRun(run, 5, {
       suppressStaleLiveOnlyCreateSpecLeak: starterKickWasCloudEmitPatch(run),
+      suppressLiveOnlyEmitPatchFounderTechnicalLeak: starterKickWasCloudEmitPatch(run),
     });
     const text = renderCompletedMilestone({ objective, summary_lines: lines });
     const r = await sendFounderResponse({

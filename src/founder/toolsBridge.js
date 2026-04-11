@@ -1445,6 +1445,92 @@ export async function invokeExternalTool(spec, ctx = {}) {
     }
   }
 
+  if (
+    automationLaneActive &&
+    tool === 'cursor' &&
+    action === 'emit_patch' &&
+    cosRunId &&
+    threadKey &&
+    runPacketId != null &&
+    String(runPacketId).trim()
+  ) {
+    const { bindCursorEmitPatchDispatchLedgerBeforeTrigger } = await import('./providerEventCorrelator.js');
+    const bind = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+      threadKey,
+      runId: cosRunId,
+      packetId: String(runPacketId).trim(),
+      invocation_id,
+      payload,
+    });
+    if (!bind.ok) {
+      const stBind = 'blocked';
+      const ocBind = TOOL_OUTCOME_CODES.BLOCKED_MISSING_INPUT;
+      const nrBind = false;
+      const emBind = 'live';
+      const elBind = 'cloud_agent';
+      const rsBind = `blocked / ${tool}:${action}`;
+      const lpBind = {
+        invocation_id,
+        tool,
+        action,
+        execution_mode: emBind,
+        execution_lane: elBind,
+        status: stBind,
+        artifact_path: null,
+        next_required_input: null,
+        error_code: 'dispatch_ledger_bind_failed',
+        result_summary: rsBind,
+        outcome_code: ocBind,
+        live_attempted: false,
+        readiness_snapshot: snap,
+        fallback_reason: null,
+        blocked_reason: null,
+        degraded_from: null,
+        needs_review: nrBind,
+        suppress_from_founder_execution_summary: true,
+        suppress_from_founder_review_queue: true,
+        internal_dispatch_ledger_bind_code: String(bind.code || 'dispatch_ledger_bind_failed'),
+        ...(runPacketId ? { run_packet_id: runPacketId } : {}),
+        ...(cosRunId ? { cos_run_id: cosRunId } : {}),
+      };
+      if (threadKey) {
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_invocation',
+          summary: rsBind.slice(0, 500),
+          status: stBind,
+          needs_review: nrBind,
+          payload: lpBind,
+        });
+        await appendExecutionArtifact(threadKey, {
+          type: 'tool_result',
+          summary: rsBind.slice(0, 500),
+          status: stBind,
+          needs_review: nrBind,
+          payload: lpBind,
+        });
+      }
+      return {
+        ok: true,
+        mode: 'external_tool_invocation',
+        invocation_id,
+        tool,
+        action,
+        accepted: true,
+        execution_mode: emBind,
+        execution_lane: elBind,
+        status: stBind,
+        outcome_code: ocBind,
+        payload,
+        result_summary: rsBind,
+        artifact_path: null,
+        next_required_input: null,
+        needs_review: nrBind,
+        error_code: 'dispatch_ledger_bind_failed',
+        blocked_reason: null,
+      };
+    }
+  }
+
   const tr = automationLaneActive
     ? await triggerCursorAutomation({
         action,
@@ -1520,6 +1606,7 @@ export async function invokeExternalTool(spec, ctx = {}) {
         const { recordCursorCloudCorrelation } = await import('./providerEventCorrelator.js');
         correlation_registered = await recordCursorCloudCorrelation({
           threadKey,
+          ...(cosRunId ? { runId: cosRunId } : {}),
           packetId: runPacketId || undefined,
           cloudRunId,
           action,
@@ -1667,36 +1754,26 @@ export async function invokeExternalTool(spec, ctx = {}) {
         callbackOrchestratorStatus !== 'skipped_policy_gate';
       if (emitPatchClosureOrchestratorRan) {
         if (callbackDeliveryState === 'timeout') {
-          status = 'degraded';
-          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
           degraded_from = 'emit_patch_callback_timeout';
           error_code = 'emit_patch_callback_timeout';
-          result_summary = `degraded / cloud_agent / cursor:emit_patch — dispatch accepted; signed callback not resolved within orchestrator window`;
         } else if (
           callbackDeliveryState === 'unavailable' &&
           ['skipped_no_contract', 'skipped_url_not_allowlisted', 'skipped_no_fetch'].includes(
             String(callbackOrchestratorStatus || ''),
           )
         ) {
-          status = 'degraded';
-          outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
           degraded_from = 'emit_patch_callback_contract_unsatisfied';
           error_code = 'emit_patch_callback_contract_unsatisfied';
-          result_summary = `degraded / cloud_agent / cursor:emit_patch — dispatch accepted but webhook closure contract cannot be satisfied`;
         }
       }
       if (
         tool === 'cursor' &&
         action === 'emit_patch' &&
         callbackContractSnapshot &&
-        callbackContractSnapshot.callback_contract_present !== true &&
-        status !== 'degraded'
+        callbackContractSnapshot.callback_contract_present !== true
       ) {
-        status = 'degraded';
-        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
         degraded_from = 'emit_patch_cloud_requires_callback_contract';
         error_code = 'emit_patch_callback_contract_not_configured';
-        result_summary = `degraded / cloud_agent / cursor:emit_patch — outbound callback contract not configured (CURSOR_AUTOMATION_CALLBACK_CONTRACT_ENABLED + URL + secret)`;
       }
     } catch (e) {
       fallback_reason = String(e?.message || e).slice(0, 300);
@@ -1945,6 +2022,15 @@ export async function invokeExternalTool(spec, ctx = {}) {
     needs_review,
     ...(runPacketId ? { run_packet_id: runPacketId } : {}),
     ...(cosRunId ? { cos_run_id: cosRunId } : {}),
+    ...(tool === 'cursor' &&
+    action === 'emit_patch' &&
+    execution_lane === 'cloud_agent' &&
+    status === 'degraded'
+      ? {
+          suppress_from_founder_execution_summary: true,
+          suppress_from_founder_review_queue: true,
+        }
+      : {}),
     ...(cursorAutomationAudit || {}),
   };
 

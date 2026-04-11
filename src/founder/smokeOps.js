@@ -1006,7 +1006,8 @@ export function aggregateSmokeSessionProgress(rows) {
   let final_status = 'unknown';
   const provOnly = providerCallbackClosureSeen(seen);
   const synOnly = false;
-  const ghClosed = seen.has('github_secondary_recovery_matched');
+  const ghClosed =
+    seen.has('github_secondary_recovery_matched') && !providerCallbackClosureSeen(seen);
   const manualOnlyClosed =
     !provOnly &&
     !synOnly &&

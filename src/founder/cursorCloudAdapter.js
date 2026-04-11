@@ -11,6 +11,17 @@ import { buildEmitPatchCompletionContractBlock, EMIT_PATCH_COMPLETION_CONTRACT_K
 /** @type {{ fn: typeof fetch | null }} */
 export const __cursorAutomationFetchForTests = { fn: null };
 
+
+/**
+ * Outbound automation request_id — must match trigger body before POST (v13.75 dispatch ledger bind).
+ * @param {string | null | undefined} invocationId
+ */
+export function resolveCursorAutomationRequestId(invocationId) {
+  const s = String(invocationId || '').trim();
+  if (s) return s;
+  return `ca_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
 export function isCursorCloudAgentEnabled(env = process.env) {
   return String(env.CURSOR_CLOUD_AGENT_ENABLED || '').trim() === '1';
 }
@@ -538,9 +549,7 @@ export async function triggerCursorAutomation(opts) {
   const endpoint = String(env.CURSOR_AUTOMATION_ENDPOINT || '').trim();
   const authRaw = String(env.CURSOR_AUTOMATION_AUTH_HEADER || '').trim();
   const timeoutMs = Number(opts.timeoutMs ?? env.CURSOR_CLOUD_TIMEOUT_MS ?? 60_000) || 60_000;
-  const request_id =
-    String(opts.invocation_id || '').trim() ||
-    `ca_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const request_id = resolveCursorAutomationRequestId(opts.invocation_id);
 
   if (!endpoint || !authRaw) {
     return {

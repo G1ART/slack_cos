@@ -88,7 +88,7 @@ export async function awaitOrForceCallbackCompletion(p) {
   }
 
   const timeoutSec = Number(String(env.CURSOR_AUTOMATION_FORCE_CALLBACK_TIMEOUT_SEC || "").trim());
-  const timeoutMs = Number.isFinite(timeoutSec) && timeoutSec > 0 ? Math.floor(timeoutSec * 1000) : 120_000;
+  const timeoutMs = Number.isFinite(timeoutSec) && timeoutSec > 0 ? Math.floor(timeoutSec * 1000) : 360_000;
   const pollMs = 400;
 
   if (await naturalProviderClosureObserved(runId)) {

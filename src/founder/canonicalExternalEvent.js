@@ -392,6 +392,13 @@ export function resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical) {
   const fromCorr = packetIdIfEmitPatchOnRun(runRow, corr.packet_id != null ? String(corr.packet_id) : '');
   if (fromCorr) return { packetId: fromCorr, closure_not_applied_reason: null };
 
+  const tkH = canonical.thread_key_hint != null ? String(canonical.thread_key_hint).trim() : '';
+  const pkEarly = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
+  if (tkH && pkEarly && String(runRow.thread_key || '').trim() === tkH) {
+    const fromSignedContext = packetIdIfEmitPatchOnRun(runRow, pkEarly);
+    if (fromSignedContext) return { packetId: fromSignedContext, closure_not_applied_reason: null };
+  }
+
   const hintRaw = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
   const fromHint = hintRaw ? packetIdIfEmitPatchOnRun(runRow, hintRaw) : '';
   if (fromHint) return { packetId: fromHint, closure_not_applied_reason: null };
@@ -775,7 +782,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
         idempotent_closure_repeat = closure.idempotent_repeat;
         progression_skipped_reason = closure.applied ? null : closure.closure_not_applied_reason;
         authoritative_packet_progression = Boolean(closure.applied && closure.progression_applied);
-        supervisor_should_wake = Boolean(closure.applied);
+        supervisor_should_wake = Boolean(closure.applied || closure.progression_applied);
       } else {
         const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
         pktEff = resolveEffectiveCursorPacketId(runRow, corr, canonical);
