@@ -29,6 +29,7 @@ import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
 import { recordOpsSmokeAfterExternalMatch } from './smokeOps.js';
 import { findExternalCorrelation, findExternalCorrelationCursorHints } from './correlationStore.js';
+import { commitReceivedCursorCallbackToRunPacket } from './cursorReceiveCommit.js';
 import {
   canonicalizeExternalRunStatus,
   resolveCursorPacketStateAuthority,
@@ -743,7 +744,46 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   let idempotent_closure_repeat = false;
   let pktEff = '';
 
+  /** @type {Awaited<ReturnType<typeof commitReceivedCursorCallbackToRunPacket>> | null} */
+  let intakeResult = null;
+
   if (canonical.provider === 'cursor') {
+    const accHint = String(canonical.accepted_external_id_hint || '').trim();
+    if (
+      allowsAuthoritativeCursorPacketProgression(callbackSourceKind) &&
+      directKeyCorrelation &&
+      accHint
+    ) {
+      const accRow = await findExternalCorrelation('cursor', 'accepted_external_id', accHint);
+      if (accRow) {
+        intakeResult = await commitReceivedCursorCallbackToRunPacket({
+          accepted_external_id: accHint,
+          external_run_id: canonical.external_run_id,
+          callback_thread_key: canonical.thread_key_hint,
+          callback_packet_id: canonical.packet_id_hint,
+          canonical,
+          status_bucket: canonForOut.bucket,
+          ingress_meta: meta,
+        });
+      }
+    }
+  }
+
+  if (canonical.provider === 'cursor' && intakeResult !== null) {
+    pktEff = intakeResult.packet_id || '';
+    cursorPacketPatched = intakeResult.committed === true;
+    authoritative_emit_patch_closure_applied = intakeResult.closure_anchor_written === true;
+    authoritative_packet_progression = Boolean(
+      intakeResult.committed &&
+        intakeResult.closure_anchor_written &&
+        !intakeResult.idempotent,
+    );
+    progression_skipped_reason = intakeResult.committed ? null : intakeResult.reason;
+    emit_patch_authoritative_path = true;
+    closure_not_applied_reason = intakeResult.committed ? null : intakeResult.reason;
+    supervisor_should_wake = true;
+    idempotent_closure_repeat = intakeResult.idempotent === true;
+  } else if (canonical.provider === 'cursor') {
     if (!directKeyCorrelation) {
       emit_patch_authoritative_path = false;
       pktEff = corr.packet_id != null ? String(corr.packet_id).trim() : '';
@@ -872,8 +912,28 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
   });
 
+  const usedIntakeCommit = canonical.provider === 'cursor' && intakeResult !== null;
+
   if (canonical.provider === 'cursor' && emit_patch_authoritative_path) {
-    if (authoritative_emit_patch_closure_applied && !idempotent_closure_repeat) {
+    if (usedIntakeCommit) {
+      if (!intakeResult.committed) {
+        await appendCosRunEventForRun(
+          runId,
+          'cursor_callback_correlated_but_closure_not_applied',
+          {
+            target_run_id: runId,
+            closure_not_applied_reason: intakeResult.reason,
+            correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
+            intake_commit: true,
+          },
+          {
+            matched_by: meta.matched_by ?? null,
+            canonical_status: cs,
+            payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
+          },
+        );
+      }
+    } else if (authoritative_emit_patch_closure_applied && !idempotent_closure_repeat) {
       await appendCosRunEventForRun(
         runId,
         'cursor_authoritative_closure_applied',

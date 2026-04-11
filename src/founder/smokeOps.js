@@ -2166,7 +2166,7 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
     });
   }
 
-  if (p.cursorPacketPatched) {
+  if (p.cursorPacketPatched && !p.idempotent_closure_repeat) {
     await recordOpsSmokePhase({
       env,
       runId,
