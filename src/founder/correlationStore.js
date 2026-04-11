@@ -138,8 +138,8 @@ export async function findExternalCorrelation(provider, objectType, objectId) {
 }
 
 /**
- * Cursor callback correlation order (v13.64): external_run_id → accepted_external_id →
- * automation_request_path_fp → run_uuid+packet → thread_key+packet.
+ * Cursor authoritative correlation (v13.74): external_run_id → accepted_external_id →
+ * run_uuid+packet → thread_key+packet. Path-fp is evidence-only (see findExternalCorrelationCursorPathFingerprintEvidence).
  *
  * @param {{
  *   external_run_id?: string | null,
@@ -163,14 +163,6 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
   if (acc) {
     const hit = await findExternalCorrelation('cursor', 'accepted_external_id', acc);
     if (hit) return { corr: hit, matched_by: 'accepted_external_id' };
-  }
-
-  const req = String(hints.callback_request_id || '').trim();
-  const fp = String(hints.callback_path_fingerprint || '').trim();
-  if (req && fp) {
-    const composite = `${req}|${fp}`;
-    const hit = await findExternalCorrelation('cursor', 'automation_request_path_fp', composite);
-    if (hit) return { corr: hit, matched_by: 'automation_request_path_fp' };
   }
 
   const rid = String(hints.run_id || '').trim();
@@ -224,6 +216,20 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
     }
   }
   return { corr: null, matched_by: 'none' };
+}
+
+/**
+ * Path fingerprint correlation only — not eligible for packet progression (v13.74).
+ * @param {{ callback_request_id?: string | null, callback_path_fingerprint?: string | null }} hints
+ * @returns {Promise<{ corr: Record<string, unknown> | null, matched_by: string }>}
+ */
+export async function findExternalCorrelationCursorPathFingerprintEvidence(hints) {
+  const req = String(hints.callback_request_id || '').trim();
+  const fp = String(hints.callback_path_fingerprint || '').trim();
+  if (!req || !fp) return { corr: null, matched_by: 'none' };
+  const composite = `${req}|${fp}`;
+  const hit = await findExternalCorrelation('cursor', 'automation_request_path_fp', composite);
+  return hit ? { corr: hit, matched_by: 'automation_request_path_fp' } : { corr: null, matched_by: 'none' };
 }
 
 /**

@@ -147,7 +147,8 @@ function row(phase, at) {
       },
     },
   ]);
-  assert.equal(agg.authoritative_closure_source, 'synthetic_orchestrator');
+  assert.equal(agg.authoritative_closure_source, null);
+  assert.ok(agg.phases_seen.includes('cursor_non_provider_callback_ingress'));
 }
 
 // 4) Callback correlated without progression patch → distinct final_status
@@ -181,7 +182,6 @@ function row(phase, at) {
   __resetCorrelationMemoryForTests();
   __resetCallbackOrchestratorDedupeForTests();
   __callbackOrchestratorTestHooks.sleepMs = async () => {};
-  __callbackOrchestratorTestHooks.fetchImpl = async () => ({ ok: false, status: 500 });
 
   const tk = 'mention:v71:invoke:1';
   const run = await persistRunAfterDelegate({
@@ -268,7 +268,6 @@ function row(phase, at) {
   assert.ok(String(inv.degraded_from || '').includes('emit_patch_callback_timeout'));
 
   __cursorAutomationFetchForTests.fn = null;
-  __callbackOrchestratorTestHooks.fetchImpl = null;
   __callbackOrchestratorTestHooks.sleepMs = null;
   delete process.env.CURSOR_CLOUD_AGENT_ENABLED;
   delete process.env.CURSOR_AUTOMATION_ENDPOINT;

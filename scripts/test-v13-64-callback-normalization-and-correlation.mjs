@@ -23,9 +23,11 @@ __resetCorrelationMemoryForTests();
 __resetExternalGatewayTestState();
 
 const onlyComposer = extractAutomationResponseFields({ success: true, backgroundComposerId: 'bc_v1364' }, {});
-assert.equal(onlyComposer.accepted_external_id, 'bc_v1364');
+assert.equal(onlyComposer.accepted_external_id, null);
+assert.equal(onlyComposer.has_accepted_external_id, false);
+assert.equal(onlyComposer.provider_run_hint, 'bc_v1364');
 assert.equal(onlyComposer.has_run_id, false);
-assert.equal(onlyComposer.accepted_external_id_source, 'heuristic');
+assert.equal(onlyComposer.accepted_external_id_source, 'absent');
 assert.equal(onlyComposer.run_id_source, 'absent');
 
 const withOverride = extractAutomationResponseFields(

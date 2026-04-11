@@ -713,14 +713,15 @@ const PHASE_SORT_ORDER = [
   'cursor_callback_ingress_rejected',
   'cursor_direct_callback_ingress_received',
   'cursor_provider_callback_correlated',
-  'cursor_synthetic_callback_correlated',
+  'cursor_non_provider_callback_ingress',
   'cursor_unknown_source_callback_correlated',
   'cursor_manual_probe_callback_correlated',
   'cursor_direct_callback_correlated',
   'external_run_id_extracted',
   'manual_probe_external_callback_matched',
-  'synthetic_external_callback_matched',
+  'non_provider_callback_closure_observed',
   'external_callback_matched',
+  'path_fingerprint_callback_evidence_only',
   'authoritative_callback_closure_applied',
   'callback_correlated_but_closure_not_applied',
   'github_secondary_recovery_matched',
@@ -762,7 +763,7 @@ function smokeSummaryPhaseFromRow(r) {
     if (o === 'no_match') return 'cursor_callback_observed_no_match';
     if (o === 'matched') {
       if (src === 'manual_probe') return 'cursor_manual_probe_callback_correlated';
-      if (src === 'synthetic_orchestrator') return 'cursor_synthetic_callback_correlated';
+      if (src === 'synthetic_orchestrator') return 'cursor_non_provider_callback_ingress';
       if (src === 'provider_runtime') return 'cursor_provider_callback_correlated';
       return 'cursor_unknown_source_callback_correlated';
     }
@@ -787,9 +788,9 @@ function strictPipelineBreak(step, seen) {
     case 'external_callback_matched':
       return (
         seen.has('external_callback_matched') ||
-        seen.has('synthetic_external_callback_matched') ||
+        seen.has('non_provider_callback_closure_observed') ||
         seen.has('cursor_provider_callback_correlated') ||
-        seen.has('cursor_synthetic_callback_correlated') ||
+        seen.has('cursor_non_provider_callback_ingress') ||
         seen.has('cursor_unknown_source_callback_correlated') ||
         seen.has('cursor_direct_callback_correlated') ||
         seen.has('github_secondary_recovery_matched')
@@ -821,9 +822,9 @@ function relaxedPipelineBreak(step, seen) {
     case 'external_callback_matched':
       return (
         seen.has('external_callback_matched') ||
-        seen.has('synthetic_external_callback_matched') ||
+        seen.has('non_provider_callback_closure_observed') ||
         seen.has('cursor_provider_callback_correlated') ||
-        seen.has('cursor_synthetic_callback_correlated') ||
+        seen.has('cursor_non_provider_callback_ingress') ||
         seen.has('cursor_unknown_source_callback_correlated') ||
         seen.has('cursor_direct_callback_correlated') ||
         seen.has('github_secondary_recovery_matched')
@@ -865,7 +866,7 @@ function providerCallbackClosureSeen(seen) {
  * @param {Set<string>} seen
  */
 function syntheticCallbackClosureSeen(seen) {
-  return seen.has('cursor_synthetic_callback_correlated') || seen.has('synthetic_external_callback_matched');
+  return false;
 }
 
 /**
@@ -881,8 +882,8 @@ function computeCallbackCompletionState(seen) {
   if (seen.has('cursor_provider_callback_correlated') || seen.has('external_callback_matched')) {
     return 'provider_callback_ingress_matched_not_closed';
   }
-  if (seen.has('cursor_synthetic_callback_correlated') || seen.has('synthetic_external_callback_matched')) {
-    return 'synthetic_callback_matched';
+  if (seen.has('non_provider_callback_closure_observed') || seen.has('cursor_non_provider_callback_ingress')) {
+    return 'non_provider_callback_observed';
   }
   if (seen.has('github_secondary_recovery_matched')) return 'github_secondary_recovery_matched';
   if (
@@ -914,7 +915,6 @@ const AGG_EXTRA_KEYS = {
 export function computeAuthoritativeClosureSource(seen, ctx) {
   if (ctx.manualOnlyClosed) return 'manual_probe';
   if (ctx.provOnly) return 'provider_runtime';
-  if (ctx.synOnly) return 'synthetic_orchestrator';
   if (ctx.ghClosed) return 'github_secondary_recovery';
   if (seen.has('callback_orchestrator_unavailable')) return 'callback_unavailable';
   if (
@@ -946,6 +946,17 @@ export function aggregateSmokeSessionProgress(rows) {
     return i >= 0 ? i : 99;
   };
   const sorted = [...phases].sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+
+  if (seen.has('path_fingerprint_callback_evidence_only')) {
+    return {
+      phases_seen: [...seen].sort((a, b) => orderIdx(a) - orderIdx(b)),
+      ordered_events: sorted.map((pl) => ({ phase: pl.phase, at: pl.at })),
+      breaks_at: 'run_packet_progression_patched',
+      final_status: 'callback_correlated_path_fingerprint_not_authoritative',
+      callback_completion_state: 'path_fingerprint_not_authoritative',
+      ...AGG_EXTRA_KEYS,
+    };
+  }
 
   if (!seen.size) {
     return {
@@ -994,7 +1005,7 @@ export function aggregateSmokeSessionProgress(rows) {
 
   let final_status = 'unknown';
   const provOnly = providerCallbackClosureSeen(seen);
-  const synOnly = syntheticCallbackClosureSeen(seen) && !provOnly;
+  const synOnly = false;
   const ghClosed = seen.has('github_secondary_recovery_matched');
   const manualOnlyClosed =
     !provOnly &&
@@ -1009,17 +1020,6 @@ export function aggregateSmokeSessionProgress(rows) {
       final_status = 'unknown';
     } else if (staleAcceptPending) {
       final_status = 'cursor_callback_correlated';
-    } else {
-      final_status = `partial_stopped_before_${breaksAt}`;
-    }
-  } else if (synOnly) {
-    breaksAt = recomputeBreaksAtRelaxed(seen);
-    const staleAcceptPending =
-      seen.has('trigger_accepted_external_id_present') && !seen.has('external_run_id_extracted');
-    if (!breaksAt) {
-      final_status = 'unknown';
-    } else if (staleAcceptPending) {
-      final_status = 'synthetic_callback_correlated';
     } else {
       final_status = `partial_stopped_before_${breaksAt}`;
     }
@@ -1091,11 +1091,9 @@ export function aggregateSmokeSessionProgress(rows) {
     final_status = 'callback_correlated_but_closure_not_applied';
   } else if (seen.has('authoritative_callback_closure_applied')) {
     final_status = 'authoritative_callback_closure_applied';
-  } else if ((provOnly || synOnly) && !seen.has('run_packet_progression_patched')) {
+  } else if (provOnly && !seen.has('run_packet_progression_patched')) {
     if (final_status === 'cursor_callback_correlated') {
       final_status = 'callback_correlated_without_progression_patch';
-    } else if (final_status === 'synthetic_callback_correlated') {
-      final_status = 'synthetic_callback_correlated_without_progression_patch';
     }
   }
 
@@ -1611,8 +1609,6 @@ export function inferSelectedExecutionLaneFromAgg(agg) {
     fs === 'callback_correlated_but_closure_not_applied' ||
     fs === 'cursor_callback_correlated' ||
     fs === 'callback_correlated_without_progression_patch' ||
-    fs === 'synthetic_callback_correlated' ||
-    fs === 'synthetic_callback_correlated_without_progression_patch' ||
     fs === 'github_secondary_recovery_closed'
   ) {
     return 'cloud_trigger_attempted';
@@ -2107,12 +2103,15 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
 
   const meta = p.ingressMeta && typeof p.ingressMeta === 'object' ? p.ingressMeta : {};
   const src = String(meta.callback_source_kind || '').trim().toLowerCase();
-  const phaseMatch =
-    src === 'manual_probe'
-      ? 'manual_probe_external_callback_matched'
-      : src === 'synthetic_orchestrator'
-        ? 'synthetic_external_callback_matched'
-        : 'external_callback_matched';
+  const mb = String(meta.matched_by || '').trim();
+  let phaseMatch = 'external_callback_matched';
+  if (mb === 'automation_request_path_fp') {
+    phaseMatch = 'path_fingerprint_callback_evidence_only';
+  } else if (src === 'manual_probe') {
+    phaseMatch = 'manual_probe_external_callback_matched';
+  } else if (src === 'synthetic_orchestrator') {
+    phaseMatch = 'non_provider_callback_closure_observed';
+  }
 
   await recordOpsSmokePhase({
     env,

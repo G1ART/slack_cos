@@ -1,5 +1,5 @@
 /**
- * vNext.13.69 — Callback completion orchestrator, synthetic vs provider truth, narrow hint.
+ * vNext.13.74 — Callback completion orchestrator: provider closure polling only (no synthetic POST).
  */
 import assert from 'node:assert';
 import crypto from 'node:crypto';
@@ -21,7 +21,6 @@ import {
   __resetCallbackOrchestratorDedupeForTests,
   shouldRunCallbackCompletionOrchestrator,
 } from '../src/founder/cursorCallbackCompletionOrchestrator.js';
-import { buildSyntheticCursorCompletionCallback } from '../src/founder/cursorSyntheticCallback.js';
 import { computeEmitPatchPayloadPathFingerprint, listNormalizedEmitPatchPathsForAnchor } from '../src/founder/cursorCallbackGate.js';
 import { prepareEmitPatchForCloudAutomation } from '../src/founder/livePatchPayload.js';
 import {
@@ -54,8 +53,6 @@ function resetAll() {
   __resetCorrelationMemoryForTests();
   __resetExternalGatewayTestState();
   __resetCallbackOrchestratorDedupeForTests();
-  __callbackOrchestratorTestHooks.fetchImpl = null;
-  __callbackOrchestratorTestHooks.sleepMs = null;
 }
 
 async function setupRun() {
@@ -104,29 +101,12 @@ function envBase() {
   };
 }
 
-// 1) No natural callback → synthetic matches
+// 1) No natural provider callback → timeout, zero synthetic posts
 resetAll();
 {
   const { run, requestId, cloudRunId, acceptedExternalId } = await setupRun();
   const env = envBase();
   __callbackOrchestratorTestHooks.sleepMs = async () => {};
-  __callbackOrchestratorTestHooks.fetchImpl = async (_url, init) => {
-    const rawBody = Buffer.isBuffer(init.body) ? init.body : Buffer.from(String(init.body), 'utf8');
-    /** @type {Record<string, string>} */
-    const lower = {};
-    const h = init.headers;
-    if (h && typeof h === 'object') {
-      for (const [k, v] of Object.entries(h)) {
-        lower[String(k).toLowerCase()] = String(v);
-      }
-    }
-    const out = await handleCursorWebhookIngress({
-      rawBody,
-      headers: lower,
-      env,
-    });
-    return { ok: out.ok && out.httpStatus === 200, status: out.httpStatus };
-  };
   const orch = await awaitOrForceCallbackCompletion({
     runId: String(run.id),
     threadKey: tk,
@@ -138,11 +118,11 @@ resetAll();
     payload,
     env,
   });
-  assert.equal(orch.status, 'synthetic_callback_matched');
-  assert.ok((orch.synthetic_posts || 0) >= 1);
+  assert.equal(orch.status, 'callback_timeout');
+  assert.equal(orch.synthetic_posts, 0);
 }
 
-// 2) Natural provider callback first → no synthetic POST
+// 2) Natural provider callback first → matched without POST
 resetAll();
 {
   const { run, requestId, cloudRunId, acceptedExternalId } = await setupRun();
@@ -166,12 +146,7 @@ resetAll();
     },
     env,
   });
-  let posts = 0;
   __callbackOrchestratorTestHooks.sleepMs = async () => {};
-  __callbackOrchestratorTestHooks.fetchImpl = async () => {
-    posts += 1;
-    return { ok: false, status: 500 };
-  };
   const orch = await awaitOrForceCallbackCompletion({
     runId: String(run.id),
     threadKey: tk,
@@ -184,10 +159,10 @@ resetAll();
     env,
   });
   assert.equal(orch.status, 'provider_callback_matched');
-  assert.equal(posts, 0);
+  assert.equal(orch.synthetic_posts, 0);
 }
 
-// 3) Synthetic ingress phase classification
+// 3) Non-provider ingress phase (legacy synthetic header) → not authoritative
 {
   const agg = aggregateSmokeSessionProgress([
     {
@@ -199,7 +174,8 @@ resetAll();
       },
     },
   ]);
-  assert.ok(agg.phases_seen.includes('cursor_synthetic_callback_correlated'));
+  assert.ok(agg.phases_seen.includes('cursor_non_provider_callback_ingress'));
+  assert.equal(agg.authoritative_closure_source, null);
 }
 
 // 4) Manual probe distinct (aggregate)
@@ -218,67 +194,21 @@ resetAll();
   assert.equal(agg.final_status, 'manual_probe_callback_matched_without_provider_closure');
 }
 
-// 5) Invalid signature synthetic path → timeout (no match)
-resetAll();
+// 5) Path fingerprint helper (emit_patch scope)
 {
-  const { run, requestId, cloudRunId, acceptedExternalId } = await setupRun();
-  const env = envBase();
-  __callbackOrchestratorTestHooks.sleepMs = async () => {};
-  __callbackOrchestratorTestHooks.fetchImpl = async (_url, init) => {
-    const rawBody = Buffer.isBuffer(init.body) ? init.body : Buffer.from(String(init.body), 'utf8');
-    const badSig = 'sha256=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
-    /** @type {Record<string, string>} */
-    const lower = {
-      'content-type': 'application/json',
-      'x-cursor-signature-256': badSig,
-      'x-cos-callback-source': 'synthetic_orchestrator',
-    };
-    return handleCursorWebhookIngress({ rawBody, headers: lower, env }).then((out) => ({
-      ok: out.ok && out.httpStatus === 200,
-      status: out.httpStatus,
-    }));
-  };
-  const orch = await awaitOrForceCallbackCompletion({
-    runId: String(run.id),
-    threadKey: tk,
-    packetId: 'p_emit',
-    action: 'emit_patch',
-    requestId,
-    acceptedExternalId,
-    externalRunId: cloudRunId,
-    payload,
-    env,
-  });
-  assert.equal(orch.status, 'callback_timeout');
-}
-
-// 6) Synthetic body: request_id + paths + accepted id
-{
-  const syn = buildSyntheticCursorCompletionCallback({
-    requestId: 'rid_6',
-    acceptedExternalId: 'acc_6',
-    externalRunId: 'run_6',
-    threadKey: 't',
-    packetId: 'p',
-    payload,
-  });
-  assert.equal(syn.request_id, 'rid_6');
-  assert.equal(syn.backgroundComposerId, 'acc_6');
-  assert.equal(syn.runId, 'run_6');
-  assert.ok(Array.isArray(syn.paths_touched));
-  assert.equal(syn.paths_touched.join('|'), listNormalizedEmitPatchPathsForAnchor(payload).join('|'));
   const fpBody = computeEmitPatchPayloadPathFingerprint(payload);
   const fpSyn = computeEmitPatchPayloadPathFingerprint({ ...payload, live_patch: { ...payload.live_patch } });
   assert.equal(fpBody, fpSyn);
+  assert.ok(listNormalizedEmitPatchPathsForAnchor(payload).length >= 1);
 }
 
-// 7) Narrow execution hint
+// 6) Narrow execution hint
 {
   const prep = prepareEmitPatchForCloudAutomation(payload);
   assert.equal(prep.payload?.cos_execution_scope_hint?.handoff_scan_policy, 'target_path_and_parent_only');
 }
 
-// 8–9) Founder summary + run_id shape
+// 7–8) Founder summary: provider vs non-provider lanes
 {
   const sid = 'sess_orch_69';
   const flat = [
