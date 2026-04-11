@@ -392,28 +392,10 @@ export function resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical) {
   const fromCorr = packetIdIfEmitPatchOnRun(runRow, corr.packet_id != null ? String(corr.packet_id) : '');
   if (fromCorr) return { packetId: fromCorr, closure_not_applied_reason: null };
 
-  const fromHint = packetIdIfEmitPatchOnRun(runRow, canonical.packet_id_hint);
+  const hintRaw = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
+  const fromHint = hintRaw ? packetIdIfEmitPatchOnRun(runRow, hintRaw) : '';
   if (fromHint) return { packetId: fromHint, closure_not_applied_reason: null };
 
-  const anchor =
-    runRow.cursor_callback_anchor && typeof runRow.cursor_callback_anchor === 'object'
-      ? /** @type {Record<string, unknown>} */ (runRow.cursor_callback_anchor)
-      : {};
-  const fromAnchor = packetIdIfEmitPatchOnRun(runRow, anchor.packet_id);
-  if (fromAnchor) return { packetId: fromAnchor, closure_not_applied_reason: null };
-
-  const psm =
-    runRow.packet_state_map && typeof runRow.packet_state_map === 'object'
-      ? /** @type {Record<string, string>} */ (runRow.packet_state_map)
-      : {};
-  const req = Array.isArray(runRow.required_packet_ids) ? runRow.required_packet_ids.map(String) : [];
-  /** @type {string[]} */
-  const runningEmit = [];
-  for (const rid of req) {
-    if (String(psm[rid] || '') !== 'running') continue;
-    if (packetIdIfEmitPatchOnRun(runRow, rid)) runningEmit.push(rid);
-  }
-  if (runningEmit.length === 1) return { packetId: runningEmit[0], closure_not_applied_reason: null };
   return { packetId: '', closure_not_applied_reason: 'effective_packet_id_unresolved' };
 }
 
@@ -427,12 +409,7 @@ export function resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical) {
  */
 export function shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canonical) {
   if (!runDispatchHasEmitPatchPacket(runRow)) return false;
-  const cPid = corr.packet_id != null ? String(corr.packet_id).trim() : '';
-  if (cPid) {
-    return Boolean(packetIdIfEmitPatchOnRun(runRow, cPid));
-  }
-  const quick = resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical);
-  return Boolean(quick.packetId);
+  return Boolean(resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical).packetId);
 }
 
 /**
@@ -441,6 +418,7 @@ export function shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canon
  * @param {Record<string, unknown>} corr
  * @param {CanonicalExternalEvent} canonical
  * @param {{ bucket: string }} canonForOut
+ * @param {string} matchedBy
  * @param {string} callbackSourceKind
  */
 async function tryApplyAuthoritativeCursorEmitPatchClosureForRun(
@@ -449,8 +427,24 @@ async function tryApplyAuthoritativeCursorEmitPatchClosureForRun(
   corr,
   canonical,
   canonForOut,
+  matchedBy,
   callbackSourceKind,
 ) {
+  const mb = String(matchedBy || '').trim();
+  if (
+    mb !== 'external_run_id' &&
+    mb !== 'accepted_external_id' &&
+    mb !== 'run_uuid_packet' &&
+    mb !== 'thread_key_packet_id'
+  ) {
+    return {
+      applied: false,
+      progression_applied: false,
+      effective_packet_id: '',
+      closure_not_applied_reason: 'correlation_not_direct_key',
+      idempotent_repeat: false,
+    };
+  }
   const src = String(callbackSourceKind || '').trim().toLowerCase();
   if (src !== 'provider_runtime') {
     return {
@@ -726,6 +720,13 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   const callbackSourceKind =
     meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'provider_runtime';
 
+  const matched_by_for_closure = meta.matched_by != null ? String(meta.matched_by).trim() : '';
+  const directKeyCorrelation =
+    matched_by_for_closure === 'external_run_id' ||
+    matched_by_for_closure === 'accepted_external_id' ||
+    matched_by_for_closure === 'run_uuid_packet' ||
+    matched_by_for_closure === 'thread_key_packet_id';
+
   /** @type {string | null} */
   let progression_skipped_reason = null;
   let cursorPacketPatched = false;
@@ -739,40 +740,56 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   let pktEff = '';
 
   if (canonical.provider === 'cursor') {
-    emit_patch_authoritative_path = shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canonical);
-    if (emit_patch_authoritative_path) {
-      const closure = await tryApplyAuthoritativeCursorEmitPatchClosureForRun(
-        runId,
-        runRow,
-        corr,
-        canonical,
-        canonForOut,
-        callbackSourceKind,
-      );
-      pktEff =
-        closure.effective_packet_id ||
-        resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical).packetId ||
-        '';
-      cursorPacketPatched = closure.progression_applied;
-      authoritative_emit_patch_closure_applied = closure.applied;
-      closure_not_applied_reason = closure.closure_not_applied_reason;
-      idempotent_closure_repeat = closure.idempotent_repeat;
-      progression_skipped_reason = closure.applied ? null : closure.closure_not_applied_reason;
-      authoritative_packet_progression = Boolean(closure.applied && closure.progression_applied);
-      supervisor_should_wake = Boolean(closure.applied);
-    } else {
-      const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
-      pktEff = resolveEffectiveCursorPacketId(runRow, corr, canonical);
-      if (allowProg && pktEff) {
-        cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pktEff, canonical);
-        if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
-      } else if (allowProg && !pktEff) {
-        progression_skipped_reason = 'missing_target_packet_id';
-      } else if (!allowProg) {
-        progression_skipped_reason = 'non_provider_callback_source';
-      }
+    if (!directKeyCorrelation) {
+      emit_patch_authoritative_path = false;
+      pktEff = corr.packet_id != null ? String(corr.packet_id).trim() : '';
+      progression_skipped_reason =
+        matched_by_for_closure === 'automation_request_path_fp'
+          ? 'path_fingerprint_correlation_not_authoritative'
+          : 'correlation_not_direct_key';
+      closure_not_applied_reason = progression_skipped_reason;
+      cursorPacketPatched = false;
+      authoritative_emit_patch_closure_applied = false;
       authoritative_packet_progression = false;
       supervisor_should_wake = true;
+      idempotent_closure_repeat = false;
+    } else {
+      emit_patch_authoritative_path = shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canonical);
+      if (emit_patch_authoritative_path) {
+        const closure = await tryApplyAuthoritativeCursorEmitPatchClosureForRun(
+          runId,
+          runRow,
+          corr,
+          canonical,
+          canonForOut,
+          matched_by_for_closure,
+          callbackSourceKind,
+        );
+        pktEff =
+          closure.effective_packet_id ||
+          resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical).packetId ||
+          '';
+        cursorPacketPatched = closure.progression_applied;
+        authoritative_emit_patch_closure_applied = closure.applied;
+        closure_not_applied_reason = closure.closure_not_applied_reason;
+        idempotent_closure_repeat = closure.idempotent_repeat;
+        progression_skipped_reason = closure.applied ? null : closure.closure_not_applied_reason;
+        authoritative_packet_progression = Boolean(closure.applied && closure.progression_applied);
+        supervisor_should_wake = Boolean(closure.applied);
+      } else {
+        const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
+        pktEff = resolveEffectiveCursorPacketId(runRow, corr, canonical);
+        if (allowProg && pktEff) {
+          cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pktEff, canonical);
+          if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
+        } else if (allowProg && !pktEff) {
+          progression_skipped_reason = 'missing_target_packet_id';
+        } else if (!allowProg) {
+          progression_skipped_reason = 'non_provider_callback_source';
+        }
+        authoritative_packet_progression = false;
+        supervisor_should_wake = true;
+      }
     }
   } else {
     pktEff = corr.packet_id != null ? String(corr.packet_id).trim() : '';

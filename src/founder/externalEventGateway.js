@@ -3,7 +3,7 @@
  */
 
 import crypto from 'node:crypto';
-import { __resetCorrelationMemoryForTests, findExternalCorrelationCursorHintsWithMeta } from './correlationStore.js';
+import { __resetCorrelationMemoryForTests, findExternalCorrelationCursorHintsWithMeta, findExternalCorrelationCursorPathFingerprintEvidence } from './correlationStore.js';
 import { tryRecordGithubDelivery, __resetGithubDeliveryMemoryForTests } from './githubWebhookDedupe.js';
 import { __resetCosRunEventsMemoryForTests } from './runCosEvents.js';
 import {
@@ -275,7 +275,7 @@ export async function handleCursorWebhookIngress(p) {
   }
 
   const { canonical, evidence: ingressEvidence } = norm;
-  const { corr, matched_by } = await findExternalCorrelationCursorHintsWithMeta({
+  let { corr, matched_by } = await findExternalCorrelationCursorHintsWithMeta({
     external_run_id: canonical.external_run_id,
     run_id: canonical.run_id_hint,
     packet_id: canonical.packet_id_hint,
@@ -284,6 +284,16 @@ export async function handleCursorWebhookIngress(p) {
     callback_request_id: canonical.callback_request_id_hint,
     callback_path_fingerprint: canonical.callback_path_fingerprint_hint,
   });
+  if (!corr) {
+    const ev = await findExternalCorrelationCursorPathFingerprintEvidence({
+      callback_request_id: canonical.callback_request_id_hint,
+      callback_path_fingerprint: canonical.callback_path_fingerprint_hint,
+    });
+    if (ev.corr) {
+      corr = ev.corr;
+      matched_by = ev.matched_by;
+    }
+  }
   const fp = crypto.createHash('sha256').update(p.rawBody).digest('hex').slice(0, 16);
   const callback_match_basis = mapMatchedByToCallbackMatchBasis(matched_by);
   const out = await processCanonicalExternalEvent(canonical, corr, {
@@ -358,6 +368,7 @@ export async function handleCursorWebhookIngress(p) {
     httpStatus: out.matched ? 200 : 202,
     body: out.httpBody,
     matched: out.matched,
+    matched_by: matched_by ?? null,
     ...(out && out.canonical_status != null ? { canonical_status: out.canonical_status } : {}),
   };
 }

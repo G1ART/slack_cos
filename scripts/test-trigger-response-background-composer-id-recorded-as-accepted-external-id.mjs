@@ -1,5 +1,6 @@
 /**
- * vNext.13.49 — Cursor trigger JSON { success, backgroundComposerId } → accepted id metadata (not canonical run_id).
+ * vNext.13.74 — Trigger JSON { success, backgroundComposerId } only: invoice id = local request_id;
+ * backgroundComposerId is provider_run_hint only (never accepted_external_id).
  */
 import assert from 'node:assert';
 import path from 'path';
@@ -10,15 +11,23 @@ import { listCosRunEventsForRun, __resetCosRunEventsMemoryForTests } from '../sr
 import {
   recordOpsSmokeCursorTrigger,
   summarizeOpsSmokeSessionsFromFlatRows,
+  tailExternalRunId,
 } from '../src/founder/smokeOps.js';
 
 const parsed = { success: true, backgroundComposerId: 'bgcomposer_smoke_value_12345' };
-const ex = extractAutomationResponseFields(parsed, {});
+const localReq = 'req_invoice_local_1374';
+const ex = extractAutomationResponseFields(parsed, {}, { localTriggerRequestId: localReq });
 assert.equal(ex.has_run_id, false);
 assert.equal(ex.external_run_id, null);
 assert.equal(ex.has_accepted_external_id, true);
-assert.equal(ex.selected_accepted_id_field_name, 'backgroundComposerId');
-assert.equal(ex.accepted_external_id, 'bgcomposer_smoke_value_12345');
+assert.equal(ex.selected_accepted_id_field_name, 'local_trigger_request_id');
+assert.equal(ex.accepted_external_id, localReq);
+assert.equal(ex.provider_run_hint, 'bgcomposer_smoke_value_12345');
+
+const exNoLocal = extractAutomationResponseFields(parsed, {});
+assert.equal(exNoLocal.has_accepted_external_id, false);
+assert.equal(exNoLocal.accepted_external_id, null);
+assert.equal(exNoLocal.provider_run_hint, 'bgcomposer_smoke_value_12345');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-bg-composer-id');
@@ -56,6 +65,7 @@ await recordOpsSmokeCursorTrigger({
     has_run_id: false,
     has_status: false,
     has_url: false,
+    provider_run_hint: ex.provider_run_hint,
   },
 });
 
@@ -73,8 +83,8 @@ const flatRows = evs
   }));
 const sums = summarizeOpsSmokeSessionsFromFlatRows(flatRows, { sessionLimit: 5 });
 assert.equal(sums[0].has_accepted_external_id, true);
-assert.equal(sums[0].selected_accepted_id_field_name, 'backgroundComposerId');
-assert.ok(sums[0].accepted_external_id);
+assert.equal(sums[0].selected_accepted_id_field_name, 'local_trigger_request_id');
+assert.equal(sums[0].accepted_external_id, tailExternalRunId(localReq));
 
 delete process.env.COS_OPS_SMOKE_ENABLED;
 delete process.env.COS_RUN_STORE;

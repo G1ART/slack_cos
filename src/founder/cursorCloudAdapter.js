@@ -118,14 +118,30 @@ const DEFAULT_STATUS_DOT_PATHS = ['status', 'state', 'result.status', 'data.stat
 
 const DEFAULT_BRANCH_DOT_PATHS = ['branch', 'branch_name', 'branchName', 'result.branch', 'data.branch'];
 
-/** Acceptance / correlation id from provider — not canonical COS external_run_id until callback matches. */
-const DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS = ['backgroundComposerId', 'composerId', 'background_composer_id'];
+/** Provider-side run/composer hints only — never promoted to COS accepted_external_id (v13.74). */
+const PROVIDER_RUN_HINT_KEYS = ['backgroundComposerId', 'composerId', 'background_composer_id'];
+
+/**
+ * @param {Record<string, unknown> | null | undefined} parsed
+ */
+export function extractProviderRunHintFromParsed(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  for (const k of PROVIDER_RUN_HINT_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(parsed, k)) continue;
+    const v = /** @type {Record<string, unknown>} */ (parsed)[k];
+    if (v == null) continue;
+    const s = String(v).trim();
+    if (s) return s;
+  }
+  return null;
+}
 
 /**
  * @param {Record<string, unknown> | null} parsed
  * @param {NodeJS.ProcessEnv} env
+ * @param {{ localTriggerRequestId?: string | null }} [opts] v13.74 — invoice id = outbound request_id only when set
  */
-export function extractAutomationResponseFields(parsed, env) {
+export function extractAutomationResponseFields(parsed, env, opts = {}) {
   const absentBase = {
     external_run_id: null,
     external_url: null,
@@ -146,10 +162,14 @@ export function extractAutomationResponseFields(parsed, env) {
     url_source: /** @type {const} */ ('absent'),
     branch_source: /** @type {const} */ ('absent'),
     automation_response_env_absent_notes: /** @type {string[]} */ ([]),
+    provider_run_hint: /** @type {string | null} */ (null),
   };
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return absentBase;
   }
+
+  const provider_run_hint = extractProviderRunHintFromParsed(parsed);
+  const localInvoice = String(opts.localTriggerRequestId || '').trim();
 
   const runIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_RUN_ID_PATH || '').trim();
   const acceptedIdPath = String(env.CURSOR_AUTOMATION_RESPONSE_ACCEPTED_ID_PATH || '').trim();
@@ -271,7 +291,12 @@ export function extractAutomationResponseFields(parsed, env) {
   let selected_accepted_id_field_name = null;
   let accepted_external_id = '';
   let accWonOverride = false;
-  if (acceptedIdPath) {
+  let accWonHeuristic = false;
+  if (localInvoice) {
+    accepted_external_id = localInvoice;
+    selected_accepted_id_field_name = 'local_trigger_request_id';
+    accWonOverride = true;
+  } else if (acceptedIdPath) {
     const v = getByDotPath(parsed, acceptedIdPath);
     if (v != null) {
       const s = String(v).trim();
@@ -279,21 +304,6 @@ export function extractAutomationResponseFields(parsed, env) {
         accepted_external_id = s;
         selected_accepted_id_field_name = acceptedIdPath;
         accWonOverride = true;
-      }
-    }
-  }
-  let accWonHeuristic = false;
-  if (!accepted_external_id) {
-    for (const p of DEFAULT_ACCEPTED_EXTERNAL_ID_PATHS) {
-      if (!Object.prototype.hasOwnProperty.call(parsed, p)) continue;
-      const v = getByDotPath(parsed, p);
-      if (v == null) continue;
-      const s = String(v).trim();
-      if (s) {
-        accepted_external_id = s;
-        selected_accepted_id_field_name = p;
-        accWonHeuristic = true;
-        break;
       }
     }
   }
@@ -320,7 +330,7 @@ export function extractAutomationResponseFields(parsed, env) {
   if (!statusPath && !has_status) automation_response_env_absent_notes.push('status:CURSOR_AUTOMATION_RESPONSE_STATUS_PATH_unset_and_absent');
   if (!urlPath && !has_url) automation_response_env_absent_notes.push('url:CURSOR_AUTOMATION_RESPONSE_URL_PATH_unset_and_absent');
   if (!branchPath && !has_branch) automation_response_env_absent_notes.push('branch:CURSOR_AUTOMATION_RESPONSE_BRANCH_PATH_unset_and_absent');
-  if (!acceptedIdPath && !has_accepted_external_id) {
+  if (!localInvoice && !acceptedIdPath && !has_accepted_external_id) {
     automation_response_env_absent_notes.push('accepted_id:CURSOR_AUTOMATION_RESPONSE_ACCEPTED_ID_PATH_unset_and_absent');
   }
 
@@ -344,6 +354,7 @@ export function extractAutomationResponseFields(parsed, env) {
     url_source,
     branch_source,
     automation_response_env_absent_notes,
+    provider_run_hint,
   };
 }
 
@@ -557,6 +568,7 @@ export async function triggerCursorAutomation(opts) {
       url_source: 'absent',
       branch_source: 'absent',
       automation_response_env_absent_notes: [],
+      provider_run_hint: null,
     };
   }
 
@@ -616,13 +628,12 @@ export async function triggerCursorAutomation(opts) {
     } catch {
       parsed = null;
     }
-    const extracted = extractAutomationResponseFields(parsed, env);
+    const ok = res.ok;
+    const extracted = extractAutomationResponseFields(parsed, env, ok ? { localTriggerRequestId: request_id } : {});
     const external_run_id = extracted.external_run_id;
     const external_url = extracted.external_url;
     const automation_branch_raw = extracted.automation_branch_raw;
     const automation_status_raw = extracted.automation_status_raw;
-
-    const ok = res.ok;
     return {
       ok,
       trigger_status: ok ? 'accepted' : `http_${res.status}`,
@@ -632,6 +643,7 @@ export async function triggerCursorAutomation(opts) {
       external_run_id,
       external_url,
       accepted_external_id: extracted.accepted_external_id,
+      provider_run_hint: extracted.provider_run_hint,
       automation_branch_raw,
       automation_status_raw,
       error_code: ok ? null : `cursor_automation_http_${res.status}`,
@@ -666,6 +678,7 @@ export async function triggerCursorAutomation(opts) {
       external_run_id: null,
       external_url: null,
       accepted_external_id: null,
+      provider_run_hint: null,
       error_code: aborted ? 'cursor_automation_timeout' : 'cursor_automation_fetch_error',
       response_top_level_keys: null,
       selected_run_id_field_name: null,

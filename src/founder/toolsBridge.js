@@ -99,7 +99,7 @@ export const __invokeToolTestHooks = { failArtifactForTool: /** @type {string | 
 function mapOrchestratorStatusToDeliveryState(status) {
   const s = String(status || '').trim();
   if (!s) return 'unknown';
-  if (s === 'provider_callback_matched' || s === 'synthetic_callback_matched' || s === 'manual_probe_closure_observed') {
+  if (s === 'provider_callback_matched' || s === 'manual_probe_closure_observed') {
     return 'delivered';
   }
   if (s === 'callback_timeout') return 'timeout';
