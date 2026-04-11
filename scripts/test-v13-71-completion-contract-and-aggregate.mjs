@@ -168,6 +168,7 @@ function row(phase, at) {
     row('cursor_trigger_recorded', '2026-04-01T00:00:01Z'),
     row('external_run_id_extracted', '2026-04-01T00:00:02Z'),
     row('external_callback_matched', '2026-04-01T00:00:03Z'),
+    row('authoritative_callback_closure_applied', '2026-04-01T00:00:03Z'),
     row('run_packet_progression_patched', '2026-04-01T00:00:04Z'),
     row('supervisor_wake_enqueued', '2026-04-01T00:00:05Z'),
   ]);

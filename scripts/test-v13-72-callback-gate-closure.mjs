@@ -27,7 +27,7 @@ __resetCosRunMemoryStore();
 __resetExternalGatewayTestState();
 
 assert.equal(allowsAuthoritativeCursorPacketProgression('provider_runtime'), true);
-assert.equal(allowsAuthoritativeCursorPacketProgression('unknown'), true);
+assert.equal(allowsAuthoritativeCursorPacketProgression('unknown'), false);
 assert.equal(allowsAuthoritativeCursorPacketProgression('synthetic_orchestrator'), false);
 assert.equal(allowsAuthoritativeCursorPacketProgression('manual_probe'), false);
 

@@ -157,11 +157,25 @@ export async function computeExecutionOutcomeCounts(threadKey, lookback = 200) {
  * @returns {Promise<string[]>}
  */
 /**
+ * @param {string[]} lines
+ */
+export function filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines) {
+  return (lines || []).filter((line) => {
+    const s = String(line);
+    if (s.includes('create_spec_disallowed_in_live_only_mode')) return false;
+    if (s.includes('live_only_no_fallback_create_spec_forbidden')) return false;
+    if (s.includes('cursor:create_spec') && /\bblocked\b/i.test(s)) return false;
+    return true;
+  });
+}
+
+/**
  * @param {Record<string, unknown>} run — needs thread_key, id, dispatch_id, required_packet_ids
  * @param {number} limit
+ * @param {{ suppressStaleLiveOnlyCreateSpecLeak?: boolean }} [opts]
  * @returns {Promise<string[]>}
  */
-export async function readExecutionSummaryForRun(run, limit = 5) {
+export async function readExecutionSummaryForRun(run, limit = 5, opts = {}) {
   const threadKey = String(run?.thread_key || '');
   if (!threadKey || !run?.id) return [];
   const list = await readAll(threadKey);
@@ -178,7 +192,11 @@ export async function readExecutionSummaryForRun(run, limit = 5) {
     if (sa !== sb) return sa - sb;
     return String(b.ts || '').localeCompare(String(a.ts || ''));
   });
-  return sorted.slice(0, limit).map(formatExecutionSummaryLine);
+  const lines = sorted.slice(0, limit).map(formatExecutionSummaryLine);
+  if (opts.suppressStaleLiveOnlyCreateSpecLeak === true) {
+    return filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines(lines);
+  }
+  return lines;
 }
 
 export async function readExecutionSummary(threadKey, limit = 5) {

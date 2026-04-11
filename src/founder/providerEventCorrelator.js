@@ -146,6 +146,7 @@ export async function recordCursorCloudCorrelation(ctx) {
     emit_patch_requested_paths: emitPaths.length ? emitPaths : null,
     automation_branch_raw: automationBranchRaw,
     action: cursorAction,
+    packet_id: packetId || null,
   };
   try {
     await patchRunById(String(run.id), { cursor_callback_anchor: anchor });
