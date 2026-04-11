@@ -49,8 +49,18 @@ function starterKickWasCloudEmitPatch(run) {
   return String(oc.execution_lane || '') === 'cloud_agent';
 }
 
-/** vNext.13.73 — closure marker must match the emit_patch packet that is actually terminal. */
+/**
+ * vNext.13.76 — Founder-facing completion for cloud emit_patch: dispatch ledger target === closure packet,
+ * that packet completed, run terminal completed (no callback/orchestrator/GitHub evidence shortcuts).
+ */
 function runHasAuthoritativeEmitPatchStructuralClosure(run) {
+  const ledger =
+    run.cursor_dispatch_ledger && typeof run.cursor_dispatch_ledger === 'object'
+      ? /** @type {Record<string, unknown>} */ (run.cursor_dispatch_ledger)
+      : {};
+  const bound = String(ledger.target_packet_id || '').trim();
+  if (!bound) return false;
+
   const a =
     run.cursor_callback_anchor && typeof run.cursor_callback_anchor === 'object'
       ? /** @type {Record<string, unknown>} */ (run.cursor_callback_anchor)
@@ -58,11 +68,15 @@ function runHasAuthoritativeEmitPatchStructuralClosure(run) {
   if (!a.provider_structural_closure_at) return false;
   const closurePkt = String(a.provider_structural_closure_packet_id || '').trim();
   if (!closurePkt) return false;
+  if (closurePkt !== bound) return false;
+
   const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
   if (!req.includes(closurePkt)) return false;
+
   const psm = run.packet_state_map && typeof run.packet_state_map === 'object' ? run.packet_state_map : {};
-  const st = String(psm[closurePkt] || '');
-  return st === 'completed' || st === 'failed' || st === 'skipped';
+  if (String(psm[closurePkt] || '') !== 'completed') return false;
+  if (String(run.status || '') !== 'completed') return false;
+  return true;
 }
 
 /**

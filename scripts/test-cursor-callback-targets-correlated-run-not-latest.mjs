@@ -6,6 +6,7 @@ import {
   persistRunAfterDelegate,
   getActiveRunForThread,
   getRunById,
+  patchRunById,
   __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
@@ -35,7 +36,7 @@ const runA = await persistRunAfterDelegate({
         packet_id: 'p_a',
         packet_status: 'running',
         preferred_tool: 'cursor',
-        preferred_action: 'create_spec',
+        preferred_action: 'emit_patch',
         mission: 'm',
       },
     ],
@@ -44,12 +45,13 @@ const runA = await persistRunAfterDelegate({
     executed: true,
     packet_id: 'p_a',
     tool: 'cursor',
-    action: 'create_spec',
+    action: 'emit_patch',
     outcome: { status: 'running', outcome_code: 'cloud_agent_dispatch_accepted' },
   },
   founder_request_summary: '',
 });
 const ridA = String(runA.id);
+await patchRunById(ridA, { packet_state_map: { p_a: 'running' }, required_packet_ids: ['p_a'] });
 
 const extLate = 'cloud_late_run_correlation_99';
 await upsertExternalCorrelation({
@@ -73,7 +75,7 @@ const runB = await persistRunAfterDelegate({
         packet_id: 'p_b',
         packet_status: 'running',
         preferred_tool: 'cursor',
-        preferred_action: 'create_spec',
+        preferred_action: 'emit_patch',
         mission: 'm2',
       },
     ],
@@ -82,17 +84,23 @@ const runB = await persistRunAfterDelegate({
     executed: true,
     packet_id: 'p_b',
     tool: 'cursor',
-    action: 'create_spec',
+    action: 'emit_patch',
     outcome: { status: 'running', outcome_code: 'cloud_agent_dispatch_accepted' },
   },
   founder_request_summary: '',
 });
 const ridB = String(runB.id);
+await patchRunById(ridB, { packet_state_map: { p_b: 'running' }, required_packet_ids: ['p_b'] });
 
 assert.notEqual(ridA, ridB);
 assert.equal(String((await getActiveRunForThread(tk)).id), ridB);
 
-const body = JSON.stringify({ type: 'statusChange', runId: extLate, status: 'completed' });
+const body = JSON.stringify({
+  type: 'statusChange',
+  runId: extLate,
+  status: 'completed',
+  paths_touched: ['src/target-corr.ts'],
+});
 const raw = Buffer.from(body, 'utf8');
 const sig = `sha256=${crypto.createHmac('sha256', secret).update(raw).digest('hex')}`;
 const wh = await handleCursorWebhookIngress({

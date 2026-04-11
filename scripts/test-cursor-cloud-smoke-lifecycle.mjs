@@ -2,7 +2,12 @@ import assert from 'node:assert';
 import path from 'path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
+import {
+  persistRunAfterDelegate,
+  getActiveRunForThread,
+  patchRunById,
+  __resetCosRunMemoryStore,
+} from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import { __cursorAutomationFetchForTests } from '../src/founder/cursorCloudAdapter.js';
@@ -34,7 +39,7 @@ const run = await persistRunAfterDelegate({
         packet_id: 'p1',
         packet_status: 'running',
         preferred_tool: 'cursor',
-        preferred_action: 'create_spec',
+        preferred_action: 'emit_patch',
         mission: 'm1',
       },
       {
@@ -51,12 +56,17 @@ const run = await persistRunAfterDelegate({
     executed: true,
     packet_id: 'p1',
     tool: 'cursor',
-    action: 'create_spec',
-    outcome: { status: 'running', outcome_code: 'cloud_agent_dispatch_accepted' },
+    action: 'emit_patch',
+    outcome: { status: 'running', execution_lane: 'cloud_agent' },
   },
   founder_request_summary: '',
 });
 assert.ok(run?.id);
+const rid = String(run.id);
+await patchRunById(rid, {
+  packet_state_map: { p1: 'running', p2: 'queued' },
+  required_packet_ids: ['p1', 'p2'],
+});
 
 process.env.CURSOR_CLOUD_AGENT_ENABLED = '1';
 process.env.CURSOR_AUTOMATION_ENDPOINT = 'https://example.com/automation-smoke';
@@ -69,18 +79,36 @@ __cursorAutomationFetchForTests.fn = async () =>
   });
 
 const inv = await invokeExternalTool(
-  { tool: 'cursor', action: 'create_spec', payload: { title: 't', body: 'b' } },
-  { threadKey: tk, packetId: 'p1' },
+  {
+    tool: 'cursor',
+    action: 'emit_patch',
+    payload: {
+      title: 't',
+      live_patch: {
+        path: 'src/smoke-life.txt',
+        operation: 'create',
+        content: 'x\n',
+        live_only: true,
+        no_fallback: true,
+      },
+    },
+  },
+  { threadKey: tk, cosRunId: rid, packetId: 'p1' },
 );
 assert.equal(inv.execution_lane, 'cloud_agent');
 __cursorAutomationFetchForTests.fn = null;
 
-const body = JSON.stringify({ type: 'statusChange', runId: extId, status: 'completed' });
+const body = JSON.stringify({
+  type: 'statusChange',
+  runId: extId,
+  status: 'completed',
+  paths_touched: ['src/smoke-life.txt'],
+});
 const raw = Buffer.from(body, 'utf8');
 const sig = `sha256=${crypto.createHmac('sha256', secret).update(raw).digest('hex')}`;
 const wh = await handleCursorWebhookIngress({
   rawBody: raw,
-  headers: { 'x-cursor-signature-256': sig },
+  headers: { 'x-cursor-signature-256': sig, 'x-cos-callback-source': 'provider_runtime' },
   env: { CURSOR_WEBHOOK_SECRET: secret },
 });
 assert.equal(wh.matched, true);
@@ -122,7 +150,7 @@ const run2 = await persistRunAfterDelegate({
         packet_id: 'p_ov',
         packet_status: 'running',
         preferred_tool: 'cursor',
-        preferred_action: 'create_spec',
+        preferred_action: 'emit_patch',
         mission: 'm',
       },
     ],
@@ -131,14 +159,16 @@ const run2 = await persistRunAfterDelegate({
     executed: true,
     packet_id: 'p_ov',
     tool: 'cursor',
-    action: 'create_spec',
-    outcome: { status: 'running', outcome_code: 'cloud_agent_dispatch_accepted' },
+    action: 'emit_patch',
+    outcome: { status: 'running', execution_lane: 'cloud_agent' },
   },
   founder_request_summary: '',
 });
+const rid2 = String(run2.id);
+await patchRunById(rid2, { packet_state_map: { p_ov: 'running' }, required_packet_ids: ['p_ov'] });
 const extOv = 'override_smoke_run_99';
 await upsertExternalCorrelation({
-  run_id: String(run2.id),
+  run_id: rid2,
   thread_key: tk2,
   packet_id: 'p_ov',
   provider: 'cursor',
@@ -147,17 +177,24 @@ await upsertExternalCorrelation({
 });
 
 const nestedBody = JSON.stringify({
-  outer: { nested: { cursorRun: extOv, phase: 'done' } },
+  outer: {
+    nested: {
+      cursorRun: extOv,
+      phase: 'completed',
+      paths: ['src/override-smoke.txt'],
+    },
+  },
 });
 const rawOv = Buffer.from(nestedBody, 'utf8');
 const sigOv = `sha256=${crypto.createHmac('sha256', secret).update(rawOv).digest('hex')}`;
 const whOv = await handleCursorWebhookIngress({
   rawBody: rawOv,
-  headers: { 'x-cursor-signature-256': sigOv },
+  headers: { 'x-cursor-signature-256': sigOv, 'x-cos-callback-source': 'provider_runtime' },
   env: {
     CURSOR_WEBHOOK_SECRET: secret,
     CURSOR_WEBHOOK_RUN_ID_PATH: 'outer.nested.cursorRun',
     CURSOR_WEBHOOK_STATUS_PATH: 'outer.nested.phase',
+    CURSOR_WEBHOOK_PATHS_TOUCHED_PATH: 'outer.nested.paths',
   },
 });
 assert.equal(whOv.matched, true);

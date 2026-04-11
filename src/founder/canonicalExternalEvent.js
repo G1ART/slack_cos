@@ -389,27 +389,24 @@ export function packetIdIfEmitPatchOnRun(runRow, rawId) {
  * @returns {{ packetId: string, closure_not_applied_reason: string | null }}
  */
 export function resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical) {
-  const fromCorr = packetIdIfEmitPatchOnRun(runRow, corr.packet_id != null ? String(corr.packet_id) : '');
-  if (fromCorr) return { packetId: fromCorr, closure_not_applied_reason: null };
-
-  const tkH = canonical.thread_key_hint != null ? String(canonical.thread_key_hint).trim() : '';
-  const pkEarly = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
-  if (tkH && pkEarly && String(runRow.thread_key || '').trim() === tkH) {
-    const fromSignedContext = packetIdIfEmitPatchOnRun(runRow, pkEarly);
-    if (fromSignedContext) return { packetId: fromSignedContext, closure_not_applied_reason: null };
+  const corrPid = corr.packet_id != null ? String(corr.packet_id).trim() : '';
+  if (!corrPid) {
+    return { packetId: '', closure_not_applied_reason: 'correlation_packet_id_required' };
   }
-
+  const fromCorr = packetIdIfEmitPatchOnRun(runRow, corrPid);
+  if (!fromCorr) {
+    return { packetId: '', closure_not_applied_reason: 'correlation_packet_not_emit_patch_on_run' };
+  }
   const hintRaw = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
-  const fromHint = hintRaw ? packetIdIfEmitPatchOnRun(runRow, hintRaw) : '';
-  if (fromHint) return { packetId: fromHint, closure_not_applied_reason: null };
-
-  return { packetId: '', closure_not_applied_reason: 'effective_packet_id_unresolved' };
+  if (hintRaw && hintRaw !== fromCorr) {
+    return { packetId: '', closure_not_applied_reason: 'callback_packet_id_mismatch' };
+  }
+  return { packetId: fromCorr, closure_not_applied_reason: null };
 }
 
 /**
- * Mixed delegate graphs may include an emit_patch packet while the active correlation targets create_spec.
- * Authoritative emit_patch closure applies only when correlation/hints resolve an emit_patch target, or
- * exactly one running emit_patch packet can be inferred without contradicting an explicit non-emit corr id.
+ * Emit_patch structural closure applies only when correlation carries an emit_patch packet_id on the run graph
+ * and (if the callback provides packet_id_hint) it matches that correlation id exactly (v13.76).
  * @param {Record<string, unknown>} runRow
  * @param {Record<string, unknown>} corr
  * @param {CanonicalExternalEvent} canonical
@@ -763,6 +760,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     } else {
       emit_patch_authoritative_path = shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canonical);
       if (emit_patch_authoritative_path) {
+        const resolvedPid = resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical);
         const closure = await tryApplyAuthoritativeCursorEmitPatchClosureForRun(
           runId,
           runRow,
@@ -772,10 +770,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
           matched_by_for_closure,
           callbackSourceKind,
         );
-        pktEff =
-          closure.effective_packet_id ||
-          resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical).packetId ||
-          '';
+        pktEff = closure.effective_packet_id || resolvedPid.packetId || '';
         cursorPacketPatched = closure.progression_applied;
         authoritative_emit_patch_closure_applied = closure.applied;
         closure_not_applied_reason = closure.closure_not_applied_reason;
@@ -783,19 +778,60 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
         progression_skipped_reason = closure.applied ? null : closure.closure_not_applied_reason;
         authoritative_packet_progression = Boolean(closure.applied && closure.progression_applied);
         supervisor_should_wake = Boolean(closure.applied || closure.progression_applied);
+
+        if (
+          !cursorPacketPatched &&
+          closure.closure_not_applied_reason === 'non_terminal_callback_status' &&
+          resolvedPid.packetId
+        ) {
+          const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
+          if (allowProg) {
+            const progressed = await applyExternalCursorPacketProgressForRun(runId, resolvedPid.packetId, canonical);
+            cursorPacketPatched = progressed;
+            if (progressed) {
+              progression_skipped_reason = null;
+              pktEff = resolvedPid.packetId;
+            } else if (!progression_skipped_reason) {
+              progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
+            }
+            supervisor_should_wake = true;
+          }
+        }
       } else {
         const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
-        pktEff = resolveEffectiveCursorPacketId(runRow, corr, canonical);
-        if (allowProg && pktEff) {
-          cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pktEff, canonical);
-          if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
-        } else if (allowProg && !pktEff) {
-          progression_skipped_reason = 'missing_target_packet_id';
-        } else if (!allowProg) {
-          progression_skipped_reason = 'non_provider_callback_source';
+        const corrPid = corr.packet_id != null ? String(corr.packet_id).trim() : '';
+        const hintRaw = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
+        if (hintRaw && corrPid && hintRaw !== corrPid) {
+          pktEff = corrPid || hintRaw;
+          progression_skipped_reason = 'callback_packet_id_mismatch';
+          closure_not_applied_reason = 'callback_packet_id_mismatch';
+          cursorPacketPatched = false;
+          authoritative_packet_progression = false;
+          supervisor_should_wake = true;
+        } else {
+          const emitPatchBound = corrPid && packetIdIfEmitPatchOnRun(runRow, corrPid) ? corrPid : '';
+          if (!emitPatchBound) {
+            pktEff = corrPid || '';
+            progression_skipped_reason = corrPid
+              ? 'emit_patch_packet_not_on_dispatch_graph'
+              : 'correlation_packet_id_required_for_direct_key_commit';
+            closure_not_applied_reason = progression_skipped_reason;
+            cursorPacketPatched = false;
+            authoritative_packet_progression = false;
+            supervisor_should_wake = true;
+          } else if (allowProg) {
+            pktEff = emitPatchBound;
+            cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, emitPatchBound, canonical);
+            if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
+            authoritative_packet_progression = false;
+            supervisor_should_wake = true;
+          } else {
+            pktEff = emitPatchBound;
+            progression_skipped_reason = 'non_provider_callback_source';
+            authoritative_packet_progression = false;
+            supervisor_should_wake = true;
+          }
         }
-        authoritative_packet_progression = false;
-        supervisor_should_wake = true;
       }
     }
   } else {

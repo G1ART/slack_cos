@@ -107,6 +107,14 @@ assert.equal(r1.packet_state_map[PKT], 'completed');
 assert.ok(r1.cursor_callback_anchor?.provider_structural_closure_at);
 
 await patchRunById(rid, {
+  cursor_dispatch_ledger: {
+    bound_at: new Date().toISOString(),
+    target_packet_id: PKT,
+    automation_request_id: 'ledger_v1374',
+    pending_provider_callback: false,
+    selected_tool: 'cursor',
+    selected_action: 'emit_patch',
+  },
   starter_kickoff: {
     executed: true,
     packet_id: PKT,

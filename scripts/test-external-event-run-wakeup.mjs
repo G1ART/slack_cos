@@ -3,7 +3,12 @@ import path from 'path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { registerRunStateChangeListener } from '../src/founder/supervisorDirectTrigger.js';
-import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
+import {
+  persistRunAfterDelegate,
+  getActiveRunForThread,
+  patchRunById,
+  __resetCosRunMemoryStore,
+} from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 
@@ -35,13 +40,18 @@ const run = await persistRunAfterDelegate({
         packet_id: 'p_cr',
         packet_status: 'running',
         preferred_tool: 'cursor',
-        preferred_action: 'create_spec',
+        preferred_action: 'emit_patch',
         mission: 'm',
       },
     ],
   },
   starter_kickoff: { executed: false },
   founder_request_summary: '',
+});
+assert.ok(run?.id);
+await patchRunById(String(run.id), {
+  packet_state_map: { p_cr: 'running' },
+  required_packet_ids: ['p_cr'],
 });
 
 const cloudRunId = 'cr_tool_test_wake_001';
@@ -58,6 +68,7 @@ const body = JSON.stringify({
   type: 'statusChange',
   runId: cloudRunId,
   status: 'completed',
+  paths_touched: ['src/wake-cr.txt'],
 });
 const raw = Buffer.from(body, 'utf8');
 const sig = `sha256=${crypto.createHmac('sha256', secret).update(raw).digest('hex')}`;

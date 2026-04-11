@@ -61,7 +61,7 @@ const rAmb = resolveEmitPatchAuthoritativePacketId(rowAmb, { packet_id: null }, 
   packet_id_hint: null,
 });
 assert.equal(rAmb.packetId, '');
-assert.equal(rAmb.closure_not_applied_reason, 'effective_packet_id_unresolved');
+assert.equal(rAmb.closure_not_applied_reason, 'correlation_packet_id_required');
 
 const secret = 'cursor_webhook_secret_test_min_len__';
 

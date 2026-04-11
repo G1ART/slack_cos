@@ -2,7 +2,12 @@ import assert from 'node:assert';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { persistRunAfterDelegate, getActiveRunForThread, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
+import {
+  persistRunAfterDelegate,
+  getActiveRunForThread,
+  patchRunById,
+  __resetCosRunMemoryStore,
+} from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation, findExternalCorrelation } from '../src/founder/correlationStore.js';
 import {
   handleGithubWebhookIngress,
@@ -38,6 +43,13 @@ const dispatch = {
       mission: 'm',
       deliverables: [],
     },
+    {
+      packet_id: 'pkt_cursor_hint',
+      packet_status: 'queued',
+      preferred_tool: 'cursor',
+      preferred_action: 'emit_patch',
+      mission: 'cursor',
+    },
   ],
 };
 
@@ -48,6 +60,10 @@ const run = await persistRunAfterDelegate({
   founder_request_summary: '',
 });
 assert.ok(run?.id);
+await patchRunById(String(run.id), {
+  packet_state_map: { pkt_corr_1: 'ready', pkt_cursor_hint: 'queued' },
+  required_packet_ids: ['pkt_corr_1', 'pkt_cursor_hint'],
+});
 
 await upsertExternalCorrelation({
   run_id: String(run.id),
