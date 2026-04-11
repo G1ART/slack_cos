@@ -151,7 +151,7 @@ await upsertExternalCorrelation({
   thread_key: tk,
   packet_id: 'pkt_cursor_hint',
   provider: 'cursor',
-  object_type: 'accepted_external_id',
+  object_type: 'cloud_agent_run',
   object_id: 'composer_anchor_x',
 });
 const accBody = JSON.stringify({ backgroundComposerId: 'composer_anchor_x', status: 'completed' });

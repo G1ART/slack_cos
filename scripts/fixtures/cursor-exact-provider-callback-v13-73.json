@@ -1,0 +1,14 @@
+{
+  "status": "accepted_and_applied",
+  "request_id": "tool_1775874634056_0c0460a286d2",
+  "paths_touched": ["docs/cursor-handoffs/smoke_live_note_2026-04-07.md"],
+  "backgroundComposerId": "6143dd0d-0fcb-439c-91c7-997caecb5b79",
+  "summary": "Live-only single-file patch accepted and reflected at target path.",
+  "occurred_at": "2026-04-11T02:32:31.552678Z",
+  "accepted_external_id": "tool_1775874634056_0c0460a286d2",
+  "external_run_id": "6143dd0d-0fcb-439c-91c7-997caecb5b79",
+  "context": {
+    "thread_key": "mention:C0AMELPEFRC:1775874613.196639",
+    "packet_id": "cursor-live-smoke-single-file"
+  }
+}

@@ -358,6 +358,7 @@ export async function handleCursorWebhookIngress(p) {
     httpStatus: out.matched ? 200 : 202,
     body: out.httpBody,
     matched: out.matched,
+    ...(out && out.canonical_status != null ? { canonical_status: out.canonical_status } : {}),
   };
 }
 
