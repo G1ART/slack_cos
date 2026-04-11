@@ -196,6 +196,9 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'blocked' && !run.founder_notified_blocked_at) {
+    if (starterKickWasCloudEmitPatch(run) && runHasAuthoritativeEmitPatchStructuralClosure(run)) {
+      return null;
+    }
     const rq = await readReviewQueueForRun(run, 3);
     const need =
       rq.map((x) => x.next_required_input).find(Boolean) ||

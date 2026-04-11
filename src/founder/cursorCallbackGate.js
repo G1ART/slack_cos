@@ -46,7 +46,7 @@ export function listNormalizedEmitPatchPathsForAnchor(payload) {
 
 /**
  * Safe diagnostics when normalization returns null (ops smoke / ledger).
- * v13.64: request_id alone is never sufficient; request_id+path_fp is a separate closeable pair.
+ * v13.64: request_id+path_fp is a closeable pair. v13.73b: request_id also fills accepted_external_id_hint (accepted id alias).
  * @param {Record<string, unknown>} sel — return shape of computeCursorWebhookFieldSelection
  */
 export function buildCursorCallbackInsufficientDiagnostics(sel) {

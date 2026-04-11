@@ -29,7 +29,16 @@ export function canonicalizeExternalRunStatus(raw) {
     'working',
     'busy',
   ]);
-  const positive = new Set(['completed', 'succeeded', 'success', 'done', 'finished', 'complete']);
+  const positive = new Set([
+    'accepted_and_applied',
+    'applied',
+    'completed',
+    'succeeded',
+    'success',
+    'done',
+    'finished',
+    'complete',
+  ]);
   const negative = new Set([
     'failed',
     'failure',

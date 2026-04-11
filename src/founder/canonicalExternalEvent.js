@@ -724,7 +724,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
   }
 
   const callbackSourceKind =
-    meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'unknown';
+    meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'provider_runtime';
 
   /** @type {string | null} */
   let progression_skipped_reason = null;

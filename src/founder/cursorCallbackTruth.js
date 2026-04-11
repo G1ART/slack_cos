@@ -16,7 +16,8 @@ export function deriveCursorCallbackSourceKindFromHeaders(headers) {
   if (v === 'synthetic_orchestrator' || v === 'synthetic') return 'synthetic_orchestrator';
   if (v === 'provider' || v === 'provider_runtime') return 'provider_runtime';
   if (!v) return 'provider_runtime';
-  return 'unknown';
+  // v13.73b — signed Cursor webhooks without internal probe semantics default to provider (not unknown).
+  return 'provider_runtime';
 }
 
 /**

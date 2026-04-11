@@ -11,7 +11,7 @@
 
 2. **`cursorCallbackTruth.js`**  
    - 진행 허용: `provider_runtime`만.  
-   - 서명 콜백에 헤더 없으면 `provider_runtime`으로 간주(운영 경로); 명시적 비표준 값은 `unknown` → 전진 없음.
+   - 서명 콜백에 헤더 없으면 `provider_runtime`; 내부 probe가 아닌 임의 헤더 값도 **`provider_runtime`** (v13.73b, `COS_vNext13_73b_Exact_Provider_Callback_Schema_2026-04-01.md` 참고).
 
 3. **`providerEventCorrelator.js`**  
    - `cursor_callback_anchor.packet_id` 저장(해석 순서 3단계).

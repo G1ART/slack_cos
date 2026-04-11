@@ -35,7 +35,10 @@ const withOverride = extractAutomationResponseFields(
 assert.equal(withOverride.accepted_external_id, 'bc_override');
 assert.equal(withOverride.accepted_external_id_source, 'override');
 
-assert.equal(normalizeCursorWebhookPayload({ request_id: 'solo_req' }), null);
+// v13.73b: request_id fills accepted_external_id_hint → normalization accepts (correlation may still miss).
+const soloNorm = normalizeCursorWebhookPayload({ request_id: 'solo_req' });
+assert.ok(soloNorm);
+assert.equal(soloNorm.canonical.accepted_external_id_hint, 'solo_req');
 assert.ok(
   normalizeCursorWebhookPayload({ request_id: 'pair_only', paths_touched: ['a/x.txt'], status: 'done' }),
   'request_id + path fingerprint is a valid normalization basis (correlation may still miss)',

@@ -190,7 +190,7 @@ const rSyn = await getRunById(ridS);
 assert.equal(rSyn.packet_state_map.p73s, 'running');
 assert.ok(!rSyn.cursor_callback_anchor?.provider_structural_closure_at);
 
-// 5) Explicit unknown / non-provider header → no progression on emit_patch dispatch
+// 5) Non-probe header value → still treated as provider_runtime (v13.73b); progression applies
 const tkU = 'mention:v73:unk';
 const runU = await persistRunAfterDelegate({
   threadKey: tkU,
@@ -234,7 +234,8 @@ await handleCursorWebhookIngress({
   env: { CURSOR_WEBHOOK_SECRET: secret },
 });
 const rU = await getRunById(ridU);
-assert.equal(rU.packet_state_map.p73u, 'running');
+assert.equal(rU.packet_state_map.p73u, 'completed');
+assert.ok(rU.cursor_callback_anchor?.provider_structural_closure_at);
 
 // 6) Founder summary: strip stale live-only create_spec blocked lines
 const filtered = filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines([

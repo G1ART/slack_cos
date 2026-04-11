@@ -30,9 +30,9 @@ assert.equal(normalizeCursorWebhookPayload({}), null);
 
 const c3 = normalizeCursorWebhookPayload({ backgroundComposerId: 'bc_anchor_demo', status: 'completed' });
 assert.ok(c3);
-assert.equal(c3.canonical.accepted_external_id_hint, 'bc_anchor_demo');
+assert.equal(c3.canonical.external_run_id, 'bc_anchor_demo');
+assert.equal(c3.canonical.accepted_external_id_hint, null);
 assert.ok(String(c3.canonical.external_id).includes('bc_anchor_demo'));
-assert.equal(c3.canonical.external_run_id, null);
 
 const sec = 'cursor_canon_secret_test_min_len___';
 const orphan = Buffer.from(

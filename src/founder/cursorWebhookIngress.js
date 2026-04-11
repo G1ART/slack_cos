@@ -117,158 +117,172 @@ export function computeCursorWebhookFieldSelection(body, env = process.env) {
       job.type,
     ]) || 'statusChange';
 
-  const statusPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_STATUS_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        dataRun.status,
-        dataRun.state,
-        runRoot.status,
-        runRoot.state,
-        jobRun.status,
-        jobRun.state,
-        nestedRun.status,
-        nestedRun.state,
-        agent.status,
-        agent.state,
-        job.status,
-        job.state,
-        data.status,
-        data.state,
-        nested.status,
-        nested.state,
-        root.status,
-        root.state,
-        root.runStatus,
-      ]),
-      trace: 'heuristic:nested.status|state',
-    }),
-    selected_override_keys,
-  );
+  // Canonical root status beats env dot-path (v13.73 exact provider schema lock).
+  const statusExplicit = firstNonEmptyString([root.status, root.state, root.runStatus]);
+  /** @type {{ value: string, source: string }} */
+  let statusPick;
+  if (statusExplicit) {
+    statusPick = { value: statusExplicit, source: 'canonical:root.status' };
+  } else {
+    statusPick = pickString(
+      root,
+      'CURSOR_WEBHOOK_STATUS_PATH',
+      env,
+      () => ({
+        value: firstNonEmptyString([
+          dataRun.status,
+          dataRun.state,
+          runRoot.status,
+          runRoot.state,
+          jobRun.status,
+          jobRun.state,
+          nestedRun.status,
+          nestedRun.state,
+          agent.status,
+          agent.state,
+          job.status,
+          job.state,
+          data.status,
+          data.state,
+          nested.status,
+          nested.state,
+        ]),
+        trace: 'heuristic:nested.status|state',
+      }),
+      selected_override_keys,
+    );
+  }
   const statusRaw = String(statusPick.value || '').toLowerCase();
 
-  const runIdPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_RUN_ID_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        dataRun.id,
-        dataRun.runId,
-        dataRun.run_id,
-        jobRun.id,
-        nestedRun.id,
-        nestedRun.runId,
-        nestedRun.run_id,
-        runRoot.id,
-        runRoot.runId,
-        runRoot.run_id,
-        agent.runId,
-        agent.run_id,
-        agent.id,
-        job.runId,
-        job.run_id,
-        job.id,
-        data.runId,
-        data.run_id,
-        data.agentRunId,
-        data.cloudRunId,
-        nested.runId,
-        nested.run_id,
-        nested.agentRunId,
-        nested.cloudRunId,
-        root.runId,
-        root.run_id,
-        root.agentRunId,
-        root.cloudRunId,
-        root.externalRunId,
-        root.id,
-      ]),
-      trace: 'heuristic:run.id|runId',
-    }),
-    selected_override_keys,
-  );
-  const externalRunId = runIdPick.value;
+  // External run id: external_run_id → backgroundComposerId → env path → nested heuristics (composer is NOT accepted id).
+  const runIdPathEnv = String(env.CURSOR_WEBHOOK_RUN_ID_PATH || '').trim();
+  let externalRunId = firstNonEmptyString([root.external_run_id, root.externalRunId]);
+  let runIdPickSource = externalRunId ? 'canonical:external_run_id' : '';
+  if (!externalRunId) {
+    externalRunId = firstNonEmptyString([root.backgroundComposerId, root.background_composer_id]);
+    if (externalRunId) runIdPickSource = 'canonical:backgroundComposerId';
+  }
+  if (!externalRunId && runIdPathEnv) {
+    const v = getByDotPath(root, runIdPathEnv);
+    if (v != null && String(v).trim()) {
+      externalRunId = String(v).trim();
+      runIdPickSource = 'CURSOR_WEBHOOK_RUN_ID_PATH';
+      selected_override_keys.push('CURSOR_WEBHOOK_RUN_ID_PATH');
+    }
+  }
+  if (!externalRunId) {
+    externalRunId = firstNonEmptyString([
+      dataRun.id,
+      dataRun.runId,
+      dataRun.run_id,
+      jobRun.id,
+      nestedRun.id,
+      nestedRun.runId,
+      nestedRun.run_id,
+      runRoot.id,
+      runRoot.runId,
+      runRoot.run_id,
+      agent.runId,
+      agent.run_id,
+      agent.id,
+      job.runId,
+      job.run_id,
+      job.id,
+      data.runId,
+      data.run_id,
+      data.agentRunId,
+      data.cloudRunId,
+      nested.runId,
+      nested.run_id,
+      nested.agentRunId,
+      nested.cloudRunId,
+      root.runId,
+      root.run_id,
+      root.agentRunId,
+      root.cloudRunId,
+      root.id,
+    ]);
+    if (externalRunId) runIdPickSource = 'heuristic:run.id|runId';
+  }
+  const runIdPick = { value: externalRunId, source: runIdPickSource };
 
-  const threadPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_THREAD_KEY_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        context.thread_key,
-        context.threadKey,
-        data.thread_key,
-        data.threadKey,
-        job.thread_key,
-        job.threadKey,
-        nested.thread_key,
-        nested.threadKey,
-        root.thread_key,
-        root.threadKey,
-      ]),
-      trace: 'heuristic:context.threadKey',
-    }),
-    selected_override_keys,
-  );
-  const threadKeyHint = threadPick.value;
+  // Thread key: context.thread_key → root.thread_key → env path → nested heuristics.
+  const threadPathEnv = String(env.CURSOR_WEBHOOK_THREAD_KEY_PATH || '').trim();
+  let threadKeyHint = firstNonEmptyString([
+    context.thread_key,
+    context.threadKey,
+    root.thread_key,
+    root.threadKey,
+  ]);
+  let threadPickSource = threadKeyHint ? 'canonical:context.thread_key|root.thread_key' : '';
+  if (!threadKeyHint && threadPathEnv) {
+    const v = getByDotPath(root, threadPathEnv);
+    if (v != null && String(v).trim()) {
+      threadKeyHint = String(v).trim();
+      threadPickSource = 'CURSOR_WEBHOOK_THREAD_KEY_PATH';
+      selected_override_keys.push('CURSOR_WEBHOOK_THREAD_KEY_PATH');
+    }
+  }
+  if (!threadKeyHint) {
+    threadKeyHint = firstNonEmptyString([
+      data.thread_key,
+      data.threadKey,
+      job.thread_key,
+      job.threadKey,
+      nested.thread_key,
+      nested.threadKey,
+    ]);
+    if (threadKeyHint) threadPickSource = 'heuristic:thread_key';
+  }
+  const threadPick = { value: threadKeyHint, source: threadPickSource };
 
-  const packetPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_PACKET_ID_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        context.packet_id,
-        context.packetId,
-        data.packet_id,
-        data.packetId,
-        job.packet_id,
-        job.packetId,
-        nested.packet_id,
-        nested.packetId,
-        root.packet_id,
-        root.packetId,
-      ]),
-      trace: 'heuristic:packet_id',
-    }),
-    selected_override_keys,
-  );
-  const packetIdHint = packetPick.value;
+  // Packet id: context.packet_id → root.packet_id → env path → nested heuristics.
+  const packetPathEnv = String(env.CURSOR_WEBHOOK_PACKET_ID_PATH || '').trim();
+  let packetIdHint = firstNonEmptyString([
+    context.packet_id,
+    context.packetId,
+    root.packet_id,
+    root.packetId,
+  ]);
+  let packetPickSource = packetIdHint ? 'canonical:context.packet_id|root.packet_id' : '';
+  if (!packetIdHint && packetPathEnv) {
+    const v = getByDotPath(root, packetPathEnv);
+    if (v != null && String(v).trim()) {
+      packetIdHint = String(v).trim();
+      packetPickSource = 'CURSOR_WEBHOOK_PACKET_ID_PATH';
+      selected_override_keys.push('CURSOR_WEBHOOK_PACKET_ID_PATH');
+    }
+  }
+  if (!packetIdHint) {
+    packetIdHint = firstNonEmptyString([
+      data.packet_id,
+      data.packetId,
+      job.packet_id,
+      job.packetId,
+      nested.packet_id,
+      nested.packetId,
+    ]);
+    if (packetIdHint) packetPickSource = 'heuristic:packet_id';
+  }
+  const packetPick = { value: packetIdHint, source: packetPickSource };
 
+  // Accepted external id: accepted_external_id → request_id → env path only if still empty (never backgroundComposerId).
   const acceptedIdPathEnv = String(env.CURSOR_WEBHOOK_ACCEPTED_ID_PATH || '').trim();
-  /** @type {string} */
-  let acceptedExternalIdHint = '';
-  /** @type {string} */
-  let acceptedIdSource = '';
-  if (acceptedIdPathEnv) {
+  let acceptedExternalIdHint = firstNonEmptyString([root.accepted_external_id, root.acceptedExternalId]);
+  let acceptedIdSource = acceptedExternalIdHint ? 'canonical:accepted_external_id' : '';
+  if (!acceptedExternalIdHint) {
+    const rq = firstNonEmptyString([root.request_id, root.requestId]);
+    if (rq) {
+      acceptedExternalIdHint = rq;
+      acceptedIdSource = 'canonical:request_id';
+    }
+  }
+  if (!acceptedExternalIdHint && acceptedIdPathEnv) {
     const v = getByDotPath(root, acceptedIdPathEnv);
     if (v != null && String(v).trim()) {
       acceptedExternalIdHint = String(v).trim();
-      acceptedIdSource = acceptedIdPathEnv;
+      acceptedIdSource = 'CURSOR_WEBHOOK_ACCEPTED_ID_PATH';
       selected_override_keys.push('CURSOR_WEBHOOK_ACCEPTED_ID_PATH');
-    }
-  }
-  if (!acceptedExternalIdHint) {
-    const v = firstNonEmptyString([
-      root.backgroundComposerId,
-      root.composerId,
-      root.background_composer_id,
-      data.backgroundComposerId,
-      data.composerId,
-      data.background_composer_id,
-      nested.backgroundComposerId,
-      nested.composerId,
-      job.backgroundComposerId,
-      job.composerId,
-      agent.backgroundComposerId,
-      agent.composerId,
-    ]);
-    if (v) {
-      acceptedExternalIdHint = v;
-      acceptedIdSource = 'heuristic:accepted_external_id';
     }
   }
 
@@ -283,7 +297,12 @@ export function computeCursorWebhookFieldSelection(body, env = process.env) {
   ]);
 
   const pathsTouchedRaw = (() => {
-    const lists = [data.paths_touched, nested.paths_touched, job.paths_touched, root.paths_touched];
+    const lists = [
+      root.paths_touched,
+      data.paths_touched,
+      nested.paths_touched,
+      job.paths_touched,
+    ];
     for (const L of lists) {
       if (Array.isArray(L)) return L;
     }
@@ -351,46 +370,54 @@ export function computeCursorWebhookFieldSelection(body, env = process.env) {
   );
   const prUrlRaw = prPick.value;
 
-  const summaryPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_SUMMARY_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        dataRun.summary,
-        runRoot.summary,
-        data.summary,
-        job.message,
-        job.summary,
-        nested.summary,
-        nested.message,
-        root.summary,
-        root.message,
-        root.title,
-      ]),
-      trace: 'heuristic:summary|message',
-    }),
-    selected_override_keys,
-  );
+  const summaryExplicit = firstNonEmptyString([root.summary, root.message, root.title]);
+  /** @type {{ value: string, source: string }} */
+  let summaryPick;
+  if (summaryExplicit) {
+    summaryPick = { value: summaryExplicit, source: 'canonical:root.summary' };
+  } else {
+    summaryPick = pickString(
+      root,
+      'CURSOR_WEBHOOK_SUMMARY_PATH',
+      env,
+      () => ({
+        value: firstNonEmptyString([
+          dataRun.summary,
+          runRoot.summary,
+          data.summary,
+          job.message,
+          job.summary,
+          nested.summary,
+          nested.message,
+        ]),
+        trace: 'heuristic:summary|message',
+      }),
+      selected_override_keys,
+    );
+  }
   const summaryRaw = summaryPick.value;
 
-  const occurredPick = pickString(
-    root,
-    'CURSOR_WEBHOOK_OCCURRED_AT_PATH',
-    env,
-    () => ({
-      value: firstNonEmptyString([
-        root.occurred_at,
-        root.occurredAt,
-        root.timestamp,
-        nested.occurred_at,
-        data.occurred_at,
-        job.updatedAt,
-      ]),
-      trace: 'heuristic:occurred_at|timestamp',
-    }),
-    selected_override_keys,
-  );
+  const occurredExplicit = firstNonEmptyString([root.occurred_at, root.occurredAt, root.timestamp]);
+  /** @type {{ value: string, source: string }} */
+  let occurredPick;
+  if (occurredExplicit) {
+    occurredPick = { value: occurredExplicit, source: 'canonical:root.occurred_at' };
+  } else {
+    occurredPick = pickString(
+      root,
+      'CURSOR_WEBHOOK_OCCURRED_AT_PATH',
+      env,
+      () => ({
+        value: firstNonEmptyString([
+          nested.occurred_at,
+          data.occurred_at,
+          job.updatedAt,
+        ]),
+        trace: 'heuristic:occurred_at|timestamp',
+      }),
+      selected_override_keys,
+    );
+  }
   const occurredPickVal = occurredPick.value;
 
   return {
