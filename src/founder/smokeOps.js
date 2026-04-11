@@ -227,6 +227,9 @@ export function formatOpsSmokeFounderFacingLines(s) {
       ? `콜백_완료_상태: ${cbState.slice(0, 120)}`
       : '콜백_완료_상태: (미분류)',
   );
+  if (cbState === 'provider_callback_ingress_matched_not_closed') {
+    lines.push('(내부) 프로바이더_인그레스_매칭만_됨 — 구조적_클로저_미적용');
+  }
   lines.push(
     s.repository_reflection_observed
       ? '부가(2차): 저장소/깃허브 반사 신호 있음 — 1차 완료로 취급하지 않음.'
@@ -718,6 +721,8 @@ const PHASE_SORT_ORDER = [
   'manual_probe_external_callback_matched',
   'synthetic_external_callback_matched',
   'external_callback_matched',
+  'authoritative_callback_closure_applied',
+  'callback_correlated_but_closure_not_applied',
   'github_secondary_recovery_matched',
   'github_fallback_evidence',
   'callback_orchestrator_pending',
@@ -867,8 +872,14 @@ function syntheticCallbackClosureSeen(seen) {
  * @param {Set<string>} seen
  */
 function computeCallbackCompletionState(seen) {
+  if (seen.has('authoritative_callback_closure_applied')) {
+    return 'authoritative_callback_closure_applied';
+  }
+  if (seen.has('callback_correlated_but_closure_not_applied')) {
+    return 'callback_correlated_but_closure_not_applied';
+  }
   if (seen.has('cursor_provider_callback_correlated') || seen.has('external_callback_matched')) {
-    return 'provider_callback_matched';
+    return 'provider_callback_ingress_matched_not_closed';
   }
   if (seen.has('cursor_synthetic_callback_correlated') || seen.has('synthetic_external_callback_matched')) {
     return 'synthetic_callback_matched';
@@ -880,7 +891,7 @@ function computeCallbackCompletionState(seen) {
   ) {
     return 'manual_probe_callback_matched';
   }
-  if (seen.has('cursor_unknown_source_callback_correlated')) return 'unknown_source_callback_matched';
+  if (seen.has('cursor_unknown_source_callback_correlated')) return 'unknown_source_callback_correlated';
   return null;
 }
 
@@ -1076,7 +1087,11 @@ export function aggregateSmokeSessionProgress(rows) {
     }
   }
 
-  if ((provOnly || synOnly) && !seen.has('run_packet_progression_patched')) {
+  if (seen.has('callback_correlated_but_closure_not_applied')) {
+    final_status = 'callback_correlated_but_closure_not_applied';
+  } else if (seen.has('authoritative_callback_closure_applied')) {
+    final_status = 'authoritative_callback_closure_applied';
+  } else if ((provOnly || synOnly) && !seen.has('run_packet_progression_patched')) {
     if (final_status === 'cursor_callback_correlated') {
       final_status = 'callback_correlated_without_progression_patch';
     } else if (final_status === 'synthetic_callback_correlated') {
@@ -1092,9 +1107,9 @@ export function aggregateSmokeSessionProgress(rows) {
     callback_completion_state: cbState,
   });
   const emit_patch_structural_closure_complete = Boolean(
-    (provOnly || synOnly || ghClosed) &&
+    (seen.has('authoritative_callback_closure_applied') || ghClosed) &&
       seen.has('run_packet_progression_patched') &&
-      seen.has('supervisor_wake_enqueued'),
+      (seen.has('supervisor_wake_enqueued') || seen.has('authoritative_callback_closure_applied')),
   );
 
   return {
@@ -1592,6 +1607,8 @@ export function inferSelectedExecutionLaneFromAgg(agg) {
   const seen = new Set(Array.isArray(agg?.phases_seen) ? agg.phases_seen : []);
   const fs = String(agg?.final_status || '');
   if (
+    fs === 'authoritative_callback_closure_applied' ||
+    fs === 'callback_correlated_but_closure_not_applied' ||
     fs === 'cursor_callback_correlated' ||
     fs === 'callback_correlated_without_progression_patch' ||
     fs === 'synthetic_callback_correlated' ||
@@ -2073,6 +2090,12 @@ export async function recordOpsSmokeCursorTrigger(p) {
  *   canonForOut: { bucket?: string },
  *   ingressEvidence: Record<string, unknown>,
  *   cursorPacketPatched: boolean,
+ *   progression_skipped_reason?: string | null,
+ *   authoritative_closure_applied?: boolean,
+ *   closure_not_applied_reason?: string | null,
+ *   emit_patch_authoritative_path?: boolean,
+ *   supervisor_wake_enqueued?: boolean,
+ *   idempotent_closure_repeat?: boolean,
  * }} p
  */
 export async function recordOpsSmokeAfterExternalMatch(p) {
@@ -2116,6 +2139,33 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
     },
   });
 
+  const emitPatchPath = p.emit_patch_authoritative_path === true;
+  const authApplied = p.authoritative_closure_applied === true;
+  const idem = p.idempotent_closure_repeat === true;
+
+  if (emitPatchPath && authApplied && !idem) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      phase: 'authoritative_callback_closure_applied',
+      detail: {},
+    });
+  } else if (emitPatchPath && !authApplied) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      phase: 'callback_correlated_but_closure_not_applied',
+      detail: {
+        closure_not_applied_reason:
+          p.closure_not_applied_reason != null
+            ? String(p.closure_not_applied_reason).slice(0, 120)
+            : 'unknown',
+      },
+    });
+  }
+
   if (p.cursorPacketPatched) {
     await recordOpsSmokePhase({
       env,
@@ -2126,13 +2176,17 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
     });
   }
 
-  await recordOpsSmokePhase({
-    env,
-    runId,
-    threadKey,
-    phase: 'supervisor_wake_enqueued',
-    detail: {},
-  });
+  const wake = p.supervisor_wake_enqueued !== false;
+  const skipWakePhase = idem && !p.cursorPacketPatched;
+  if (wake && !skipWakePhase) {
+    await recordOpsSmokePhase({
+      env,
+      runId,
+      threadKey,
+      phase: 'supervisor_wake_enqueued',
+      detail: {},
+    });
+  }
 }
 
 /**

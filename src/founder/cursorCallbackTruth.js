@@ -15,18 +15,18 @@ export function deriveCursorCallbackSourceKindFromHeaders(headers) {
   if (v === '1' || v === 'true' || v === 'manual' || v === 'manual_probe') return 'manual_probe';
   if (v === 'synthetic_orchestrator' || v === 'synthetic') return 'synthetic_orchestrator';
   if (v === 'provider' || v === 'provider_runtime') return 'provider_runtime';
+  if (!v) return 'provider_runtime';
   return 'unknown';
 }
 
 /**
- * Only provider-signed (or unsigned legacy) callbacks may advance packet/run state.
- * Synthetic orchestrator + manual probe are evidence-only (vNext.13.72).
+ * vNext.13.73 — Only explicit provider_runtime may advance packet/run state for authoritative closure.
+ * synthetic_orchestrator / manual_probe / unknown are evidence-only (no progression).
  * @param {string | null | undefined} callbackSourceKind
  */
 export function allowsAuthoritativeCursorPacketProgression(callbackSourceKind) {
   const k = String(callbackSourceKind || '').trim().toLowerCase();
-  if (k === 'synthetic_orchestrator' || k === 'manual_probe') return false;
-  return true;
+  return k === 'provider_runtime';
 }
 
 /**

@@ -45,12 +45,20 @@ function starterKickWasCloudEmitPatch(run) {
   return String(oc.execution_lane || '') === 'cloud_agent';
 }
 
-function runHasProviderStructuralClosure(run) {
+/** vNext.13.73 — closure marker must match the emit_patch packet that is actually terminal. */
+function runHasAuthoritativeEmitPatchStructuralClosure(run) {
   const a =
     run.cursor_callback_anchor && typeof run.cursor_callback_anchor === 'object'
       ? /** @type {Record<string, unknown>} */ (run.cursor_callback_anchor)
       : {};
-  return Boolean(a.provider_structural_closure_at);
+  if (!a.provider_structural_closure_at) return false;
+  const closurePkt = String(a.provider_structural_closure_packet_id || '').trim();
+  if (!closurePkt) return false;
+  const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String) : [];
+  if (!req.includes(closurePkt)) return false;
+  const psm = run.packet_state_map && typeof run.packet_state_map === 'object' ? run.packet_state_map : {};
+  const st = String(psm[closurePkt] || '');
+  return st === 'completed' || st === 'failed' || st === 'skipped';
 }
 
 /**
@@ -81,11 +89,7 @@ export async function processRunMilestones(p) {
 
   if (kick && kick.executed && !run.founder_notified_started_at) {
     if (status === 'completed' || status === 'blocked' || status === 'failed' || status === 'review_required') {
-      if (
-        status === 'completed' &&
-        starterKickWasCloudEmitPatch(run) &&
-        !runHasProviderStructuralClosure(run)
-      ) {
+      if (starterKickWasCloudEmitPatch(run)) {
         const textStart = renderStartedMilestone({
           objective,
           tool: String(kick.tool || ''),
@@ -107,7 +111,9 @@ export async function processRunMilestones(p) {
       }
       let text = '';
       if (status === 'completed') {
-        const lines = await readExecutionSummaryForRun(run, 4);
+        const lines = await readExecutionSummaryForRun(run, 4, {
+          suppressStaleLiveOnlyCreateSpecLeak: starterKickWasCloudEmitPatch(run),
+        });
         text = renderEagerCombinedMilestone({
           objective,
           tool: String(kick.tool || ''),
@@ -235,10 +241,12 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'completed' && !run.founder_notified_completed_at) {
-    if (starterKickWasCloudEmitPatch(run) && !runHasProviderStructuralClosure(run)) {
+    if (starterKickWasCloudEmitPatch(run) && !runHasAuthoritativeEmitPatchStructuralClosure(run)) {
       return null;
     }
-    const lines = await readExecutionSummaryForRun(run, 5);
+    const lines = await readExecutionSummaryForRun(run, 5, {
+      suppressStaleLiveOnlyCreateSpecLeak: starterKickWasCloudEmitPatch(run),
+    });
     const text = renderCompletedMilestone({ objective, summary_lines: lines });
     const r = await sendFounderResponse({
       client: p.client,
