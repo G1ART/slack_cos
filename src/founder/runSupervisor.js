@@ -36,6 +36,23 @@ const OWNER_ID = `${process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || 'l
 /** @type {Set<string>} */
 const tickInflight = new Set();
 
+/** vNext.13.72 — founder completed requires provider callback + packet progression (anchor marker). */
+function starterKickWasCloudEmitPatch(run) {
+  const kick = run.starter_kickoff && typeof run.starter_kickoff === 'object' ? run.starter_kickoff : {};
+  if (!kick.executed) return false;
+  if (String(kick.tool) !== 'cursor' || String(kick.action) !== 'emit_patch') return false;
+  const oc = kick.outcome && typeof kick.outcome === 'object' ? kick.outcome : {};
+  return String(oc.execution_lane || '') === 'cloud_agent';
+}
+
+function runHasProviderStructuralClosure(run) {
+  const a =
+    run.cursor_callback_anchor && typeof run.cursor_callback_anchor === 'object'
+      ? /** @type {Record<string, unknown>} */ (run.cursor_callback_anchor)
+      : {};
+  return Boolean(a.provider_structural_closure_at);
+}
+
 /**
  * @param {{ run: Record<string, unknown>, client: import('@slack/web-api').WebClient, constitutionSha256: string }} p
  * @returns {Promise<string | null>}
@@ -64,6 +81,30 @@ export async function processRunMilestones(p) {
 
   if (kick && kick.executed && !run.founder_notified_started_at) {
     if (status === 'completed' || status === 'blocked' || status === 'failed' || status === 'review_required') {
+      if (
+        status === 'completed' &&
+        starterKickWasCloudEmitPatch(run) &&
+        !runHasProviderStructuralClosure(run)
+      ) {
+        const textStart = renderStartedMilestone({
+          objective,
+          tool: String(kick.tool || ''),
+          action: String(kick.action || ''),
+        });
+        const rStart = await sendFounderResponse({
+          client: p.client,
+          channel: routing.channel,
+          thread_ts: routing.thread_ts || undefined,
+          text: textStart,
+          constitutionSha256: p.constitutionSha256,
+        });
+        if (rStart.ok) {
+          await patchRunById(String(run.id), { founder_notified_started_at: now });
+          await recordOpsSmokeMilestone('started');
+          return 'started';
+        }
+        return null;
+      }
       let text = '';
       if (status === 'completed') {
         const lines = await readExecutionSummaryForRun(run, 4);
@@ -194,6 +235,9 @@ export async function processRunMilestones(p) {
   }
 
   if (status === 'completed' && !run.founder_notified_completed_at) {
+    if (starterKickWasCloudEmitPatch(run) && !runHasProviderStructuralClosure(run)) {
+      return null;
+    }
     const lines = await readExecutionSummaryForRun(run, 5);
     const text = renderCompletedMilestone({ objective, summary_lines: lines });
     const r = await sendFounderResponse({

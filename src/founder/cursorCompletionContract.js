@@ -14,6 +14,7 @@ export const EMIT_PATCH_COMPLETION_CONTRACT_KEY = 'cos_emit_patch_completion_con
  *   fullCallbackUrl: string,
  *   requestId: string,
  *   payload: Record<string, unknown>,
+ *   completionContext?: { thread_key?: string | null, packet_id?: string | null },
  * }} p
  * @returns {Record<string, unknown> | null}
  */
@@ -33,10 +34,14 @@ export function buildEmitPatchCompletionContractBlock(p) {
   const pl = p.payload && typeof p.payload === 'object' && !Array.isArray(p.payload) ? p.payload : {};
   const pathsTouchedExpected = listNormalizedEmitPatchPathsForAnchor(pl).slice(0, 48);
   const rid = String(p.requestId || '').trim();
+  const ctx = p.completionContext && typeof p.completionContext === 'object' ? p.completionContext : {};
+  const ctxTk = String(ctx.thread_key || '').trim();
+  const ctxPk = String(ctx.packet_id || '').trim();
 
   return {
     version: 1,
     contract_name: 'cos_emit_patch_completion_v1',
+    completion_authority: 'signed_cursor_webhook_callback',
     expected_primary_closure: 'signed_webhook_post',
     callback_url_path_hint: callbackUrlPathHint || null,
     trigger_callback_url_field_name: d.callback_url_field_name,
@@ -47,6 +52,19 @@ export function buildEmitPatchCompletionContractBlock(p) {
       message: 'raw_utf8_json_body_bytes',
       secret_env: 'CURSOR_WEBHOOK_SECRET',
       digest_prefix: 'sha256=',
+    },
+    required_callback_fields: ['status', 'request_id', 'paths_touched', 'occurred_at'],
+    strongly_preferred_callback_fields: [
+      'accepted_external_id',
+      'external_run_id',
+      'backgroundComposerId',
+      'summary',
+      'context.thread_key',
+      'context.packet_id',
+    ],
+    recommended_callback_context: {
+      ...(ctxTk ? { thread_key: ctxTk } : {}),
+      ...(ctxPk ? { packet_id: ctxPk } : {}),
     },
     minimum_callback_body_fields: [
       'status',

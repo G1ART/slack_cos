@@ -32,6 +32,7 @@ import {
   resolveCursorPacketStateAuthority,
   externalBucketToDesiredPacketState,
 } from './externalRunStatus.js';
+import { allowsAuthoritativeCursorPacketProgression } from './cursorCallbackTruth.js';
 
 /**
  * @param {string} provider
@@ -286,6 +287,39 @@ export async function applyExternalCursorPacketProgress(threadKey, packetId, can
 /**
  * @returns {Promise<boolean>} true if run row was patched
  */
+/**
+ * Correlation row may omit packet_id; webhook may carry packet_id_hint; else infer running emit_patch packet.
+ * @param {Record<string, unknown> | null | undefined} runRow
+ * @param {Record<string, unknown>} corr
+ * @param {CanonicalExternalEvent} canonical
+ */
+export function resolveEffectiveCursorPacketId(runRow, corr, canonical) {
+  if (String(canonical.provider || '') !== 'cursor') {
+    return corr.packet_id != null ? String(corr.packet_id).trim() : '';
+  }
+  let pkt = corr.packet_id != null ? String(corr.packet_id).trim() : '';
+  if (!pkt && canonical.packet_id_hint) pkt = String(canonical.packet_id_hint).trim();
+  if (!pkt && runRow) {
+    const anchor =
+      runRow.cursor_callback_anchor && typeof runRow.cursor_callback_anchor === 'object'
+        ? /** @type {Record<string, unknown>} */ (runRow.cursor_callback_anchor)
+        : {};
+    if (String(anchor.action || '') === 'emit_patch') {
+      const psm =
+        runRow.packet_state_map && typeof runRow.packet_state_map === 'object'
+          ? /** @type {Record<string, string>} */ (runRow.packet_state_map)
+          : {};
+      const req = Array.isArray(runRow.required_packet_ids) ? runRow.required_packet_ids.map(String) : [];
+      for (const id of req) {
+        if (String(psm[id] || '') === 'running') return id;
+      }
+      const cur = runRow.current_packet_id != null ? String(runRow.current_packet_id).trim() : '';
+      if (cur) return cur;
+    }
+  }
+  return pkt;
+}
+
 export async function applyExternalCursorPacketProgressForRun(runId, packetId, canonical) {
   const rid = String(runId || '').trim();
   const pid = String(packetId || '').trim();
@@ -365,6 +399,9 @@ export async function applyExternalCursorPacketProgressForRun(runId, packetId, c
  *   matched_by?: string | null,
  *   payload_fingerprint_prefix?: string | null,
  *   ingress_evidence?: Record<string, unknown>,
+ *   callback_source_kind?: string | null,
+ *   callback_match_basis?: string | null,
+ *   callback_verification_kind?: string | null,
  * }} [ingressMeta]
  * @returns {Promise<{ matched: boolean, httpBody: string, canonical_status?: string }>}
  */
@@ -444,7 +481,44 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     }
   }
 
-  await appendCosRunEventForRun(runId, eventType, {
+  const callbackSourceKind =
+    meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'unknown';
+  const allowProg =
+    canonical.provider === 'cursor' && allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
+
+  const pktEff = resolveEffectiveCursorPacketId(runRow, corr, canonical);
+
+  /** @type {string | null} */
+  let progression_skipped_reason = null;
+  let cursorPacketPatched = false;
+  if (canonical.provider === 'cursor' && allowProg && pktEff) {
+    cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pktEff, canonical);
+    if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
+  } else if (canonical.provider === 'cursor' && allowProg && !pktEff) {
+    progression_skipped_reason = 'missing_target_packet_id';
+  } else if (canonical.provider === 'cursor' && !allowProg) {
+    progression_skipped_reason = 'non_provider_callback_source';
+  }
+
+  const authoritative_packet_progression =
+    allowProg && cursorPacketPatched && (callbackSourceKind === 'provider_runtime' || callbackSourceKind === 'unknown');
+
+  if (authoritative_packet_progression) {
+    const prevAnchor =
+      runRow.cursor_callback_anchor && typeof runRow.cursor_callback_anchor === 'object'
+        ? /** @type {Record<string, unknown>} */ (runRow.cursor_callback_anchor)
+        : {};
+    const nextAnchor = { ...prevAnchor, provider_structural_closure_at: new Date().toISOString() };
+    if (pktEff) nextAnchor.provider_structural_closure_packet_id = pktEff;
+    try {
+      await patchRunById(runId, { cursor_callback_anchor: nextAnchor });
+    } catch (e) {
+      console.error('[cos_provider_structural_closure]', e);
+    }
+  }
+
+  /** @type {Record<string, unknown>} */
+  const eventPayload = {
     canonical_provider: canonical.provider,
     canonical_event_type: canonical.event_type,
     external_id: canonical.external_id,
@@ -453,21 +527,26 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     occurred_at: canonical.occurred_at,
     correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
     payload: canonical.payload,
-    cos_callback_closure_source:
-      meta.callback_source_kind != null ? String(meta.callback_source_kind).slice(0, 32) : 'unknown',
-  }, {
+  };
+  if (canonical.provider === 'cursor') {
+    Object.assign(eventPayload, {
+      cos_callback_closure_source: callbackSourceKind,
+      cos_callback_match_basis:
+        meta.callback_match_basis != null ? String(meta.callback_match_basis).slice(0, 40) : null,
+      cos_effective_packet_id: pktEff || null,
+      cos_packet_progression_applied: cursorPacketPatched,
+      cos_packet_progression_skipped_reason: progression_skipped_reason,
+      cos_authoritative_packet_progression: authoritative_packet_progression,
+      target_run_id: runId,
+      target_packet_id_resolved: pktEff || null,
+    });
+  }
+
+  await appendCosRunEventForRun(runId, eventType, eventPayload, {
     matched_by: meta.matched_by ?? null,
     canonical_status: cs,
     payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
   });
-
-  const pkt = corr.packet_id != null ? String(corr.packet_id).trim() : '';
-
-  let cursorPacketPatched = false;
-  if (canonical.provider === 'cursor' && pkt) {
-    cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, pkt, canonical);
-  }
-  // GitHub webhooks remain secondary evidence only (vNext.13.52): do not advance packets / run terminal state from GitHub alone.
 
   await signalSupervisorWakeForRun(threadKey, runId);
 
@@ -482,6 +561,7 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
         canonForOut,
         ingressEvidence,
         cursorPacketPatched,
+        progression_skipped_reason,
       });
     }
   } catch (e) {

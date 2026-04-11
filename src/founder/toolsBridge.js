@@ -23,6 +23,7 @@ import {
   automationEndpointHostOnly,
   isCursorAutomationSmokeMode,
   acceptanceResponseHasCallbackMetadataKeys,
+  computeEmitPatchCursorAutomationTruth,
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
@@ -1445,7 +1446,20 @@ export async function invokeExternalTool(spec, ctx = {}) {
   }
 
   const tr = automationLaneActive
-    ? await triggerCursorAutomation({ action, payload, env, invocation_id })
+    ? await triggerCursorAutomation({
+        action,
+        payload,
+        env,
+        invocation_id,
+        ...(tool === 'cursor' && action === 'emit_patch' && threadKey
+          ? {
+              completionContext: {
+                thread_key: threadKey,
+                packet_id: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
+              },
+            }
+          : {}),
+      })
     : null;
 
   if (automationLaneActive && tr && threadKey && cosRunId) {
@@ -1484,6 +1498,15 @@ export async function invokeExternalTool(spec, ctx = {}) {
       automation_branch_raw: tr.automation_branch_raw ?? null,
       callback_metadata_present: callbackMetadataPresent,
       callback_capability_observed: callbackCapabilityObserved,
+      ...(tool === 'cursor' && action === 'emit_patch'
+        ? {
+            emit_patch_cursor_automation_truth: computeEmitPatchCursorAutomationTruth(
+              tr && typeof tr === 'object' ? /** @type {Record<string, unknown>} */ (tr) : {},
+              payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {},
+              env,
+            ),
+          }
+        : {}),
     };
   }
 
@@ -1661,6 +1684,19 @@ export async function invokeExternalTool(spec, ctx = {}) {
           error_code = 'emit_patch_callback_contract_unsatisfied';
           result_summary = `degraded / cloud_agent / cursor:emit_patch — dispatch accepted but webhook closure contract cannot be satisfied`;
         }
+      }
+      if (
+        tool === 'cursor' &&
+        action === 'emit_patch' &&
+        callbackContractSnapshot &&
+        callbackContractSnapshot.callback_contract_present !== true &&
+        status !== 'degraded'
+      ) {
+        status = 'degraded';
+        outcome_code = TOOL_OUTCOME_CODES.DEGRADED_FROM_LIVE_FAILURE;
+        degraded_from = 'emit_patch_cloud_requires_callback_contract';
+        error_code = 'emit_patch_callback_contract_not_configured';
+        result_summary = `degraded / cloud_agent / cursor:emit_patch — outbound callback contract not configured (CURSOR_AUTOMATION_CALLBACK_CONTRACT_ENABLED + URL + secret)`;
       }
     } catch (e) {
       fallback_reason = String(e?.message || e).slice(0, 300);

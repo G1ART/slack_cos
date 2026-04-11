@@ -19,6 +19,17 @@ export function deriveCursorCallbackSourceKindFromHeaders(headers) {
 }
 
 /**
+ * Only provider-signed (or unsigned legacy) callbacks may advance packet/run state.
+ * Synthetic orchestrator + manual probe are evidence-only (vNext.13.72).
+ * @param {string | null | undefined} callbackSourceKind
+ */
+export function allowsAuthoritativeCursorPacketProgression(callbackSourceKind) {
+  const k = String(callbackSourceKind || '').trim().toLowerCase();
+  if (k === 'synthetic_orchestrator' || k === 'manual_probe') return false;
+  return true;
+}
+
+/**
  * @param {string | null | undefined} matchedBy from correlation meta
  * @returns {CursorCallbackMatchBasis}
  */

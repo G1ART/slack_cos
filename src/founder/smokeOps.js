@@ -2108,6 +2108,11 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
         callback_verification_kind:
           meta.callback_verification_kind != null ? String(meta.callback_verification_kind) : null,
       }),
+      ...(p.cursorPacketPatched
+        ? {}
+        : p.progression_skipped_reason != null && String(p.progression_skipped_reason).trim()
+          ? { progression_skipped_reason: String(p.progression_skipped_reason).slice(0, 120) }
+          : {}),
     },
   });
 

@@ -5,6 +5,7 @@
 
 import crypto from 'node:crypto';
 import { deriveAutomationResponseWinningSource } from './cursorEnvParsingTruth.js';
+import { computeEmitPatchPayloadPathFingerprint } from './cursorCallbackGate.js';
 import { buildEmitPatchCompletionContractBlock, EMIT_PATCH_COMPLETION_CONTRACT_KEY } from './cursorCompletionContract.js';
 
 /** @type {{ fn: typeof fetch | null }} */
@@ -443,6 +444,31 @@ export function deriveOutboundCallbackContractReason(env = process.env) {
  * @param {Record<string, unknown> | null | undefined} tr
  * @param {NodeJS.ProcessEnv} [env]
  */
+/**
+ * Downstream truth for emit_patch Cursor automation acceptance (no extra logging).
+ * @param {Record<string, unknown> | null | undefined} tr triggerCursorAutomation result
+ * @param {Record<string, unknown>} payload outbound payload (pre-trigger)
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function computeEmitPatchCursorAutomationTruth(tr, payload, env = process.env) {
+  const d = describeTriggerCallbackContractForOps(env);
+  const pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const fp = computeEmitPatchPayloadPathFingerprint(pl);
+  const row = tr && typeof tr === 'object' ? tr : {};
+  const echo = acceptanceResponseHasCallbackMetadataKeys(row, env);
+  return {
+    callback_contract_enabled_flag: d.callback_contract_enabled_flag,
+    callback_contract_present: d.callback_contract_present,
+    callback_metadata_echoed_on_acceptance: echo,
+    request_id_present: Boolean(String(row.request_id || '').trim()),
+    accepted_external_id_present: Boolean(String(row.accepted_external_id || '').trim()),
+    external_run_id_present: Boolean(String(row.external_run_id || '').trim()),
+    emit_patch_path_fingerprint_derivable: Boolean(fp),
+    accepted_without_callback_contract_echo:
+      row.ok === true && d.callback_contract_present === true && !echo,
+  };
+}
+
 export function acceptanceResponseHasCallbackMetadataKeys(tr, env = process.env) {
   const keys = Array.isArray(tr?.response_top_level_keys)
     ? tr.response_top_level_keys.map((k) => String(k))
@@ -493,6 +519,7 @@ export function mergeCallbackContractIntoTriggerBody(base, env = process.env) {
  *   env?: NodeJS.ProcessEnv,
  *   invocation_id?: string,
  *   timeoutMs?: number,
+ *   completionContext?: { thread_key?: string | null, packet_id?: string | null },
  * }} opts
  */
 export async function triggerCursorAutomation(opts) {
@@ -555,6 +582,7 @@ export async function triggerCursorAutomation(opts) {
       fullCallbackUrl: fullUrl,
       requestId: request_id,
       payload: pl,
+      completionContext: opts.completionContext,
     });
     if (block) bodyObj[EMIT_PATCH_COMPLETION_CONTRACT_KEY] = block;
   }
