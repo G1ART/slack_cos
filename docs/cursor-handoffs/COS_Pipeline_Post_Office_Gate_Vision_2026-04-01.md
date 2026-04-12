@@ -67,6 +67,7 @@
 |----|-----------|
 | 게이트·요약 | `npm run verify:parcel-post-office` — `scripts/verify-parcel-post-office.mjs` 가 게이트 불변식·뷰 SSOT·병합 예산·스트림 경로 목업·감사 스킵·웹훅 wake·런 스코프 wake 회귀를 한 번에 돈다 (Slack/OpenAI/실 DB 불필요). |
 | 전체 회귀 | `npm test` 통과. |
+| 성능 계약(콜백·집계·strict recovery 가드) | `npm run verify:performance-contract` 통과. 문서: `COS_Performance_Contract_Ultimate_Goal_And_Roadmap_2026-04-12.md`. |
 | 프로덕션 관측 | Supabase 자격이 있는 환경에서 `npm run audit:parcel-health` — `ok: true` 이고 `warnings` 가 비면 런타임 하드 게이트 양호; `advisory` 만 있으면 D1 이중기록 구간에서 흔한 고아 비율 안내(장애 아님). |
 | 사람 확인 | `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` 등으로 요약 문맥이 기대와 맞는지(문구·상한은 환경 의존). |
 
@@ -84,6 +85,7 @@
 ## Owner actions
 
 - 빠른 축 확인: `npm run verify:parcel-post-office`
+- 성능 계약 묶음: `npm run verify:performance-contract`
 - 전체: `npm test`
 - 프로덕션 DB: `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (레거시 복제 감사는 `--intake-replicate-all`)
 - **슬랙까지 “완전 끝”을 주장하려면**: 운영 앱 기준으로 파운더 스레드에서 짧은 스모크 1회(또는 동일 조건 스테이징). 생략하면 백엔드 계약만 증명된 것이다(5절 표).

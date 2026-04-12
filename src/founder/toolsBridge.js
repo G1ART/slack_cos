@@ -27,7 +27,10 @@ import {
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
-import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
+import {
+  emitPatchHasCloudContractSource,
+  shouldSkipGithubRecoveryEnvelopeRegistration,
+} from './livePatchPayload.js';
 import { getExecutionProfileForThread, evaluateCursorActionAgainstProfile } from './executionProfile.js';
 import {
   mergeEmitPatchPayloadForDispatch,
@@ -1643,21 +1646,32 @@ export async function invokeExternalTool(spec, ctx = {}) {
       }
       if (tool === 'cursor' && action === 'emit_patch' && cosRunId && threadKey) {
         try {
-          const { registerRecoveryEnvelopeFromEmitPatchAccept } = await import('./resultRecoveryBridge.js');
-          await registerRecoveryEnvelopeFromEmitPatchAccept({
-            env,
-            runId: cosRunId,
-            threadKey,
-            packetId: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
-            acceptedExternalId:
-              String(tr.accepted_external_id || '').trim() ||
-              String(tr.external_run_id || '').trim() ||
-              null,
-            smoke_session_id: opsSmokeSessionId != null && String(opsSmokeSessionId).trim()
-              ? String(opsSmokeSessionId).trim()
-              : null,
-            payload,
-          });
+          const plObj = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+          if (shouldSkipGithubRecoveryEnvelopeRegistration(env, plObj)) {
+            console.info(
+              JSON.stringify({
+                event: 'cos_github_recovery_envelope_skipped',
+                reason: 'strict_live_emit_patch_provider_only',
+                run_id_tail: String(cosRunId).slice(-12),
+              }),
+            );
+          } else {
+            const { registerRecoveryEnvelopeFromEmitPatchAccept } = await import('./resultRecoveryBridge.js');
+            await registerRecoveryEnvelopeFromEmitPatchAccept({
+              env,
+              runId: cosRunId,
+              threadKey,
+              packetId: runPacketId != null && String(runPacketId).trim() ? String(runPacketId).trim() : null,
+              acceptedExternalId:
+                String(tr.accepted_external_id || '').trim() ||
+                String(tr.external_run_id || '').trim() ||
+                null,
+              smoke_session_id: opsSmokeSessionId != null && String(opsSmokeSessionId).trim()
+                ? String(opsSmokeSessionId).trim()
+                : null,
+              payload,
+            });
+          }
         } catch (e) {
           console.error('[result_recovery_bridge]', e);
         }

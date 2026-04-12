@@ -222,3 +222,16 @@ export function formatEmitPatchMachineBlockedHints(prep) {
   }
   return out;
 }
+
+/**
+ * `COS_STRICT_LIVE_EMIT_PATCH_PROVIDER_ONLY=1` 이면 narrow delegate `live_patch`(live_only+no_fallback+path/op/content)에 대해
+ * GitHub push secondary recovery envelope 등록을 건너뜀 — 완료 권위는 프로바이더 콜백만.
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined> | null | undefined} env
+ * @param {Record<string, unknown> | null | undefined} payload
+ * @returns {boolean}
+ */
+export function shouldSkipGithubRecoveryEnvelopeRegistration(env, payload) {
+  const e = env && typeof env === 'object' ? env : process.env;
+  if (String(e?.COS_STRICT_LIVE_EMIT_PATCH_PROVIDER_ONLY || '').trim() !== '1') return false;
+  return detectNarrowLivePatchFromPayload(payload) != null;
+}
