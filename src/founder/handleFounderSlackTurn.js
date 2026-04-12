@@ -139,7 +139,7 @@ export async function handleFounderSlackTurn(ctx) {
   };
 
   return {
-    answer: out.text,
+    starter_ack: out.starter_ack,
     threadKey,
     userTurn,
     assistantTurnCandidate,

@@ -1,14 +1,19 @@
 /**
- * vNext.13.57 — Live-only execution profile rejects create_spec at adapter boundary (explicit policy, not invalid_payload).
+ * vNext.13.57 / 13.79 — Execution profile still marks create_spec as disallowed on live_only_emit_patch; adapter no longer emits CREATE_SPEC_DISALLOWED policy block.
  */
 import assert from 'node:assert';
 import path from 'path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { invokeExternalTool, CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE } from '../src/founder/toolsBridge.js';
+import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import { stashDelegateEmitPatchContext, __resetDelegateEmitPatchStashForTests } from '../src/founder/delegateEmitPatchStash.js';
 import { getExecutionProfileForThread, evaluateCursorActionAgainstProfile } from '../src/founder/executionProfile.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+assert.ok(
+  !fs.readFileSync(path.join(__dirname, '..', 'src/founder/toolsBridge.js'), 'utf8').includes('CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE'),
+);
+
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-v13-57-policy');
 process.env.COS_RUN_STORE = 'memory';
 delete process.env.SUPABASE_URL;
@@ -36,11 +41,8 @@ const r = await invokeExternalTool(
   { tool: 'cursor', action: 'create_spec', payload: { title: 't', body: 'b' } },
   { threadKey: tk },
 );
-assert.equal(r.status, 'blocked');
-assert.equal(r.policy_rejection, true);
-assert.equal(r.rejection_kind, 'execution_profile');
-assert.ok(String(r.result_summary || '').includes('blocked / policy'));
-assert.ok(String(r.result_summary || '').includes(CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE));
+assert.ok(!String(r.result_summary || '').includes('create_spec_disallowed_in_live_only_mode'));
+assert.notEqual(r.policy_rejection, true);
 
 delete process.env.COS_RUN_STORE;
 console.log('test-v13-57-policy-rejects-create-spec-profile: ok');

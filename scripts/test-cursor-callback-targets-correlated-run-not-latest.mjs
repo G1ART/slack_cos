@@ -10,6 +10,7 @@ import {
   __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +64,18 @@ await upsertExternalCorrelation({
   object_id: extLate,
 });
 
+const bindA = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk,
+  runId: ridA,
+  packetId: 'p_a',
+  invocation_id: 'inv_cursor_corr_target_a',
+  payload: {
+    live_patch: { path: 'src/target-corr.ts', operation: 'create', content: '//', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bindA.ok, true);
+const reqA = String(bindA.request_id);
+
 const runB = await persistRunAfterDelegate({
   threadKey: tk,
   dispatch: {
@@ -99,6 +112,9 @@ const body = JSON.stringify({
   type: 'statusChange',
   runId: extLate,
   status: 'completed',
+  request_id: reqA,
+  thread_key: tk,
+  packet_id: 'p_a',
   paths_touched: ['src/target-corr.ts'],
 });
 const raw = Buffer.from(body, 'utf8');

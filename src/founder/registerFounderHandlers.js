@@ -48,7 +48,7 @@ export function registerFounderHandlers(app, core) {
       const sendRes = await sendFounderResponse({
         say,
         thread_ts: mentionThreadTs,
-        text: out.answer,
+        text: out.starter_ack,
         constitutionSha256: core.constitutionSha256,
       });
 
@@ -92,7 +92,7 @@ export function registerFounderHandlers(app, core) {
       const sendRes = await sendFounderResponse({
         client,
         channel: event.channel,
-        text: out.answer,
+        text: out.starter_ack,
         constitutionSha256: core.constitutionSha256,
       });
 

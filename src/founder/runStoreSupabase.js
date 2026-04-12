@@ -37,6 +37,7 @@ const SMOKE_SUMMARY_SUPABASE_EVENT_TYPES = [
   'cos_pretrigger_tool_call',
   'cos_pretrigger_tool_call_blocked',
   'cos_cursor_webhook_ingress_safe',
+  'cursor_receive_intake_committed',
   'cos_github_fallback_evidence',
   'result_recovery_github_secondary',
 ];
@@ -51,6 +52,7 @@ export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
   'emit_patch_payload_validated',
   'trigger_blocked_invalid_payload',
   'cos_cursor_webhook_ingress_safe',
+  'cursor_receive_intake_committed',
   'cos_github_fallback_evidence',
   'result_recovery_github_secondary',
 ];

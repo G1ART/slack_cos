@@ -1,19 +1,20 @@
 /**
- * vNext.13.49 — Regression: live_only+no_fallback stash still blocks create_spec after delegate validator changes.
+ * vNext.13.79 — Live-only stash present: policy string create_spec_disallowed_in_live_only_mode must not appear in tool results.
  */
 import assert from 'node:assert';
 import path from 'path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import {
-  invokeExternalTool,
-  CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE,
-} from '../src/founder/toolsBridge.js';
+import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import {
   stashDelegateEmitPatchContext,
   __resetDelegateEmitPatchStashForTests,
 } from '../src/founder/delegateEmitPatchStash.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const toolsSrc = fs.readFileSync(path.join(__dirname, '..', 'src/founder/toolsBridge.js'), 'utf8');
+assert.ok(!toolsSrc.includes('create_spec_disallowed_in_live_only_mode'));
+
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-live-only-guard-still');
 process.env.COS_RUN_STORE = 'memory';
 delete process.env.SUPABASE_URL;
@@ -52,8 +53,7 @@ const r = await invokeExternalTool(
   { threadKey: tk },
 );
 
-assert.equal(r.status, 'blocked');
-assert.ok(String(r.result_summary || '').includes(CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE));
+assert.ok(!String(r.result_summary || '').includes('create_spec_disallowed_in_live_only_mode'));
 
 delete process.env.COS_RUN_STORE;
 

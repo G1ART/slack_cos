@@ -1,5 +1,6 @@
 /**
- * vNext.13.72 — Provider-only packet progression; structural closure anchor; effective packet id.
+ * vNext.13.72 — Structural closure anchor; effective packet id.
+ * vNext.13.79 — Provider terminal completion requires receive-office bind + exact callback context (no runId-only progression).
  */
 import assert from 'node:assert';
 import crypto from 'node:crypto';
@@ -7,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { allowsAuthoritativeCursorPacketProgression } from '../src/founder/cursorCallbackTruth.js';
 import { resolveEffectiveCursorPacketId } from '../src/founder/canonicalExternalEvent.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import {
   computeEmitPatchCursorAutomationTruth,
   __cursorAutomationFetchForTests,
@@ -141,15 +143,25 @@ const run2 = await persistRunAfterDelegate({
 });
 const rid2 = String(run2.id);
 await patchRunById(rid2, { packet_state_map: { p72b: 'running' }, required_packet_ids: ['p72b'] });
-await upsertExternalCorrelation({
-  run_id: rid2,
+const bind72 = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk2,
+  runId: rid2,
+  packetId: 'p72b',
+  invocation_id: 'inv_v72_gate',
+  payload: {
+    live_patch: { path: 'src/gate72.txt', operation: 'create', content: 'g', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bind72.ok, true);
+const req72 = String(bind72.request_id);
+const body2 = JSON.stringify({
+  type: 'statusChange',
+  status: 'completed',
+  request_id: req72,
   thread_key: tk2,
   packet_id: 'p72b',
-  provider: 'cursor',
-  object_type: 'cloud_agent_run',
-  object_id: 'cr_prov_72',
+  paths_touched: ['src/gate72.txt'],
 });
-const body2 = JSON.stringify({ type: 'statusChange', runId: 'cr_prov_72', status: 'completed' });
 const raw2 = Buffer.from(body2, 'utf8');
 const sig2 = `sha256=${crypto.createHmac('sha256', secret).update(raw2).digest('hex')}`;
 const out2 = await handleCursorWebhookIngress({

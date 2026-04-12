@@ -771,6 +771,7 @@ function smokeSummaryPhaseFromRow(r) {
     if (o === 'rejected_invalid_signature' || o === 'rejected_invalid_json') return 'cursor_callback_ingress_rejected';
     return 'cursor_direct_callback_ingress_received';
   }
+  if (et === 'cursor_receive_intake_committed') return 'run_packet_progression_patched';
   return '';
 }
 

@@ -81,6 +81,6 @@ export function buildEmitPatchCompletionContractBlock(p) {
     request_id_for_correlation: rid || null,
     machine_rule_no_signed_callback_no_complete: true,
     provider_instructions_ko:
-      '패치 적용(에이전트 수락)만으로 완료로 보지 말 것. 동일 request_id·paths_touched·backgroundComposerId로 HMAC 서명된 JSON 본문을 콜백 URL로 POST하십시오. 리플렉션/푸시만으로 1차 완료로 취급하지 마십시오.',
+      '패치 적용(에이전트 수락)만으로 완료로 보지 말 것. 동일 request_id·paths_touched·backgroundComposerId로 HMAC 서명된 JSON 본문을 콜백 URL로 POST하십시오. 리플렉션/푸시만으로 1차 완료로 취급하지 마십시오. recommended_callback_context.packet_id(및 thread_key)는 트리거 시점 dispatch ledger 값과 바이트 단위로 동일해야 입고(commit)됩니다. 임의 문자열·다른 패킷 ID·수동 스모크용 고정 ID는 거부됩니다.',
   };
 }

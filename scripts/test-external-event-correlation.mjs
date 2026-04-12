@@ -15,6 +15,7 @@ import {
   __resetExternalGatewayTestState,
 } from '../src/founder/externalEventGateway.js';
 import { findExternalCorrelationCursorHints } from '../src/founder/correlationStore.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-ext-corr');
@@ -150,7 +151,24 @@ assert.ok(byRun);
 assert.equal(byRun.thread_key, tk);
 
 const cursorSecret = 'cursor_corr_secret_test_min_len___';
-const cBody = JSON.stringify({ type: 'statusChange', runId: 'cloud_corr_demo', status: 'running' });
+const bindHint = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk,
+  runId: String(run.id),
+  packetId: 'pkt_cursor_hint',
+  invocation_id: 'inv_ext_corr_cursor',
+  payload: {
+    live_patch: { path: 'src/ext-corr-hint.txt', operation: 'create', content: 'x', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bindHint.ok, true);
+const cBody = JSON.stringify({
+  type: 'statusChange',
+  runId: 'cloud_corr_demo',
+  status: 'running',
+  request_id: bindHint.request_id,
+  thread_key: tk,
+  packet_id: 'pkt_cursor_hint',
+});
 const cRaw = Buffer.from(cBody, 'utf8');
 const cSig = `sha256=${crypto.createHmac('sha256', cursorSecret).update(cRaw).digest('hex')}`;
 const cOut = await handleCursorWebhookIngress({

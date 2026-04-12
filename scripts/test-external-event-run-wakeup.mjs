@@ -10,6 +10,7 @@ import {
   __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,10 +65,24 @@ await upsertExternalCorrelation({
   object_id: cloudRunId,
 });
 
+const bindWake = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk,
+  runId: String(run.id),
+  packetId: 'p_cr',
+  invocation_id: 'inv_ext_run_wake',
+  payload: {
+    live_patch: { path: 'src/wake-cr.txt', operation: 'create', content: 'w', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bindWake.ok, true);
+
 const body = JSON.stringify({
   type: 'statusChange',
   runId: cloudRunId,
   status: 'completed',
+  request_id: bindWake.request_id,
+  thread_key: tk,
+  packet_id: 'p_cr',
   paths_touched: ['src/wake-cr.txt'],
 });
 const raw = Buffer.from(body, 'utf8');

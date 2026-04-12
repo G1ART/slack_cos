@@ -265,4 +265,10 @@ assert.equal(
   false,
 );
 
+// cos_run_events cursor_receive_intake_committed → same break gate as ops_smoke run_packet_progression_patched
+const aggIntakeRow = aggregateSmokeSessionProgress([
+  { event_type: 'cursor_receive_intake_committed', payload: { at: '1', target_packet_id: 'p_x' } },
+]);
+assert.ok(aggIntakeRow.phases_seen.includes('run_packet_progression_patched'));
+
 console.log('test-v13-77-receive-intake-commit: ok');

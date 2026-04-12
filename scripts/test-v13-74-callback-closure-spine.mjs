@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { extractAutomationResponseFields } from '../src/founder/cursorCloudAdapter.js';
 import { computePathsArrayFingerprint } from '../src/founder/cursorCallbackGate.js';
 import { normalizeCursorWebhookPayload } from '../src/founder/cursorWebhookIngress.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { upsertExternalCorrelation, __resetCorrelationMemoryForTests } from '../src/founder/correlationStore.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 import {
@@ -79,6 +80,17 @@ const run = await persistRunAfterDelegate({
 });
 const rid = String(run.id);
 await patchRunById(rid, { packet_state_map: { [PKT]: 'running' }, required_packet_ids: [PKT] });
+const touchPath = String(exactPayload.paths_touched?.[0] || 'docs/cursor-handoffs/smoke_live_note_2026-04-07.md');
+const bind74 = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: TK,
+  runId: rid,
+  packetId: PKT,
+  invocation_id: String(exactPayload.request_id || exactPayload.accepted_external_id || ''),
+  payload: {
+    live_patch: { path: touchPath, operation: 'create', content: 'x', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bind74.ok, true);
 await upsertExternalCorrelation({
   run_id: rid,
   thread_key: TK,

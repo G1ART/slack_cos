@@ -417,150 +417,6 @@ export function shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canon
   return Boolean(resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical).packetId);
 }
 
-/**
- * @param {string} runId
- * @param {Record<string, unknown>} runRow
- * @param {Record<string, unknown>} corr
- * @param {CanonicalExternalEvent} canonical
- * @param {{ bucket: string }} canonForOut
- * @param {string} matchedBy
- * @param {string} callbackSourceKind
- */
-async function tryApplyAuthoritativeCursorEmitPatchClosureForRun(
-  runId,
-  runRow,
-  corr,
-  canonical,
-  canonForOut,
-  matchedBy,
-  callbackSourceKind,
-) {
-  const mb = String(matchedBy || '').trim();
-  if (
-    mb !== 'external_run_id' &&
-    mb !== 'accepted_external_id' &&
-    mb !== 'run_uuid_packet' &&
-    mb !== 'thread_key_packet_id'
-  ) {
-    return {
-      applied: false,
-      progression_applied: false,
-      effective_packet_id: '',
-      closure_not_applied_reason: 'correlation_not_direct_key',
-      idempotent_repeat: false,
-    };
-  }
-  const src = String(callbackSourceKind || '').trim().toLowerCase();
-  if (src !== 'provider_runtime') {
-    return {
-      applied: false,
-      progression_applied: false,
-      effective_packet_id: '',
-      closure_not_applied_reason: 'non_provider_callback_source',
-      idempotent_repeat: false,
-    };
-  }
-
-  const bucket = String(canonForOut.bucket || '');
-  if (bucket !== 'positive_terminal' && bucket !== 'negative_terminal') {
-    return {
-      applied: false,
-      progression_applied: false,
-      effective_packet_id: '',
-      closure_not_applied_reason: 'non_terminal_callback_status',
-      idempotent_repeat: false,
-    };
-  }
-
-  const { packetId, closure_not_applied_reason: unresolved } = resolveEmitPatchAuthoritativePacketId(
-    runRow,
-    corr,
-    canonical,
-  );
-  if (!packetId) {
-    return {
-      applied: false,
-      progression_applied: false,
-      effective_packet_id: '',
-      closure_not_applied_reason: unresolved || 'effective_packet_id_unresolved',
-      idempotent_repeat: false,
-    };
-  }
-
-  const prevAnchor =
-    runRow.cursor_callback_anchor && typeof runRow.cursor_callback_anchor === 'object'
-      ? /** @type {Record<string, unknown>} */ (runRow.cursor_callback_anchor)
-      : {};
-  const psm0 =
-    runRow.packet_state_map && typeof runRow.packet_state_map === 'object'
-      ? /** @type {Record<string, string>} */ (runRow.packet_state_map)
-      : {};
-  const st0 = String(psm0[packetId] || '');
-  if (
-    prevAnchor.provider_structural_closure_at &&
-    String(prevAnchor.provider_structural_closure_packet_id || '').trim() === packetId &&
-    (st0 === 'completed' || st0 === 'failed' || st0 === 'skipped')
-  ) {
-    return {
-      applied: true,
-      progression_applied: false,
-      effective_packet_id: packetId,
-      closure_not_applied_reason: null,
-      idempotent_repeat: true,
-    };
-  }
-
-  const progressed = await applyExternalCursorPacketProgressForRun(runId, packetId, canonical);
-  if (!progressed) {
-    return {
-      applied: false,
-      progression_applied: false,
-      effective_packet_id: packetId,
-      closure_not_applied_reason: 'packet_progression_not_applied',
-      idempotent_repeat: false,
-    };
-  }
-
-  const reqId =
-    canonical.callback_request_id_hint != null && String(canonical.callback_request_id_hint).trim()
-      ? String(canonical.callback_request_id_hint).trim().slice(0, 128)
-      : null;
-  const pathFp =
-    canonical.callback_path_fingerprint_hint != null && String(canonical.callback_path_fingerprint_hint).trim()
-      ? String(canonical.callback_path_fingerprint_hint).trim().slice(0, 128)
-      : null;
-
-  const nextAnchor = {
-    ...prevAnchor,
-    provider_structural_closure_at: new Date().toISOString(),
-    provider_structural_closure_source: 'provider_runtime',
-    provider_structural_closure_request_id: reqId,
-    provider_structural_closure_packet_id: packetId,
-    provider_structural_closure_status_bucket: bucket,
-    ...(pathFp ? { provider_structural_closure_paths_fingerprint: pathFp } : {}),
-  };
-  try {
-    await patchRunById(runId, { cursor_callback_anchor: nextAnchor });
-  } catch (e) {
-    console.error('[cos_provider_structural_closure]', e);
-    return {
-      applied: false,
-      progression_applied: true,
-      effective_packet_id: packetId,
-      closure_not_applied_reason: 'packet_progression_not_applied',
-      idempotent_repeat: false,
-    };
-  }
-
-  return {
-    applied: true,
-    progression_applied: true,
-    effective_packet_id: packetId,
-    closure_not_applied_reason: null,
-    idempotent_repeat: false,
-  };
-}
-
 export async function applyExternalCursorPacketProgressForRun(runId, packetId, canonical) {
   const rid = String(runId || '').trim();
   const pid = String(packetId || '').trim();
@@ -746,133 +602,55 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
 
   /** @type {Awaited<ReturnType<typeof commitReceivedCursorCallbackToRunPacket>> | null} */
   let intakeResult = null;
+  let cursorIntakeAttempted = false;
 
-  if (canonical.provider === 'cursor') {
-    const accHint = String(canonical.accepted_external_id_hint || '').trim();
-    if (
-      allowsAuthoritativeCursorPacketProgression(callbackSourceKind) &&
-      directKeyCorrelation &&
-      accHint
-    ) {
-      const accRow = await findExternalCorrelation('cursor', 'accepted_external_id', accHint);
-      if (accRow) {
-        intakeResult = await commitReceivedCursorCallbackToRunPacket({
-          accepted_external_id: accHint,
-          external_run_id: canonical.external_run_id,
-          callback_thread_key: canonical.thread_key_hint,
-          callback_packet_id: canonical.packet_id_hint,
-          canonical,
-          status_bucket: canonForOut.bucket,
-          ingress_meta: meta,
-        });
-      }
-    }
+  if (
+    canonical.provider === 'cursor' &&
+    allowsAuthoritativeCursorPacketProgression(callbackSourceKind) &&
+    directKeyCorrelation
+  ) {
+    cursorIntakeAttempted = true;
+    intakeResult = await commitReceivedCursorCallbackToRunPacket({
+      accepted_external_id: String(canonical.accepted_external_id_hint || '').trim(),
+      external_run_id: canonical.external_run_id,
+      callback_thread_key: canonical.thread_key_hint,
+      callback_packet_id: canonical.packet_id_hint,
+      canonical,
+      status_bucket: canonForOut.bucket,
+      ingress_meta: meta,
+    });
   }
 
-  if (canonical.provider === 'cursor' && intakeResult !== null) {
-    pktEff = intakeResult.packet_id || '';
-    cursorPacketPatched = intakeResult.committed === true;
-    authoritative_emit_patch_closure_applied = intakeResult.closure_anchor_written === true;
-    authoritative_packet_progression = Boolean(
-      intakeResult.committed &&
-        intakeResult.closure_anchor_written &&
-        !intakeResult.idempotent,
-    );
-    progression_skipped_reason = intakeResult.committed ? null : intakeResult.reason;
-    emit_patch_authoritative_path = true;
-    closure_not_applied_reason = intakeResult.committed ? null : intakeResult.reason;
-    supervisor_should_wake = true;
-    idempotent_closure_repeat = intakeResult.idempotent === true;
-  } else if (canonical.provider === 'cursor') {
-    if (!directKeyCorrelation) {
+  if (canonical.provider === 'cursor') {
+    if (cursorIntakeAttempted && intakeResult) {
+      pktEff = intakeResult.packet_id || '';
+      cursorPacketPatched = intakeResult.committed === true;
+      authoritative_emit_patch_closure_applied = intakeResult.closure_anchor_written === true;
+      authoritative_packet_progression = Boolean(
+        intakeResult.committed && intakeResult.closure_anchor_written && !intakeResult.idempotent,
+      );
+      progression_skipped_reason = intakeResult.committed ? null : intakeResult.reason;
+      emit_patch_authoritative_path = true;
+      closure_not_applied_reason = intakeResult.committed ? null : intakeResult.reason;
+      supervisor_should_wake = true;
+      idempotent_closure_repeat = intakeResult.idempotent === true;
+    } else {
       emit_patch_authoritative_path = false;
       pktEff = corr.packet_id != null ? String(corr.packet_id).trim() : '';
-      progression_skipped_reason =
-        matched_by_for_closure === 'automation_request_path_fp'
-          ? 'path_fingerprint_correlation_not_authoritative'
-          : 'correlation_not_direct_key';
+      if (!directKeyCorrelation) {
+        progression_skipped_reason =
+          matched_by_for_closure === 'automation_request_path_fp'
+            ? 'path_fingerprint_correlation_not_authoritative'
+            : 'correlation_not_direct_key';
+      } else {
+        progression_skipped_reason = 'non_provider_callback_source';
+      }
       closure_not_applied_reason = progression_skipped_reason;
       cursorPacketPatched = false;
       authoritative_emit_patch_closure_applied = false;
       authoritative_packet_progression = false;
       supervisor_should_wake = true;
       idempotent_closure_repeat = false;
-    } else {
-      emit_patch_authoritative_path = shouldUseEmitPatchAuthoritativeCursorClosure(runRow, corr, canonical);
-      if (emit_patch_authoritative_path) {
-        const resolvedPid = resolveEmitPatchAuthoritativePacketId(runRow, corr, canonical);
-        const closure = await tryApplyAuthoritativeCursorEmitPatchClosureForRun(
-          runId,
-          runRow,
-          corr,
-          canonical,
-          canonForOut,
-          matched_by_for_closure,
-          callbackSourceKind,
-        );
-        pktEff = closure.effective_packet_id || resolvedPid.packetId || '';
-        cursorPacketPatched = closure.progression_applied;
-        authoritative_emit_patch_closure_applied = closure.applied;
-        closure_not_applied_reason = closure.closure_not_applied_reason;
-        idempotent_closure_repeat = closure.idempotent_repeat;
-        progression_skipped_reason = closure.applied ? null : closure.closure_not_applied_reason;
-        authoritative_packet_progression = Boolean(closure.applied && closure.progression_applied);
-        supervisor_should_wake = Boolean(closure.applied || closure.progression_applied);
-
-        if (
-          !cursorPacketPatched &&
-          closure.closure_not_applied_reason === 'non_terminal_callback_status' &&
-          resolvedPid.packetId
-        ) {
-          const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
-          if (allowProg) {
-            const progressed = await applyExternalCursorPacketProgressForRun(runId, resolvedPid.packetId, canonical);
-            cursorPacketPatched = progressed;
-            if (progressed) {
-              progression_skipped_reason = null;
-              pktEff = resolvedPid.packetId;
-            } else if (!progression_skipped_reason) {
-              progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
-            }
-            supervisor_should_wake = true;
-          }
-        }
-      } else {
-        const allowProg = allowsAuthoritativeCursorPacketProgression(callbackSourceKind);
-        const corrPid = corr.packet_id != null ? String(corr.packet_id).trim() : '';
-        const hintRaw = canonical.packet_id_hint != null ? String(canonical.packet_id_hint).trim() : '';
-        if (hintRaw && corrPid && hintRaw !== corrPid) {
-          pktEff = corrPid || hintRaw;
-          progression_skipped_reason = 'callback_packet_id_mismatch';
-          closure_not_applied_reason = 'callback_packet_id_mismatch';
-          cursorPacketPatched = false;
-          authoritative_packet_progression = false;
-          supervisor_should_wake = true;
-        } else {
-          const emitPatchBound = corrPid && packetIdIfEmitPatchOnRun(runRow, corrPid) ? corrPid : '';
-          if (!emitPatchBound) {
-            pktEff = corrPid || '';
-            progression_skipped_reason = corrPid
-              ? 'emit_patch_packet_not_on_dispatch_graph'
-              : 'correlation_packet_id_required_for_direct_key_commit';
-            closure_not_applied_reason = progression_skipped_reason;
-            cursorPacketPatched = false;
-            authoritative_packet_progression = false;
-            supervisor_should_wake = true;
-          } else if (allowProg) {
-            pktEff = emitPatchBound;
-            cursorPacketPatched = await applyExternalCursorPacketProgressForRun(runId, emitPatchBound, canonical);
-            if (!cursorPacketPatched) progression_skipped_reason = 'authority_resolution_or_idempotent_skip';
-            authoritative_packet_progression = false;
-            supervisor_should_wake = true;
-          } else {
-            pktEff = emitPatchBound;
-            progression_skipped_reason = 'non_provider_callback_source';
-            authoritative_packet_progression = false;
-            supervisor_should_wake = true;
-          }
-        }
-      }
     }
   } else {
     pktEff = corr.packet_id != null ? String(corr.packet_id).trim() : '';
@@ -912,50 +690,16 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
   });
 
-  const usedIntakeCommit = canonical.provider === 'cursor' && intakeResult !== null;
-
-  if (canonical.provider === 'cursor' && emit_patch_authoritative_path) {
-    if (usedIntakeCommit) {
-      if (!intakeResult.committed) {
-        await appendCosRunEventForRun(
-          runId,
-          'cursor_callback_correlated_but_closure_not_applied',
-          {
-            target_run_id: runId,
-            closure_not_applied_reason: intakeResult.reason,
-            correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
-            intake_commit: true,
-          },
-          {
-            matched_by: meta.matched_by ?? null,
-            canonical_status: cs,
-            payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
-          },
-        );
-      }
-    } else if (authoritative_emit_patch_closure_applied && !idempotent_closure_repeat) {
-      await appendCosRunEventForRun(
-        runId,
-        'cursor_authoritative_closure_applied',
-        {
-          target_run_id: runId,
-          effective_packet_id: pktEff || null,
-          provider_structural_closure_source: 'provider_runtime',
-        },
-        {
-          matched_by: meta.matched_by ?? null,
-          canonical_status: cs,
-          payload_fingerprint_prefix: meta.payload_fingerprint_prefix ?? null,
-        },
-      );
-    } else if (!authoritative_emit_patch_closure_applied) {
+  if (canonical.provider === 'cursor' && emit_patch_authoritative_path && intakeResult) {
+    if (!intakeResult.committed) {
       await appendCosRunEventForRun(
         runId,
         'cursor_callback_correlated_but_closure_not_applied',
         {
           target_run_id: runId,
-          closure_not_applied_reason: closure_not_applied_reason,
+          closure_not_applied_reason: intakeResult.reason,
           correlation: { packet_id: corr.packet_id, run_id: corr.run_id },
+          intake_commit: true,
         },
         {
           matched_by: meta.matched_by ?? null,

@@ -9,6 +9,7 @@ import {
   __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import { __cursorAutomationFetchForTests } from '../src/founder/cursorCloudAdapter.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
@@ -98,10 +99,16 @@ const inv = await invokeExternalTool(
 assert.equal(inv.execution_lane, 'cloud_agent');
 __cursorAutomationFetchForTests.fn = null;
 
+const reqLife = String(inv.cursor_automation_request_id || '').trim();
+assert.ok(reqLife.length, 'dispatch bind request_id recorded on invoke');
+
 const body = JSON.stringify({
   type: 'statusChange',
   runId: extId,
   status: 'completed',
+  request_id: reqLife,
+  thread_key: tk,
+  packet_id: 'p1',
   paths_touched: ['src/smoke-life.txt'],
 });
 const raw = Buffer.from(body, 'utf8');
@@ -176,7 +183,21 @@ await upsertExternalCorrelation({
   object_id: extOv,
 });
 
+const bindOv = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk2,
+  runId: rid2,
+  packetId: 'p_ov',
+  invocation_id: 'inv_smoke_ov',
+  payload: {
+    live_patch: { path: 'src/override-smoke.txt', operation: 'create', content: 'z', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bindOv.ok, true);
+
 const nestedBody = JSON.stringify({
+  request_id: bindOv.request_id,
+  thread_key: tk2,
+  packet_id: 'p_ov',
   outer: {
     nested: {
       cursorRun: extOv,

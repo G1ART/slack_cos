@@ -1,11 +1,13 @@
 /**
- * vNext.13.73 — Authoritative emit_patch closure: packet resolution, provider-only progression, events, aggregate, summary filter.
+ * vNext.13.73 — Emit_patch closure: packet resolution, receive-office intake commit, events, aggregate, summary filter.
+ * vNext.13.79 — Terminal completion requires bind + exact callback context (intake commit), not runId-only webhook.
  */
 import assert from 'node:assert';
 import crypto from 'node:crypto';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { resolveEmitPatchAuthoritativePacketId } from '../src/founder/canonicalExternalEvent.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { filterStaleLiveOnlyCreateSpecLeakFromExecutionSummaryLines } from '../src/founder/executionLedger.js';
 import { aggregateSmokeSessionProgress } from '../src/founder/smokeOps.js';
 import { persistRunAfterDelegate, getRunById, patchRunById, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
@@ -89,20 +91,24 @@ const run = await persistRunAfterDelegate({
 });
 const rid = String(run.id);
 await patchRunById(rid, { packet_state_map: { p73: 'running' }, required_packet_ids: ['p73'] });
-await upsertExternalCorrelation({
-  run_id: rid,
-  thread_key: tk,
-  packet_id: 'p73',
-  provider: 'cursor',
-  object_type: 'cloud_agent_run',
-  object_id: 'cr_v73_ok',
+const bind73 = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk,
+  runId: rid,
+  packetId: 'p73',
+  invocation_id: 'inv_v73_ok',
+  payload: {
+    live_patch: { path: 'src/x.ts', operation: 'create', content: '//', live_only: true, no_fallback: true },
+  },
 });
+assert.equal(bind73.ok, true);
+const req73 = String(bind73.request_id);
 
 const body = JSON.stringify({
   type: 'statusChange',
-  runId: 'cr_v73_ok',
   status: 'completed',
-  request_id: 'req_v73',
+  request_id: req73,
+  thread_key: tk,
+  packet_id: 'p73',
   paths_touched: ['src/x.ts'],
 });
 const raw = Buffer.from(body, 'utf8');
@@ -124,9 +130,9 @@ assert.equal(rOk.cursor_callback_anchor?.provider_structural_closure_packet_id, 
 assert.equal(rOk.cursor_callback_anchor?.provider_structural_closure_status_bucket, 'positive_terminal');
 
 const evs = await listCosRunEventsForRun(rid, 80);
-const authEv = evs.filter((e) => String(e.event_type || '') === 'cursor_authoritative_closure_applied');
+const intakeEv = evs.filter((e) => String(e.event_type || '') === 'cursor_receive_intake_committed');
 const notApp = evs.filter((e) => String(e.event_type || '') === 'cursor_callback_correlated_but_closure_not_applied');
-assert.equal(authEv.length, 1);
+assert.equal(intakeEv.length, 1);
 assert.equal(notApp.length, 0);
 
 // 3) Duplicate verified callback → still one authoritative event
@@ -140,8 +146,8 @@ const outDup = await handleCursorWebhookIngress({
 });
 assert.equal(outDup.matched, true);
 const evs2 = await listCosRunEventsForRun(rid, 120);
-const authEv2 = evs2.filter((e) => String(e.event_type || '') === 'cursor_authoritative_closure_applied');
-assert.equal(authEv2.length, 1);
+const intakeEv2 = evs2.filter((e) => String(e.event_type || '') === 'cursor_receive_intake_committed');
+assert.equal(intakeEv2.length, 1);
 
 // 4) Synthetic orchestrator → matched, no progression, no structural closure
 const tkS = 'mention:v73:syn';
@@ -190,7 +196,7 @@ const rSyn = await getRunById(ridS);
 assert.equal(rSyn.packet_state_map.p73s, 'running');
 assert.ok(!rSyn.cursor_callback_anchor?.provider_structural_closure_at);
 
-// 5) Non-probe header value → still treated as provider_runtime (v13.73b); progression applies
+// 5) Non-probe header value → still provider_runtime; intake bind + exact context → completed
 const tkU = 'mention:v73:unk';
 const runU = await persistRunAfterDelegate({
   threadKey: tkU,
@@ -214,15 +220,25 @@ const runU = await persistRunAfterDelegate({
 });
 const ridU = String(runU.id);
 await patchRunById(ridU, { packet_state_map: { p73u: 'running' }, required_packet_ids: ['p73u'] });
-await upsertExternalCorrelation({
-  run_id: ridU,
+const bindU = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tkU,
+  runId: ridU,
+  packetId: 'p73u',
+  invocation_id: 'inv_v73_u',
+  payload: {
+    live_patch: { path: 'src/u73.ts', operation: 'create', content: '//', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bindU.ok, true);
+const reqU = String(bindU.request_id);
+const bodyU = JSON.stringify({
+  type: 'statusChange',
+  status: 'completed',
+  request_id: reqU,
   thread_key: tkU,
   packet_id: 'p73u',
-  provider: 'cursor',
-  object_type: 'cloud_agent_run',
-  object_id: 'cr_v73_u',
+  paths_touched: ['src/u73.ts'],
 });
-const bodyU = JSON.stringify({ type: 'statusChange', runId: 'cr_v73_u', status: 'completed' });
 const rawU = Buffer.from(bodyU, 'utf8');
 const sigU = `sha256=${crypto.createHmac('sha256', secret).update(rawU).digest('hex')}`;
 await handleCursorWebhookIngress({

@@ -7,9 +7,6 @@ import {
   invokeExternalTool,
   isValidToolAction,
   formatAdapterReadinessCompactLines,
-  DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH,
-  DELEGATE_REQUIRED_BEFORE_EMIT_PATCH,
-  EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD,
 } from './toolsBridge.js';
 import {
   appendExecutionArtifact,
@@ -31,6 +28,9 @@ import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
+
+/** Same-turn Slack post only — receipt/start semantics; no tool/blocked/callback translation. */
+export const FOUNDER_SAME_TURN_ACK_TEXT = '요청을 접수했습니다.';
 
 const MAX_TOOL_ROUNDS = 8;
 
@@ -375,109 +375,6 @@ export function getDelegateBootSchemaSnapshot() {
 }
 
 /**
- * Founder-facing copy when tools failed validation/contract (machine hints only; no speculation).
- * @param {unknown[]} parsedToolResults
- */
-export function formatFounderSafeToolBlockMessage(parsedToolResults) {
-  const lines = [];
-  const arr = Array.isArray(parsedToolResults) ? parsedToolResults : [];
-  for (const r of arr) {
-    if (!r || typeof r !== 'object') continue;
-    const o = /** @type {Record<string, unknown>} */ (r);
-    const br = o.blocked_reason != null ? String(o.blocked_reason) : '';
-    if (
-      o.status === 'blocked' &&
-      (br === DELEGATE_REQUIRED_BEFORE_EMIT_PATCH || br === DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH)
-    ) {
-      lines.push(br);
-      if (o.machine_hint) lines.push(String(o.machine_hint));
-      if (Array.isArray(o.missing_required_fields)) {
-        for (const f of o.missing_required_fields.slice(0, 16)) {
-          lines.push(`required: ${String(f)}`);
-        }
-      }
-    }
-    if (o.status === 'blocked' && o.policy_rejection === true) {
-      lines.push(`policy: ${String(o.blocked_reason || 'execution_profile')}`);
-      if (o.execution_profile_id) lines.push(`profile: ${String(o.execution_profile_id)}`);
-      if (o.policy_rejection_code) lines.push(`code: ${String(o.policy_rejection_code)}`);
-    }
-    if (o.status === 'blocked' && o.rejection_kind === 'missing_contract_source') {
-      if (o.exact_failure_code) lines.push(`stage: ${String(o.exact_failure_code)}`);
-      if (o.execution_profile_id) lines.push(`profile: ${String(o.execution_profile_id)}`);
-      lines.push(String(o.blocked_reason || 'missing_contract_source'));
-      if (o.machine_hint) lines.push(String(o.machine_hint));
-      if (o.attempt_seq != null) lines.push(`attempt_seq: ${String(o.attempt_seq)}`);
-    }
-    if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) {
-      if (o.exact_failure_code) lines.push(`stage: ${String(o.exact_failure_code)}`);
-      if (o.payload_provenance) lines.push(`payload_origin: ${String(o.payload_provenance)}`);
-      if (o.builder_stage_last_reached) lines.push(`builder_stage: ${String(o.builder_stage_last_reached)}`);
-      if (o.attempt_seq != null) lines.push(`attempt_seq: ${String(o.attempt_seq)}`);
-      if (Array.isArray(o.emit_patch_machine_hints)) {
-        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
-      }
-      if (Array.isArray(o.missing_required_fields)) {
-        for (const f of o.missing_required_fields.slice(0, 16)) {
-          lines.push(`required: ${String(f)}`);
-        }
-      }
-    }
-    if (o.blocked === true && o.reason === 'invalid_payload') {
-      if (o.blocked_reason) lines.push(String(o.blocked_reason));
-      if (o.machine_hint) lines.push(String(o.machine_hint));
-      if (Array.isArray(o.missing_required_fields)) {
-        for (const f of o.missing_required_fields.slice(0, 16)) {
-          lines.push(`emit_patch required field missing: ${String(f)}`);
-        }
-      }
-      if (Array.isArray(o.emit_patch_machine_hints)) {
-        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
-      }
-    }
-    if (o.degraded_from === 'emit_patch_cloud_contract_not_met') {
-      if (Array.isArray(o.missing_required_fields)) {
-        for (const f of o.missing_required_fields.slice(0, 16)) {
-          lines.push(`emit_patch required field missing: ${String(f)}`);
-        }
-      }
-      if (Array.isArray(o.emit_patch_machine_hints)) {
-        for (const h of o.emit_patch_machine_hints.slice(0, 12)) lines.push(String(h));
-      }
-    }
-  }
-  const unique = [...new Set(lines.map((x) => String(x).trim()).filter(Boolean))];
-  const detail =
-    unique.length > 0
-      ? unique.map((l) => `· ${l.slice(0, 220)}`).join('\n')
-      : '· invalid_payload (validator rejected; exact missing field not captured)';
-  return `요청을 처리하는 중 도구 입력이 검증에 막혔습니다.\n${detail}\n범위를 좁히거나 필요한 필드를 채운 뒤 다시 보내 주시면 이어서 진행하겠습니다.`;
-}
-
-/**
- * @param {unknown[]} parsedToolResults
- */
-export function shouldReplaceFounderTextWithSafeToolBlockMessage(parsedToolResults) {
-  const arr = Array.isArray(parsedToolResults) ? parsedToolResults : [];
-  return arr.some((r) => {
-    if (!r || typeof r !== 'object') return false;
-    const o = /** @type {Record<string, unknown>} */ (r);
-    const br = o.blocked_reason != null ? String(o.blocked_reason) : '';
-    if (
-      o.status === 'blocked' &&
-      (br === DELEGATE_REQUIRED_BEFORE_EMIT_PATCH || br === DELEGATE_PACKETS_MISSING_FOR_EMIT_PATCH)
-    )
-      return true;
-    if (o.status === 'blocked' && br === EXTERNAL_CALL_BLOCKED_EMPTY_COMPILED_PAYLOAD) return true;
-    if (o.status === 'blocked' && o.policy_rejection === true) return true;
-    if (o.status === 'blocked' && o.rejection_kind === 'missing_contract_source') return true;
-    if (o.blocked === true && o.reason === 'invalid_payload') return true;
-    if (o.degraded_from === 'emit_patch_cloud_contract_not_met') return true;
-    return false;
-  });
-}
-
-/**
  * @param {string} constitutionMarkdown
  */
 export function buildSystemInstructions(constitutionMarkdown) {
@@ -698,9 +595,6 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
 
     if (!calls.length) {
       lastText = String(res.output_text || '').trim();
-      if (shouldReplaceFounderTextWithSafeToolBlockMessage(lastToolRoundParsedResults)) {
-        lastText = formatFounderSafeToolBlockMessage(lastToolRoundParsedResults);
-      }
       break;
     }
 
@@ -914,5 +808,5 @@ export async function runFounderDirectConversation(ctx) {
     }),
   );
 
-  return { text };
+  return { text, starter_ack: FOUNDER_SAME_TURN_ACK_TEXT };
 }

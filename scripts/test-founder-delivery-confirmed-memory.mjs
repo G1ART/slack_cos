@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleFounderSlackTurn } from '../src/founder/handleFounderSlackTurn.js';
+import { FOUNDER_SAME_TURN_ACK_TEXT } from '../src/founder/runFounderDirectConversation.js';
 import { readRecentThreadTurns, clearThread } from '../src/founder/threadMemory.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,7 +40,7 @@ const out = await handleFounderSlackTurn({
   constitutionSha256: 'abc',
 });
 
-assert.equal(out.answer, 'stub assistant reply');
+assert.equal(out.starter_ack, FOUNDER_SAME_TURN_ACK_TEXT);
 assert.equal(out.threadKey, `dm:${ch}`);
 
 const turnsAfterTurn = await readRecentThreadTurns(out.threadKey, 20);

@@ -10,6 +10,7 @@ import path from 'node:path';
 import { computeCursorWebhookFieldSelection, normalizeCursorWebhookPayload } from '../src/founder/cursorWebhookIngress.js';
 import { canonicalizeExternalRunStatus } from '../src/founder/externalRunStatus.js';
 import { deriveCursorCallbackSourceKindFromHeaders } from '../src/founder/cursorCallbackTruth.js';
+import { bindCursorEmitPatchDispatchLedgerBeforeTrigger } from '../src/founder/providerEventCorrelator.js';
 import { persistRunAfterDelegate, getRunById, patchRunById, __resetCosRunMemoryStore } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
@@ -59,8 +60,9 @@ assert.equal(selSteal.acceptedExternalIdHint, ACCEPTED_ID);
 
 const secret = 'cursor_webhook_secret_test_exact_v73___';
 
-// (1) Provider-signed, no internal header → matched + progression + completed milestone path
+// (1) Provider-signed, no internal header → bind + exact payload → intake commit + completed milestone path
 await saveSlackRouting(TK, { channel: 'C_exact', thread_ts: '1.1' });
+const touchPath = String(exactPayload.paths_touched?.[0] || 'docs/x.md');
 const run = await persistRunAfterDelegate({
   threadKey: TK,
   dispatch: {
@@ -83,6 +85,16 @@ const run = await persistRunAfterDelegate({
 });
 const rid = String(run.id);
 await patchRunById(rid, { packet_state_map: { [PKT]: 'running' }, required_packet_ids: [PKT] });
+const bind1 = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: TK,
+  runId: rid,
+  packetId: PKT,
+  invocation_id: ACCEPTED_ID,
+  payload: {
+    live_patch: { path: touchPath, operation: 'create', content: 'x', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bind1.ok, true);
 await upsertExternalCorrelation({
   run_id: rid,
   thread_key: TK,
@@ -217,6 +229,16 @@ const run3 = await persistRunAfterDelegate({
 });
 const rid3 = String(run3.id);
 await patchRunById(rid3, { packet_state_map: { [PKT]: 'running' }, required_packet_ids: [PKT] });
+const bind3 = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: tk3,
+  runId: rid3,
+  packetId: PKT,
+  invocation_id: ACCEPTED_ID,
+  payload: {
+    live_patch: { path: touchPath, operation: 'create', content: 'x', live_only: true, no_fallback: true },
+  },
+});
+assert.equal(bind3.ok, true);
 await upsertExternalCorrelation({
   run_id: rid3,
   thread_key: tk3,
