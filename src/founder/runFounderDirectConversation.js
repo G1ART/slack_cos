@@ -29,7 +29,10 @@ import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketVali
 
 export { runHarnessOrchestration, invokeExternalTool };
 
-/** Same-turn Slack post only — receipt/start semantics; no tool/blocked/callback translation. */
+/**
+ * 레거시 상수 — 과거에는 슬랙에 접수 한 줄만 보냄. 현재는 모델 `text`가 슬랙 본문으로 나감.
+ * @deprecated 회귀·문서 호환용; 신규 코드는 `runFounderDirectConversation` 의 `text` 사용.
+ */
 export const FOUNDER_SAME_TURN_ACK_TEXT = '요청을 접수했습니다.';
 
 const MAX_TOOL_ROUNDS = 8;
@@ -808,5 +811,5 @@ export async function runFounderDirectConversation(ctx) {
     }),
   );
 
-  return { text, starter_ack: FOUNDER_SAME_TURN_ACK_TEXT };
+  return { text, starter_ack: text };
 }

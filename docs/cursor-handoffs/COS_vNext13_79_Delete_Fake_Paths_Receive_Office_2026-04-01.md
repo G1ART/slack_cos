@@ -4,7 +4,7 @@
 
 - Cursor signed callback (`provider_runtime`): terminal packet/run updates only via `commitReceivedCursorCallbackToRunPacket` in `src/founder/cursorReceiveCommit.js` (exact `accepted_external_id` row + `thread_key` / `packet_id` / `cursor_dispatch_ledger.target_packet_id` alignment).
 - `processCanonicalExternalEvent` does not call legacy `await applyExternalCursorPacketProgressForRun` or `tryApplyAuthoritativeCursorEmitPatchClosureForRun`.
-- Same-turn founder Slack text: `out.starter_ack` only (`registerFounderHandlers.js`); no `create_spec_disallowed_in_live_only_mode` policy branch in `toolsBridge.js` live_only emit_patch path.
+- Founder Slack same-turn body: `out.starter_ack` === 모델 `text` (`registerFounderHandlers.js` → `sendFounderResponse`). (2026-04-12 이전 문구의 “접수 한 줄만”은 폐기.) `toolsBridge.js` live_only emit_patch 경로에 `create_spec_disallowed_in_live_only_mode` 정책 분기 없음.
 
 ## Tests
 

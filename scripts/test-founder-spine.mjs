@@ -33,6 +33,7 @@ for (const rel of spineFiles) {
 const reg = fs.readFileSync(path.join(root, 'src/founder/registerFounderHandlers.js'), 'utf8');
 assert.ok(reg.includes('handleFounderSlackTurn'), 'register must call handleFounderSlackTurn');
 assert.ok(reg.includes('sendFounderResponse'), 'register must use sendFounderResponse');
+assert.ok(reg.includes('getSlackRouting'), 'register must gate channel thread follow-up on routing');
 
 const h = fs.readFileSync(path.join(root, 'src/founder/handleFounderSlackTurn.js'), 'utf8');
 assert.ok(h.includes('runFounderDirectConversation'), 'controller must call runFounderDirectConversation');
