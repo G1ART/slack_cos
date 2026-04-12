@@ -58,7 +58,8 @@
 ## 4. 다음 패치에서 잡을 수 있는 작은 한 걸음
 
 - `smokeOps` 에 **불변식 테스트 1개** 추가: provider correlated + intake committed ⇒ 집계에 `run_packet_progression_patched` (실데이터 없이 flat fixture).
-- intake persist 시 **`smoke_session_id` 주입**(컨텍스트 있을 때)으로 2차 귀속 의존도 감소.
+- intake persist 시 **`smoke_session_id` 주입**(컨텍스트 있을 때)으로 2차 귀속 의존도 감소 — 적용됨(`cursorReceiveCommit` + 하니스 병합).
+- 뷰 SQL `IN` 목록 ↔ JS SSOT: `scripts/test-smoke-summary-stream-view-sql-ssot.mjs` 로 드리프트 방지.
 
 ## Owner actions
 
