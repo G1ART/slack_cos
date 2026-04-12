@@ -91,7 +91,24 @@
 | Cursor 매칭 | `external_status_update` 등 캐논 타입 (`processCanonicalExternalEvent`) | 연쇄 `ops_smoke_phase` (`recordOpsSmokeAfterExternalMatch`) | 요약·브레이크 포인터는 양쪽을 섞어 씀; 한쪽만 남기려면 `aggregateSmokeSessionProgress`·fixture 대량 수정 |
 | GitHub 매칭 | 캐논 외부 이벤트 한 줄 | (현재) `recordOpsSmokeAfterExternalMatch` 없음 | 상대적으로 단순 |
 
+### 6.3 §4 고아·이중 기록 판단 — 자동화 (GPT/Cursor)
+
+**사람이 표를 직접 읽지 않아도 되게** 하려면 아래 스크립트 출력(JSON)을 SSOT로 쓴다.
+
+| 항목 | 내용 |
+|------|------|
+| 스크립트 | `scripts/audit-parcel-ops-smoke-health.mjs` |
+| npm | `npm run audit:parcel-health` — 옵션: `--sample N`, `--strict` (하드 경고 또는 advisory 있으면 exit 1), `--json` |
+| 무자격 | Supabase URL/키 없으면 `skipped: true`, exit 0 (CI 친화) |
+| 집계 | `cos_ops_smoke_summary_stream` 전체 `count` + 최근 N행 샘플에서 `run_id` 분류(`_orphan`/빈/비UUID vs UUID), `cos_runs.pending_supervisor_wake=true` 건수, `cos_ops_smoke_events` 에서 `run_id IS NULL` 건수 |
+| 하드 `warnings` | pending wake > 50, 고아 테이블 null run > 500, 카운트 쿼리 실패 등 — `ok: false` |
+| `advisory` | 샘플 내 고아·비UUID 비율 > 기본 0.35 — D1 이중기록 구간에서 흔함; `ok` 는 여전히 `true` 일 수 있음 |
+| 임계 조정 | `COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN`, `COS_PARCEL_HEALTH_PENDING_WAKE_WARN`, `COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN` (환경변수, 숫자) |
+| 사람용 요약 | JSON 필드 `interpretation_ko` |
+
+**GPT/Cursor 해석 규칙(권장)**: `warnings` 가 비고 `ok: true` 이면 런타임·게이트 관점 양호. `advisory` 만 있으면 문서 4번(고아 비율)은 “추이 확인” 수준이며 즉시 장애로 보지 않음. `warnings` 가 있으면 Railway 로그·웹훅·특정 `run_id` 추적을 제안. `--json` 한 줄을 세션에 붙이면 다른 에이전트가 동일 기준으로 재현한다.
+
 ## Owner actions
 
-- 로컬: `npm test`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`
+- 로컬: `npm test`, `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`
 - Git: 패치 후 `pull --rebase` → `commit` → `push` (워크스페이스 규칙과 동일)
