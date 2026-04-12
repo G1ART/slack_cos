@@ -19,6 +19,14 @@ import {
 import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES, createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
 import { __resetOpsSmokeAttemptSeqForTests } from './opsSmokeAttemptSeq.js';
+import {
+  buildSmokeSessionBucketsFromFlatRows,
+  ensureOpsSmokeSessionIdOnRunHarness,
+  filterRowsForSessionAggregateTopline,
+  getRowAttemptSeq,
+} from './opsSmokeParcelGate.js';
+
+export { getRowAttemptSeq, filterRowsForSessionAggregateTopline } from './opsSmokeParcelGate.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -72,15 +80,6 @@ export function resolveOpsSmokeSessionIdForToolAudit(env = process.env) {
 }
 
 /**
- * @param {{ payload?: Record<string, unknown> }} row
- */
-export function getRowAttemptSeq(row) {
-  const pl = row?.payload && typeof row.payload === 'object' ? row.payload : {};
-  const n = Number(pl.attempt_seq);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-}
-
-/**
  * @param {Array<{ payload?: Record<string, unknown> }>} rows
  */
 export function sessionRowsUseAttemptLineage(rows) {
@@ -102,29 +101,6 @@ export function partitionSmokeSessionRowsByAttempt(rows) {
     byAttempt.get(seq).push(r);
   }
   return { byAttempt, useLineage };
-}
-
-/**
- * vNext.13.59a — Session aggregate for top-line status: primary attempt + cross-attempt ingress/GitHub only.
- * @param {Array<{ event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} rows
- * @param {number} primarySeq
- */
-export function filterRowsForSessionAggregateTopline(rows, primarySeq) {
-  const ps = primarySeq > 0 ? primarySeq : 0;
-  if (!ps) return rows;
-  return (rows || []).filter((r) => {
-    const et = String(r.event_type || '');
-    if (
-      et === 'cos_cursor_webhook_ingress_safe' ||
-      et === 'cos_github_fallback_evidence' ||
-      et === 'result_recovery_github_secondary'
-    ) {
-      return true;
-    }
-    const seq = getRowAttemptSeq(r);
-    if (seq <= 0) return false;
-    return seq === ps;
-  });
 }
 
 function attemptRowsHaveAcceptedTrigger(rows) {
@@ -260,6 +236,12 @@ export async function recordOpsSmokePhase(p) {
   const sid = String(p.smoke_session_id || '').trim() || resolveSmokeSessionId(env);
   const runId = String(p.runId || '').trim();
   if (!sid || !runId) return;
+
+  try {
+    await ensureOpsSmokeSessionIdOnRunHarness(runId, sid);
+  } catch (e) {
+    console.error('[ops_smoke_harness_anchor]', e);
+  }
 
   const detail = p.detail && typeof p.detail === 'object' ? p.detail : {};
   const attemptSeq =
@@ -1713,58 +1695,7 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
 
 export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
-  /** @type {Map<string, { run_ids: string[], rows: { event_type: string, payload: Record<string, unknown>, created_at: string }[] }>} */
-  const bySession = new Map();
-  /** cos_run_events intake rows omit smoke_session_id; attribute via target_run_id / row.run_id (vNext.13.80). */
-  const pendingIntakeNoSid = [];
-  for (const row of flatRows || []) {
-    if (!SMOKE_SESSION_ROW_EVENT_TYPES.has(String(row.event_type || ''))) continue;
-    const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
-    const sid = String(pl.smoke_session_id || '').trim();
-    const et = String(row.event_type || '');
-    if (!sid) {
-      if (et === 'cursor_receive_intake_committed') {
-        pendingIntakeNoSid.push({ row, pl });
-      }
-      continue;
-    }
-    const runId = String(row.run_id || '').trim() || 'unknown';
-    if (!bySession.has(sid)) bySession.set(sid, { run_ids: [], rows: [] });
-    const bucket = bySession.get(sid);
-    bucket.rows.push({
-      event_type: et,
-      payload: pl,
-      created_at: row.created_at != null ? String(row.created_at) : '',
-    });
-    if (runId && runId !== 'unknown' && !bucket.run_ids.includes(runId)) bucket.run_ids.push(runId);
-  }
-  /** @type {Map<string, string[]>} */
-  const runIdToSmokeSids = new Map();
-  for (const [sid, { run_ids }] of bySession) {
-    for (const rid of run_ids) {
-      if (!rid || rid === '_orphan' || rid === 'unknown') continue;
-      const prev = runIdToSmokeSids.get(rid) || [];
-      if (!prev.includes(sid)) prev.push(sid);
-      runIdToSmokeSids.set(rid, prev);
-    }
-  }
-  for (const { row, pl } of pendingIntakeNoSid) {
-    const rid = String(pl.target_run_id || row.run_id || '').trim();
-    if (!rid) continue;
-    const sids = runIdToSmokeSids.get(rid) || [];
-    for (const sid of sids) {
-      const bucket = bySession.get(sid);
-      if (!bucket) continue;
-      bucket.rows.push({
-        event_type: 'cursor_receive_intake_committed',
-        payload: pl,
-        created_at: row.created_at != null ? String(row.created_at) : '',
-      });
-    }
-  }
-  for (const [, bucket] of bySession) {
-    bucket.rows.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
-  }
+  const bySession = buildSmokeSessionBucketsFromFlatRows(flatRows, SMOKE_SESSION_ROW_EVENT_TYPES);
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_ids, rows }]) => {
     const nonOrphan = run_ids.filter((r) => r && r !== '_orphan');
     const orphanOnly = run_ids.filter((r) => r === '_orphan');

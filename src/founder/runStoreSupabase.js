@@ -28,21 +28,7 @@ export function createCosRuntimeSupabaseForSummary(env = process.env, urlOverrid
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-/**
- * @param {import('@supabase/supabase-js').SupabaseClient} sb
- * @param {{ runId?: string | null, limit?: number }} p
- */
-const SMOKE_SUMMARY_SUPABASE_EVENT_TYPES = [
-  'ops_smoke_phase',
-  'cos_pretrigger_tool_call',
-  'cos_pretrigger_tool_call_blocked',
-  'cos_cursor_webhook_ingress_safe',
-  'cursor_receive_intake_committed',
-  'cos_github_fallback_evidence',
-  'result_recovery_github_secondary',
-];
-
-/** Included in ops smoke session summaries (cos_ops_smoke_events + cos_run_events merge). */
+/** Included in ops smoke session summaries (cos_ops_smoke_events + cos_run_events merge). Single SSOT for summary fetches. */
 export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
   'ops_smoke_phase',
   'cos_pretrigger_tool_call',
@@ -63,7 +49,7 @@ export async function supabaseListOpsSmokePhaseEvents(sb, p) {
   let q = sb
     .from('cos_run_events')
     .select('run_id, event_type, payload, created_at')
-    .in('event_type', SMOKE_SUMMARY_SUPABASE_EVENT_TYPES);
+    .in('event_type', COS_OPS_SMOKE_SUMMARY_EVENT_TYPES);
   if (rid) q = q.eq('run_id', rid);
   const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
   if (error) return [];

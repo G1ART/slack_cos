@@ -13,11 +13,32 @@ import {
 } from './executionRunStore.js';
 import { buildPacketsById, recomputeCurrentNext } from './runProgressor.js';
 import { appendCosRunEventForRun } from './runCosEvents.js';
+import { resolveSmokeSessionIdForIntakeFromRun } from './opsSmokeParcelGate.js';
 import {
   canonicalizeExternalRunStatus,
   resolveCursorPacketStateAuthority,
   externalBucketToDesiredPacketState,
 } from './externalRunStatus.js';
+
+/**
+ * @param {Record<string, unknown>} run
+ * @param {string} runId
+ * @param {string} corrPid
+ * @param {string} effectiveBucket
+ * @param {string} acc
+ */
+function buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc) {
+  const sid = resolveSmokeSessionIdForIntakeFromRun(run);
+  /** @type {Record<string, unknown>} */
+  const out = {
+    target_run_id: runId,
+    target_packet_id: corrPid,
+    terminal_bucket: effectiveBucket,
+    accepted_external_id_tail: acc.length > 8 ? acc.slice(-8) : acc,
+  };
+  if (sid) out.smoke_session_id = sid;
+  return out;
+}
 
 /**
  * @typedef {{
@@ -257,12 +278,7 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     await appendCosRunEventForRun(
       runId,
       'cursor_receive_intake_committed',
-      {
-        target_run_id: runId,
-        target_packet_id: corrPid,
-        terminal_bucket: effectiveBucket,
-        accepted_external_id_tail: acc.length > 8 ? acc.slice(-8) : acc,
-      },
+      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc),
       {
         matched_by: meta.matched_by ?? null,
         canonical_status: effectiveBucket,
@@ -296,12 +312,7 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     await appendCosRunEventForRun(
       runId,
       'cursor_receive_intake_committed',
-      {
-        target_run_id: runId,
-        target_packet_id: corrPid,
-        terminal_bucket: effectiveBucket,
-        accepted_external_id_tail: acc.length > 8 ? acc.slice(-8) : acc,
-      },
+      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc),
       {
         matched_by: meta.matched_by ?? null,
         canonical_status: effectiveBucket,

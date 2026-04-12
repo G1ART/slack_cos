@@ -17,7 +17,11 @@ import {
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 import { __resetCorrelationMemoryForTests, upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { __resetCosRunEventsMemoryForTests, listCosRunEventsForRun } from '../src/founder/runCosEvents.js';
-import { aggregateSmokeSessionProgress, summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
+import {
+  aggregateSmokeSessionProgress,
+  filterRowsForSessionAggregateTopline,
+  summarizeOpsSmokeSessionsFromFlatRows,
+} from '../src/founder/smokeOps.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-v13-77-intake');
@@ -373,5 +377,59 @@ assert.ok(
   'intake row must count as progression when attributed by run_id',
 );
 assert.notEqual(sumInt.final_status, 'callback_correlated_without_progression_patch');
+
+// --- (8) vNext.13.80b: attempt lineage strips only primary-seq rows; intake has no attempt_seq → must stay in aggregate ---
+const lineageMix = [
+  {
+    event_type: 'ops_smoke_phase',
+    payload: { phase: 'cursor_trigger_recorded', attempt_seq: 1, trigger_ok: true, at: '1' },
+  },
+  { event_type: 'cursor_receive_intake_committed', payload: { at: '2' } },
+];
+const fil = filterRowsForSessionAggregateTopline(lineageMix, 1);
+assert.equal(fil.length, 2, 'intake must not be stripped when primary attempt_seq is set');
+const aggLin = aggregateSmokeSessionProgress(fil);
+assert.ok(aggLin.phases_seen.includes('run_packet_progression_patched'));
+
+// --- (9) Full summarize: lineage + attributed intake (no smoke_session_id on intake payload) ---
+const ridL = 'run-lineage-v80b';
+const sidL = 'sess_lineage_v80b';
+const flatLineageIntake = [
+  {
+    run_id: ridL,
+    event_type: 'ops_smoke_phase',
+    created_at: '2026-01-01T00:00:00Z',
+    payload: {
+      smoke_session_id: sidL,
+      phase: 'cursor_trigger_recorded',
+      attempt_seq: 1,
+      trigger_ok: true,
+      at: '2026-01-01T00:00:00Z',
+    },
+  },
+  {
+    run_id: ridL,
+    event_type: 'cos_cursor_webhook_ingress_safe',
+    created_at: '2026-01-01T00:00:01Z',
+    payload: {
+      smoke_session_id: sidL,
+      correlation_outcome: 'matched',
+      callback_source_kind: 'provider_runtime',
+      at: '2026-01-01T00:00:01Z',
+    },
+  },
+  {
+    run_id: ridL,
+    event_type: 'cursor_receive_intake_committed',
+    created_at: '2026-01-01T00:00:02Z',
+    payload: { target_run_id: ridL, at: '2026-01-01T00:00:02Z' },
+  },
+];
+const sumL = summarizeOpsSmokeSessionsFromFlatRows(flatLineageIntake, { sessionLimit: 5 })[0];
+assert.ok(
+  sumL.phases_seen.includes('run_packet_progression_patched'),
+  'lineage session must include progression from intake in phases_seen',
+);
+assert.notEqual(sumL.final_status, 'callback_correlated_without_progression_patch');
 
 console.log('test-v13-77-receive-intake-commit: ok');

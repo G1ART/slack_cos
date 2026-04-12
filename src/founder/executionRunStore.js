@@ -381,6 +381,10 @@ export async function finalizeRunAfterStarterKickoff(p) {
   const handoff_order = Array.isArray(dispatch.handoff_order) ? dispatch.handoff_order.map(String) : [];
   const now = new Date().toISOString();
   const run_id = String(existing.run_id || existing.external_run_id || '');
+  const prevHarness =
+    existing.harness_snapshot && typeof existing.harness_snapshot === 'object'
+      ? { .../** @type {Record<string, unknown>} */ (existing.harness_snapshot) }
+      : {};
 
   const patch = {
     founder_request_summary: String(p.founder_request_summary ?? existing.founder_request_summary ?? '').slice(
@@ -398,6 +402,7 @@ export async function finalizeRunAfterStarterKickoff(p) {
     stage,
     completed_at: status === 'completed' ? now : null,
     harness_snapshot: {
+      ...prevHarness,
       packets: Array.isArray(dispatch.packets) ? dispatch.packets : [],
       handoff_order,
     },

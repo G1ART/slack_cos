@@ -6,6 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { cosRuntimeBaseDir } from './executionLedger.js';
 import {
+  COS_OPS_SMOKE_SUMMARY_EVENT_TYPES,
   createCosRuntimeSupabase,
   createCosRuntimeSupabaseForSummary,
   supabaseAppendRunEvent,
@@ -38,15 +39,8 @@ const memByRun = new Map();
 /** Memory-only rows without a durable run id (pre-delegate audit). */
 const memSmokeSummaryOrphans = [];
 
-/** Event types included in ops smoke session summaries (vNext.13.46+). */
-export const SMOKE_SUMMARY_EVENT_TYPES = new Set([
-  'ops_smoke_phase',
-  'cos_pretrigger_tool_call',
-  'cos_pretrigger_tool_call_blocked',
-  'cos_cursor_webhook_ingress_safe',
-  'cos_github_fallback_evidence',
-  'result_recovery_github_secondary',
-]);
+/** File/memory summary listing — must match {@link COS_OPS_SMOKE_SUMMARY_EVENT_TYPES} (SSOT in runStoreSupabase). */
+export const SMOKE_SUMMARY_EVENT_TYPES = new Set(COS_OPS_SMOKE_SUMMARY_EVENT_TYPES);
 
 const SMOKE_SUMMARY_ORPHANS_BASENAME = 'cos_smoke_summary_orphans.jsonl';
 
