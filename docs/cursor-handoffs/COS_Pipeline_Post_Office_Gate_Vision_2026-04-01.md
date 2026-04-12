@@ -58,13 +58,22 @@
 - 런북 초안: `COS_Ops_Smoke_Callback_Pipeline_Audit_2026-04-01.md` §6 (전제·후보 순위·이번 턴은 삭제 없음).
 - 테스트·운영 확인이 붙은 뒤에만 **쓰기 축소 / 바이패스 대량 삭제**.
 
-## 4. 다음 패치에서 잡을 수 있는 작은 한 걸음
+## 4. “택배사무소가 작동한다”의 완료 정의 (코드 기준, A–C)
 
-- `smokeOps` **불변식 테스트**: `scripts/test-ops-smoke-parcel-gate-summary-invariant.mjs` — `summarizeOpsSmokeSessionsFromFlatRows` 경로에서 provider correlated + intake ⇒ `run_packet_progression_patched` (lineage 케이스 포함).
-- intake persist 시 **`smoke_session_id` 주입**(컨텍스트 있을 때)으로 2차 귀속 의존도 감소 — 적용됨(`cursorReceiveCommit` + 하니스 병합).
-- 뷰 SQL `IN` 목록 ↔ JS SSOT: `scripts/test-smoke-summary-stream-view-sql-ssot.mjs` 로 드리프트 방지.
+**Ultimate goal**를 “레포·운영에서 이 축이 깨지지 않는다”로 좁히면 아래를 만족하면 **A–C는 완료**로 본다. **페이즈 D**(고아 전용 쓰기 축소·중복 타입 제거)는 별도 런북·회귀 면적이 있어 의도적으로 다음 단계다.
+
+| 층 | 완료 판정 |
+|----|-----------|
+| 게이트·요약 | `npm run verify:parcel-post-office` — `scripts/verify-parcel-post-office.mjs` 가 게이트 불변식·뷰 SSOT·병합 예산·스트림 경로 목업·감사 스킵·웹훅 wake·런 스코프 wake 회귀를 한 번에 돈다 (Slack/OpenAI/실 DB 불필요). |
+| 전체 회귀 | `npm test` 통과. |
+| 프로덕션 관측 | Supabase 자격이 있는 환경에서 `npm run audit:parcel-health` — `ok: true` 이고 `warnings` 가 비면 런타임 하드 게이트 양호; `advisory` 만 있으면 D1 이중기록 구간에서 흔한 고아 비율 안내(장애 아님). |
+| 사람 확인 | `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` 등으로 요약 문맥이 기대와 맞는지(문구·상한은 환경 의존). |
+
+이미 반영된 구현 앵커(참고): 불변식 `test-ops-smoke-parcel-gate-summary-invariant.mjs`, intake `smoke_session_id` 주입(`cursorReceiveCommit` + 하니스), 뷰↔JS SSOT `test-smoke-summary-stream-view-sql-ssot.mjs`.
 
 ## Owner actions
 
-- 비전만으로는 배포 검증이 없다. 레포 관례: `npm test`, Supabase 모드면 `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (하니스 앵커 자동 로드; 레거시 복제 감사는 `--intake-replicate-all`).
+- 빠른 축 확인: `npm run verify:parcel-post-office`
+- 전체: `npm test`
+- 프로덕션 DB: `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (레거시 복제 감사는 `--intake-replicate-all`)
 - Git 동기화는 워크스페이스 패치 보고 규칙 따름.

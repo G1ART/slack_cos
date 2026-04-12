@@ -110,5 +110,5 @@
 
 ## Owner actions
 
-- 로컬: `npm test`, `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`
+- 로컬: `npm run verify:parcel-post-office`, `npm test`, `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`
 - Git: 패치 후 `pull --rebase` → `commit` → `push` (워크스페이스 규칙과 동일)
