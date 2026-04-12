@@ -1,5 +1,7 @@
 /**
  * vNext.13.77 — Single intake commit path for signed Cursor callbacks (accepted_external_id authoritative row).
+ * vNext.13.82 — Multi-candidate accepted id (webhook hint, callback request_id, ledger automation_request_id)
+ *   fixes Cursor/API alias drift vs bind-time tool_* id and ledger packet alignment.
  * Correlation row + dispatch ledger must align. Callback may omit thread_key/packet_id when
  * empty; then values from the accepted_external_id correlation row are used (explicit mismatch still fails).
  */
@@ -41,11 +43,21 @@ function buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc) 
 }
 
 /**
+ * @param {string[]} out
+ * @param {unknown} v
+ */
+function pushUniqueCandidate(out, v) {
+  const s = String(v || '').trim();
+  if (s && !out.includes(s)) out.push(s);
+}
+
+/**
  * @typedef {{
  *   provider: string,
  *   status_hint?: string,
  *   occurred_at?: string,
  *   payload?: Record<string, unknown>,
+ *   callback_request_id_hint?: string | null,
  * }} CanonicalLike
  */
 
@@ -127,42 +139,30 @@ async function patchRunPacketStateFromCanonical(runId, packetId, canonical) {
   return true;
 }
 
+/** @param {string} reason */
+function shouldRetryIntakeWithNextAcceptedIdCandidate(reason) {
+  return (
+    reason === 'accepted_external_id_correlation_not_found' ||
+    reason === 'ledger_packet_id_mismatch_correlation' ||
+    reason === 'correlation_row_incomplete' ||
+    reason === 'external_run_id_correlation_mismatch'
+  );
+}
+
 /**
  * @param {{
- *   accepted_external_id: string,
- *   external_run_id?: string | null,
- *   callback_thread_key: string | null | undefined,
- *   callback_packet_id: string | null | undefined,
+ *   accUsed: string,
+ *   corr: Record<string, unknown>,
+ *   extRun: string,
+ *   cbTkIn: string,
+ *   cbPktIn: string,
  *   canonical: CanonicalLike,
- *   status_bucket: string,
- *   ingress_meta?: Record<string, unknown> | null,
- * }} ctx
- * @returns {Promise<{
- *   committed: boolean,
- *   reason: string,
- *   run_id: string,
- *   packet_id: string,
- *   idempotent?: boolean,
- *   closure_anchor_written?: boolean,
- * }>}
+ *   bucket: string,
+ *   meta: Record<string, unknown>,
+ * }} p
  */
-export async function commitReceivedCursorCallbackToRunPacket(ctx) {
-  const acc = String(ctx.accepted_external_id || '').trim();
-  const extRun = ctx.external_run_id != null ? String(ctx.external_run_id).trim() : '';
-  const cbTkIn = ctx.callback_thread_key != null ? String(ctx.callback_thread_key).trim() : '';
-  const cbPktIn = ctx.callback_packet_id != null ? String(ctx.callback_packet_id).trim() : '';
-  const bucket = String(ctx.status_bucket || '');
-  const canonical = ctx.canonical && typeof ctx.canonical === 'object' ? ctx.canonical : {};
-  const meta = ctx.ingress_meta && typeof ctx.ingress_meta === 'object' ? ctx.ingress_meta : {};
-
-  if (!acc) {
-    return { committed: false, reason: 'accepted_external_id_required', run_id: '', packet_id: '' };
-  }
-
-  const corr = await findExternalCorrelation('cursor', 'accepted_external_id', acc);
-  if (!corr) {
-    return { committed: false, reason: 'accepted_external_id_correlation_not_found', run_id: '', packet_id: '' };
-  }
+async function intakeAfterCorrelationResolved(p) {
+  const { accUsed, corr, extRun, cbTkIn, cbPktIn, canonical, bucket, meta } = p;
 
   const runId = String(corr.run_id || '').trim();
   const corrPid = String(corr.packet_id || '').trim();
@@ -278,7 +278,7 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     await appendCosRunEventForRun(
       runId,
       'cursor_receive_intake_committed',
-      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc),
+      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, accUsed),
       {
         matched_by: meta.matched_by ?? null,
         canonical_status: effectiveBucket,
@@ -312,7 +312,7 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     await appendCosRunEventForRun(
       runId,
       'cursor_receive_intake_committed',
-      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, acc),
+      buildIntakeCommittedPayload(run, runId, corrPid, effectiveBucket, accUsed),
       {
         matched_by: meta.matched_by ?? null,
         canonical_status: effectiveBucket,
@@ -334,4 +334,85 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     return { committed: false, reason: 'non_terminal_authority_skip', run_id: runId, packet_id: corrPid };
   }
   return { committed: true, reason: 'committed_non_terminal', run_id: runId, packet_id: corrPid };
+}
+
+/**
+ * @param {{
+ *   accepted_external_id?: string,
+ *   callback_request_id_hint?: string | null,
+ *   run_uuid_hint?: string | null,
+ *   external_run_id?: string | null,
+ *   callback_thread_key: string | null | undefined,
+ *   callback_packet_id: string | null | undefined,
+ *   canonical: CanonicalLike,
+ *   status_bucket: string,
+ *   ingress_meta?: Record<string, unknown> | null,
+ * }} ctx
+ * @returns {Promise<{
+ *   committed: boolean,
+ *   reason: string,
+ *   run_id: string,
+ *   packet_id: string,
+ *   idempotent?: boolean,
+ *   closure_anchor_written?: boolean,
+ * }>}
+ */
+export async function commitReceivedCursorCallbackToRunPacket(ctx) {
+  const extRun = ctx.external_run_id != null ? String(ctx.external_run_id).trim() : '';
+  const cbTkIn = ctx.callback_thread_key != null ? String(ctx.callback_thread_key).trim() : '';
+  const cbPktIn = ctx.callback_packet_id != null ? String(ctx.callback_packet_id).trim() : '';
+  const bucket = String(ctx.status_bucket || '');
+  const canonical = ctx.canonical && typeof ctx.canonical === 'object' ? ctx.canonical : {};
+  const meta = ctx.ingress_meta && typeof ctx.ingress_meta === 'object' ? ctx.ingress_meta : {};
+
+  /** @type {string[]} */
+  const candidates = [];
+  pushUniqueCandidate(candidates, ctx.accepted_external_id);
+  pushUniqueCandidate(candidates, ctx.callback_request_id_hint);
+  const runHint = ctx.run_uuid_hint != null ? String(ctx.run_uuid_hint).trim() : '';
+  if (runHint) {
+    const runEarly = await getRunById(runHint);
+    const led =
+      runEarly?.cursor_dispatch_ledger && typeof runEarly.cursor_dispatch_ledger === 'object'
+        ? /** @type {Record<string, unknown>} */ (runEarly.cursor_dispatch_ledger)
+        : null;
+    if (led && led.pending_provider_callback === true) {
+      pushUniqueCandidate(candidates, led.automation_request_id);
+    }
+  }
+
+  if (!candidates.length) {
+    return { committed: false, reason: 'accepted_external_id_required', run_id: '', packet_id: '' };
+  }
+
+  let lastFail = /** @type {{ committed: false, reason: string, run_id: string, packet_id: string }} */ ({
+    committed: false,
+    reason: 'accepted_external_id_correlation_not_found',
+    run_id: '',
+    packet_id: '',
+  });
+
+  for (const cand of candidates) {
+    const corr = await findExternalCorrelation('cursor', 'accepted_external_id', cand);
+    if (!corr) {
+      lastFail = { committed: false, reason: 'accepted_external_id_correlation_not_found', run_id: '', packet_id: '' };
+      continue;
+    }
+    const res = await intakeAfterCorrelationResolved({
+      accUsed: cand,
+      corr,
+      extRun,
+      cbTkIn,
+      cbPktIn,
+      canonical,
+      bucket,
+      meta,
+    });
+    if (res.committed || !shouldRetryIntakeWithNextAcceptedIdCandidate(res.reason)) {
+      return res;
+    }
+    lastFail = res;
+  }
+
+  return lastFail;
 }

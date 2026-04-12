@@ -183,7 +183,7 @@ export async function recordCursorCloudCorrelation(ctx) {
   }
 
   if (!threadKey) return false;
-  if (!cloudRunId && !acceptedExternalId && !(automationRequestId && emitFp)) return false;
+  if (!cloudRunId && !acceptedExternalId && !(automationRequestId && emitFp) && !automationRequestId) return false;
 
   const run = await resolveRunForCursorCorrelation({ threadKey, runId: ctx.runId });
   if (!run?.id) return false;
@@ -202,7 +202,19 @@ export async function recordCursorCloudCorrelation(ctx) {
     });
     if (ok) anyOk = true;
   }
-  if (acceptedExternalId) {
+  /** Bind-time tool_* id — authoritative for webhook intake; reaffirm after trigger accept (v13.82). */
+  if (automationRequestId) {
+    const ok = await upsertExternalCorrelation({
+      run_id: rid,
+      thread_key: threadKey,
+      packet_id: packetId || null,
+      provider: 'cursor',
+      object_type: 'accepted_external_id',
+      object_id: automationRequestId,
+    });
+    if (ok) anyOk = true;
+  }
+  if (acceptedExternalId && acceptedExternalId !== automationRequestId) {
     const ok = await upsertExternalCorrelation({
       run_id: rid,
       thread_key: threadKey,
@@ -229,7 +241,7 @@ export async function recordCursorCloudCorrelation(ctx) {
   /** @type {string[]} */
   const anchorParts = [];
   if (cloudRunId) anchorParts.push('cloud_agent_run');
-  if (acceptedExternalId) anchorParts.push('accepted_external_id');
+  if (automationRequestId || acceptedExternalId) anchorParts.push('accepted_external_id');
   if (automationRequestId && emitFp) anchorParts.push('automation_request_path_fp');
   const anchorKind =
     anchorParts.length === 0 ? 'none' : anchorParts.length === 1 ? anchorParts[0] : 'mixed';
@@ -275,7 +287,7 @@ export async function recordCursorCloudCorrelation(ctx) {
     execution_lane: 'cloud_agent',
     cursor_correlation_anchors: {
       has_cloud_agent_run: Boolean(cloudRunId),
-      has_accepted_external_id: Boolean(acceptedExternalId),
+      has_accepted_external_id: Boolean(acceptedExternalId || automationRequestId),
       has_request_path_fp: Boolean(automationRequestId && emitFp),
     },
   });

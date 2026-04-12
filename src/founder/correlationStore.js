@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { cosRuntimeBaseDir } from './executionLedger.js';
 import { createCosRuntimeSupabase } from './runStoreSupabase.js';
-import { getCosRunStoreMode } from './executionRunStore.js';
+import { getCosRunStoreMode, getRunById } from './executionRunStore.js';
 
 /** @type {Map<string, Record<string, unknown>>} */
 const memCorrelations = new Map();
@@ -166,8 +166,18 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
   }
 
   const rid = String(hints.run_id || '').trim();
-  const pid = String(hints.packet_id || '').trim();
+  let pid = String(hints.packet_id || '').trim();
   const tk = String(hints.thread_key || '').trim();
+
+  if (rid && !pid) {
+    const run = await getRunById(rid);
+    const led =
+      run?.cursor_dispatch_ledger && typeof run.cursor_dispatch_ledger === 'object'
+        ? /** @type {Record<string, unknown>} */ (run.cursor_dispatch_ledger)
+        : null;
+    const lp = led && String(led.target_packet_id || '').trim();
+    if (lp) pid = lp;
+  }
 
   const mode = getCosRunStoreMode();
   if (mode === 'memory') {
@@ -189,6 +199,9 @@ export async function findExternalCorrelationCursorHintsWithMeta(hints) {
     if (rid) {
       let q = sb.from('cos_external_correlations').select('*').eq('provider', 'cursor').eq('run_id', rid);
       if (pid) q = q.eq('packet_id', pid);
+      else {
+        q = q.eq('object_type', 'accepted_external_id').order('last_seen_at', { ascending: false });
+      }
       const { data, error } = await q.limit(1);
       if (!error && Array.isArray(data) && data[0]) return { corr: data[0], matched_by: 'run_uuid_packet' };
     }

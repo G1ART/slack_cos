@@ -612,6 +612,8 @@ export async function processCanonicalExternalEvent(canonical, corr, ingressMeta
     cursorIntakeAttempted = true;
     intakeResult = await commitReceivedCursorCallbackToRunPacket({
       accepted_external_id: String(canonical.accepted_external_id_hint || '').trim(),
+      callback_request_id_hint: canonical.callback_request_id_hint,
+      run_uuid_hint: canonical.run_id_hint,
       external_run_id: canonical.external_run_id,
       callback_thread_key: canonical.thread_key_hint,
       callback_packet_id: canonical.packet_id_hint,

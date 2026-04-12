@@ -36,7 +36,7 @@
 - 타입 SSOT + 병합: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`, `COS_OPS_SMOKE_SUMMARY_STREAM_VIEW`, `supabaseListMergedSmokeSummaryEvents`, `supabaseListMergedSmokeSummaryEventsFallback`, `supabaseMapHarnessOpsSmokeSessionIdsByRunIds`
 - 파일/메모리 필터: `src/founder/runCosEvents.js` — `SMOKE_SUMMARY_EVENT_TYPES`
 - 세션 요약 본문: `src/founder/smokeOps.js` — `summarizeOpsSmokeSessionsFromFlatRows`, `aggregateSmokeSessionProgress`, founder-facing
-- Intake 기록: `src/founder/cursorReceiveCommit.js` — `cursor_receive_intake_committed`
+- Intake 기록: `src/founder/cursorReceiveCommit.js` — `cursor_receive_intake_committed` (v13.82: 다중 accepted id 후보 + ledger 정합 재시도, `COS_vNext13_82_Cursor_Intake_Id_Alignment_2026-04-01.md`)
 - 런 하니스 보존: `src/founder/executionRunStore.js` — `finalizeRunAfterStarterKickoff` 가 기존 `harness_snapshot` 필드 병합
 - 슈퍼바이저 샤딩 키: `src/founder/supervisorTickSharding.js` ( `runSupervisor.js` 에서 사용)
 - 요약 불변식: `scripts/test-ops-smoke-parcel-gate-summary-invariant.mjs`

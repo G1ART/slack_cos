@@ -271,7 +271,18 @@ export function computeCursorWebhookFieldSelection(body, env = process.env) {
   let acceptedExternalIdHint = firstNonEmptyString([root.accepted_external_id, root.acceptedExternalId]);
   let acceptedIdSource = acceptedExternalIdHint ? 'canonical:accepted_external_id' : '';
   if (!acceptedExternalIdHint) {
-    const rq = firstNonEmptyString([root.request_id, root.requestId]);
+    const rq = firstNonEmptyString([
+      root.request_id,
+      root.requestId,
+      data.request_id,
+      data.requestId,
+      nested.request_id,
+      nested.requestId,
+      context.request_id,
+      context.requestId,
+      job.request_id,
+      job.requestId,
+    ]);
     if (rq) {
       acceptedExternalIdHint = rq;
       acceptedIdSource = 'canonical:request_id';
