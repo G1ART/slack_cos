@@ -344,4 +344,34 @@ const sumOrph = summarizeOpsSmokeSessionsFromFlatRows(flatOrphanMix, { sessionLi
 assert.equal(sumOrph.primary_run_id, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
 assert.ok(sumOrph.related_run_ids.includes('_orphan'));
 
+// --- (7) Intake without smoke_session_id in payload → attach to session via COS run_id (Supabase merge shape) ---
+const flatIntakeAttrib = [
+  {
+    run_id: 'run-uuid-intake-attrib',
+    event_type: 'ops_smoke_phase',
+    created_at: '2026-01-01T00:00:00Z',
+    payload: {
+      smoke_session_id: 'sess_intake_attrib',
+      phase: 'cursor_trigger_recorded',
+      at: '2026-01-01T00:00:00Z',
+    },
+  },
+  {
+    run_id: 'run-uuid-intake-attrib',
+    event_type: 'cursor_receive_intake_committed',
+    created_at: '2026-01-01T00:01:00Z',
+    payload: {
+      target_run_id: 'run-uuid-intake-attrib',
+      target_packet_id: 'p_x',
+      terminal_bucket: 'positive_terminal',
+    },
+  },
+];
+const sumInt = summarizeOpsSmokeSessionsFromFlatRows(flatIntakeAttrib, { sessionLimit: 5 })[0];
+assert.ok(
+  sumInt.phases_seen.includes('run_packet_progression_patched'),
+  'intake row must count as progression when attributed by run_id',
+);
+assert.notEqual(sumInt.final_status, 'callback_correlated_without_progression_patch');
+
 console.log('test-v13-77-receive-intake-commit: ok');

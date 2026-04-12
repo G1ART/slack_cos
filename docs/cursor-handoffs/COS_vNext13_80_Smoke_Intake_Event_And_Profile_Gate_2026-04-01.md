@@ -3,6 +3,7 @@
 ## Summary
 
 - **Supabase / flat-row smoke summaries**: `cursor_receive_intake_committed` is included in summary event type allowlists and mapped in `smokeSummaryPhaseFromRow` to `run_packet_progression_patched`, so ops tooling sees progression when receive-office commit succeeded even if `ops_smoke_phase` rows were dropped or merged differently.
+- **Session bucketing**: Intake events written to `cos_run_events` do not carry `smoke_session_id` in the JSON payload. `summarizeOpsSmokeSessionsFromFlatRows` therefore **re-attributes** those rows to any smoke session that already lists the same COS `run_id` (`target_run_id` or row `run_id`), so `summarize-ops-smoke-sessions.mjs` is not stuck on `callback_correlated_without_progression_patch` when the DB shows `cursor_receive_intake_committed`.
 - **Completion contract (KO)**: `cos_emit_patch_completion_contract_v1.provider_instructions_ko` now states explicitly that `recommended_callback_context.packet_id` must match dispatch ledger exactly (manual fixed IDs fail intake).
 - **Adapter**: `invokeExternalTool` blocks `cursor:create_spec` on `live_only_emit_patch` threads via `evaluateCursorActionAgainstProfile` (no legacy `create_spec_disallowed_in_live_only_mode` string).
 

@@ -1715,20 +1715,55 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
   /** @type {Map<string, { run_ids: string[], rows: { event_type: string, payload: Record<string, unknown>, created_at: string }[] }>} */
   const bySession = new Map();
+  /** cos_run_events intake rows omit smoke_session_id; attribute via target_run_id / row.run_id (vNext.13.80). */
+  const pendingIntakeNoSid = [];
   for (const row of flatRows || []) {
     if (!SMOKE_SESSION_ROW_EVENT_TYPES.has(String(row.event_type || ''))) continue;
     const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
     const sid = String(pl.smoke_session_id || '').trim();
-    if (!sid) continue;
+    const et = String(row.event_type || '');
+    if (!sid) {
+      if (et === 'cursor_receive_intake_committed') {
+        pendingIntakeNoSid.push({ row, pl });
+      }
+      continue;
+    }
     const runId = String(row.run_id || '').trim() || 'unknown';
     if (!bySession.has(sid)) bySession.set(sid, { run_ids: [], rows: [] });
     const bucket = bySession.get(sid);
     bucket.rows.push({
-      event_type: String(row.event_type || ''),
+      event_type: et,
       payload: pl,
       created_at: row.created_at != null ? String(row.created_at) : '',
     });
     if (runId && runId !== 'unknown' && !bucket.run_ids.includes(runId)) bucket.run_ids.push(runId);
+  }
+  /** @type {Map<string, string[]>} */
+  const runIdToSmokeSids = new Map();
+  for (const [sid, { run_ids }] of bySession) {
+    for (const rid of run_ids) {
+      if (!rid || rid === '_orphan' || rid === 'unknown') continue;
+      const prev = runIdToSmokeSids.get(rid) || [];
+      if (!prev.includes(sid)) prev.push(sid);
+      runIdToSmokeSids.set(rid, prev);
+    }
+  }
+  for (const { row, pl } of pendingIntakeNoSid) {
+    const rid = String(pl.target_run_id || row.run_id || '').trim();
+    if (!rid) continue;
+    const sids = runIdToSmokeSids.get(rid) || [];
+    for (const sid of sids) {
+      const bucket = bySession.get(sid);
+      if (!bucket) continue;
+      bucket.rows.push({
+        event_type: 'cursor_receive_intake_committed',
+        payload: pl,
+        created_at: row.created_at != null ? String(row.created_at) : '',
+      });
+    }
+  }
+  for (const [, bucket] of bySession) {
+    bucket.rows.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
   }
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_ids, rows }]) => {
     const nonOrphan = run_ids.filter((r) => r && r !== '_orphan');
