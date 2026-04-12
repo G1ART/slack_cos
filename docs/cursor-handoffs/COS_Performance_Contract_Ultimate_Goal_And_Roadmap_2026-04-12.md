@@ -36,3 +36,17 @@
 
 - 로컬: `npm run verify:performance-contract`, `npm test`, (가능 시) `npm run audit:parcel-health`
 - Git: 워크스페이스 규칙에 따라 `pull --rebase` → `commit` → `push`
+
+## 5. 배포 후 현장 검증 메모 — `smoke_2026_04_12_live_34` (2026-04-12)
+
+**요약 스크립트(Supabase):** `final_status=authoritative_callback_closure_applied`, `breaks_at` 없음, `delegate_live_patch_present=true`, `accepted_external_id` 정상.
+
+**live_33 대비:** `phases_seen`에 **`github_secondary_recovery_matched` 없음** — narrow live + `COS_STRICT_LIVE_EMIT_PATCH_PROVIDER_ONLY=1` 배포 시 **recovery envelope 푸시 매칭 행이 생기지 않는 것**과 정합. `github_fallback_evidence`는 GitHub 웹훅 감사 경로로 **남을 수 있음**(부차 증거; 완료 권위 아님).
+
+**Supabase 타임라인 CSV:** `cursor_receive_intake_committed` 2회, `external_callback_matched` / `authoritative_callback_closure_applied` 2회(오케스트레이터+프로바이더 파동), `cos_cursor_webhook_ingress_safe` 상관 키 `accepted_external_id`. `founder_milestone_sent`에 `milestone:blocked` 한 번은 live_only 스레드에서 선행 `create_spec` 시도가 프로필에 막힌 뒤 `emit_patch`로 이어진 흐름과 부합.
+
+**슈퍼바이저 행:** `pending_supervisor_wake=false`, `last_supervisor_wake_request_at` 이 콜백 직전대와 맞으면 **wake 소비 정상**. `status=blocked`는 런 그래프상 패킷/런 상태가 아직 `completed`로 올라가지 않은 경우에 흔함 — 스모크 **콜백 성공**과 동치는 아님(필요 시 `cos_runs`·패킷 상태 별도 확인).
+
+**Railway:** 로그에서 `cos_github_recovery_envelope_skipped`(strict) 및 `cos_cursor_callback_evidence` 시각을 Supabase `created_at`과 맞추면 인입 지연·이중 콜백을 설명하기 쉬움.
+
+**감사 스크립트:** `--strict`는 `advisory`만 있어도 exit 1 — JSON에 `strict_exit_nonzero`, `strict_fail_due_to_advisory` 등으로 원인 표기(패치 v13.85).

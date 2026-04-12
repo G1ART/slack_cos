@@ -177,6 +177,8 @@ async function main() {
         ? '뷰·집계·슈퍼바이저·고아 테이블 절대량은 양호로 보임. advisory는 D1 이중기록 구간에서 흔한 스트림 고아 비율 안내.'
         : '하드 경고가 있음 — Railway 로그·웹훅·DB를 우선 확인.';
 
+  const strictFail = strict && (warnings.length > 0 || advisory.length > 0);
+
   const report = {
     ok,
     skipped: false,
@@ -199,6 +201,11 @@ async function main() {
     },
     warnings,
     advisory,
+    /** --strict 일 때 exit 1 원인을 JSON만 봐도 구분 (ok:true 인데 npm 실패 혼란 방지) */
+    strict_mode: strict,
+    strict_exit_nonzero: strictFail,
+    strict_fail_due_to_warnings: strict && warnings.length > 0,
+    strict_fail_due_to_advisory: strict && advisory.length > 0,
   };
 
   if (jsonOnly) {
@@ -214,9 +221,16 @@ async function main() {
     if (interpretationKo) {
       console.log('\n--- 해석 ---\n' + interpretationKo);
     }
+    if (strict && strictFail) {
+      const bits = [];
+      if (warnings.length) bits.push('warnings');
+      if (advisory.length) bits.push('advisory');
+      console.log(
+        `\n--- strict 종료 ---\nexit 1 (${bits.join(' + ')}) — advisory만 있어도 --strict 는 실패 처리합니다.`,
+      );
+    }
   }
 
-  const strictFail = strict && (warnings.length > 0 || advisory.length > 0);
   process.exit(strictFail ? 1 : 0);
 }
 
