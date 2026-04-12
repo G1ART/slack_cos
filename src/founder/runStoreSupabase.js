@@ -202,6 +202,10 @@ export function appRunToDbRow(row) {
       row.cursor_callback_anchor && typeof row.cursor_callback_anchor === 'object'
         ? row.cursor_callback_anchor
         : null,
+    cursor_dispatch_ledger:
+      row.cursor_dispatch_ledger && typeof row.cursor_dispatch_ledger === 'object'
+        ? row.cursor_dispatch_ledger
+        : null,
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
@@ -267,6 +271,10 @@ export function dbRowToAppRun(db) {
     cursor_callback_anchor:
       db.cursor_callback_anchor && typeof db.cursor_callback_anchor === 'object'
         ? db.cursor_callback_anchor
+        : null,
+    cursor_dispatch_ledger:
+      db.cursor_dispatch_ledger && typeof db.cursor_dispatch_ledger === 'object'
+        ? db.cursor_dispatch_ledger
         : null,
   };
 }
@@ -411,6 +419,7 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
       last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
       recovery_envelope_pending: dbUp.recovery_envelope_pending,
       cursor_callback_anchor: dbUp.cursor_callback_anchor,
+      cursor_dispatch_ledger: dbUp.cursor_dispatch_ledger,
       updated_at: dbUp.updated_at,
     })
     .eq('id', cur.id);
@@ -467,6 +476,7 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
       last_supervisor_wake_request_at: dbUp.last_supervisor_wake_request_at,
       recovery_envelope_pending: dbUp.recovery_envelope_pending,
       cursor_callback_anchor: dbUp.cursor_callback_anchor,
+      cursor_dispatch_ledger: dbUp.cursor_dispatch_ledger,
       updated_at: dbUp.updated_at,
     })
     .eq('id', rid);
