@@ -31,6 +31,22 @@ const opsRows = [
 function createMockSupabase(runData, opsData) {
   return {
     from(table) {
+      if (table === 'cos_ops_smoke_summary_stream') {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return Promise.resolve({ data: null, error: { message: 'mock_no_view' } });
+          },
+        };
+      }
       const data = table === 'cos_ops_smoke_events' ? opsData : runData;
       return {
         select() {

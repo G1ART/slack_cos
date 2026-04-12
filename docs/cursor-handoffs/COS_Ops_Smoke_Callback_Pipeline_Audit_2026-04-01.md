@@ -16,7 +16,7 @@
 | 구역 | 증상 힌트 | 확인할 것 |
 |------|-----------|-----------|
 | SSOT 타입 | 파일 요약엔 있는데 Supabase만 다름 / 그 반대 | `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` 한 벌만 쓰는지 (`runStoreSupabase` + `runCosEvents` Set) |
-| 병합 상한 | 최근 세션이 요약에서 잘림 | `--max-rows`, 양 테이블 각각 `limit` 후 merge·slice — 초과 트래픽 시 오래된 행 도려짐 |
+| 병합 상한 | 최근 세션이 요약에서 잘림 | `mergedSmokeSummaryPerSourceFetchBudget` — 소스별 `min(10k, finalLimit*2)` 후 merge·`slice(finalLimit)` (`runStoreSupabase.js`). `--max-rows` 로 최종 한도 조정. |
 | 세션 귀속 | intake 가 아예 세션에 안 붙음 | `summarizeOpsSmokeSessionsFromFlatRows` 의 `pendingIntakeNoSid` + `runIdToSmokeSids` |
 | 집계 필터 | 콜백은 있는데 `without_progression_patch` | `filterRowsForSessionAggregateTopline` 에 **진행 판정** 이벤트가 예외 목록에 있는지 |
 | 쓰기 시점 | DB엔 없고 런타임만 성공 | Railway/COS 프로세스의 Supabase 자격·`append` 실패 로그 |
@@ -28,12 +28,12 @@
 1. **타입 SSOT**: `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` 만 정의하고, Supabase `cos_run_events` 조회·파일 스캔 모두 여기서 파생 (이번 패치).
 2. **단일 정규화 레이어**(선택): flat row 를 세션에 넣기 전에 `enrichRowForSmokeSummary(row)` 로 `smoke_session_id` / `attempt_seq` 를 가능한 한 채운다 (intake 에 sid 주입까지).
 3. **불변식 테스트**: “provider correlated + intake committed ⇒ `phases_seen` 에 `run_packet_progression_patched`” 같은 **속성 테스트**를 `smokeOps` 에 고정.
-4. **병합 쿼리**(선택): 장기적으로는 DB 뷰나 단일 쿼리로 “최근 N 이벤트”를 세션 무관하게 가져온 뒤 메모리에서 세션 그룹 — 이중 limit 이슈 완화.
+4. **병합 단일 시계열**: 뷰 `cos_ops_smoke_summary_stream` + `supabaseListMergedSmokeSummaryEventsFromStream` (마이그레이션 `20260413103000`). 실패 시 `supabaseListMergedSmokeSummaryEventsFallback` + 소스 예산. `COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY=1` 로 강제 레거시.
 
 ## 4. 코드 앵커
 
 - **게이트(입구·분류)**: `src/founder/opsSmokeParcelGate.js` — 버킷 빌드, `SESSION_WIDE_AGGREGATE_EVENT_TYPES`, 하니스 `ops_smoke_session_id` 앵커, intake `smoke_session_id` 보강
-- 타입 SSOT: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`
+- 타입 SSOT + 병합: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`, `COS_OPS_SMOKE_SUMMARY_STREAM_VIEW`, `supabaseListMergedSmokeSummaryEvents`, `supabaseListMergedSmokeSummaryEventsFallback`
 - 파일/메모리 필터: `src/founder/runCosEvents.js` — `SMOKE_SUMMARY_EVENT_TYPES`
 - 세션 요약 본문: `src/founder/smokeOps.js` — `summarizeOpsSmokeSessionsFromFlatRows`, `aggregateSmokeSessionProgress`, founder-facing
 - Intake 기록: `src/founder/cursorReceiveCommit.js` — `cursor_receive_intake_committed`

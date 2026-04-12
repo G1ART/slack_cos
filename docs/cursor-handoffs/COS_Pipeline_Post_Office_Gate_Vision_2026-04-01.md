@@ -45,7 +45,7 @@
 
 **페이즈 B — 읽기 단일화**
 
-- 요약/대시보드는 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` SSOT 유지 + **병합 이중 limit** 완화(뷰 또는 단일 쿼리).
+- 적용됨: 뷰 `cos_ops_smoke_summary_stream` + `supabaseListMergedSmokeSummaryEventsFromStream`; 폴백은 이중 쿼리 + 소스 예산(`mergedSmokeSummaryPerSourceFetchBudget`).
 
 **페이즈 C — 병렬·부하**
 

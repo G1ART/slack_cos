@@ -43,6 +43,39 @@ export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
   'result_recovery_github_secondary',
 ];
 
+/** DB 뷰 `supabase/migrations/*_cos_ops_smoke_summary_stream_view.sql` — 단일 시계열 읽기. */
+export const COS_OPS_SMOKE_SUMMARY_STREAM_VIEW = 'cos_ops_smoke_summary_stream';
+
+/**
+ * @param {Record<string, unknown>} r
+ */
+function mapMergedSmokeSummaryRow(r) {
+  return {
+    run_id: String(r.run_id || ''),
+    event_type: String(r.event_type || ''),
+    payload: r.payload && typeof r.payload === 'object' ? r.payload : {},
+    created_at: r.created_at != null ? String(r.created_at) : '',
+  };
+}
+
+/**
+ * 단일 뷰에서 병합 스트림 조회 (한 번의 order/limit).
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{ runId?: string | null, limit?: number }} p
+ * @returns {Promise<{ ok: boolean, data: ReturnType<typeof mapMergedSmokeSummaryRow>[] }>}
+ */
+export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
+  const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
+  const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  let q = sb
+    .from(COS_OPS_SMOKE_SUMMARY_STREAM_VIEW)
+    .select('run_id, event_type, payload, created_at');
+  if (rid) q = q.eq('run_id', rid);
+  const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
+  if (error) return { ok: false, data: [] };
+  return { ok: true, data: (data || []).map(mapMergedSmokeSummaryRow) };
+}
+
 export async function supabaseListOpsSmokePhaseEvents(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
@@ -91,20 +124,47 @@ export async function supabaseListCosOpsSmokeEvents(sb, p) {
 }
 
 /**
- * Merge cos_run_events smoke rows with cos_ops_smoke_events, newest first.
+ * 병합 요약: 각 테이블은 이 행 수까지 가져온 뒤 합쳐서 `finalLimit`로 자른다.
+ * 두 소스에 동일한 작은 limit만 쓰면 한쪽이 매우 많을 때 다른 쪽 최신 행이 통째로 밀려 요약에서 사라질 수 있어, 소스 예산을 넉넉히 잡는다 (상한 10k).
+ * @param {number} finalLimit
+ */
+export function mergedSmokeSummaryPerSourceFetchBudget(finalLimit) {
+  const lim = Math.max(1, Math.min(Number(finalLimit) || 2000, 10000));
+  return Math.min(10000, lim * 2);
+}
+
+/**
+ * 이중 쿼리 병합 (뷰 미적용·오류 시 폴백).
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
  * @param {{ runId?: string | null, limit?: number }} p
  */
-export async function supabaseListMergedSmokeSummaryEvents(sb, p) {
+export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  const sourceBudget = mergedSmokeSummaryPerSourceFetchBudget(lim);
   const [runEv, opsEv] = await Promise.all([
-    supabaseListOpsSmokePhaseEvents(sb, { runId: rid, limit: lim }),
-    supabaseListCosOpsSmokeEvents(sb, { runId: rid, limit: lim }),
+    supabaseListOpsSmokePhaseEvents(sb, { runId: rid, limit: sourceBudget }),
+    supabaseListCosOpsSmokeEvents(sb, { runId: rid, limit: sourceBudget }),
   ]);
   const merged = [...runEv, ...opsEv];
   merged.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   return merged.slice(0, lim);
+}
+
+/**
+ * Merge cos_run_events smoke rows with cos_ops_smoke_events, newest first.
+ * 우선 DB 뷰 `cos_ops_smoke_summary_stream` 한 번 조회; 실패 시 {@link supabaseListMergedSmokeSummaryEventsFallback}.
+ * 강제 레거시: `COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY=1`.
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {{ runId?: string | null, limit?: number }} p
+ */
+export async function supabaseListMergedSmokeSummaryEvents(sb, p) {
+  if (String(process.env.COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY || '').trim() === '1') {
+    return supabaseListMergedSmokeSummaryEventsFallback(sb, p);
+  }
+  const stream = await supabaseListMergedSmokeSummaryEventsFromStream(sb, p);
+  if (!stream.ok) return supabaseListMergedSmokeSummaryEventsFallback(sb, p);
+  return stream.data;
 }
 
 /**
