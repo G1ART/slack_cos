@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   persistRunAfterDelegate,
   getActiveRunForThread,
+  getRunById,
   __resetCosRunMemoryStore,
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
@@ -114,6 +115,13 @@ await Promise.resolve();
 await Promise.resolve();
 assert.equal(last.threadKey, tk);
 assert.equal(last.runId, ridA, 'supervisor wake must target correlated run A, not omit run id');
+
+const runAfter = await getRunById(ridA);
+assert.equal(
+  runAfter?.pending_supervisor_wake,
+  true,
+  '택배사무소: 웹훅 매칭 후 durable pending_supervisor_wake 가 켜져야 함 (주기 루프 백스톱)',
+);
 
 registerRunStateChangeListener(null);
 

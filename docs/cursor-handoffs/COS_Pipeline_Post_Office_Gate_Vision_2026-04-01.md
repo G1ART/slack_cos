@@ -51,11 +51,12 @@
 **페이즈 C — 병렬·부하**
 
 - 적용·고정: 프로세스 내 tick 재진입 키는 `supervisorTickSharding.js` — `r:${runId}` / `t:${threadKey}` (`runSupervisor.js`). 전역 단일 Set 이 아니라 **런·스레드 샤딩**.
-- 남음: 웹훅 인그레스→wake 경로가 동일 원칙을 끝까지 지키는지 회귀 테스트·부하 시나리오.
+- 웹훅→wake: `processCanonicalExternalEvent` 가 `signalSupervisorWakeForRun` 로 durable 플래그 설정; `app.js` 리스너가 `runId` 있으면 `tickRunSupervisorForRun`. 회귀: `test-cursor-callback-wakes-correlated-run-supervisor.mjs` (`pending_supervisor_wake` 포함). 부하·다중 동시 웹훅 시나리오는 선택 과제.
 
 **페이즈 D — 레거시 제거**
 
-- 테스트와 운영 런북이 붙은 뒤에만 **바이패스 분기 대량 삭제**.
+- 런북 초안: `COS_Ops_Smoke_Callback_Pipeline_Audit_2026-04-01.md` §6 (전제·후보 순위·이번 턴은 삭제 없음).
+- 테스트·운영 확인이 붙은 뒤에만 **쓰기 축소 / 바이패스 대량 삭제**.
 
 ## 4. 다음 패치에서 잡을 수 있는 작은 한 걸음
 
