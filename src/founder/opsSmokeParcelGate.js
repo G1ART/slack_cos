@@ -45,12 +45,82 @@ export function filterRowsForSessionAggregateTopline(rows, primarySeq) {
 }
 
 /**
+ * 동일 run_id 에 여러 smoke_session_id 가 섞인 병렬·재시도 스트림에서, sid 없는 intake 귀속에 쓸
+ * 결정적 1순위 세션(행 수 최대, 동률 시 sid 문자열 오름차순 최소).
+ *
+ * @param {Array<{ run_id?: string, event_type?: string, payload?: Record<string, unknown> }>} flatRows
+ * @param {Set<string>} allowedEventTypes
+ * @returns {Map<string, string>} run_id → smoke_session_id
+ */
+export function inferPreferredSmokeSessionIdPerRunFromFlatRows(flatRows, allowedEventTypes) {
+  /** @type {Map<string, Map<string, number>>} */
+  const counts = new Map();
+  for (const row of flatRows || []) {
+    if (!allowedEventTypes.has(String(row.event_type || ''))) continue;
+    const pl = row.payload && typeof row.payload === 'object' ? row.payload : {};
+    const sid = String(pl.smoke_session_id || '').trim();
+    const rid = String(row.run_id || '').trim();
+    if (!sid || !rid || rid === '_orphan') continue;
+    if (!counts.has(rid)) counts.set(rid, new Map());
+    const m = counts.get(rid);
+    m.set(sid, (m.get(sid) || 0) + 1);
+  }
+  /** @type {Map<string, string>} */
+  const out = new Map();
+  for (const [rid, sidMap] of counts) {
+    const entries = [...sidMap.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    if (entries.length) out.set(rid, entries[0][0]);
+  }
+  return out;
+}
+
+/**
+ * @typedef {{
+ *   preferredSmokeSessionByRunId?: Map<string, string> | null,
+ *   intakeOrphanReplication?: 'all' | 'dominant',
+ * }} BuildSmokeSessionBucketsOpts
+ */
+
+/**
  * cos_run_events + cos_ops_smoke_events 병합 플랫 행 → smoke_session_id 버킷 (intake 2차 귀속 포함).
+ * `intakeOrphanReplication: 'dominant'`(기본): 동일 run 에 세션이 여러 개일 때 intake 를 한 세션에만 붙여 이중 집계를 줄인다.
+ * 하니스 `preferredSmokeSessionByRunId` 가 있으면 그 sid 가 추론보다 우선(버킷이 스트림에 있을 때).
+ *
  * @param {Array<{ run_id?: string, event_type?: string, payload?: Record<string, unknown>, created_at?: string }>} flatRows
  * @param {Set<string>} allowedEventTypes
+ * @param {BuildSmokeSessionBucketsOpts} [opts]
  * @returns {Map<string, { run_ids: string[], rows: SmokeRow[] }>}
  */
-export function buildSmokeSessionBucketsFromFlatRows(flatRows, allowedEventTypes) {
+export function buildSmokeSessionBucketsFromFlatRows(flatRows, allowedEventTypes, opts = {}) {
+  const replication = opts.intakeOrphanReplication === 'all' ? 'all' : 'dominant';
+  const harnessMap =
+    opts.preferredSmokeSessionByRunId instanceof Map ? opts.preferredSmokeSessionByRunId : null;
+  const inferredPref = inferPreferredSmokeSessionIdPerRunFromFlatRows(flatRows, allowedEventTypes);
+
+  /** @param {string} rid */
+  const prefForRun = (rid) => {
+    const h = harnessMap?.get(rid);
+    if (h != null && String(h).trim()) return String(h).trim();
+    return inferredPref.get(rid) || '';
+  };
+
+  /** @param {string} rid @param {string[]} sids @param {string} pref */
+  const pickIntakeTargetSids = (rid, sids, pref) => {
+    if (replication === 'all') {
+      if (sids.length) return sids;
+      if (pref && bySession.has(pref)) return [pref];
+      return [];
+    }
+    const fromHarness = harnessMap != null && harnessMap.has(rid) && String(harnessMap.get(rid) || '').trim() !== '';
+    if (fromHarness && pref && bySession.has(pref)) return [pref];
+    if (sids.length <= 1) {
+      if (sids.length === 1) return sids;
+      return pref && bySession.has(pref) ? [pref] : [];
+    }
+    if (pref && sids.includes(pref)) return [pref];
+    return sids;
+  };
+
   /** @type {Map<string, { run_ids: string[], rows: SmokeRow[] }>} */
   const bySession = new Map();
   const pendingIntakeNoSid = [];
@@ -89,7 +159,9 @@ export function buildSmokeSessionBucketsFromFlatRows(flatRows, allowedEventTypes
     const rid = String(pl.target_run_id || row.run_id || '').trim();
     if (!rid) continue;
     const sids = runIdToSmokeSids.get(rid) || [];
-    for (const sid of sids) {
+    const pref = prefForRun(rid);
+    const targetSids = pickIntakeTargetSids(rid, sids, pref);
+    for (const sid of targetSids) {
       const bucket = bySession.get(sid);
       if (!bucket) continue;
       bucket.rows.push({

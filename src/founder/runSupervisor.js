@@ -34,6 +34,12 @@ import {
   renderFailedMilestone,
   renderEagerCombinedMilestone,
 } from './founderCallbackCopy.js';
+import {
+  supervisorTickInflightKeyForRun,
+  supervisorTickInflightKeyForThread,
+} from './supervisorTickSharding.js';
+
+export { supervisorTickInflightKeyForRun, supervisorTickInflightKeyForThread } from './supervisorTickSharding.js';
 
 const OWNER_ID = `${process.env.RAILWAY_REPLICA_ID || process.env.HOSTNAME || 'local'}:${process.pid}:${crypto.randomBytes(3).toString('hex')}`;
 
@@ -326,7 +332,7 @@ export async function tickRunSupervisorForThread(threadKey, ctx) {
   const tk = String(threadKey || '');
   if (!tk || !ctx.client?.chat?.postMessage) return { skipped: true, reason: 'no_client' };
 
-  const inflightKey = `t:${tk}`;
+  const inflightKey = supervisorTickInflightKeyForThread(tk);
   if (tickInflight.has(inflightKey)) return { skipped: true, reason: 'reentrant' };
 
   if (!ctx.skipLease) {
@@ -375,7 +381,7 @@ export async function tickRunSupervisorForRun(runId, ctx) {
   const rid = String(runId || '').trim();
   if (!rid || !ctx.client?.chat?.postMessage) return { skipped: true, reason: 'no_client' };
 
-  const inflightKey = `r:${rid}`;
+  const inflightKey = supervisorTickInflightKeyForRun(rid);
   if (tickInflight.has(inflightKey)) return { skipped: true, reason: 'reentrant' };
 
   if (!ctx.skipLease) {

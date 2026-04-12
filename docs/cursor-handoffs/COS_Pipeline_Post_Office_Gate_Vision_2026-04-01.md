@@ -4,7 +4,8 @@
 
 ## 0. 코드 앵커 (단일 게이트 모듈)
 
-- `src/founder/opsSmokeParcelGate.js` — 플랫 행 → 세션 버킷(`buildSmokeSessionBucketsFromFlatRows`), 집계용 교차 레인(`SESSION_WIDE_AGGREGATE_EVENT_TYPES` + `filterRowsForSessionAggregateTopline`), 런 하니스 `ops_smoke_session_id` 앵커, intake 페이로드의 `smoke_session_id` 해석.
+- `src/founder/opsSmokeParcelGate.js` — 플랫 행 → 세션 버킷(`buildSmokeSessionBucketsFromFlatRows`), 집계용 교차 레인(`SESSION_WIDE_AGGREGATE_EVENT_TYPES` + `filterRowsForSessionAggregateTopline`), 런 하니스 `ops_smoke_session_id` 앵커, intake 페이로드의 `smoke_session_id` 해석. **동일 run·다중 세션**이면 sid 없는 intake 는 기본 `dominant`(행 수 우세 + 결정적 tie-break); 하니스 맵이 있으면 최우선. 레거시 복제는 `intakeOrphanReplication: 'all'`.
+- `src/founder/supervisorTickSharding.js` — 슈퍼바이저 tick 재진입 키 `r:` / `t:` (병렬 샤딩).
 - `smokeOps.js` 는 기록·`aggregateSmokeSessionProgress`·founder-facing 포맷을 유지하고, **분류·버킷·필터**는 게이트를 호출한다.
 
 ## 0b. 이번까지 한 일과의 관계
@@ -40,8 +41,8 @@
 
 **페이즈 A — 쓰기 계약 정리 (삭제보다 먼저 관측)**
 
-- `cos_run_events` vs `cos_ops_smoke_events` 에 **같은 사실이 중복 기록되는지** 표로 정리.
-- “없어도 되는” 감사 행 vs “법적·운영 필수” 행 구분 후, 중복만 제거 후보로 둔다.
+- 표로 정리됨: `COS_Ops_Smoke_Callback_Pipeline_Audit_2026-04-01.md` §5.
+- “없어도 되는” 감사 행 vs “법적·운영 필수” 행 구분 후, 중복만 제거 후보로 둔다 (D 전 단계).
 
 **페이즈 B — 읽기 단일화**
 
@@ -49,7 +50,8 @@
 
 **페이즈 C — 병렬·부하**
 
-- 슈퍼바이저/웹훅 워커가 **run 단위 큐**로만 직렬화되는지 검증, 필요 시 명시적 큐 도입.
+- 적용·고정: 프로세스 내 tick 재진입 키는 `supervisorTickSharding.js` — `r:${runId}` / `t:${threadKey}` (`runSupervisor.js`). 전역 단일 Set 이 아니라 **런·스레드 샤딩**.
+- 남음: 웹훅 인그레스→wake 경로가 동일 원칙을 끝까지 지키는지 회귀 테스트·부하 시나리오.
 
 **페이즈 D — 레거시 제거**
 
@@ -57,11 +59,11 @@
 
 ## 4. 다음 패치에서 잡을 수 있는 작은 한 걸음
 
-- `smokeOps` 에 **불변식 테스트 1개** 추가: provider correlated + intake committed ⇒ 집계에 `run_packet_progression_patched` (실데이터 없이 flat fixture).
+- `smokeOps` **불변식 테스트**: `scripts/test-ops-smoke-parcel-gate-summary-invariant.mjs` — `summarizeOpsSmokeSessionsFromFlatRows` 경로에서 provider correlated + intake ⇒ `run_packet_progression_patched` (lineage 케이스 포함).
 - intake persist 시 **`smoke_session_id` 주입**(컨텍스트 있을 때)으로 2차 귀속 의존도 감소 — 적용됨(`cursorReceiveCommit` + 하니스 병합).
 - 뷰 SQL `IN` 목록 ↔ JS SSOT: `scripts/test-smoke-summary-stream-view-sql-ssot.mjs` 로 드리프트 방지.
 
 ## Owner actions
 
-- 비전만으로는 배포 검증이 없다. 레포 관례: `npm test`, Supabase 모드면 `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`.
+- 비전만으로는 배포 검증이 없다. 레포 관례: `npm test`, Supabase 모드면 `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (하니스 앵커 자동 로드; 레거시 복제 감사는 `--intake-replicate-all`).
 - Git 동기화는 워크스페이스 패치 보고 규칙 따름.

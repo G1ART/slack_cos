@@ -376,6 +376,37 @@ export async function supabaseSelectRunById(sb, runUuid) {
   return data;
 }
 
+const HARNESS_OPS_SMOKE_SID_FETCH_CAP = 200;
+
+/**
+ * Ops smoke 요약 CLI 등: 플랫 이벤트에 대응하는 런들의 `harness_snapshot.ops_smoke_session_id` 일괄 조회.
+ * orphan intake 귀속 시 스트림 추론보다 우선한다.
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} sb
+ * @param {string[]} runIds
+ * @returns {Promise<Map<string, string>>}
+ */
+export async function supabaseMapHarnessOpsSmokeSessionIdsByRunIds(sb, runIds) {
+  const ids = [
+    ...new Set((runIds || []).map((x) => String(x || '').trim()).filter((x) => x && x !== '_orphan')),
+  ].slice(0, HARNESS_OPS_SMOKE_SID_FETCH_CAP);
+  if (!sb || !ids.length) return new Map();
+  const { data, error } = await sb.from('cos_runs').select('id,harness_snapshot').in('id', ids);
+  if (error) {
+    console.error('[cos_runs harness anchors]', error.message);
+    return new Map();
+  }
+  /** @type {Map<string, string>} */
+  const out = new Map();
+  for (const row of data || []) {
+    const id = String(row.id || '').trim();
+    const hs = row.harness_snapshot && typeof row.harness_snapshot === 'object' ? row.harness_snapshot : {};
+    const sid = String(/** @type {Record<string, unknown>} */ (hs).ops_smoke_session_id || '').trim();
+    if (id && sid) out.set(id, sid);
+  }
+  return out;
+}
+
 /**
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
  * @param {Record<string, unknown>} appRow

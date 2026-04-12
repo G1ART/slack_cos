@@ -1693,9 +1693,22 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
   };
 }
 
+/**
+ * @param {Array<Record<string, unknown>>} flatRows
+ * @param {{
+ *   sessionLimit?: number,
+ *   preferredSmokeSessionByRunId?: Map<string, string>,
+ *   intakeOrphanReplication?: 'all' | 'dominant',
+ * }} [opts]
+ * — `preferredSmokeSessionByRunId`: 런 하니스 `ops_smoke_session_id` 등, orphan intake 귀속 우선.
+ * — `intakeOrphanReplication`: 기본 `dominant`(다중 세션 시 단일 귀속). 레거시 전 구간이면 `all`.
+ */
 export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
   const sessionLimit = opts.sessionLimit != null ? Math.max(1, Number(opts.sessionLimit)) : 50;
-  const bySession = buildSmokeSessionBucketsFromFlatRows(flatRows, SMOKE_SESSION_ROW_EVENT_TYPES);
+  const bySession = buildSmokeSessionBucketsFromFlatRows(flatRows, SMOKE_SESSION_ROW_EVENT_TYPES, {
+    preferredSmokeSessionByRunId: opts.preferredSmokeSessionByRunId,
+    intakeOrphanReplication: opts.intakeOrphanReplication,
+  });
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_ids, rows }]) => {
     const nonOrphan = run_ids.filter((r) => r && r !== '_orphan');
     const orphanOnly = run_ids.filter((r) => r === '_orphan');

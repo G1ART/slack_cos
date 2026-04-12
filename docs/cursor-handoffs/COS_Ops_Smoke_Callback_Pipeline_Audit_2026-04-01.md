@@ -32,12 +32,29 @@
 
 ## 4. 코드 앵커
 
-- **게이트(입구·분류)**: `src/founder/opsSmokeParcelGate.js` — 버킷 빌드, `SESSION_WIDE_AGGREGATE_EVENT_TYPES`, 하니스 `ops_smoke_session_id` 앵커, intake `smoke_session_id` 보강
-- 타입 SSOT + 병합: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`, `COS_OPS_SMOKE_SUMMARY_STREAM_VIEW`, `supabaseListMergedSmokeSummaryEvents`, `supabaseListMergedSmokeSummaryEventsFallback`
+- **게이트(입구·분류)**: `src/founder/opsSmokeParcelGate.js` — 버킷 빌드, `SESSION_WIDE_AGGREGATE_EVENT_TYPES`, 하니스 `ops_smoke_session_id` 앵커, intake `smoke_session_id` 보강, 다중 세션 시 orphan intake `dominant` 귀속(`inferPreferredSmokeSessionIdPerRunFromFlatRows`)
+- 타입 SSOT + 병합: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`, `COS_OPS_SMOKE_SUMMARY_STREAM_VIEW`, `supabaseListMergedSmokeSummaryEvents`, `supabaseListMergedSmokeSummaryEventsFallback`, `supabaseMapHarnessOpsSmokeSessionIdsByRunIds`
 - 파일/메모리 필터: `src/founder/runCosEvents.js` — `SMOKE_SUMMARY_EVENT_TYPES`
 - 세션 요약 본문: `src/founder/smokeOps.js` — `summarizeOpsSmokeSessionsFromFlatRows`, `aggregateSmokeSessionProgress`, founder-facing
 - Intake 기록: `src/founder/cursorReceiveCommit.js` — `cursor_receive_intake_committed`
 - 런 하니스 보존: `src/founder/executionRunStore.js` — `finalizeRunAfterStarterKickoff` 가 기존 `harness_snapshot` 필드 병합
+- 슈퍼바이저 샤딩 키: `src/founder/supervisorTickSharding.js` ( `runSupervisor.js` 에서 사용)
+- 요약 불변식: `scripts/test-ops-smoke-parcel-gate-summary-invariant.mjs`
+
+## 5. 쓰기 이중성 요약 (페이즈 A — 삭제 전 관측)
+
+같은 관측이 **두 테이블**로 갈라질 수 있다. 요약은 뷰/병합으로 합치되, **기록 경로**는 아래를 본다.
+
+| 이벤트·유형 | `run_id` 가 있을 때 (일반) | `run_id` 없음·고아 (대체) |
+|-------------|---------------------------|---------------------------|
+| `ops_smoke_phase` | `cos_run_events` (`recordOpsSmokePhase` → `appendCosRunEventForRun`) | (현 구조: sid+runId 없으면 기록 생략) |
+| `cos_cursor_webhook_ingress_safe` | `cos_run_events` | Supabase: `cos_ops_smoke_events` / 그 외: 요약용 orphan 파일 행 |
+| `cos_github_fallback_evidence` | `cos_run_events` | 위와 동일 |
+| `cos_pretrigger_tool_call` / `_blocked` | `cos_run_events` (pretrigger 감사) | orphan 가능 |
+| `cursor_receive_intake_committed` | `cos_run_events` | run 없으면 기록 경로가 달라질 수 있음 — 운영 시 로그 확인 |
+| 기타 SSOT 요약 타입 | 캐논 외부 이벤트·도구 결과 등 **런 앵커**가 있으면 `cos_run_events` 우선 | 앵커 없으면 `cos_ops_smoke_events` 또는 병합 스트림의 `_orphan` 런 |
+
+중복 제거(D 페이즈)는 **위 표에서 “필수 한 곳만”으로 줄일 후보**를 집은 뒤 테스트·런북과 함께 진행한다.
 
 ## Owner actions
 

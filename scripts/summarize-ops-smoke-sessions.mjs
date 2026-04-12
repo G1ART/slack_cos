@@ -2,6 +2,7 @@
 /**
  * Ops-only: summarize COS ops smoke sessions from cos_run_events (file | memory | supabase).
  * Read-only. Does not log raw payloads. Optional: COS_RUNTIME_STATE_DIR, COS_RUNTIME_SUPABASE_* or SUPABASE_*.
+ * Supabase: loads harness `ops_smoke_session_id` per run for orphan intake attribution unless `--intake-replicate-all`.
  */
 import path from 'node:path';
 import os from 'node:os';
@@ -10,7 +11,10 @@ import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
-import { createCosRuntimeSupabaseForSummary } from '../src/founder/runStoreSupabase.js';
+import {
+  createCosRuntimeSupabaseForSummary,
+  supabaseMapHarnessOpsSmokeSessionIdsByRunIds,
+} from '../src/founder/runStoreSupabase.js';
 import { listOpsSmokePhaseEventsForSummary } from '../src/founder/runCosEvents.js';
 import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
 
@@ -24,6 +28,7 @@ function parseArgs() {
     maxRows: 2000,
     supabaseUrl: null,
     supabaseKey: null,
+    intakeReplicateAll: false,
   };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i += 1) {
@@ -59,6 +64,9 @@ function parseArgs() {
     }
     if (a[i] === '--compact') {
       out.compact = true;
+    }
+    if (a[i] === '--intake-replicate-all') {
+      out.intakeReplicateAll = true;
     }
   }
   return out;
@@ -101,7 +109,21 @@ async function main() {
     supabaseClient,
   });
 
-  const summaries = summarizeOpsSmokeSessionsFromFlatRows(flatRows, { sessionLimit: 500 });
+  /** @type {Map<string, string> | undefined} */
+  let preferredSmokeSessionByRunId;
+  if (modeOverride === 'supabase' && supabaseClient && !args.intakeReplicateAll) {
+    const rids = flatRows
+      .map((r) => String(r.run_id || '').trim())
+      .filter((x) => x && x !== '_orphan');
+    preferredSmokeSessionByRunId = await supabaseMapHarnessOpsSmokeSessionIdsByRunIds(supabaseClient, rids);
+    if (!preferredSmokeSessionByRunId.size) preferredSmokeSessionByRunId = undefined;
+  }
+
+  const summaries = summarizeOpsSmokeSessionsFromFlatRows(flatRows, {
+    sessionLimit: 500,
+    preferredSmokeSessionByRunId,
+    intakeOrphanReplication: args.intakeReplicateAll ? 'all' : undefined,
+  });
   const limited = args.runId ? summaries : summaries.slice(0, args.limit);
 
   if (!limited.length) {
