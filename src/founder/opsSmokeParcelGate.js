@@ -19,6 +19,20 @@ export const SESSION_WIDE_AGGREGATE_EVENT_TYPES = new Set([
 ]);
 
 /**
+ * `recordOpsSmokeAfterExternalMatch` / `recordOpsSmokeFounderMilestone` 등은 `attempt_seq` 없이
+ * `ops_smoke_phase`만 남긴다. 다중 시도 lineage 집계 시 이 행들을 빼면 콜백·wake·마일스톤이
+ * 위상에서 사라져 `breaks_at`·`final_status`가 DB 진실과 어긋난다 (live_32 유형).
+ */
+export const SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE = new Set([
+  'external_callback_matched',
+  'authoritative_callback_closure_applied',
+  'callback_correlated_but_closure_not_applied',
+  'run_packet_progression_patched',
+  'supervisor_wake_enqueued',
+  'founder_milestone_sent',
+]);
+
+/**
  * @param {{ payload?: Record<string, unknown> }} row
  */
 export function getRowAttemptSeq(row) {
@@ -38,6 +52,11 @@ export function filterRowsForSessionAggregateTopline(rows, primarySeq) {
   return (rows || []).filter((r) => {
     const et = String(r.event_type || '');
     if (SESSION_WIDE_AGGREGATE_EVENT_TYPES.has(et)) return true;
+    if (et === 'ops_smoke_phase') {
+      const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+      const ph = String(pl.phase || '').trim();
+      if (SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE.has(ph)) return true;
+    }
     const seq = getRowAttemptSeq(r);
     if (seq <= 0) return false;
     return seq === ps;

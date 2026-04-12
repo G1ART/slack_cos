@@ -8,7 +8,7 @@
 
 - **이중 저장소**: 같은 관측이 `cos_run_events` 와 `cos_ops_smoke_events` 에 갈라질 수 있고, 요약은 **병합 + 상한(slice)** 으로만 본다 (`supabaseListMergedSmokeSummaryEvents`).
 - **화이트리스트가 여러 벌**: 과거에는 `cos_run_events` 조회용 타입 집합이 `cos_ops_smoke_events` / 파일 요약용 집합과 **달랐다**. 한쪽에만 타입을 추가하면 다른 경로에서 행이 **영구 누락**된다.
-- **집계 vs 추출의 이중 규칙**: `summarizeOpsSmokeSessionsFromFlatRows` 는 `aggregateSmokeSessionProgress(rowsForAgg)` 에 **필터된** 행만 넣고, 머신 필드 추출은 `primaryRows` 또는 전체 `rows` 를 섞어 쓴다. **attempt lineage** 가 켜지면 `filterRowsForSessionAggregateTopline` 이 교차 시도 증거만 예외로 두는데, 예외 목록에 빠진 이벤트는 위상에서 사라진다 (intake 누락 버그).
+- **집계 vs 추출의 이중 규칙**: `summarizeOpsSmokeSessionsFromFlatRows` 는 `aggregateSmokeSessionProgress(rowsForAgg)` 에 **필터된** 행만 넣고, 머신 필드 추출은 `primaryRows` 또는 전체 `rows` 를 섞어 쓴다. **attempt lineage** 가 켜지면 `filterRowsForSessionAggregateTopline` 이 교차 시도 증거만 예외로 두는데, 예외 목록에 빠진 이벤트는 위상에서 사라진다 (intake 누락 버그, v13.80b 수정). **post-callback `ops_smoke_phase`**(`recordOpsSmokeAfterExternalMatch` 등)는 `attempt_seq` 없이 기록되므로, 예외 없이면 `supervisor_wake_enqueued`·`authoritative_callback_closure_applied` 가 집계에서 빠져 DB 진실과 요약이 어긋난다 — **v13.83**: `SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE` (`opsSmokeParcelGate.js`).
 - **스키마 불균형**: `cursor_receive_intake_committed` 는 종종 `smoke_session_id` 없이 기록되므로, 세션 버킷팅에서 **2차 귀속**(run_id 매칭)이 필요하다.
 
 ## 2. 잠재 원인 체크리스트 (다음 이슈 때 위에서부터)
@@ -18,7 +18,7 @@
 | SSOT 타입 | 파일 요약엔 있는데 Supabase만 다름 / 그 반대 | `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` 한 벌만 쓰는지 (`runStoreSupabase` + `runCosEvents` Set) |
 | 병합 상한 | 최근 세션이 요약에서 잘림 | `mergedSmokeSummaryPerSourceFetchBudget` — 소스별 `min(10k, finalLimit*2)` 후 merge·`slice(finalLimit)` (`runStoreSupabase.js`). `--max-rows` 로 최종 한도 조정. |
 | 세션 귀속 | intake 가 아예 세션에 안 붙음 | `summarizeOpsSmokeSessionsFromFlatRows` 의 `pendingIntakeNoSid` + `runIdToSmokeSids` |
-| 집계 필터 | 콜백은 있는데 `without_progression_patch` | `filterRowsForSessionAggregateTopline` 에 **진행 판정** 이벤트가 예외 목록에 있는지 |
+| 집계 필터 | 콜백은 있는데 `without_progression_patch` / DB엔 wake·closure 있는데 요약만 `breaks_at supervisor_wake` | `filterRowsForSessionAggregateTopline` — intake·ingress·GitHub 타입 + **post-callback ops phase**(`SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE`, v13.83) |
 | 쓰기 시점 | DB엔 없고 런타임만 성공 | Railway/COS 프로세스의 Supabase 자격·`append` 실패 로그 |
 | 정책 레이어 | Slack 에서 `create_spec` 차단 | 실행 프로필 / `toolsBridge` — **요약 집계와 별개** |
 | 프로바이더 리포트 | Cursor 구조화 리포트만 성공 | 그건 외부 제품 UI; COS 는 **자체 이벤트·집계**로만 단정 |
@@ -32,7 +32,7 @@
 
 ## 4. 코드 앵커
 
-- **게이트(입구·분류)**: `src/founder/opsSmokeParcelGate.js` — 버킷 빌드, `SESSION_WIDE_AGGREGATE_EVENT_TYPES`, 하니스 `ops_smoke_session_id` 앵커, intake `smoke_session_id` 보강, 다중 세션 시 orphan intake `dominant` 귀속(`inferPreferredSmokeSessionIdPerRunFromFlatRows`)
+- **게이트(입구·분류)**: `src/founder/opsSmokeParcelGate.js` — 버킷 빌드, `SESSION_WIDE_AGGREGATE_EVENT_TYPES`, **`SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE`**(v13.83), 하니스 `ops_smoke_session_id` 앵커, intake `smoke_session_id` 보강, 다중 세션 시 orphan intake `dominant` 귀속(`inferPreferredSmokeSessionIdPerRunFromFlatRows`)
 - 타입 SSOT + 병합: `src/founder/runStoreSupabase.js` — `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES`, `COS_OPS_SMOKE_SUMMARY_STREAM_VIEW`, `supabaseListMergedSmokeSummaryEvents`, `supabaseListMergedSmokeSummaryEventsFallback`, `supabaseMapHarnessOpsSmokeSessionIdsByRunIds`
 - 파일/메모리 필터: `src/founder/runCosEvents.js` — `SMOKE_SUMMARY_EVENT_TYPES`
 - 세션 요약 본문: `src/founder/smokeOps.js` — `summarizeOpsSmokeSessionsFromFlatRows`, `aggregateSmokeSessionProgress`, founder-facing
