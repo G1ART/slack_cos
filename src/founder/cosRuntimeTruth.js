@@ -80,6 +80,9 @@ export function logCosRuntimeTruthBoot(env = process.env) {
   const webhook_ingress_ready = String(env.COS_HTTP_DISABLED || '').trim() !== '1';
   const cursorTruth = getCursorCloudRuntimeTruth(env);
 
+  const smokeSummaryLegacyMergeOnly =
+    String(env.COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY || '').trim() === '1';
+
   console.info(
     JSON.stringify({
       event: 'cos_runtime_truth',
@@ -89,6 +92,8 @@ export function logCosRuntimeTruthBoot(env = process.env) {
       supervisor_lease_effective_mode,
       supervisor_lease_last_error_kind,
       webhook_ingress_ready,
+      smoke_summary_read_path: smokeSummaryLegacyMergeOnly ? 'legacy_dual_query' : 'stream_view_default',
+      smoke_summary_legacy_merge_only: smokeSummaryLegacyMergeOnly,
       ...cursorTruth,
     }),
   );

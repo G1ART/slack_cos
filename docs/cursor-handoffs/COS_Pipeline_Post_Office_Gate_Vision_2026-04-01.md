@@ -11,7 +11,8 @@
 ## 0b. 이번까지 한 일과의 관계
 
 - 최근 레포 패치는 **관측 파이프라인의 정합**(이벤트 타입 SSOT, intake·lineage 집계, 감사 체크리스트)에 가깝다.
-- **GPT 시절 .env 부족 → 바이패스·감사 애드온 누적**이라는 가설은, “진실이 여러 경로·화이트리스트·테이블에 쪼개져 있다”는 현재 구조와 잘 맞는다. 다만 **그 레이어를 일괄 삭제하는 대청소는 아직 하지 않았다.** 삭제는 계약(테스트·운영 의존성) 없이 하면 회귀가 난다.
+- **GPT 시절 .env 부족 → 바이패스·감사 애드온 누적**이라는 가설은, “진실이 여러 경로·화이트리스트·테이블에 쪼개져 있다”는 현재 구조와 잘 맞는다.
+- **대청소(페이즈 D)** 는 아래 5절 기준으로만 진행한다. 임의로 고아 쓰기를 끄면 correlation 실패·서명 실패 감사가 DB에서 사라진다.
 
 ## 1. 장담할 수 없는 것
 
@@ -55,12 +56,12 @@
 
 **페이즈 D — 레거시 제거**
 
-- 런북 초안: `COS_Ops_Smoke_Callback_Pipeline_Audit_2026-04-01.md` §6 (전제·후보 순위·이번 턴은 삭제 없음).
-- 테스트·운영 확인이 붙은 뒤에만 **쓰기 축소 / 바이패스 대량 삭제**.
+- 런북: `COS_Ops_Smoke_Callback_Pipeline_Audit_2026-04-01.md` 6절 (전제·후보 순위).
+- **쓰기 축소·바이패스 삭제**는 5절의 조건을 만족할 때만. 고아 비율이 높은 상태에서 D1 테이블을 “폐쇄”하는 것은 재건이 아니라 맹목이다.
 
 ## 4. “택배사무소가 작동한다”의 완료 정의 (코드 기준, A–C)
 
-**Ultimate goal**를 “레포·운영에서 이 축이 깨지지 않는다”로 좁히면 아래를 만족하면 **A–C는 완료**로 본다. **페이즈 D**(고아 전용 쓰기 축소·중복 타입 제거)는 별도 런북·회귀 면적이 있어 의도적으로 다음 단계다.
+아래를 만족하면 **백엔드·DB 계약 위의 택배사무소(A–C)는 완료**로 본다. 이것만으로 **슬랙 문구·스레드 UX**까지 증명되지는 않는다(5절).
 
 | 층 | 완료 판정 |
 |----|-----------|
@@ -71,9 +72,20 @@
 
 이미 반영된 구현 앵커(참고): 불변식 `test-ops-smoke-parcel-gate-summary-invariant.mjs`, intake `smoke_session_id` 주입(`cursorReceiveCommit` + 하니스), 뷰↔JS SSOT `test-smoke-summary-stream-view-sql-ssot.mjs`.
 
+## 5. 당신이 말한 “끝까지”를 한 번에 정리 (빙글거림 금지)
+
+| 말 | 뜻 |
+|----|-----|
+| **택배사무소 구조가 끝** | A–C: 게이트·뷰·wake·샤딩·불변식 테스트. **`npm run verify:parcel-post-office` + `npm test` + (가능하면) `npm run audit:parcel-health`** 로 레포·DB에서 증명. **지금 여기까지 온 상태다.** |
+| **슬랙까지 포함해 완전히 끝** | Socket Mode·토큰·스레드·파운더 응답까지 포함한 **현장 계약**. 이건 코드만으로는 증명 불가. **한 번은** 운영 채널에서 짧은 스모크(클라우드 한 사이클 또는 `/readyz` + 스레드 확인)를 돌려야 “슬랙에서도 된다”고 말할 수 있다. |
+| **청소까지 끝 (D)** | `cos_ops_smoke_events` 고아 행은 **서명 실패·JSON 실패·correlation 실패** 등이 `run_id` 없이 쌓인 **감사 궤적**이다. 지금처럼 고아 비율이 높을 때 이 쓰기를 끄거나 테이블을 비우는 것은 **“안 되던 것 폐쇄”가 아니라 관측 맹탕**이다. D는 **상관 성공률이 올라간 뒤** 쓰기 축소를 설계하거나, **명시적 opt-in 플래그**로만 한다. |
+| **지금 당장 폐쇄해도 되는 것** | 운영에 `COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY=1` 이 켜져 있다면 **끄기**(기본은 뷰 단일 읽기). 기동 로그 `cos_runtime_truth` 에 `smoke_summary_read_path` 로 노출된다. 그 밖의 경로는 이름 없이 끄지 말 것. |
+
 ## Owner actions
 
 - 빠른 축 확인: `npm run verify:parcel-post-office`
 - 전체: `npm test`
 - 프로덕션 DB: `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (레거시 복제 감사는 `--intake-replicate-all`)
+- **슬랙까지 “완전 끝”을 주장하려면**: 운영 앱 기준으로 파운더 스레드에서 짧은 스모크 1회(또는 동일 조건 스테이징). 생략하면 백엔드 계약만 증명된 것이다(5절 표).
+- 기동 시 `cos_runtime_truth` JSON 에서 `smoke_summary_read_path` 가 `stream_view_default` 인지 확인(레거시 병합 강제 여부).
 - Git 동기화는 워크스페이스 패치 보고 규칙 따름.
