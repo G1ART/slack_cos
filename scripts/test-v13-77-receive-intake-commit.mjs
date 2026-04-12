@@ -17,7 +17,7 @@ import {
 import { handleCursorWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
 import { __resetCorrelationMemoryForTests, upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { __resetCosRunEventsMemoryForTests, listCosRunEventsForRun } from '../src/founder/runCosEvents.js';
-import { aggregateSmokeSessionProgress } from '../src/founder/smokeOps.js';
+import { aggregateSmokeSessionProgress, summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-v13-77-intake');
@@ -96,6 +96,60 @@ assert.ok(rOk.cursor_callback_anchor?.provider_structural_closure_at);
 const evOk = await listCosRunEventsForRun(rid, 80);
 const intakeEv = evOk.filter((e) => String(e.event_type || '') === 'cursor_receive_intake_committed');
 assert.equal(intakeEv.length, 1, 'one intake commit event');
+
+// --- (1b) Minimal signed body: only request_id + status (no thread_key / packet_id) → correlation fallback commits ---
+reset();
+const TKb = 'mention:v77:minimal';
+const PKb = 'p_min_v77';
+const runB = await persistRunAfterDelegate({
+  threadKey: TKb,
+  dispatch: {
+    ok: true,
+    status: 'accepted',
+    dispatch_id: 'd77b',
+    objective: 'o',
+    packets: [
+      {
+        packet_id: PKb,
+        packet_status: 'running',
+        preferred_tool: 'cursor',
+        preferred_action: 'emit_patch',
+        mission: 'm',
+      },
+    ],
+  },
+  starter_kickoff: { executed: false },
+  founder_request_summary: '',
+});
+const ridB = String(runB.id);
+await patchRunById(ridB, { packet_state_map: { [PKb]: 'running' }, required_packet_ids: [PKb] });
+const bindB = await bindCursorEmitPatchDispatchLedgerBeforeTrigger({
+  threadKey: TKb,
+  runId: ridB,
+  packetId: PKb,
+  invocation_id: 'inv_v77_min',
+  payload: { live_patch: { path: 'src/min.txt', operation: 'create', content: 'm', live_only: true, no_fallback: true } },
+});
+assert.equal(bindB.ok, true);
+const reqB = String(bindB.request_id);
+const bodyMin = {
+  type: 'statusChange',
+  status: 'completed',
+  request_id: reqB,
+};
+const rawMin = Buffer.from(JSON.stringify(bodyMin), 'utf8');
+const sigMin = `sha256=${crypto.createHmac('sha256', secret).update(rawMin).digest('hex')}`;
+const outMin = await handleCursorWebhookIngress({
+  rawBody: rawMin,
+  headers: { 'x-cursor-signature-256': sigMin, 'x-cos-callback-source': 'provider_runtime' },
+  env: { CURSOR_WEBHOOK_SECRET: secret },
+});
+assert.equal(outMin.matched, true);
+const rB = await getRunById(ridB);
+assert.equal(rB.packet_state_map[PKb], 'completed');
+const evB = await listCosRunEventsForRun(ridB, 80);
+const intakeB = evB.filter((e) => String(e.event_type || '') === 'cursor_receive_intake_committed');
+assert.equal(intakeB.length, 1, 'minimal body still produces intake commit via correlation fallback');
 
 // --- (2) accepted_external_id row matches but callback packet_id ≠ correlation packet_id → no commit ---
 reset();
@@ -270,5 +324,24 @@ const aggIntakeRow = aggregateSmokeSessionProgress([
   { event_type: 'cursor_receive_intake_committed', payload: { at: '1', target_packet_id: 'p_x' } },
 ]);
 assert.ok(aggIntakeRow.phases_seen.includes('run_packet_progression_patched'));
+
+// --- (6) Ops summary: prefer durable run_id over _orphan when both appear for one smoke_session_id ---
+const flatOrphanMix = [
+  {
+    run_id: '_orphan',
+    event_type: 'ops_smoke_phase',
+    payload: { smoke_session_id: 'sess_v77_orph', phase: 'cursor_trigger_recorded', at: '2026-01-02T00:00:00Z' },
+    created_at: '2026-01-02T00:00:00Z',
+  },
+  {
+    run_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    event_type: 'ops_smoke_phase',
+    payload: { smoke_session_id: 'sess_v77_orph', phase: 'emit_patch', at: '2026-01-01T00:00:00Z' },
+    created_at: '2026-01-01T00:00:00Z',
+  },
+];
+const sumOrph = summarizeOpsSmokeSessionsFromFlatRows(flatOrphanMix, { sessionLimit: 5 })[0];
+assert.equal(sumOrph.primary_run_id, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+assert.ok(sumOrph.related_run_ids.includes('_orphan'));
 
 console.log('test-v13-77-receive-intake-commit: ok');

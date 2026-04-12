@@ -1,6 +1,7 @@
 /**
  * vNext.13.77 — Single intake commit path for signed Cursor callbacks (accepted_external_id authoritative row).
- * No heuristics: correlation row + dispatch ledger + callback context must align exactly.
+ * Correlation row + dispatch ledger must align. Callback may omit thread_key/packet_id when
+ * empty; then values from the accepted_external_id correlation row are used (explicit mismatch still fails).
  */
 
 import { findExternalCorrelation } from './correlationStore.js';
@@ -127,8 +128,8 @@ async function patchRunPacketStateFromCanonical(runId, packetId, canonical) {
 export async function commitReceivedCursorCallbackToRunPacket(ctx) {
   const acc = String(ctx.accepted_external_id || '').trim();
   const extRun = ctx.external_run_id != null ? String(ctx.external_run_id).trim() : '';
-  const cbTk = ctx.callback_thread_key != null ? String(ctx.callback_thread_key).trim() : '';
-  const cbPkt = ctx.callback_packet_id != null ? String(ctx.callback_packet_id).trim() : '';
+  const cbTkIn = ctx.callback_thread_key != null ? String(ctx.callback_thread_key).trim() : '';
+  const cbPktIn = ctx.callback_packet_id != null ? String(ctx.callback_packet_id).trim() : '';
   const bucket = String(ctx.status_bucket || '');
   const canonical = ctx.canonical && typeof ctx.canonical === 'object' ? ctx.canonical : {};
   const meta = ctx.ingress_meta && typeof ctx.ingress_meta === 'object' ? ctx.ingress_meta : {};
@@ -149,18 +150,15 @@ export async function commitReceivedCursorCallbackToRunPacket(ctx) {
     return { committed: false, reason: 'correlation_row_incomplete', run_id: runId, packet_id: corrPid };
   }
 
-  if (!cbPkt) {
-    return { committed: false, reason: 'callback_packet_id_required', run_id: runId, packet_id: corrPid };
-  }
-  if (!cbTk) {
-    return { committed: false, reason: 'callback_thread_key_required', run_id: runId, packet_id: corrPid };
-  }
-  if (cbTk !== corrTk) {
-    return { committed: false, reason: 'callback_thread_key_mismatch', run_id: runId, packet_id: corrPid };
-  }
-  if (cbPkt !== corrPid) {
+  if (cbPktIn && cbPktIn !== corrPid) {
     return { committed: false, reason: 'callback_packet_id_mismatch_correlation', run_id: runId, packet_id: corrPid };
   }
+  if (cbTkIn && cbTkIn !== corrTk) {
+    return { committed: false, reason: 'callback_thread_key_mismatch', run_id: runId, packet_id: corrPid };
+  }
+
+  const cbPkt = cbPktIn || corrPid;
+  const cbTk = cbTkIn || corrTk;
 
   if (extRun) {
     const cloudHit = await findExternalCorrelation('cursor', 'cloud_agent_run', extRun);

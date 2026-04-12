@@ -1731,8 +1731,10 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     if (runId && runId !== 'unknown' && !bucket.run_ids.includes(runId)) bucket.run_ids.push(runId);
   }
   const sessions = [...bySession.entries()].map(([smoke_session_id, { run_ids, rows }]) => {
-    const primary_run_id = run_ids[0] || 'unknown';
-    const related_run_ids = run_ids.slice(1);
+    const nonOrphan = run_ids.filter((r) => r && r !== '_orphan');
+    const orphanOnly = run_ids.filter((r) => r === '_orphan');
+    const primary_run_id = nonOrphan[0] || orphanOnly[0] || 'unknown';
+    const related_run_ids = [...nonOrphan.slice(1), ...orphanOnly];
     const { byAttempt, useLineage } = partitionSmokeSessionRowsByAttempt(rows);
     const primarySeq = choosePrimaryAttemptSeqFromPartition(byAttempt, useLineage);
     const primaryRows =
