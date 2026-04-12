@@ -51,7 +51,7 @@
 **페이즈 C — 병렬·부하**
 
 - 적용·고정: 프로세스 내 tick 재진입 키는 `supervisorTickSharding.js` — `r:${runId}` / `t:${threadKey}` (`runSupervisor.js`). 전역 단일 Set 이 아니라 **런·스레드 샤딩**.
-- 웹훅→wake: `processCanonicalExternalEvent` 가 `signalSupervisorWakeForRun` 로 durable 플래그 설정; `app.js` 리스너가 `runId` 있으면 `tickRunSupervisorForRun`. 회귀: `test-cursor-callback-wakes-correlated-run-supervisor.mjs` (`pending_supervisor_wake` 포함). 부하·다중 동시 웹훅 시나리오는 선택 과제.
+- 웹훅→wake: `processCanonicalExternalEvent` 가 `signalSupervisorWakeForRun` 로 durable 플래그 설정; `app.js` 리스너가 `runId` 있으면 `tickRunSupervisorForRun`. 회귀: Cursor `test-cursor-callback-wakes-correlated-run-supervisor.mjs`, GitHub `test-github-external-event-targets-correlated-run-not-latest.mjs` (`pending_supervisor_wake` 포함). 부하·다중 동시 웹훅 시나리오는 선택 과제.
 
 **페이즈 D — 레거시 제거**
 

@@ -10,6 +10,7 @@ import {
 } from '../src/founder/executionRunStore.js';
 import { upsertExternalCorrelation } from '../src/founder/correlationStore.js';
 import { handleGithubWebhookIngress, __resetExternalGatewayTestState } from '../src/founder/externalEventGateway.js';
+import { registerRunStateChangeListener } from '../src/founder/supervisorDirectTrigger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-github-corr-target');
@@ -19,6 +20,13 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 __resetCosRunMemoryStore();
 __resetExternalGatewayTestState();
+
+/** @type {{ threadKey: string | null, runId: string | null }} */
+const lastWake = { threadKey: null, runId: null };
+registerRunStateChangeListener((tk, rid) => {
+  lastWake.threadKey = tk;
+  lastWake.runId = rid != null && String(rid).trim() ? String(rid).trim() : null;
+});
 
 const secret = 'whsec_github_target_test____________';
 const tk = 'mention:vnext38_github_target:1';
@@ -93,6 +101,8 @@ const bodyObj = {
 const rawBody = Buffer.from(JSON.stringify(bodyObj), 'utf8');
 const sig = `sha256=${crypto.createHmac('sha256', secret).update(rawBody).digest('hex')}`;
 
+lastWake.threadKey = null;
+lastWake.runId = null;
 const out = await handleGithubWebhookIngress({
   rawBody,
   headers: {
@@ -107,7 +117,17 @@ const out = await handleGithubWebhookIngress({
 });
 assert.equal(out.matched, true);
 
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(lastWake.threadKey, tk);
+assert.equal(lastWake.runId, ridA, 'GitHub 매칭도 상관된 run uuid 로 supervisor notify');
+
 const patchedA = await getRunById(ridA);
+assert.equal(
+  patchedA?.pending_supervisor_wake,
+  true,
+  'GitHub canonical 매칭 후에도 durable pending_supervisor_wake',
+);
 const patchedB = await getRunById(ridB);
 assert.notEqual(
   patchedA.packet_state_map.pkt_ga,
@@ -115,5 +135,7 @@ assert.notEqual(
   'GitHub correlation must not advance packet terminal state (secondary evidence only).',
 );
 assert.equal(patchedB.packet_state_map.pkt_gb, 'queued');
+
+registerRunStateChangeListener(null);
 
 console.log('test-github-external-event-targets-correlated-run-not-latest: ok');

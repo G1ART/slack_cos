@@ -74,6 +74,23 @@
 
 **이번 턴**: 위 런북만 고정했으며 **실제 쓰기 제거는 하지 않음** (회귀 면적 방지).
 
+### 6.1 `cos_ops_smoke_events` 직접 insert 호출처 (정적)
+
+운영자가 D1 전에 “고아 쓰기”가 어디서 나오는지 빠르게 찾을 때 사용.
+
+| 파일 | 역할 |
+|------|------|
+| `src/founder/smokeOps.js` | `recordCosCursorWebhookIngressSafe` / `recordOpsSmokeGithubFallbackEvidence` — **run_id 없음** + Supabase 일 때만 |
+| `src/founder/pretriggerAudit.js` | pretrigger 감사 — **run_id 없음** + Supabase 일 때만 |
+| `scripts/test-supabase-orphan-pretrigger-audit-persists-without-run-id.mjs` | 테스트 목 |
+
+### 6.2 D2 후보 — `cos_run_events` 안의 “같은 줄기” 중복 (축소 시 회귀 필수)
+
+| 줄기 | 행 A | 행 B | 비고 |
+|------|------|------|------|
+| Cursor 매칭 | `external_status_update` 등 캐논 타입 (`processCanonicalExternalEvent`) | 연쇄 `ops_smoke_phase` (`recordOpsSmokeAfterExternalMatch`) | 요약·브레이크 포인터는 양쪽을 섞어 씀; 한쪽만 남기려면 `aggregateSmokeSessionProgress`·fixture 대량 수정 |
+| GitHub 매칭 | 캐논 외부 이벤트 한 줄 | (현재) `recordOpsSmokeAfterExternalMatch` 없음 | 상대적으로 단순 |
+
 ## Owner actions
 
 - 로컬: `npm test`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10`

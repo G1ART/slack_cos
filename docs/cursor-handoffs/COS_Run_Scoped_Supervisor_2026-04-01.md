@@ -7,6 +7,7 @@
 - `notifyRunStateChanged(threadKey)` — backward compatible; invokes listener with `runId === null` (active-thread tick).
 - Production (`app.js`): if `runId` is present, `tickRunSupervisorForRun(runId, …)`; else `tickRunSupervisorForThread(threadKey, …)`.
 - Cursor 웹훅 매칭 경로: `handleCursorWebhookIngress` → `processCanonicalExternalEvent` → `signalSupervisorWakeForRun` → `notifyRunStateChangedForRun` → (listener) `tickRunSupervisorForRun`. 회귀: `scripts/test-cursor-callback-wakes-correlated-run-supervisor.mjs` (리스너 `runId` + `pending_supervisor_wake`).
+- GitHub 웹훅 매칭도 동일하게 `processCanonicalExternalEvent` 끝에서 `signalSupervisorWakeForRun` 호출. 회귀: `scripts/test-github-external-event-targets-correlated-run-not-latest.mjs`.
 
 ## Supervisor tick
 
