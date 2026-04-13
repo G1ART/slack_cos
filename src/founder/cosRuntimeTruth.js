@@ -15,6 +15,7 @@ import {
   listAutomationResponseOverrideKeys,
 } from './cursorCloudAdapter.js';
 import { listCursorWebhookOverrideKeys } from './cursorWebhookIngress.js';
+import { slackAppIdFromEnv } from './cosSlackAppIdentity.js';
 
 /**
  * @param {NodeJS.ProcessEnv} env
@@ -83,6 +84,8 @@ export function logCosRuntimeTruthBoot(env = process.env) {
   const smokeSummaryLegacyMergeOnly =
     String(env.COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY || '').trim() === '1';
 
+  const slackAppId = slackAppIdFromEnv(env);
+
   console.info(
     JSON.stringify({
       event: 'cos_runtime_truth',
@@ -94,6 +97,8 @@ export function logCosRuntimeTruthBoot(env = process.env) {
       webhook_ingress_ready,
       smoke_summary_read_path: smokeSummaryLegacyMergeOnly ? 'legacy_dual_query' : 'stream_view_default',
       smoke_summary_legacy_merge_only: smokeSummaryLegacyMergeOnly,
+      slack_app_id_configured: Boolean(slackAppId),
+      ...(slackAppId ? { slack_app_id: slackAppId } : {}),
       ...cursorTruth,
     }),
   );
