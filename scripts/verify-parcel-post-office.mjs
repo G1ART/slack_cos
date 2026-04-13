@@ -16,6 +16,7 @@ const STEPS = [
   'test-parcel-phase-partition-display.mjs',
   'test-smoke-session-id-prefix.mjs',
   'test-filter-ops-smoke-summaries-session-prefix.mjs',
+  'test-parcel-closure-ledger-mirror.mjs',
   'test-run-supervisor-parcel-sharding.mjs',
   'test-smoke-summary-stream-view-sql-ssot.mjs',
   'test-merged-smoke-summary-source-budget.mjs',

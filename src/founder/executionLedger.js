@@ -97,6 +97,35 @@ export async function appendExecutionArtifact(threadKey, artifact) {
 }
 
 /**
+ * Cursor cloud `emit_patch`: dispatch 직후 ledger의 `tool_result`는 `running`으로 남고, 웹훅 클로저는 DB·ops_smoke에만 쌓인다.
+ * authoritative callback closure 적용 시 **append**로 완료 한 줄을 남겨 COS가 `[최근 실행 아티팩트]`에서 running 다음에 completed 를 보도록 한다 (기존 행은 수정하지 않음).
+ * @param {string} threadKey
+ */
+export async function appendCloudEmitPatchClosureLedgerMirror(threadKey) {
+  const tk = String(threadKey || '').trim();
+  if (!tk) return;
+  const result_summary =
+    'completed / live / cursor:emit_patch — provider callback closure applied (supersedes dispatch running snapshot)';
+  await appendExecutionArtifact(tk, {
+    type: 'tool_result',
+    summary: result_summary.slice(0, 500),
+    status: 'completed',
+    needs_review: false,
+    payload: {
+      tool: 'cursor',
+      action: 'emit_patch',
+      execution_mode: 'live',
+      execution_lane: 'cloud_agent',
+      status: 'completed',
+      outcome_code: 'live_completed',
+      result_summary,
+      live_attempted: true,
+      parcel_ledger_closure_mirror: true,
+    },
+  });
+}
+
+/**
  * @param {string} threadKey
  * @param {number} limit
  */

@@ -2168,6 +2168,14 @@ export async function recordOpsSmokeAfterExternalMatch(p) {
       phase: 'authoritative_callback_closure_applied',
       detail: {},
     });
+    if (threadKey) {
+      try {
+        const { appendCloudEmitPatchClosureLedgerMirror } = await import('./executionLedger.js');
+        await appendCloudEmitPatchClosureLedgerMirror(threadKey);
+      } catch (e) {
+        console.error('[parcel_ledger_closure_mirror]', e);
+      }
+    }
   } else if (emitPatchPath && !authApplied) {
     await recordOpsSmokePhase({
       env,
