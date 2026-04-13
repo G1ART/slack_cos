@@ -50,16 +50,32 @@ export const COS_OPS_SMOKE_SUMMARY_STREAM_VIEW = 'cos_ops_smoke_summary_stream';
 /**
  * @param {Record<string, unknown>} r
  */
+/**
+ * @param {Record<string, unknown>} pl
+ * @param {Record<string, unknown>} r
+ * @param {string} field
+ */
+function mergedTenancyField(pl, r, field) {
+  const fromR = r[field] != null ? String(r[field]).trim() : '';
+  const fromPl = String(pl[field] ?? '').trim();
+  const v = fromR || fromPl;
+  return v || undefined;
+}
+
 function mapMergedSmokeSummaryRow(r) {
   const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
-  const fromCol = r.parcel_deployment_key != null ? String(r.parcel_deployment_key).trim() : '';
-  const fromPl = String(pl.parcel_deployment_key ?? '').trim();
-  const parcelKey = fromCol || fromPl || undefined;
+  const parcelKey = mergedTenancyField(pl, r, 'parcel_deployment_key');
+  const workspaceKey = mergedTenancyField(pl, r, 'workspace_key');
+  const productKey = mergedTenancyField(pl, r, 'product_key');
+  const projectSpaceKey = mergedTenancyField(pl, r, 'project_space_key');
   return {
     run_id: String(r.run_id || ''),
     event_type: String(r.event_type || ''),
     payload: pl,
     ...(parcelKey ? { parcel_deployment_key: parcelKey } : {}),
+    ...(workspaceKey ? { workspace_key: workspaceKey } : {}),
+    ...(productKey ? { product_key: productKey } : {}),
+    ...(projectSpaceKey ? { project_space_key: projectSpaceKey } : {}),
     created_at: r.created_at != null ? String(r.created_at) : '',
   };
 }
@@ -83,7 +99,9 @@ export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
 
   let q = sb
     .from(COS_OPS_SMOKE_SUMMARY_STREAM_VIEW)
-    .select('run_id, event_type, payload, created_at, parcel_deployment_key');
+    .select(
+      'run_id, event_type, payload, created_at, parcel_deployment_key, workspace_key, product_key, project_space_key',
+    );
   if (rid) q = q.eq('run_id', rid);
   if (dk) {
     if (incLeg) {

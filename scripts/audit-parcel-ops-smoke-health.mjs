@@ -115,7 +115,9 @@ async function main() {
 
   const { data: rows, error: eSample } = await sb
     .from(view)
-    .select('run_id,event_type,created_at,payload,parcel_deployment_key')
+    .select(
+      'run_id,event_type,created_at,payload,parcel_deployment_key,workspace_key,product_key,project_space_key',
+    )
     .order('created_at', { ascending: false })
     .limit(sample);
 

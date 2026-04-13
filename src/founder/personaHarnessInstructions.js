@@ -1,6 +1,7 @@
 /**
  * 에픽 4: Founder COS 시스템 지시에 붙는 짧은 페르소나·하네스 견제 블록 (B — 동일 앱 내 스위치).
  * 무거운 정본은 CONSTITUTION.md; 여기는 역할·금지 한 줄만.
+ * 장기 3층 슬롯 이름: `personaContractOutline.js` 의 COS_PERSONA_CONTRACT_LAYERS (tool_scope·deliverable_schema 는 후속 바인딩).
  */
 
 export const FOUNDER_COS_PERSONA_HARNESS_BLOCK = [
