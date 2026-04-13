@@ -65,7 +65,7 @@
 
 | 층 | 완료 판정 |
 |----|-----------|
-| 게이트·요약 | `npm run verify:parcel-post-office` — `scripts/verify-parcel-post-office.mjs` 가 게이트 불변식·뷰 SSOT·병합 예산·스트림 경로 목업·감사 스킵·웹훅 wake·런 스코프 wake 회귀를 한 번에 돈다 (Slack/OpenAI/실 DB 불필요). |
+| 게이트·요약 | `npm run verify:parcel-post-office` — 게이트 불변식·뷰 SSOT·병합 예산·**primary/advisory 페이즈 분리**·감사 스킵·웹훅 wake·런 스코프 wake 회귀를 한 번에 돈다 (Slack/OpenAI/실 DB 불필요). |
 | 전체 회귀 | `npm test` 통과. |
 | 성능 계약(콜백·집계·strict recovery 가드) | `npm run verify:performance-contract` 통과. 문서: `COS_Performance_Contract_Ultimate_Goal_And_Roadmap_2026-04-12.md`. |
 | 프로덕션 관측 | Supabase 자격이 있는 환경에서 `npm run audit:parcel-health` — `ok: true` 이고 `warnings` 가 비면 런타임 하드 게이트 양호; `advisory` 만 있으면 D1 이중기록 구간에서 흔한 고아 비율 안내(장애 아님). |

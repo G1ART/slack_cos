@@ -24,9 +24,14 @@ import {
   ensureOpsSmokeSessionIdOnRunHarness,
   filterRowsForSessionAggregateTopline,
   getRowAttemptSeq,
+  partitionPhasesSeenForParcelDisplay,
 } from './opsSmokeParcelGate.js';
 
-export { getRowAttemptSeq, filterRowsForSessionAggregateTopline } from './opsSmokeParcelGate.js';
+export {
+  getRowAttemptSeq,
+  filterRowsForSessionAggregateTopline,
+  partitionPhasesSeenForParcelDisplay,
+} from './opsSmokeParcelGate.js';
 
 /**
  * Strip bearer tokens and http(s) URLs from free text (ops summaries only).
@@ -1726,6 +1731,7 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
     const rowsForAgg =
       useLineage && primarySeq > 0 ? filterRowsForSessionAggregateTopline(rows, primarySeq) : rows;
     const agg = aggregateSmokeSessionProgress(rowsForAgg);
+    const parcelPhaseSplit = partitionPhasesSeenForParcelDisplay(agg.phases_seen);
 
     const machine = extractOpsSmokeMachineSummaryFromRows(primaryRows);
     const triggerEv = extractLatestTriggerEvidenceFromRows(primaryRows);
@@ -1828,6 +1834,8 @@ export function summarizeOpsSmokeSessionsFromFlatRows(flatRows, opts = {}) {
       ...cursorIngress,
       ...ghFb,
       ...agg,
+      primary_phases_seen: parcelPhaseSplit.primary_phases_seen,
+      advisory_phases_seen: parcelPhaseSplit.advisory_phases_seen,
       primary_attempt_seq: primarySeq > 0 ? primarySeq : null,
       attempt_count,
       primary_attempt_status,

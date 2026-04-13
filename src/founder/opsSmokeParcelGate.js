@@ -33,6 +33,33 @@ export const SESSION_WIDE_OPS_SMOKE_PHASES_FOR_AGGREGATE = new Set([
 ]);
 
 /**
+ * 요약 CLI·운영 표시용 — GitHub/지문 등 **부차 증거** 단계만 분리 (완료 권위 ≠ advisory).
+ * `aggregateSmokeSessionProgress` 의 `phases_seen` 정렬 순서를 유지한 채 두 버킷으로 나눈다.
+ */
+export const PARCEL_ADVISORY_DISPLAY_PHASES = new Set([
+  'github_fallback_evidence',
+  'github_secondary_recovery_matched',
+  'path_fingerprint_callback_evidence_only',
+]);
+
+/**
+ * @param {string[] | null | undefined} phasesSeen
+ * @returns {{ primary_phases_seen: string[], advisory_phases_seen: string[] }}
+ */
+export function partitionPhasesSeenForParcelDisplay(phasesSeen) {
+  const list = Array.isArray(phasesSeen) ? phasesSeen : [];
+  const advisory = [];
+  const primary = [];
+  for (const p of list) {
+    const s = String(p || '').trim();
+    if (!s) continue;
+    if (PARCEL_ADVISORY_DISPLAY_PHASES.has(s)) advisory.push(s);
+    else primary.push(s);
+  }
+  return { primary_phases_seen: primary, advisory_phases_seen: advisory };
+}
+
+/**
  * @param {{ payload?: Record<string, unknown> }} row
  */
 export function getRowAttemptSeq(row) {

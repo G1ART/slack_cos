@@ -147,6 +147,8 @@ async function main() {
           final_status: s.final_status,
           breaks_at: s.breaks_at,
           phases_seen: s.phases_seen,
+          primary_phases_seen: s.primary_phases_seen,
+          advisory_phases_seen: s.advisory_phases_seen,
           ordered_events: s.ordered_events,
           call_name: s.call_name,
           selected_tool: s.selected_tool,
@@ -187,6 +189,12 @@ async function main() {
     console.log(`final_status:     ${s.final_status}`);
     console.log(`breaks_at:        ${s.breaks_at ?? '(none — full pipeline)'}`);
     console.log(`phases_seen:      ${s.phases_seen.join(', ')}`);
+    console.log(
+      `primary_phases_seen:   ${Array.isArray(s.primary_phases_seen) ? s.primary_phases_seen.join(', ') : '(n/a)'}`,
+    );
+    console.log(
+      `advisory_phases_seen:  ${Array.isArray(s.advisory_phases_seen) ? s.advisory_phases_seen.join(', ') : '(n/a)'}`,
+    );
     console.log(`ordered_events:   ${JSON.stringify(s.ordered_events)}`);
     console.log(`call_name:                ${s.call_name ?? '(n/a)'}`);
     console.log(`selected_tool:            ${s.selected_tool ?? '(n/a)'}`);

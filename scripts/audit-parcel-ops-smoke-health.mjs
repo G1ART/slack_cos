@@ -8,6 +8,7 @@
  * 사용:
  *   node scripts/audit-parcel-ops-smoke-health.mjs
  *   node scripts/audit-parcel-ops-smoke-health.mjs --sample 5000 --strict
+ *   node scripts/audit-parcel-ops-smoke-health.mjs --strict --strict-warnings-only
  *   node scripts/audit-parcel-ops-smoke-health.mjs --json
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
@@ -40,15 +41,17 @@ function parseArgs() {
   const a = process.argv.slice(2);
   let sample = 3000;
   let strict = false;
+  let strictWarningsOnly = false;
   let jsonOnly = false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] === '--sample' && a[i + 1]) {
       sample = Math.max(100, Math.min(20000, parseInt(a[i + 1], 10) || 3000));
       i += 1;
     } else if (a[i] === '--strict') strict = true;
+    else if (a[i] === '--strict-warnings-only') strictWarningsOnly = true;
     else if (a[i] === '--json') jsonOnly = true;
   }
-  return { sample, strict, jsonOnly };
+  return { sample, strict, strictWarningsOnly, jsonOnly };
 }
 
 /** @param {string} name @param {number} def */
@@ -64,7 +67,7 @@ const PENDING_WAKE_WARN = envNum('COS_PARCEL_HEALTH_PENDING_WAKE_WARN', 50);
 const OPS_NULL_RUN_WARN = envNum('COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN', 500);
 
 async function main() {
-  const { sample, strict, jsonOnly } = parseArgs();
+  const { sample, strict, strictWarningsOnly, jsonOnly } = parseArgs();
   const sb = createCosRuntimeSupabaseForSummary(process.env);
   if (!sb) {
     const out = {
@@ -177,7 +180,9 @@ async function main() {
         ? '뷰·집계·슈퍼바이저·고아 테이블 절대량은 양호로 보임. advisory는 D1 이중기록 구간에서 흔한 스트림 고아 비율 안내.'
         : '하드 경고가 있음 — Railway 로그·웹훅·DB를 우선 확인.';
 
-  const strictFail = strict && (warnings.length > 0 || advisory.length > 0);
+  const strictFail =
+    strict &&
+    (warnings.length > 0 || (advisory.length > 0 && !strictWarningsOnly));
 
   const report = {
     ok,
@@ -203,9 +208,10 @@ async function main() {
     advisory,
     /** --strict 일 때 exit 1 원인을 JSON만 봐도 구분 (ok:true 인데 npm 실패 혼란 방지) */
     strict_mode: strict,
+    strict_warnings_only: strict ? strictWarningsOnly : false,
     strict_exit_nonzero: strictFail,
     strict_fail_due_to_warnings: strict && warnings.length > 0,
-    strict_fail_due_to_advisory: strict && advisory.length > 0,
+    strict_fail_due_to_advisory: strict && advisory.length > 0 && !strictWarningsOnly,
   };
 
   if (jsonOnly) {
@@ -224,10 +230,11 @@ async function main() {
     if (strict && strictFail) {
       const bits = [];
       if (warnings.length) bits.push('warnings');
-      if (advisory.length) bits.push('advisory');
-      console.log(
-        `\n--- strict 종료 ---\nexit 1 (${bits.join(' + ')}) — advisory만 있어도 --strict 는 실패 처리합니다.`,
-      );
+      if (advisory.length && !strictWarningsOnly) bits.push('advisory');
+      const hint = strictWarningsOnly
+        ? '(strict-warnings-only: advisory는 exit에 미포함)'
+        : '(기본 strict: advisory 포함 시에도 exit 1 — CI는 --strict-warnings-only 권장 가능)';
+      console.log(`\n--- strict 종료 ---\nexit 1: ${bits.join(' + ')} ${hint}`);
     }
   }
 
