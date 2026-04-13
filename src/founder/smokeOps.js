@@ -63,6 +63,22 @@ export function isOpsSmokeEnabled(env = process.env) {
 let cachedSessionId = null;
 
 /**
+ * 멀티 제품·배포가 동일 Supabase를 쓸 때 요약·CLI 필터(`--session-prefix`)와 맞추기 위한 선택 접두사.
+ * `COS_OPS_SMOKE_SESSION_ID`가 비어 있고 자동 `smoke_<ts>_<hex>`만 쓸 때만 앞에 붙는다.
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function smokeSessionIdAutoPrefixFromEnv(env = process.env) {
+  const raw = String(env.COS_OPS_SMOKE_SESSION_ID_PREFIX || '').trim();
+  if (!raw) return '';
+  const safe = raw
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 32);
+  return safe ? `${safe}_` : '';
+}
+
+/**
  * @param {NodeJS.ProcessEnv} [env]
  */
 export function resolveSmokeSessionId(env = process.env) {
@@ -70,7 +86,8 @@ export function resolveSmokeSessionId(env = process.env) {
   if (explicit) return explicit;
   if (!isOpsSmokeEnabled(env)) return null;
   if (!cachedSessionId) {
-    cachedSessionId = `smoke_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const pref = smokeSessionIdAutoPrefixFromEnv(env);
+    cachedSessionId = `${pref}smoke_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   }
   return cachedSessionId;
 }
@@ -221,7 +238,15 @@ export function formatOpsSmokeFounderFacingLines(s) {
       ? `회복(2차·GitHub 푸시): 있음 — ${String(s.github_secondary_recovery_outcome || 'outcome_unknown').slice(0, 120)}`
       : '회복(2차·GitHub 푸시): 없음.',
   );
-  return lines.slice(0, 8);
+  const adv = Array.isArray(s.advisory_phases_seen)
+    ? s.advisory_phases_seen.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
+  if (adv.length) {
+    const shown = adv.slice(0, 8);
+    const tail = adv.length > 8 ? '…' : '';
+    lines.push(`부차 관측 페이즈(1차 완료 권위 아님): ${shown.join(', ')}${tail}`);
+  }
+  return lines.slice(0, 12);
 }
 
 /**
@@ -1696,6 +1721,16 @@ export function extractOpsSmokeMachineSummaryFromRows(rows) {
     builder_stage_last_reached:
       pl.builder_stage_last_reached != null ? String(pl.builder_stage_last_reached).slice(0, 120) : null,
   };
+}
+
+/**
+ * @param {Array<Record<string, unknown>>} summaries
+ * @param {string | null | undefined} prefix
+ */
+export function filterOpsSmokeSummariesBySessionIdPrefix(summaries, prefix) {
+  const p = String(prefix || '').trim();
+  if (!p) return summaries;
+  return summaries.filter((s) => String(s.smoke_session_id || '').startsWith(p));
 }
 
 /**

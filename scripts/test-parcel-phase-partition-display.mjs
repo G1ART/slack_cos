@@ -6,7 +6,10 @@ import {
   partitionPhasesSeenForParcelDisplay,
   PARCEL_ADVISORY_DISPLAY_PHASES,
 } from '../src/founder/opsSmokeParcelGate.js';
-import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
+import {
+  formatOpsSmokeFounderFacingLines,
+  summarizeOpsSmokeSessionsFromFlatRows,
+} from '../src/founder/smokeOps.js';
 
 const p = partitionPhasesSeenForParcelDisplay([
   'emit_patch_payload_validated',
@@ -53,5 +56,30 @@ assert.ok(s);
 assert.ok(s.phases_seen.includes('github_fallback_evidence'));
 assert.ok(s.advisory_phases_seen.includes('github_fallback_evidence'));
 assert.ok(!s.primary_phases_seen.includes('github_fallback_evidence'));
+
+const founderBase = {
+  smoke_session_id: SID,
+  primary_attempt_seq: 1,
+  attempt_count: 1,
+  primary_attempt_status: 'accepted_trigger',
+  primary_selected_tool: 't',
+  primary_selected_action: 'a',
+  accepted_external_id: 'ext',
+  provider_callback_ingress_observed: false,
+  synthetic_callback_ingress_observed: false,
+  manual_probe_callback_ingress_observed: false,
+  unknown_source_callback_ingress_observed: false,
+  outbound_callback_contract_attached: true,
+  acceptance_response_has_callback_metadata: true,
+  callback_completion_state: 'closed_ok',
+  repository_reflection_observed: false,
+  github_secondary_recovery_observed: false,
+  advisory_phases_seen: s.advisory_phases_seen,
+};
+const flines = formatOpsSmokeFounderFacingLines(founderBase);
+assert.ok(
+  flines.some((ln) => ln.includes('부차 관측') && ln.includes('github_fallback_evidence')),
+  flines.join('\n'),
+);
 
 console.log('test-parcel-phase-partition-display: ok');

@@ -16,7 +16,10 @@ import {
   supabaseMapHarnessOpsSmokeSessionIdsByRunIds,
 } from '../src/founder/runStoreSupabase.js';
 import { listOpsSmokePhaseEventsForSummary } from '../src/founder/runCosEvents.js';
-import { summarizeOpsSmokeSessionsFromFlatRows } from '../src/founder/smokeOps.js';
+import {
+  filterOpsSmokeSummariesBySessionIdPrefix,
+  summarizeOpsSmokeSessionsFromFlatRows,
+} from '../src/founder/smokeOps.js';
 
 function parseArgs() {
   const out = {
@@ -29,6 +32,7 @@ function parseArgs() {
     supabaseUrl: null,
     supabaseKey: null,
     intakeReplicateAll: false,
+    sessionPrefix: null,
   };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i += 1) {
@@ -67,6 +71,10 @@ function parseArgs() {
     }
     if (a[i] === '--intake-replicate-all') {
       out.intakeReplicateAll = true;
+    }
+    if (a[i] === '--session-prefix' && a[i + 1]) {
+      out.sessionPrefix = String(a[++i] || '').trim();
+      continue;
     }
   }
   return out;
@@ -119,11 +127,12 @@ async function main() {
     if (!preferredSmokeSessionByRunId.size) preferredSmokeSessionByRunId = undefined;
   }
 
-  const summaries = summarizeOpsSmokeSessionsFromFlatRows(flatRows, {
+  let summaries = summarizeOpsSmokeSessionsFromFlatRows(flatRows, {
     sessionLimit: 500,
     preferredSmokeSessionByRunId,
     intakeOrphanReplication: args.intakeReplicateAll ? 'all' : undefined,
   });
+  summaries = filterOpsSmokeSummariesBySessionIdPrefix(summaries, args.sessionPrefix);
   const limited = args.runId ? summaries : summaries.slice(0, args.limit);
 
   if (!limited.length) {
