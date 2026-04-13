@@ -238,15 +238,7 @@ export function formatOpsSmokeFounderFacingLines(s) {
       ? `회복(2차·GitHub 푸시): 있음 — ${String(s.github_secondary_recovery_outcome || 'outcome_unknown').slice(0, 120)}`
       : '회복(2차·GitHub 푸시): 없음.',
   );
-  const adv = Array.isArray(s.advisory_phases_seen)
-    ? s.advisory_phases_seen.map((x) => String(x || '').trim()).filter(Boolean)
-    : [];
-  if (adv.length) {
-    const shown = adv.slice(0, 8);
-    const tail = adv.length > 8 ? '…' : '';
-    lines.push(`부차 관측 페이즈(1차 완료 권위 아님): ${shown.join(', ')}${tail}`);
-  }
-  return lines.slice(0, 12);
+  return lines.slice(0, 8);
 }
 
 /**

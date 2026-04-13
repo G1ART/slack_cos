@@ -7,7 +7,7 @@
 `scripts/summarize-ops-smoke-sessions.mjs` 출력에 `primary_phases_seen` / `advisory_phases_seen` 추가.  
 `--session-prefix <p>` 로 `smoke_session_id` 가 `<p>` 로 시작하는 세션만 나열(멀티 배포·공유 Supabase).  
 `advisory`는 GitHub 부차 증거·비권위 지문 등(`opsSmokeParcelGate.js` 의 `PARCEL_ADVISORY_DISPLAY_PHASES`).  
-창업자 대면 줄(`formatOpsSmokeFounderFacingLines`)에 부차 페이즈 한 줄이 붙을 수 있음.
+요약 JSON·집계 필드만 제공하고, COS에게 어떻게 말할지는 앱이 추가로 포맷하지 않는다.
 
 ## 감사
 

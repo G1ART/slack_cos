@@ -1,36 +1,8 @@
 /**
- * Structured delegate_harness_team packet validation (machine-only).
- * Aligns with DELEGATE_PACKET_ITEM_SCHEMA in runFounderDirectConversation.js — no founder text parsing.
+ * `delegate_harness_team` — 런타임은 **기능(운송·컴파일) 안전**만 검증한다.
+ * 패킷 봉투 필드·페르소나 enum 등은 OpenAI strict 도구 스키마 + COS·하네스 지시에 맡긴다.
+ * `live_patch`가 비null이면 단일 파일 자동화에 필요한 형식만 본다.
  */
-
-const PERSONA_ENUM_ARR = ['research', 'pm', 'engineering', 'design', 'qa', 'data'];
-const PREFERRED_TOOL_ENUM = ['cursor', 'github', 'supabase', 'vercel', 'railway'];
-const INVOKE_ACTION_ENUM = [
-  'create_spec',
-  'emit_patch',
-  'create_issue',
-  'open_pr',
-  'apply_sql',
-  'deploy',
-  'inspect_logs',
-];
-
-const REQUIRED_PACKET_KEYS = [
-  'packet_id',
-  'persona',
-  'mission',
-  'inputs',
-  'deliverables',
-  'definition_of_done',
-  'handoff_to',
-  'artifact_format',
-  'preferred_tool',
-  'preferred_action',
-  'review_required',
-  'review_focus',
-  'packet_status',
-  'live_patch',
-];
 
 /**
  * Validates `live_patch` sub-object only (when non-null). For local preflight / tests.
@@ -74,12 +46,8 @@ export function validateDelegateHarnessPacketForLivePatch(lp, pathPrefix = 'live
  * @param {unknown} pkt
  * @param {number} index
  */
-function validateOneDelegatePacket(pkt, index) {
-  const missing = [];
-  const invalid_enum = [];
-  const invalid_nested = [];
+function validateFunctionalPacketSlot(pkt, index) {
   const px = `packets[${index}]`;
-
   if (!pkt || typeof pkt !== 'object' || Array.isArray(pkt)) {
     return {
       ok: false,
@@ -89,72 +57,15 @@ function validateOneDelegatePacket(pkt, index) {
     };
   }
   const p = /** @type {Record<string, unknown>} */ (pkt);
-
-  for (const k of REQUIRED_PACKET_KEYS) {
-    if (!(k in p)) missing.push(`${px}.${k}`);
+  if (p.live_patch == null) {
+    return { ok: true, missing_required_fields: [], invalid_enum_fields: [], invalid_nested_fields: [] };
   }
-  if (missing.length) {
-    return { ok: false, missing_required_fields: missing, invalid_enum_fields: [], invalid_nested_fields: [] };
-  }
-
-  if (p.packet_id != null && typeof p.packet_id !== 'string') {
-    invalid_nested.push(`${px}.packet_id`);
-  }
-
-  const persona = String(p.persona || '').toLowerCase();
-  if (!PERSONA_ENUM_ARR.includes(persona)) invalid_enum.push(`${px}.persona`);
-
-  if (typeof p.mission !== 'string' || !p.mission.trim()) missing.push(`${px}.mission`);
-
-  if (p.inputs !== undefined && p.inputs !== null) {
-    if (!Array.isArray(p.inputs)) invalid_nested.push(`${px}.inputs`);
-    else if (!p.inputs.every((x) => typeof x === 'string')) invalid_nested.push(`${px}.inputs`);
-  }
-
-  if (!Array.isArray(p.deliverables)) invalid_nested.push(`${px}.deliverables`);
-  if (!Array.isArray(p.definition_of_done)) invalid_nested.push(`${px}.definition_of_done`);
-
-  if (typeof p.handoff_to !== 'string') invalid_nested.push(`${px}.handoff_to`);
-
-  if (typeof p.artifact_format !== 'string' || !p.artifact_format.trim()) {
-    missing.push(`${px}.artifact_format`);
-  }
-
-  if (p.preferred_tool != null) {
-    const pt = String(p.preferred_tool);
-    if (!PREFERRED_TOOL_ENUM.includes(pt)) invalid_enum.push(`${px}.preferred_tool`);
-  }
-  if (p.preferred_action != null) {
-    const pa = String(p.preferred_action);
-    if (!INVOKE_ACTION_ENUM.includes(pa)) invalid_enum.push(`${px}.preferred_action`);
-  }
-
-  if (p.review_required !== undefined && p.review_required !== null && typeof p.review_required !== 'boolean') {
-    invalid_nested.push(`${px}.review_required`);
-  }
-
-  if (p.review_focus !== undefined && p.review_focus !== null) {
-    if (!Array.isArray(p.review_focus)) invalid_nested.push(`${px}.review_focus`);
-    else if (!p.review_focus.every((x) => typeof x === 'string')) invalid_nested.push(`${px}.review_focus`);
-  }
-
-  if (p.packet_status != null && p.packet_status !== 'draft' && p.packet_status !== 'ready') {
-    invalid_enum.push(`${px}.packet_status`);
-  }
-
-  if (p.live_patch != null) {
-    const lpRes = validateDelegateHarnessPacketForLivePatch(p.live_patch, `${px}.live_patch`);
-    for (const x of lpRes.missing_required_fields) missing.push(x);
-    for (const x of lpRes.invalid_enum_fields) invalid_enum.push(x);
-    for (const x of lpRes.invalid_nested_fields) invalid_nested.push(x);
-  }
-
-  const ok = !missing.length && !invalid_enum.length && !invalid_nested.length;
+  const lpRes = validateDelegateHarnessPacketForLivePatch(p.live_patch, `${px}.live_patch`);
   return {
-    ok,
-    missing_required_fields: missing,
-    invalid_enum_fields: invalid_enum,
-    invalid_nested_fields: invalid_nested,
+    ok: lpRes.ok,
+    missing_required_fields: lpRes.missing_required_fields,
+    invalid_enum_fields: lpRes.invalid_enum_fields,
+    invalid_nested_fields: lpRes.invalid_nested_fields,
   };
 }
 
@@ -204,7 +115,7 @@ export function validateDelegateHarnessTeamToolArgs(args) {
   const invalid_nested_fields = [];
 
   for (let i = 0; i < a.packets.length; i += 1) {
-    const one = validateOneDelegatePacket(a.packets[i], i);
+    const one = validateFunctionalPacketSlot(a.packets[i], i);
     missing_required_fields.push(...one.missing_required_fields);
     invalid_enum_fields.push(...one.invalid_enum_fields);
     invalid_nested_fields.push(...one.invalid_nested_fields);
@@ -216,17 +127,19 @@ export function validateDelegateHarnessTeamToolArgs(args) {
       ...invalid_enum_fields,
       ...invalid_nested_fields,
     ].slice(0, 48);
-    const allLivePatchShaped =
+    const allLivePatchPaths =
       delegate_schema_error_fields.length > 0 &&
       delegate_schema_error_fields.every((f) => String(f).includes('.live_patch'));
-    const blocked_reason = allLivePatchShaped
+    const blocked_reason = allLivePatchPaths
       ? 'delegate_schema_invalid_live_patch_shape'
-      : 'delegate_schema_invalid_packet_envelope';
+      : 'delegate_schema_invalid_packets_transport';
     return {
       blocked: true,
       reason: 'invalid_payload',
       blocked_reason,
-      machine_hint: 'delegate packet schema mismatch',
+      machine_hint: allLivePatchPaths
+        ? 'live_patch compiler shape mismatch'
+        : 'packets array must contain only objects',
       missing_required_fields: missing_required_fields.slice(0, 24),
       invalid_enum_fields: invalid_enum_fields.slice(0, 24),
       invalid_nested_fields: invalid_nested_fields.slice(0, 24),

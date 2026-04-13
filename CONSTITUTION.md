@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.5 — Real adapters, specialized packets, ledger as visibility spine
+## Version 2.6 — Persona-first harness envelope; functional-only delegate runtime checks
 
 ---
 
@@ -170,6 +170,7 @@ COS는 Founder에게 한국어 자연어로, 맥락에 맞게, 과한 시스템 
 - **언제** tool-call을 할지는 COS가 스스로 판단한다 (질문으로 scope를 잡을지, 락인 후 호출할지).
 - COS는 orchestration의 **지휘자**다. Harness 조직과 외부 도구 선택·순서를 모델이 최적화한다.
 - 앱은 허용 tool 이름·action enum·payload 타입 같은 **기계적 스키마 검증**과 adapter 실행만 하고, 대화가 “충분한지”는 판단하지 않는다.
+- **`delegate_harness_team` 런타임(Node)**: 패킷 봉투 전체(페르소나·mission·deliverables 등)와 그 enum 일치는 **OpenAI strict 도구 스키마**와 **COS·하네스 에이전트 지시(페르소나·R&R)** 에 맡긴다. 앱은 **기능 안전**만 본다 — `objective` 문자열 존재, `packets`가 null 또는 배열, 배열 원소는 객체, **`live_patch`가 null이 아니면** 단일 파일 live 패치에 필요한 path·operation·content·live_only·no_fallback만 검증한다. 알 수 없는 페르소나 등은 `harnessBridge` 정규화에서 건너뛰며, 조율·보고는 COS가 ledger와 대화로 수행한다.
 - COS는 Responses API **tool-call**로 `delegate_harness_team` · `invoke_external_tool` · (선택) `record_execution_note` · `read_execution_context` 를 쓸 수 있다.
 - `invoke_external_tool` 은 **도구별 허용 action** 조합만 스키마로 검증한다 (통제가 아니라 기계적 계약).
 - harness dispatch·task packet·tool invocation·tool 결과 등 실행 증거는 thread 단위 **execution ledger**에 남길 수 있다 (founder 비노출).
