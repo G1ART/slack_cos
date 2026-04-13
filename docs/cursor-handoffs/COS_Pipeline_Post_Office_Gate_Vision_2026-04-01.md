@@ -87,7 +87,8 @@
 - 빠른 축 확인: `npm run verify:parcel-post-office`
 - 성능 계약 묶음: `npm run verify:performance-contract`
 - 전체: `npm test`
-- 프로덕션 DB: `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (레거시 복제 감사는 `--intake-replicate-all`)
+- 프로덕션 DB: `npm run audit:parcel-health`, `node scripts/summarize-ops-smoke-sessions.mjs --store supabase --limit 10` (멀티 배포는 `--session-prefix <p>`; 레거시 복제 감사는 `--intake-replicate-all`)
+- 마감·슬랙 스모크 체크리스트: `COS_Parcel_Audit_And_Slack_Smoke_Closeout_2026-04-13.md`
 - **슬랙까지 “완전 끝”을 주장하려면**: 운영 앱 기준으로 파운더 스레드에서 짧은 스모크 1회(또는 동일 조건 스테이징). 생략하면 백엔드 계약만 증명된 것이다(5절 표).
 - 기동 시 `cos_runtime_truth` JSON 에서 `smoke_summary_read_path` 가 `stream_view_default` 인지 확인(레거시 병합 강제 여부).
 - Git 동기화는 워크스페이스 패치 보고 규칙 따름.

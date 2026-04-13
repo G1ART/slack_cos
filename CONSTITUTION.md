@@ -1,6 +1,6 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.6 — Persona-first harness envelope; functional-only delegate runtime checks
+## Version 2.7 — Founder trust, minimal code coercion; COS orchestrates harness team R&R
 
 ---
 
@@ -42,6 +42,18 @@ External tools (Cursor, GitHub, Supabase, Vercel, Railway 등)
 - **external tool invocation**은 **live**(실제 API가 성공한 경우) 또는 **artifact**(런타임에 기록된 대체 산출물) 모두 **실행 사실**이다. 자격 증명만으로 **가짜 live**(스텁만 수행하며 live로 표기)는 허용되지 않는다.
 - **execution ledger**는 COS가 실행층을 감시·조율하기 위한 **visibility spine**이다.
 - 과사용·독단·편향이 있는 에이전트 조율은 **COS의 책임**이며, **COS가 ledger·실행 기록 visibility**를 바탕으로 수행한다. 코드는 visibility만 제공하고 감시·우선순위를 대신 정하지 않는다.
+
+### AI 판단 신뢰와 코드의 최소 강제 (founder 원칙)
+
+- **고등 사고·판단**은 COS·하네스를 신뢰한다. 판단 갭은 founder가 대화·지시로 메우고, **같은 실패가 반복될 때만** 코드·정책·테스트로 옮긴다.
+- Slack 상의 COS를 비롯한 AI에 대해 앱은 **최소한의 기계적 강제**만 둔다 (자격·경계·허용 툴·전송 형식·`live_patch` 컴파일 가능성 등). 의도·우선순위·협업 방식·founder에게 **어떻게 말할지**는 **모델·시스템 지시·대화**에 맡긴다.
+- `delegate_harness_team`의 OpenAI **strict** 도구 스키마는 **JSON 봉투의 와이어 바닥**일 뿐이며, 업무 판단을 코드가 대신하는 것이 아니다. Node 런타임은 그 바닥 아래에서 **기능(운송·컴파일) 안전**만 본다.
+
+### Harness 팀과 COS의 역할 (목표 운영 모델)
+
+- **COS가 모든 scope/R&R을 인터페이스마다 독점하지 않는다.** 이미 두어진 **페르소나·역할**을 바탕으로, 하네스 팀이 각자의 scope/R&R을 가지고 **견제·협력**하며 실질 일을 수행하는 것을 목표로 한다.
+- COS는 **관리감독·조율·협력 촉진·역량 극대화**, 그리고 **founder의 의지를 AI 실행 언어로 끊김 없이 전달·정렬**(24/7 운영 맥락 포함)을 맡는다.
+- founder와 하네스 에이전트의 **직접 대화는 예외**이고, 기본은 **COS 경유**와 **ledger·실행 기록 가시성**이다. 오케스트레이션·가시성은 **Slack 안**(채널·스레드·COS 단일 대면 창구 등)에서 설계할 수 있다.
 
 ### 런타임 policing (재확인)
 
