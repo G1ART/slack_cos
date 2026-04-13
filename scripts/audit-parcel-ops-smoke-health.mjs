@@ -10,6 +10,7 @@
  *   node scripts/audit-parcel-ops-smoke-health.mjs --sample 5000 --strict
  *   node scripts/audit-parcel-ops-smoke-health.mjs --strict --strict-warnings-only
  *   node scripts/audit-parcel-ops-smoke-health.mjs --json
+ *   node scripts/audit-parcel-ops-smoke-health.mjs --parcel-deployment-key prod_a --parcel-deployment-include-legacy
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
  *   COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN
@@ -21,6 +22,7 @@ import {
   createCosRuntimeSupabaseForSummary,
   COS_OPS_SMOKE_SUMMARY_STREAM_VIEW,
 } from '../src/founder/runStoreSupabase.js';
+import { filterRowsByParcelDeploymentKey, parcelDeploymentKeyFromEnv } from '../src/founder/parcelDeploymentContext.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -43,6 +45,9 @@ function parseArgs() {
   let strict = false;
   let strictWarningsOnly = false;
   let jsonOnly = false;
+  /** @type {string | null} */
+  let parcelDeploymentKey = null;
+  let parcelDeploymentIncludeLegacy = false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] === '--sample' && a[i + 1]) {
       sample = Math.max(100, Math.min(20000, parseInt(a[i + 1], 10) || 3000));
@@ -50,8 +55,11 @@ function parseArgs() {
     } else if (a[i] === '--strict') strict = true;
     else if (a[i] === '--strict-warnings-only') strictWarningsOnly = true;
     else if (a[i] === '--json') jsonOnly = true;
+    else if (a[i] === '--parcel-deployment-key' && a[i + 1]) {
+      parcelDeploymentKey = String(a[++i] || '').trim() || null;
+    } else if (a[i] === '--parcel-deployment-include-legacy') parcelDeploymentIncludeLegacy = true;
   }
-  return { sample, strict, strictWarningsOnly, jsonOnly };
+  return { sample, strict, strictWarningsOnly, jsonOnly, parcelDeploymentIncludeLegacy, parcelDeploymentKey };
 }
 
 /** @param {string} name @param {number} def */
@@ -67,7 +75,12 @@ const PENDING_WAKE_WARN = envNum('COS_PARCEL_HEALTH_PENDING_WAKE_WARN', 50);
 const OPS_NULL_RUN_WARN = envNum('COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN', 500);
 
 async function main() {
-  const { sample, strict, strictWarningsOnly, jsonOnly } = parseArgs();
+  const { sample, strict, strictWarningsOnly, jsonOnly, parcelDeploymentIncludeLegacy, parcelDeploymentKey } =
+    parseArgs();
+  const deployScopeKey =
+    parcelDeploymentKey != null && String(parcelDeploymentKey).trim() !== ''
+      ? String(parcelDeploymentKey).trim()
+      : parcelDeploymentKeyFromEnv();
   const sb = createCosRuntimeSupabaseForSummary(process.env);
   if (!sb) {
     const out = {
@@ -102,7 +115,7 @@ async function main() {
 
   const { data: rows, error: eSample } = await sb
     .from(view)
-    .select('run_id,event_type,created_at')
+    .select('run_id,event_type,created_at,payload,parcel_deployment_key')
     .order('created_at', { ascending: false })
     .limit(sample);
 
@@ -114,7 +127,10 @@ async function main() {
     return;
   }
 
-  const list = Array.isArray(rows) ? rows : [];
+  let list = Array.isArray(rows) ? rows : [];
+  if (deployScopeKey) {
+    list = filterRowsByParcelDeploymentKey(list, deployScopeKey, parcelDeploymentIncludeLegacy);
+  }
   let orphanish = 0;
   /** @type {Record<string, number>} */
   const byClass = {};
@@ -189,6 +205,8 @@ async function main() {
     skipped: false,
     interpretation_ko: interpretationKo,
     view,
+    parcel_deployment_scope: deployScopeKey || null,
+    parcel_deployment_include_legacy: parcelDeploymentIncludeLegacy,
     stream_row_count_estimate: streamTotal ?? null,
     sample_size: list.length,
     sample_requested: sample,

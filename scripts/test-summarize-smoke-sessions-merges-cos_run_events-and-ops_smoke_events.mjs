@@ -39,6 +39,9 @@ function createMockSupabase(runData, opsData) {
           eq() {
             return this;
           },
+          or() {
+            return this;
+          },
           order() {
             return this;
           },

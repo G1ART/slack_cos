@@ -20,6 +20,7 @@ import {
   filterOpsSmokeSummariesBySessionIdPrefix,
   summarizeOpsSmokeSessionsFromFlatRows,
 } from '../src/founder/smokeOps.js';
+import { parcelDeploymentKeyFromEnv } from '../src/founder/parcelDeploymentContext.js';
 
 function parseArgs() {
   const out = {
@@ -33,6 +34,8 @@ function parseArgs() {
     supabaseKey: null,
     intakeReplicateAll: false,
     sessionPrefix: null,
+    parcelDeploymentKey: null,
+    parcelDeploymentIncludeLegacy: false,
   };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i += 1) {
@@ -76,6 +79,13 @@ function parseArgs() {
       out.sessionPrefix = String(a[++i] || '').trim();
       continue;
     }
+    if (a[i] === '--parcel-deployment-key' && a[i + 1]) {
+      out.parcelDeploymentKey = String(a[++i] || '').trim();
+      continue;
+    }
+    if (a[i] === '--parcel-deployment-include-legacy') {
+      out.parcelDeploymentIncludeLegacy = true;
+    }
   }
   return out;
 }
@@ -109,12 +119,19 @@ async function main() {
     if (!modeOverride) modeOverride = 'supabase';
   }
 
+  const parcelDeploymentKey =
+    args.parcelDeploymentKey != null && String(args.parcelDeploymentKey).trim() !== ''
+      ? String(args.parcelDeploymentKey).trim()
+      : parcelDeploymentKeyFromEnv();
+
   const flatRows = await listOpsSmokePhaseEventsForSummary({
     runId: args.runId,
     maxRows: args.maxRows,
     modeOverride,
     runtimeStateDir: args.stateDir,
     supabaseClient,
+    parcelDeploymentKey: parcelDeploymentKey || undefined,
+    parcelDeploymentIncludeLegacy: args.parcelDeploymentIncludeLegacy,
   });
 
   /** @type {Map<string, string> | undefined} */

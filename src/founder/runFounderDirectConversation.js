@@ -26,6 +26,7 @@ import { stashDelegateEmitPatchContext } from './delegateEmitPatchStash.js';
 import { resolveOpsSmokeSessionIdForToolAudit } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
+import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -396,6 +397,8 @@ export function buildSystemInstructions(constitutionMarkdown) {
     'founder에게 내부 artifact·원시 JSON을 직접 보여주지 말고 자연어로만 보고하라.',
     '[Adapter readiness] 블록은 시스템 입력 전용이다. founder 답변에 인용·복붙하지 말 것.',
     '도구 결과에 blocked·invalid_payload·계약 미충족이 있으면, 원인을 추정하거나 “줄바꿈 때문일 수 있다” 같은 서술을 하지 말고, 도구 출력에 포함된 기계적 설명만 그대로 전달하라. 기계적 설명이 없으면 짧게 막혔음만 알리고 세부 원인을 지어내지 말라.',
+    '',
+    FOUNDER_COS_PERSONA_HARNESS_BLOCK,
     '',
     '--- 헌법 시작 ---',
     constitutionMarkdown,

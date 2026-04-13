@@ -1,5 +1,5 @@
 /**
- * Migration `*_cos_ops_smoke_summary_stream_view.sql`: both `event_type in (...)` clauses
+ * Migrations that replace `cos_ops_smoke_summary_stream`: both `event_type in (...)` clauses
  * must match {@link COS_OPS_SMOKE_SUMMARY_EVENT_TYPES} exactly (order + set).
  */
 import assert from 'node:assert';
@@ -10,14 +10,15 @@ import { COS_OPS_SMOKE_SUMMARY_EVENT_TYPES } from '../src/founder/runStoreSupaba
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migDir = join(__dirname, '../supabase/migrations');
-const names = readdirSync(migDir).filter((f) => f.endsWith('.sql') && f.includes('cos_ops_smoke_summary_stream_view'));
-assert.equal(
-  names.length,
-  1,
-  `expected exactly one *cos_ops_smoke_summary_stream_view*.sql in migrations, got: ${names.join(', ') || '(none)'}`,
+const allSql = readdirSync(migDir).filter((f) => f.endsWith('.sql'));
+const viewFiles = allSql.filter((f) => {
+  const c = readFileSync(join(migDir, f), 'utf8');
+  return /create\s+or\s+replace\s+view\s+public\.cos_ops_smoke_summary_stream/i.test(c);
+});
+assert.ok(
+  viewFiles.length >= 1,
+  `expected at least one migration defining public.cos_ops_smoke_summary_stream, got: ${viewFiles.join(', ') || '(none)'}`,
 );
-
-const sql = readFileSync(join(migDir, names[0]), 'utf8');
 
 /** @param {string} s @param {string} needle */
 function extractInListBody(s, needle) {
@@ -52,18 +53,21 @@ function parseQuotedTypes(body) {
     });
 }
 
-const runEventsTypes = parseQuotedTypes(extractInListBody(sql, 'where e.event_type in'));
-const opsSmokeTypes = parseQuotedTypes(extractInListBody(sql, 'where o.event_type in'));
-
-assert.deepStrictEqual(
-  runEventsTypes,
-  opsSmokeTypes,
-  'cos_run_events and cos_ops_smoke_events IN lists must be identical',
-);
-assert.deepStrictEqual(
-  runEventsTypes,
-  [...COS_OPS_SMOKE_SUMMARY_EVENT_TYPES],
-  'migration IN list must mirror COS_OPS_SMOKE_SUMMARY_EVENT_TYPES (same order)',
-);
+const exp = [...COS_OPS_SMOKE_SUMMARY_EVENT_TYPES];
+for (const name of viewFiles.sort()) {
+  const sql = readFileSync(join(migDir, name), 'utf8');
+  const runEventsTypes = parseQuotedTypes(extractInListBody(sql, 'where e.event_type in'));
+  const opsSmokeTypes = parseQuotedTypes(extractInListBody(sql, 'where o.event_type in'));
+  assert.deepStrictEqual(
+    runEventsTypes,
+    opsSmokeTypes,
+    `${name}: cos_run_events and cos_ops_smoke_events IN lists must be identical`,
+  );
+  assert.deepStrictEqual(
+    runEventsTypes,
+    exp,
+    `${name}: migration IN list must mirror COS_OPS_SMOKE_SUMMARY_EVENT_TYPES (same order)`,
+  );
+}
 
 console.log('test-smoke-summary-stream-view-sql-ssot: ok');

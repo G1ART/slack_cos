@@ -7,6 +7,7 @@ import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.j
 import { createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
 import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
+import { withParcelDeploymentPayload } from './parcelDeploymentContext.js';
 
 /**
  * @param {string} callName
@@ -103,7 +104,7 @@ export async function recordCosPretriggerAudit(p) {
 
   const summary = summarizeToolArgsForAudit(p.call_name, p.args);
   const eventType = p.blocked ? 'cos_pretrigger_tool_call_blocked' : 'cos_pretrigger_tool_call';
-  const payload = {
+  const payload = withParcelDeploymentPayload({
     smoke_session_id,
     run_id: runId || null,
     at: new Date().toISOString(),
@@ -134,7 +135,7 @@ export async function recordCosPretriggerAudit(p) {
     builder_stage_last_reached:
       p.builder_stage_last_reached != null ? String(p.builder_stage_last_reached).slice(0, 120) : null,
     ...(p.attempt_seq != null && Number(p.attempt_seq) > 0 ? { attempt_seq: Math.floor(Number(p.attempt_seq)) } : {}),
-  };
+  });
 
   if (runId) {
     await appendCosRunEventForRun(runId, eventType, payload, {});

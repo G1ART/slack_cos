@@ -13,6 +13,7 @@ import {
   supabaseListMergedSmokeSummaryEvents,
 } from './runStoreSupabase.js';
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
+import { filterRowsByParcelDeploymentKey, withParcelDeploymentPayload } from './parcelDeploymentContext.js';
 
 /**
  * @param {Record<string, unknown>} row
@@ -116,6 +117,8 @@ async function readEventsJsonlFile(fp) {
  *   modeOverride?: 'file' | 'memory' | 'supabase' | null,
  *   runtimeStateDir?: string | null,
  *   supabaseClient?: import('@supabase/supabase-js').SupabaseClient | null,
+ *   parcelDeploymentKey?: string | null,
+ *   parcelDeploymentIncludeLegacy?: boolean,
  * }} [opts]
  * @returns {Promise<Array<{ run_id: string, event_type: string, payload: Record<string, unknown>, created_at: string }>>}
  */
@@ -127,6 +130,12 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
     modeRaw === 'file' || modeRaw === 'memory' || modeRaw === 'supabase'
       ? modeRaw
       : getCosRunStoreMode();
+
+  function scopeRows(rows) {
+    const dk = String(opts.parcelDeploymentKey || '').trim();
+    if (!dk) return rows;
+    return filterRowsByParcelDeploymentKey(rows, dk, opts.parcelDeploymentIncludeLegacy === true);
+  }
 
   if (mode === 'memory') {
     const out = [];
@@ -154,13 +163,18 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
       }
     }
     out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-    return out.slice(0, maxRows);
+    return scopeRows(out).slice(0, maxRows);
   }
 
   if (mode === 'supabase') {
     const sb = opts.supabaseClient || createCosRuntimeSupabaseForSummary();
     if (!sb) return [];
-    return supabaseListMergedSmokeSummaryEvents(sb, { runId, limit: maxRows });
+    return supabaseListMergedSmokeSummaryEvents(sb, {
+      runId,
+      limit: maxRows,
+      parcelDeploymentKey: opts.parcelDeploymentKey,
+      parcelDeploymentIncludeLegacy: opts.parcelDeploymentIncludeLegacy,
+    });
   }
 
   const dir = cosEventsDirForSummary(opts.runtimeStateDir ?? null);
@@ -178,7 +192,7 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
       });
     }
     out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-    return out.slice(0, maxRows);
+    return scopeRows(out).slice(0, maxRows);
   }
 
   let names = [];
@@ -214,7 +228,7 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
     });
   }
   out.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  return out.slice(0, maxRows);
+  return scopeRows(out).slice(0, maxRows);
 }
 
 /**
@@ -230,7 +244,10 @@ export async function appendCosRunEvent(threadKey, eventType, payload) {
   const rid = run?.id != null ? String(run.id).trim() : '';
   if (!rid) return false;
 
-  const pl = payload && typeof payload === 'object' ? payload : {};
+  let pl = payload && typeof payload === 'object' ? payload : {};
+  if (isSmokeSummaryEventType(eventType)) {
+    pl = withParcelDeploymentPayload(pl);
+  }
   const mode = getCosRunStoreMode();
   const row = eventRowFromPayload(eventType, pl, {});
 
@@ -264,7 +281,11 @@ export async function appendCosRunEventForRun(runUuid, eventType, payload, evide
   const rid = String(runUuid || '').trim();
   if (!rid) return false;
   const mode = getCosRunStoreMode();
-  const row = eventRowFromPayload(eventType, payload, evidence);
+  let pl = payload && typeof payload === 'object' ? payload : {};
+  if (isSmokeSummaryEventType(eventType)) {
+    pl = withParcelDeploymentPayload(pl);
+  }
+  const row = eventRowFromPayload(eventType, pl, evidence);
 
   if (mode === 'memory') {
     const arr = memByRun.get(rid) || [];

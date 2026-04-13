@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { filterRowsByParcelDeploymentKey } from './parcelDeploymentContext.js';
 
 /** @returns {import('@supabase/supabase-js').SupabaseClient | null} */
 export function createCosRuntimeSupabase() {
@@ -50,10 +51,15 @@ export const COS_OPS_SMOKE_SUMMARY_STREAM_VIEW = 'cos_ops_smoke_summary_stream';
  * @param {Record<string, unknown>} r
  */
 function mapMergedSmokeSummaryRow(r) {
+  const pl = r.payload && typeof r.payload === 'object' ? r.payload : {};
+  const fromCol = r.parcel_deployment_key != null ? String(r.parcel_deployment_key).trim() : '';
+  const fromPl = String(pl.parcel_deployment_key ?? '').trim();
+  const parcelKey = fromCol || fromPl || undefined;
   return {
     run_id: String(r.run_id || ''),
     event_type: String(r.event_type || ''),
-    payload: r.payload && typeof r.payload === 'object' ? r.payload : {},
+    payload: pl,
+    ...(parcelKey ? { parcel_deployment_key: parcelKey } : {}),
     created_at: r.created_at != null ? String(r.created_at) : '',
   };
 }
@@ -61,19 +67,38 @@ function mapMergedSmokeSummaryRow(r) {
 /**
  * 단일 뷰에서 병합 스트림 조회 (한 번의 order/limit).
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
- * @param {{ runId?: string | null, limit?: number }} p
+ * @param {{
+ *   runId?: string | null,
+ *   limit?: number,
+ *   parcelDeploymentKey?: string | null,
+ *   parcelDeploymentIncludeLegacy?: boolean,
+ * }} p
  * @returns {Promise<{ ok: boolean, data: ReturnType<typeof mapMergedSmokeSummaryRow>[] }>}
  */
 export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
+  const dk = String(p.parcelDeploymentKey || '').trim();
+  const incLeg = p.parcelDeploymentIncludeLegacy === true;
+
   let q = sb
     .from(COS_OPS_SMOKE_SUMMARY_STREAM_VIEW)
-    .select('run_id, event_type, payload, created_at');
+    .select('run_id, event_type, payload, created_at, parcel_deployment_key');
   if (rid) q = q.eq('run_id', rid);
+  if (dk) {
+    if (incLeg) {
+      q = q.or(`parcel_deployment_key.eq.${dk},parcel_deployment_key.is.null`);
+    } else {
+      q = q.eq('parcel_deployment_key', dk);
+    }
+  }
   const { data, error } = await q.order('created_at', { ascending: false }).limit(lim);
   if (error) return { ok: false, data: [] };
-  return { ok: true, data: (data || []).map(mapMergedSmokeSummaryRow) };
+  let rows = data || [];
+  if (dk) {
+    rows = filterRowsByParcelDeploymentKey(rows, dk, incLeg);
+  }
+  return { ok: true, data: rows.map(mapMergedSmokeSummaryRow) };
 }
 
 export async function supabaseListOpsSmokePhaseEvents(sb, p) {
@@ -136,7 +161,12 @@ export function mergedSmokeSummaryPerSourceFetchBudget(finalLimit) {
 /**
  * 이중 쿼리 병합 (뷰 미적용·오류 시 폴백).
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
- * @param {{ runId?: string | null, limit?: number }} p
+ * @param {{
+ *   runId?: string | null,
+ *   limit?: number,
+ *   parcelDeploymentKey?: string | null,
+ *   parcelDeploymentIncludeLegacy?: boolean,
+ * }} p
  */
 export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
   const lim = Math.max(1, Math.min(Number(p.limit) || 2000, 10000));
@@ -148,7 +178,12 @@ export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
   ]);
   const merged = [...runEv, ...opsEv];
   merged.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  return merged.slice(0, lim);
+  let out = merged.slice(0, lim);
+  const dk = String(p.parcelDeploymentKey || '').trim();
+  if (dk) {
+    out = filterRowsByParcelDeploymentKey(out, dk, p.parcelDeploymentIncludeLegacy === true);
+  }
+  return out;
 }
 
 /**
@@ -156,7 +191,12 @@ export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
  * 우선 DB 뷰 `cos_ops_smoke_summary_stream` 한 번 조회; 실패 시 {@link supabaseListMergedSmokeSummaryEventsFallback}.
  * 강제 레거시: `COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY=1`.
  * @param {import('@supabase/supabase-js').SupabaseClient} sb
- * @param {{ runId?: string | null, limit?: number }} p
+ * @param {{
+ *   runId?: string | null,
+ *   limit?: number,
+ *   parcelDeploymentKey?: string | null,
+ *   parcelDeploymentIncludeLegacy?: boolean,
+ * }} p
  */
 export async function supabaseListMergedSmokeSummaryEvents(sb, p) {
   if (String(process.env.COS_SMOKE_SUMMARY_LEGACY_MERGE_ONLY || '').trim() === '1') {

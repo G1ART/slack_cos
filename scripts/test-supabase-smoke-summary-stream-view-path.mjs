@@ -36,6 +36,9 @@ function createStreamMock() {
         eq() {
           return this;
         },
+        or() {
+          return this;
+        },
         order() {
           return this;
         },
