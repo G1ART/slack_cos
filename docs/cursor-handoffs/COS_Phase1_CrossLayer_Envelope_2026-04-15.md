@@ -54,8 +54,9 @@
 ## 6. 다음 구현 순서 (이 문서 이후)
 
 1. `run_id` / `thread_key` / `packet_id` 가 새 코드 경로에서 서로 치환되지 않게 리뷰 체크리스트로만 먼저 쓴다.  
-2. `COS_SLACK_APP_ID` 를 부트 truth에 노출(설정 시) — 멀티 앱 분기의 앵커.  
-3. 테넄시 키를 cos_runs·ledger 쪽으로 옮길 때 **이 표의 이름**을 그대로 쓴다.
+2. ~~`COS_SLACK_APP_ID` 를 부트 truth에 노출(설정 시)~~ — 반영됨 (`cosRuntimeTruth` · `slack_app_id` 선택 필드).  
+3. ~~테넄시 키를 cos_runs 쪽으로~~ — 반영됨 (`20260416130000_*`, `applyCosRunTenancyDefaults` / `appRunToDbRow`). **ledger 전 구간** 태깅은 여전히 후속(에픽 §다음 단계).  
+4. 출시 점검: `COS_Release_Readiness_Checklist_2026-04-16.md`.
 
 ## Owner actions
 

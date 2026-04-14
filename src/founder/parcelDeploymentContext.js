@@ -68,6 +68,20 @@ export function projectSpaceKeyFromEnv(env = process.env) {
 }
 
 /**
+ * 부트·헬스용 — **값은 넣지 않고** env에 네 축이 설정됐는지 여부만 (로그 노출 최소화).
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ parcel_deployment: boolean, workspace: boolean, product: boolean, project_space: boolean }}
+ */
+export function tenancyKeysPresenceFromEnv(env = process.env) {
+  return {
+    parcel_deployment: Boolean(parcelDeploymentKeyFromEnv(env)),
+    workspace: Boolean(workspaceKeyFromEnv(env)),
+    product: Boolean(productKeyFromEnv(env)),
+    project_space: Boolean(projectSpaceKeyFromEnv(env)),
+  };
+}
+
+/**
  * `cos_runs` insert/update용 — 값이 있는 키만 반환 (스네이크 케이스 컬럼명).
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {Record<string, string>}
