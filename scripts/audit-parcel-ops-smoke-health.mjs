@@ -11,6 +11,7 @@
  *   node scripts/audit-parcel-ops-smoke-health.mjs --strict --strict-warnings-only
  *   node scripts/audit-parcel-ops-smoke-health.mjs --json
  *   node scripts/audit-parcel-ops-smoke-health.mjs --parcel-deployment-key prod_a --parcel-deployment-include-legacy
+ *   node scripts/audit-parcel-ops-smoke-health.mjs --workspace-key T0123 --tenancy-include-legacy
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
  *   COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN
@@ -22,7 +23,10 @@ import {
   createCosRuntimeSupabaseForSummary,
   COS_OPS_SMOKE_SUMMARY_STREAM_VIEW,
 } from '../src/founder/runStoreSupabase.js';
-import { filterRowsByParcelDeploymentKey, parcelDeploymentKeyFromEnv } from '../src/founder/parcelDeploymentContext.js';
+import {
+  filterRowsByOptionalTenancyKeys,
+  parcelDeploymentKeyFromEnv,
+} from '../src/founder/parcelDeploymentContext.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -48,6 +52,13 @@ function parseArgs() {
   /** @type {string | null} */
   let parcelDeploymentKey = null;
   let parcelDeploymentIncludeLegacy = false;
+  /** @type {string | null} */
+  let workspaceKey = null;
+  /** @type {string | null} */
+  let productKey = null;
+  /** @type {string | null} */
+  let projectSpaceKey = null;
+  let tenancyIncludeLegacy = false;
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] === '--sample' && a[i + 1]) {
       sample = Math.max(100, Math.min(20000, parseInt(a[i + 1], 10) || 3000));
@@ -58,8 +69,26 @@ function parseArgs() {
     else if (a[i] === '--parcel-deployment-key' && a[i + 1]) {
       parcelDeploymentKey = String(a[++i] || '').trim() || null;
     } else if (a[i] === '--parcel-deployment-include-legacy') parcelDeploymentIncludeLegacy = true;
+    else if (a[i] === '--workspace-key' && a[i + 1]) {
+      workspaceKey = String(a[++i] || '').trim() || null;
+    } else if (a[i] === '--product-key' && a[i + 1]) {
+      productKey = String(a[++i] || '').trim() || null;
+    } else if (a[i] === '--project-space-key' && a[i + 1]) {
+      projectSpaceKey = String(a[++i] || '').trim() || null;
+    } else if (a[i] === '--tenancy-include-legacy') tenancyIncludeLegacy = true;
   }
-  return { sample, strict, strictWarningsOnly, jsonOnly, parcelDeploymentIncludeLegacy, parcelDeploymentKey };
+  return {
+    sample,
+    strict,
+    strictWarningsOnly,
+    jsonOnly,
+    parcelDeploymentIncludeLegacy,
+    parcelDeploymentKey,
+    workspaceKey,
+    productKey,
+    projectSpaceKey,
+    tenancyIncludeLegacy,
+  };
 }
 
 /** @param {string} name @param {number} def */
@@ -75,8 +104,18 @@ const PENDING_WAKE_WARN = envNum('COS_PARCEL_HEALTH_PENDING_WAKE_WARN', 50);
 const OPS_NULL_RUN_WARN = envNum('COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN', 500);
 
 async function main() {
-  const { sample, strict, strictWarningsOnly, jsonOnly, parcelDeploymentIncludeLegacy, parcelDeploymentKey } =
-    parseArgs();
+  const {
+    sample,
+    strict,
+    strictWarningsOnly,
+    jsonOnly,
+    parcelDeploymentIncludeLegacy,
+    parcelDeploymentKey,
+    workspaceKey,
+    productKey,
+    projectSpaceKey,
+    tenancyIncludeLegacy,
+  } = parseArgs();
   const deployScopeKey =
     parcelDeploymentKey != null && String(parcelDeploymentKey).trim() !== ''
       ? String(parcelDeploymentKey).trim()
@@ -113,13 +152,22 @@ async function main() {
     return;
   }
 
-  const { data: rows, error: eSample } = await sb
+  let sampleQ = sb
     .from(view)
     .select(
       'run_id,event_type,created_at,payload,parcel_deployment_key,workspace_key,product_key,project_space_key',
     )
-    .order('created_at', { ascending: false })
-    .limit(sample);
+    .order('created_at', { ascending: false });
+  if (deployScopeKey) {
+    if (parcelDeploymentIncludeLegacy) {
+      sampleQ = sampleQ.or(
+        `parcel_deployment_key.eq.${deployScopeKey},parcel_deployment_key.is.null`,
+      );
+    } else {
+      sampleQ = sampleQ.eq('parcel_deployment_key', deployScopeKey);
+    }
+  }
+  const { data: rows, error: eSample } = await sampleQ.limit(sample);
 
   if (eSample) {
     const err = { ok: false, skipped: false, error: eSample.message, view };
@@ -130,9 +178,12 @@ async function main() {
   }
 
   let list = Array.isArray(rows) ? rows : [];
-  if (deployScopeKey) {
-    list = filterRowsByParcelDeploymentKey(list, deployScopeKey, parcelDeploymentIncludeLegacy);
-  }
+  list = filterRowsByOptionalTenancyKeys(list, {
+    workspaceKey,
+    productKey,
+    projectSpaceKey,
+    tenancyIncludeLegacy,
+  });
   let orphanish = 0;
   /** @type {Record<string, number>} */
   const byClass = {};
@@ -209,6 +260,10 @@ async function main() {
     view,
     parcel_deployment_scope: deployScopeKey || null,
     parcel_deployment_include_legacy: parcelDeploymentIncludeLegacy,
+    workspace_scope: workspaceKey || null,
+    product_scope: productKey || null,
+    project_space_scope: projectSpaceKey || null,
+    tenancy_include_legacy: tenancyIncludeLegacy,
     stream_row_count_estimate: streamTotal ?? null,
     sample_size: list.length,
     sample_requested: sample,

@@ -16,6 +16,7 @@ import {
   supabaseMapHarnessOpsSmokeSessionIdsByRunIds,
 } from '../src/founder/runStoreSupabase.js';
 import { listOpsSmokePhaseEventsForSummary } from '../src/founder/runCosEvents.js';
+import { getCosRunStoreMode } from '../src/founder/executionRunStore.js';
 import {
   filterOpsSmokeSummariesBySessionIdPrefix,
   summarizeOpsSmokeSessionsFromFlatRows,
@@ -36,6 +37,10 @@ function parseArgs() {
     sessionPrefix: null,
     parcelDeploymentKey: null,
     parcelDeploymentIncludeLegacy: false,
+    workspaceKey: null,
+    productKey: null,
+    projectSpaceKey: null,
+    tenancyIncludeLegacy: false,
   };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i += 1) {
@@ -86,6 +91,21 @@ function parseArgs() {
     if (a[i] === '--parcel-deployment-include-legacy') {
       out.parcelDeploymentIncludeLegacy = true;
     }
+    if (a[i] === '--workspace-key' && a[i + 1]) {
+      out.workspaceKey = String(a[++i] || '').trim();
+      continue;
+    }
+    if (a[i] === '--product-key' && a[i + 1]) {
+      out.productKey = String(a[++i] || '').trim();
+      continue;
+    }
+    if (a[i] === '--project-space-key' && a[i + 1]) {
+      out.projectSpaceKey = String(a[++i] || '').trim();
+      continue;
+    }
+    if (a[i] === '--tenancy-include-legacy') {
+      out.tenancyIncludeLegacy = true;
+    }
   }
   return out;
 }
@@ -119,10 +139,14 @@ async function main() {
     if (!modeOverride) modeOverride = 'supabase';
   }
 
+  /** file·memory JSONL에는 보통 parcel 컬럼이 없어서, env 기본 필터를 켜면 빈 목록이 된다. Supabase일 때만 env와 짝. */
+  const effectiveStore = modeOverride || getCosRunStoreMode();
   const parcelDeploymentKey =
     args.parcelDeploymentKey != null && String(args.parcelDeploymentKey).trim() !== ''
       ? String(args.parcelDeploymentKey).trim()
-      : parcelDeploymentKeyFromEnv();
+      : effectiveStore === 'supabase'
+        ? parcelDeploymentKeyFromEnv()
+        : '';
 
   const flatRows = await listOpsSmokePhaseEventsForSummary({
     runId: args.runId,
@@ -132,6 +156,10 @@ async function main() {
     supabaseClient,
     parcelDeploymentKey: parcelDeploymentKey || undefined,
     parcelDeploymentIncludeLegacy: args.parcelDeploymentIncludeLegacy,
+    workspaceKey: args.workspaceKey || undefined,
+    productKey: args.productKey || undefined,
+    projectSpaceKey: args.projectSpaceKey || undefined,
+    tenancyIncludeLegacy: args.tenancyIncludeLegacy,
   });
 
   /** @type {Map<string, string> | undefined} */

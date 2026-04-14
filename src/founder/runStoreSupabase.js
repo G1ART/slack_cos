@@ -3,7 +3,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { filterRowsByParcelDeploymentKey } from './parcelDeploymentContext.js';
+import {
+  cosRunTenancyColumnsFromEnv,
+  filterRowsByOptionalTenancyKeys,
+  filterRowsByParcelDeploymentKey,
+} from './parcelDeploymentContext.js';
 
 /** @returns {import('@supabase/supabase-js').SupabaseClient | null} */
 export function createCosRuntimeSupabase() {
@@ -88,6 +92,10 @@ function mapMergedSmokeSummaryRow(r) {
  *   limit?: number,
  *   parcelDeploymentKey?: string | null,
  *   parcelDeploymentIncludeLegacy?: boolean,
+ *   workspaceKey?: string | null,
+ *   productKey?: string | null,
+ *   projectSpaceKey?: string | null,
+ *   tenancyIncludeLegacy?: boolean,
  * }} p
  * @returns {Promise<{ ok: boolean, data: ReturnType<typeof mapMergedSmokeSummaryRow>[] }>}
  */
@@ -96,6 +104,10 @@ export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
   const rid = p.runId != null && String(p.runId).trim() ? String(p.runId).trim() : null;
   const dk = String(p.parcelDeploymentKey || '').trim();
   const incLeg = p.parcelDeploymentIncludeLegacy === true;
+  const wk = String(p.workspaceKey || '').trim();
+  const pk = String(p.productKey || '').trim();
+  const psk = String(p.projectSpaceKey || '').trim();
+  const tenLeg = p.tenancyIncludeLegacy === true;
 
   let q = sb
     .from(COS_OPS_SMOKE_SUMMARY_STREAM_VIEW)
@@ -116,6 +128,12 @@ export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
   if (dk) {
     rows = filterRowsByParcelDeploymentKey(rows, dk, incLeg);
   }
+  rows = filterRowsByOptionalTenancyKeys(rows, {
+    workspaceKey: wk || null,
+    productKey: pk || null,
+    projectSpaceKey: psk || null,
+    tenancyIncludeLegacy: tenLeg,
+  });
   return { ok: true, data: rows.map(mapMergedSmokeSummaryRow) };
 }
 
@@ -184,6 +202,10 @@ export function mergedSmokeSummaryPerSourceFetchBudget(finalLimit) {
  *   limit?: number,
  *   parcelDeploymentKey?: string | null,
  *   parcelDeploymentIncludeLegacy?: boolean,
+ *   workspaceKey?: string | null,
+ *   productKey?: string | null,
+ *   projectSpaceKey?: string | null,
+ *   tenancyIncludeLegacy?: boolean,
  * }} p
  */
 export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
@@ -201,6 +223,12 @@ export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
   if (dk) {
     out = filterRowsByParcelDeploymentKey(out, dk, p.parcelDeploymentIncludeLegacy === true);
   }
+  out = filterRowsByOptionalTenancyKeys(out, {
+    workspaceKey: p.workspaceKey,
+    productKey: p.productKey,
+    projectSpaceKey: p.projectSpaceKey,
+    tenancyIncludeLegacy: p.tenancyIncludeLegacy === true,
+  });
   return out;
 }
 
@@ -214,6 +242,10 @@ export async function supabaseListMergedSmokeSummaryEventsFallback(sb, p) {
  *   limit?: number,
  *   parcelDeploymentKey?: string | null,
  *   parcelDeploymentIncludeLegacy?: boolean,
+ *   workspaceKey?: string | null,
+ *   productKey?: string | null,
+ *   projectSpaceKey?: string | null,
+ *   tenancyIncludeLegacy?: boolean,
  * }} p
  */
 export async function supabaseListMergedSmokeSummaryEvents(sb, p) {
@@ -261,6 +293,13 @@ export function appRunToDbRow(row) {
       : Array.isArray(snap.handoff_order)
         ? snap.handoff_order.map(String)
         : [];
+  const envTen = cosRunTenancyColumnsFromEnv(typeof process !== 'undefined' ? process.env : {});
+  /** @param {string} col */
+  const pickTenancyCol = (col) => {
+    const fromRow = row[col];
+    if (fromRow != null && String(fromRow).trim()) return String(fromRow).trim();
+    return envTen[col] ?? null;
+  };
   const base = {
     thread_key: String(row.thread_key || ''),
     dispatch_id: String(row.dispatch_id || ''),
@@ -310,6 +349,10 @@ export function appRunToDbRow(row) {
       row.cursor_dispatch_ledger && typeof row.cursor_dispatch_ledger === 'object'
         ? row.cursor_dispatch_ledger
         : null,
+    parcel_deployment_key: pickTenancyCol('parcel_deployment_key'),
+    workspace_key: pickTenancyCol('workspace_key'),
+    product_key: pickTenancyCol('product_key'),
+    project_space_key: pickTenancyCol('project_space_key'),
     created_at: row.created_at ?? undefined,
     updated_at: row.updated_at ?? new Date().toISOString(),
   };
@@ -380,6 +423,10 @@ export function dbRowToAppRun(db) {
       db.cursor_dispatch_ledger && typeof db.cursor_dispatch_ledger === 'object'
         ? db.cursor_dispatch_ledger
         : null,
+    parcel_deployment_key: db.parcel_deployment_key != null ? String(db.parcel_deployment_key) : null,
+    workspace_key: db.workspace_key != null ? String(db.workspace_key) : null,
+    product_key: db.product_key != null ? String(db.product_key) : null,
+    project_space_key: db.project_space_key != null ? String(db.project_space_key) : null,
   };
 }
 
@@ -555,6 +602,10 @@ export async function supabasePatchLatestRun(sb, threadKey, patch) {
       recovery_envelope_pending: dbUp.recovery_envelope_pending,
       cursor_callback_anchor: dbUp.cursor_callback_anchor,
       cursor_dispatch_ledger: dbUp.cursor_dispatch_ledger,
+      parcel_deployment_key: dbUp.parcel_deployment_key,
+      workspace_key: dbUp.workspace_key,
+      product_key: dbUp.product_key,
+      project_space_key: dbUp.project_space_key,
       updated_at: dbUp.updated_at,
     })
     .eq('id', cur.id);
@@ -612,6 +663,10 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
       recovery_envelope_pending: dbUp.recovery_envelope_pending,
       cursor_callback_anchor: dbUp.cursor_callback_anchor,
       cursor_dispatch_ledger: dbUp.cursor_dispatch_ledger,
+      parcel_deployment_key: dbUp.parcel_deployment_key,
+      workspace_key: dbUp.workspace_key,
+      product_key: dbUp.product_key,
+      project_space_key: dbUp.project_space_key,
       updated_at: dbUp.updated_at,
     })
     .eq('id', rid);

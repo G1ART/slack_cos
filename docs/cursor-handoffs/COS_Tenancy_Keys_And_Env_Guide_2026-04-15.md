@@ -2,13 +2,77 @@
 
 **상위:** `COS_Layer_Epic_LockIn_2026-04-14.md` 의 최소 테넄시 키, `parcelDeploymentContext.js`, 요약 스트림 뷰.
 
+## 0. 초보자용: `.env`가 뭔지, “여러 개”는 어떻게 되나요?
+
+### `.env` 한 줄 요약
+
+- **환경 변수** = 프로그램이 켜질 때 OS가 넘겨주는 **이름=값** 문자열입니다.
+- **`.env` 파일** = 로컬에서 그걸 파일로 모아 두는 관례입니다. **Git에 올리지 않는 경우가 많습니다** (비밀이 들어가니까). 레포에는 `.env.example` 만 참고용으로 있습니다.
+- **실행 주체는 “프로세스 하나”**입니다. `node app.js` 한 번 뜰 때 **그 프로세스마다** 환경 변수 집합이 하나입니다.
+
+### “한 변수에 워크스페이스 여러 개” 가능한가요?
+
+**아니요.** `COS_WORKSPACE_KEY` 같은 이름은 **값이 하나**만 들어갑니다. 쉼표로 `T111,T222` 처럼 넣는 방식은 **이 레포 코드가 지원하지 않습니다.**
+
+**여러 Slack 워크스페이스가 같은 Supabase를 쓴다**는 보통 이런 그림입니다.
+
+- 워크스페이스 A용 봇 → Railway **서비스(또는 컨테이너) 하나** → 그쪽 Variables에 `COS_WORKSPACE_KEY=TAAAA...`
+- 워크스페이스 B용 봇 → **또 다른** 배포 → `COS_WORKSPACE_KEY=TBBBB...`
+
+즉 **배포를 나누거나**, 아니면 나중에 코드가 **이벤트마다 `team_id`를 읽어서** 넣도록 바꾸는 식입니다. 지금 `COS_WORKSPACE_KEY`는 **env에서 고정 문자열 하나**만 읽습니다.
+
+### `COS_SLACK_APP_ID` 도 앱이 여러 개면?
+
+Slack에 등록된 **앱 하나**마다 App ID가 **하나**입니다.  
+봇을 **앱 두 개**로 운영하면, 현실적으로는 **프로세스(배포)도 두 개**이고, 각 배포의 env에 **각자의** `COS_SLACK_APP_ID=A...` 를 넣습니다.  
+**변수 이름을 `COS_SLACK_APP_ID_2` 처럼 새로 만들 필요는 없습니다** — 표준 이름은 그대로 두고, **배포 단위로 값만 다르게** 주면 됩니다.
+
+### Supabase에도 넣나요?
+
+**이 테넌시 키들은 Supabase 대시보드에 넣을 필요가 없습니다.**  
+Node 봇이 **자기 프로세스의** env를 읽고, DB에 이벤트를 쓸 때 payload에 문자열을 **붙여 넣는** 역할입니다. DB는 “값이 저장되는 곳”이지, `COS_PARCEL_DEPLOYMENT_KEY`를 **읽어 오는 설정 저장소**가 아닙니다.
+
+### `COS_PARCEL_DEPLOYMENT_KEY` 값은 어디서 “받아” 오나요?
+
+**외부 API에서 자동으로 내려받는 값이 아닙니다.** 팀이 정한 **짧은 별칭**을 쓰면 됩니다.
+
+- 예: `railway_prod`, `railway_staging`, `cursor_cloud_agent`, `local_henry`
+- Railway **서비스 이름**을 그대로 써도 됩니다. 중요한 건 **prod와 staging이 섞일 때 서로 다른 문자열**인 것입니다.
+
+### 스텝바이스텝: `COS_PARCEL_DEPLOYMENT_KEY` 넣기
+
+1. **문자열 정하기** (30초): 예를 들어 운영만 있으면 `railway_prod` 로 고정.
+2. **Railway**  
+   - 브라우저에서 프로젝트 → **해당 서비스**(봇이 도는 서비스) → **Variables**.  
+   - **New Variable** → Name `COS_PARCEL_DEPLOYMENT_KEY`, Value `railway_prod` → Save.  
+   - 서비스 **Redeploy** (변수 반영).
+3. **로컬 `.env`** (로컬에서도 같은 Supabase에 쓰고 싶을 때만)  
+   - 레포 루트 `.env` 를 열어 한 줄 추가:
+     `COS_PARCEL_DEPLOYMENT_KEY=local_dev`  
+   - 운영과 **같은 DB**에 쓰면서 구분만 하고 싶으면 `local_readonly` 처럼 prod와 다른 값을 쓰면 됩니다.
+4. **Cursor Cloud 에이전트**  
+   - **그 환경에서 이 봇(`node app.js`)을 실제로 실행**한다면: Cursor / 호스트의 **Environment variables**에 Railway와 동일한 규칙으로 한 줄 추가.  
+   - **봇은 Railway만 돌고**, Cursor는 코드 편집만 한다면 **넣지 않아도 됨** (DB에 태그 안 붙는 건 “그 프로세스가 안 돌았으니까”).
+5. **Supabase**  
+   - **설정 안 함.** (위 설명 참고)
+
+로컬에서 `.env` 편집 후 내용만 확인할 때 (값은 터미널에 안 찍히게 주의):
+
+```bash
+cd /Users/hyunminkim/g1-cos-slack
+grep -n '^COS_PARCEL_DEPLOYMENT_KEY=' .env || echo "(아직 .env에 없음 — 에디터로 추가)"
+```
+
+---
+
 ## 1. “테넌시”가 뭔가요?
 
 **한 줄:** 여러 팀·제품·배포가 **같은 Supabase(같은 테이블·뷰)** 를 쓸 때, 각 행이 **어느 경계에 속하는지** 붙이는 **짧은 라벨**입니다. 비밀이 아니라 **감사·요약·필터용 태그**입니다.
 
 - **레거시(키 없음):** 예전처럼 “전역 한 덩어리”로 보입니다. 잘못된 것이 아니라 **이행 구간**입니다.
-- **지금 코드가 하는 일:** `ops_smoke_phase`, `cos_pretrigger_*` 등 **요약 스트림에 들어가는 이벤트 타입**의 payload에만, env에 값이 있으면 자동으로 네 가지 키를 채웁니다 (`withParcelDeploymentPayload`).  
-  `cos_runs` 본문·일반 ledger 전체에는 아직 **강제하지 않습니다** (다음 단계).
+- **지금 코드가 하는 일:**  
+  - **요약 스트림:** `ops_smoke_phase`, `cos_pretrigger_*` 등 이벤트 payload에 env가 있으면 네 키를 채웁니다 (`withParcelDeploymentPayload`).  
+  - **`cos_runs`:** 새 행이 Supabase·메모리·파일에 들어갈 때 `parcel_deployment_key`, `workspace_key`, `product_key`, `project_space_key` 컬럼에 **env 기본값 + 행에 이미 있으면 행 우선** (`applyCosRunTenancyDefaults` / `appRunToDbRow`). DB 마이그레이션: `20260416130000_cos_runs_tenancy_keys.sql`.
 
 ## 2. 각 환경 변수에 실제로 뭘 넣으면 되나요?
 
@@ -37,15 +101,17 @@
 | 우선 축 | 잘 맞는 상황 | 장점 | 단점 |
 |---------|----------------|------|------|
 | **deployment** (`COS_PARCEL_DEPLOYMENT_KEY`) | Railway 서비스 여러 개, prod/staging, 로컬 | **이미 CLI·감사·PostgREST 필터가 구현됨**. 설정이 단순. | 같은 배포 안에서 “제품 A vs B”는 못 잘라냄. |
-| **workspace** | Slack 워크스페이스가 DB를 공유 | 고객/조직 단위 분리에 직관적. | 지금은 **요약 스트림 필터에 deployment만** 있음; workspace 필터는 후속. |
-| **product** | 한 DB에 봇·제품 여러 개 | 제품별 대시보드에 좋음. | 값을 **수동으로 통일**해야 하고, 필터도 아직 deployment 중심. |
-| **project_space** | 레포·마일스톤 단위로 보고 싶음 | 가장 세밀. | 태깅 누락·오타에 민감; 운영 규율이 필요. |
+| **workspace** | Slack 워크스페이스가 DB를 공유 | 고객/조직 단위 분리에 직관적. | PostgREST는 **deployment로만 서버 필터**; workspace 등은 요약·감사 스크립트에서 **클라이언트 필터** (`--workspace-key` 등). |
+| **product** | 한 DB에 봇·제품 여러 개 | 제품별 대시보드에 좋음. | 값을 **수동으로 통일**해야 함; `--product-key` 로 슬라이스. |
+| **project_space** | 레포·마일스톤 단위로 보고 싶음 | 가장 세밀. | 태깅 누락·오타에 민감; `--project-space-key`·`--tenancy-include-legacy` 로 이행 구간 포함 여부 조절. |
 
-**솔직한 한 줄:** 지금 레포는 **deployment 축이 제일 완성도가 높습니다.** 나머지 세 키는 **스트림 뷰 컬럼·payload에는 들어가지만**, “한 방에 필터”까지는 다음 패치에서 붙이면 됩니다.
+**솔직한 한 줄:** **deployment** 축이 PostgREST·감사 샘플에서 서버 쪽 필터로 가장 강하고, 나머지 세 축은 **`summarize-ops-smoke-sessions.mjs` / `audit-parcel-ops-smoke-health.mjs`** 에서 env와 동일한 플래그로 잘라 씁니다.
+
+**요약 스크립트 한 줄:** `--store file` 또는 `--store memory` 일 때는 `COS_PARCEL_DEPLOYMENT_KEY` env로 **자동 필터하지 않습니다** (로컬 JSONL에 태그가 없는 경우가 많음). 배포 스코프를 쓰려면 `--parcel-deployment-key` 를 넘기거나 Supabase 모드를 쓰세요.
 
 ## 4. 추천 (근거)
 
-1. **당장:** 운영 Railway에 `COS_PARCEL_DEPLOYMENT_KEY=railway_prod` (또는 서비스 이름 slug)만 넣어도 충분한 경우가 많습니다. 감사는 `npm run audit:parcel-health -- --parcel-deployment-key railway_prod` 로 **배포 단위 샘플**을 볼 수 있습니다.
+1. **당장:** 운영 Railway에 `COS_PARCEL_DEPLOYMENT_KEY=railway_prod` (또는 서비스 slug)만 넣어도 충분한 경우가 많습니다. 감사는 `npm run audit:parcel-health -- --parcel-deployment-key railway_prod` 로 **배포 단위 샘플**을 볼 수 있고, 필요하면 `--workspace-key`, `--product-key`, `--project-space-key`, `--tenancy-include-legacy` 를 조합합니다.
 2. **Slack 워크스페이스가 하나뿐이면** `COS_WORKSPACE_KEY` 는 비워도 됩니다. 나중에 **워크스페이스가 두 개 이상** 같은 DB를 쓰게 되는 순간 `T…` Team ID를 넣는 것을 권장합니다.
 3. **`COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY`** 는 “보고서·필터를 제품/프로젝트 축으로도 자르고 싶다”는 요구가 생기면 그때 고정값을 넣고, 팀 안에서 **한 표로 SSOT**를 정하면 됩니다 (예: product=`g1cos`, project_space=`slack_cos_mvp`).
 

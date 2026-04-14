@@ -13,7 +13,11 @@ import {
   supabaseListMergedSmokeSummaryEvents,
 } from './runStoreSupabase.js';
 import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
-import { filterRowsByParcelDeploymentKey, withParcelDeploymentPayload } from './parcelDeploymentContext.js';
+import {
+  filterRowsByOptionalTenancyKeys,
+  filterRowsByParcelDeploymentKey,
+  withParcelDeploymentPayload,
+} from './parcelDeploymentContext.js';
 
 /**
  * @param {Record<string, unknown>} row
@@ -119,6 +123,10 @@ async function readEventsJsonlFile(fp) {
  *   supabaseClient?: import('@supabase/supabase-js').SupabaseClient | null,
  *   parcelDeploymentKey?: string | null,
  *   parcelDeploymentIncludeLegacy?: boolean,
+ *   workspaceKey?: string | null,
+ *   productKey?: string | null,
+ *   projectSpaceKey?: string | null,
+ *   tenancyIncludeLegacy?: boolean,
  * }} [opts]
  * @returns {Promise<Array<{ run_id: string, event_type: string, payload: Record<string, unknown>, created_at: string }>>}
  */
@@ -132,9 +140,18 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
       : getCosRunStoreMode();
 
   function scopeRows(rows) {
+    let out = rows;
     const dk = String(opts.parcelDeploymentKey || '').trim();
-    if (!dk) return rows;
-    return filterRowsByParcelDeploymentKey(rows, dk, opts.parcelDeploymentIncludeLegacy === true);
+    if (dk) {
+      out = filterRowsByParcelDeploymentKey(out, dk, opts.parcelDeploymentIncludeLegacy === true);
+    }
+    out = filterRowsByOptionalTenancyKeys(out, {
+      workspaceKey: opts.workspaceKey,
+      productKey: opts.productKey,
+      projectSpaceKey: opts.projectSpaceKey,
+      tenancyIncludeLegacy: opts.tenancyIncludeLegacy === true,
+    });
+    return out;
   }
 
   if (mode === 'memory') {
@@ -174,6 +191,10 @@ export async function listOpsSmokePhaseEventsForSummary(opts = {}) {
       limit: maxRows,
       parcelDeploymentKey: opts.parcelDeploymentKey,
       parcelDeploymentIncludeLegacy: opts.parcelDeploymentIncludeLegacy,
+      workspaceKey: opts.workspaceKey,
+      productKey: opts.productKey,
+      projectSpaceKey: opts.projectSpaceKey,
+      tenancyIncludeLegacy: opts.tenancyIncludeLegacy,
     });
   }
 

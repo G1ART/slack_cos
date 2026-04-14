@@ -68,6 +68,39 @@ export function projectSpaceKeyFromEnv(env = process.env) {
 }
 
 /**
+ * `cos_runs` insert/update용 — 값이 있는 키만 반환 (스네이크 케이스 컬럼명).
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {Record<string, string>}
+ */
+export function cosRunTenancyColumnsFromEnv(env = process.env) {
+  /** @type {Record<string, string>} */
+  const out = {};
+  const p = parcelDeploymentKeyFromEnv(env);
+  if (p) out.parcel_deployment_key = p;
+  const w = workspaceKeyFromEnv(env);
+  if (w) out.workspace_key = w;
+  const pr = productKeyFromEnv(env);
+  if (pr) out.product_key = pr;
+  const ps = projectSpaceKeyFromEnv(env);
+  if (ps) out.project_space_key = ps;
+  return out;
+}
+
+/**
+ * 런 행 객체에 테넄시 기본값 채움 (이미 비어 있지 않은 필드는 덮어쓰지 않음).
+ * @param {Record<string, unknown>} row
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function applyCosRunTenancyDefaults(row, env = process.env) {
+  const t = cosRunTenancyColumnsFromEnv(env);
+  for (const [k, v] of Object.entries(t)) {
+    const cur = row[k];
+    if (cur != null && String(cur).trim()) continue;
+    row[k] = v;
+  }
+}
+
+/**
  * 요약 이벤트 payload에 최소 테넌시 키 병합 (비어 있는 필드만).
  * @param {Record<string, unknown>} payload
  * @param {NodeJS.ProcessEnv} [env]
@@ -107,5 +140,42 @@ export function filterRowsByParcelDeploymentKey(rows, deploymentKey, includeLega
     if (v === d) return true;
     if (leg && !v) return true;
     return false;
+  });
+}
+
+/**
+ * 스트림·폴백 병합 행에 workspace / product / project_space 선택 필터 (뷰 컬럼 또는 payload).
+ * @param {Array<Record<string, unknown>>} rows
+ * @param {{
+ *   workspaceKey?: string | null,
+ *   productKey?: string | null,
+ *   projectSpaceKey?: string | null,
+ *   tenancyIncludeLegacy?: boolean,
+ * }} f
+ */
+export function filterRowsByOptionalTenancyKeys(rows, f) {
+  const wk = String(f.workspaceKey || '').trim();
+  const pk = String(f.productKey || '').trim();
+  const psk = String(f.projectSpaceKey || '').trim();
+  const leg = f.tenancyIncludeLegacy === true;
+  if (!wk && !pk && !psk) return rows;
+  return rows.filter((r) => {
+    const pl = r.payload && typeof r.payload === 'object' && !Array.isArray(r.payload) ? r.payload : {};
+    /** @type {Array<[string, string]>} */
+    const dims = [
+      ['workspace_key', wk],
+      ['product_key', pk],
+      ['project_space_key', psk],
+    ];
+    for (const [col, want] of dims) {
+      if (!want) continue;
+      const fromCol = r[col] != null ? String(r[col]).trim() : '';
+      const fromPl = String(pl[col] ?? '').trim();
+      const v = fromCol || fromPl;
+      if (v === want) continue;
+      if (leg && !v) continue;
+      return false;
+    }
+    return true;
   });
 }

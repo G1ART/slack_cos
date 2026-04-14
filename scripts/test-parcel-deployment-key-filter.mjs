@@ -7,6 +7,7 @@ import {
   COS_PRODUCT_KEY_ENV,
   COS_PROJECT_SPACE_KEY_ENV,
   COS_WORKSPACE_KEY_ENV,
+  filterRowsByOptionalTenancyKeys,
   filterRowsByParcelDeploymentKey,
   parcelDeploymentKeyFromEnv,
   withParcelDeploymentPayload,
@@ -64,6 +65,20 @@ try {
   ];
   assert.equal(filterRowsByParcelDeploymentKey(rows, 'a', false).length, 1);
   assert.equal(filterRowsByParcelDeploymentKey(rows, 'a', true).length, 2);
+
+  const rows2 = [
+    { workspace_key: 'W1', payload: {} },
+    { payload: { workspace_key: 'W2' } },
+    { payload: {} },
+  ];
+  assert.equal(
+    filterRowsByOptionalTenancyKeys(rows2, { workspaceKey: 'W1', tenancyIncludeLegacy: false }).length,
+    1,
+  );
+  assert.equal(
+    filterRowsByOptionalTenancyKeys(rows2, { workspaceKey: 'W1', tenancyIncludeLegacy: true }).length,
+    2,
+  );
 } finally {
   restoreEnv();
 }

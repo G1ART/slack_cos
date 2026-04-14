@@ -27,6 +27,7 @@ import {
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
 import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
+import { applyCosRunTenancyDefaults } from './parcelDeploymentContext.js';
 
 /** @typedef {'queued'|'running'|'review_required'|'blocked'|'completed'|'failed'|'canceled'} RunStatus */
 /** @typedef {'delegated'|'starter_kickoff'|'executing'|'reviewing'|'finalizing'} RunStage */
@@ -320,6 +321,8 @@ export async function persistAcceptedRunShell(p) {
     pending_supervisor_wake: false,
     last_supervisor_wake_request_at: null,
   };
+
+  applyCosRunTenancyDefaults(row);
 
   const mode = storeMode();
   let out = null;
