@@ -1093,7 +1093,8 @@ export function aggregateSmokeSessionProgress(rows) {
     }
   }
 
-  if (seen.has('callback_correlated_but_closure_not_applied')) {
+  // 중복·늦은 콜백만 closure_not_applied 를 찍는 경우가 많다. 정상 클로저가 이미 있으면 headline 은 authoritative 유지.
+  if (seen.has('callback_correlated_but_closure_not_applied') && !seen.has('authoritative_callback_closure_applied')) {
     final_status = 'callback_correlated_but_closure_not_applied';
   } else if (seen.has('authoritative_callback_closure_applied')) {
     final_status = 'authoritative_callback_closure_applied';

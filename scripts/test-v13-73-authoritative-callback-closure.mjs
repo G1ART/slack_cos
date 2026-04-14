@@ -272,4 +272,16 @@ const agg = aggregateSmokeSessionProgress([
 assert.equal(agg.callback_completion_state, 'authoritative_callback_closure_applied');
 assert.equal(agg.final_status, 'authoritative_callback_closure_applied');
 
+const aggDupLate = aggregateSmokeSessionProgress([
+  row('cursor_trigger_recorded', '2026-04-01T00:00:01Z'),
+  row('authoritative_callback_closure_applied', '2026-04-01T00:00:04Z'),
+  row('callback_correlated_but_closure_not_applied', '2026-04-01T00:00:09Z'),
+]);
+assert.equal(aggDupLate.callback_completion_state, 'authoritative_callback_closure_applied');
+assert.equal(
+  aggDupLate.final_status,
+  'authoritative_callback_closure_applied',
+  'late duplicate not_applied must not override successful authoritative closure',
+);
+
 console.log('test-v13-73-authoritative-callback-closure: ok');
