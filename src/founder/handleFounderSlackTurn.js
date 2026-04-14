@@ -7,6 +7,7 @@ import { runFounderDirectConversation } from './runFounderDirectConversation.js'
 import { appendThreadTurn, readRecentThreadTurns } from './threadMemory.js';
 import { saveSlackRouting } from './slackRoutingStore.js';
 import { tickRunSupervisorForThread } from './runSupervisor.js';
+import { slackTeamIdFromEvent } from './slackEventTenancy.js';
 
 /**
  * @param {import('@slack/types').AppMentionEvent | import('@slack/types').MessageEvent} event
@@ -58,6 +59,7 @@ export async function handleFounderSlackTurn(ctx) {
     thread_ts: routeTs,
   });
 
+  const slack_team_id = slackTeamIdFromEvent(ctx.event);
   console.info(
     JSON.stringify({
       event: 'cos_turn_ingress',
@@ -67,6 +69,7 @@ export async function handleFounderSlackTurn(ctx) {
       user: ctx.event.user || null,
       text_len: rawText.length,
       file_count: files.length,
+      ...(slack_team_id ? { slack_team_id } : {}),
     }),
   );
 

@@ -7,7 +7,7 @@ import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.j
 import { createCosRuntimeSupabase, supabaseAppendOpsSmokeEvent } from './runStoreSupabase.js';
 import { isOpsSmokeEnabled } from './smokeOps.js';
 import { emitPatchHasCloudContractSource } from './livePatchPayload.js';
-import { withParcelDeploymentPayload } from './parcelDeploymentContext.js';
+import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
 
 /**
  * @param {string} callName
@@ -104,14 +104,15 @@ export async function recordCosPretriggerAudit(p) {
 
   const summary = summarizeToolArgsForAudit(p.call_name, p.args);
   const eventType = p.blocked ? 'cos_pretrigger_tool_call_blocked' : 'cos_pretrigger_tool_call';
-  const payload = withParcelDeploymentPayload({
-    smoke_session_id,
-    run_id: runId || null,
-    at: new Date().toISOString(),
-    thread_key: p.threadKey != null ? String(p.threadKey).slice(0, 200) : null,
-    call_name: String(p.call_name || '').slice(0, 80),
-    phase: eventType,
-    ...summary,
+  const payload = mergeCanonicalExecutionEnvelopeToPayload(
+    {
+      smoke_session_id,
+      run_id: runId || null,
+      at: new Date().toISOString(),
+      thread_key: p.threadKey != null ? String(p.threadKey).slice(0, 200) : null,
+      call_name: String(p.call_name || '').slice(0, 80),
+      phase: eventType,
+      ...summary,
     machine_hint: p.machine_hint != null ? String(p.machine_hint).slice(0, 300) : null,
     blocked_reason: p.blocked_reason != null ? String(p.blocked_reason).slice(0, 120) : null,
     missing_required_fields: Array.isArray(p.missing_required_fields)
@@ -135,7 +136,13 @@ export async function recordCosPretriggerAudit(p) {
     builder_stage_last_reached:
       p.builder_stage_last_reached != null ? String(p.builder_stage_last_reached).slice(0, 120) : null,
     ...(p.attempt_seq != null && Number(p.attempt_seq) > 0 ? { attempt_seq: Math.floor(Number(p.attempt_seq)) } : {}),
-  });
+    },
+    {
+      runId: runId || undefined,
+      threadKey: p.threadKey != null ? String(p.threadKey) : undefined,
+    },
+    env,
+  );
 
   if (runId) {
     await appendCosRunEventForRun(runId, eventType, payload, {});

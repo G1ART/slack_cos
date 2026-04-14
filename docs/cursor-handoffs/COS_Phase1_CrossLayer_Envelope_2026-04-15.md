@@ -18,6 +18,8 @@
 
 ## 2. 실행 봉투 — 반드시 통일할 식별자
 
+코드 SSOT (요약 이벤트 payload 병합): `src/founder/canonicalExecutionEnvelope.js` (`mergeCanonicalExecutionEnvelopeToPayload`, 로드맵 M1).
+
 | 필드 | 의미 | 비고 |
 |------|------|------|
 | `run_id` | 지속 run UUID (`cos_runs` 등) | 이미 전역 사용 |
@@ -56,7 +58,8 @@
 1. `run_id` / `thread_key` / `packet_id` 가 새 코드 경로에서 서로 치환되지 않게 리뷰 체크리스트로만 먼저 쓴다.  
 2. ~~`COS_SLACK_APP_ID` 를 부트 truth에 노출(설정 시)~~ — 반영됨 (`cosRuntimeTruth` · `slack_app_id` 선택 필드).  
 3. ~~테넄시 키를 cos_runs 쪽으로~~ — 반영됨 (`20260416130000_*`, `applyCosRunTenancyDefaults` / `appRunToDbRow`). **ledger 전 구간** 태깅은 여전히 후속(에픽 §다음 단계).  
-4. 출시 점검: `COS_Release_Readiness_Checklist_2026-04-16.md`.
+4. 출시 점검: `COS_Release_Readiness_Checklist_2026-04-16.md`.  
+5. 업그레이드 마일스톤(M0~M5, 테넄시·Slack·봉투·택배): `COS_Upgrade_Milestones_2026-04-16.md`.
 
 ## Owner actions
 
