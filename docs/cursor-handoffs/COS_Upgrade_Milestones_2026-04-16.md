@@ -13,6 +13,7 @@
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
 - **G1 로드맵 M0 (일부):** `slack_team_id` 뷰 컬럼 + 감사 히스토그램 + merge 시 workspace→team 보강.
 - **G1 로드맵 M4 (일부):** Phase1 `intent` — `harnessBridge.runHarnessOrchestration` dispatch 결과 + ledger `harness_dispatch` payload. Phase1 `role` — 패킷 `persona` SSOT 동기 `role` 필드.
+- **G1 로드맵 M3 (선택·문서):** `package.json` `name` → `COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY` **문서만** 제안 — `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1.
 
 ---
 
@@ -59,7 +60,7 @@
 ### M3 — 택배사무소 “자동 슬라이스” 운영
 
 - [x] `audit-parcel-health` **ledger 테넌시 샘플**: `cos_run_events_tenancy_stream` 최근 N건 `workspace_key` 분포(`ledger_tenancy_workspace_top`). 뷰 미적용 시 advisory. (`tenancy_keys_presence`는 기존 부트 유지.)
-- [ ] (선택) **제품/프로젝트** 기본값: 레포 `package.json` name → `COS_PRODUCT_KEY` 기본 제안은 **문서만**, 코드 기본값은 팀 합의 후.
+- [x] (선택) **제품/프로젝트** 기본값: 레포 `package.json` name → `COS_PRODUCT_KEY` 기본 제안은 **문서만** (`COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1), 코드 기본값은 팀 합의 후.
 
 **완료 기준:** 온콜이 **env 없이**도 “어느 팀/배포가 깨졌는지” 5분 안에 좁힌다.
 

@@ -1,7 +1,7 @@
 /**
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
  *
- * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다.
+ * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다; `success_criteria` — 디스패치 결과 배열은 {@link runHarnessOrchestration} 가 `payload.success_criteria` 및 기본 채움 규칙으로 조립한다.
  */
 
 import crypto from 'node:crypto';

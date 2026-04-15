@@ -1,5 +1,6 @@
 /**
- * M4: Phase1 `intent` — harness dispatch 단일 경로(runHarnessOrchestration).
+ * M4: Phase1 `intent` / `role` — harness dispatch 단일 경로(runHarnessOrchestration).
+ * Phase1 `success_criteria`: payload 배열 trim·전달 회귀.
  */
 import assert from 'node:assert/strict';
 import {
@@ -55,5 +56,12 @@ const badLen = validateDelegateHarnessTeamToolArgs({
   intent: longIntent,
 });
 assert.equal(badLen.blocked, true);
+
+const withCrit = await runHarnessOrchestration({
+  objective: '배포',
+  personas: ['pm'],
+  success_criteria: ['  smoke_green  ', 'ledger_ok'],
+});
+assert.deepEqual(withCrit.success_criteria, ['smoke_green', 'ledger_ok']);
 
 console.log('test-harness-dispatch-intent: ok');
