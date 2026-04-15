@@ -26,6 +26,7 @@ import {
   getRowAttemptSeq,
   partitionPhasesSeenForParcelDisplay,
 } from './opsSmokeParcelGate.js';
+import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
 
 export {
   getRowAttemptSeq,
@@ -330,37 +331,40 @@ export async function recordCosCursorWebhookIngressSafe(p) {
       ? { ...p.observed_callback_schema_snapshot }
       : null;
   if (snap && 'status_candidate_raw' in snap) delete snap.status_candidate_raw;
-  const payload = {
-    smoke_session_id: sid,
-    source: 'cursor',
-    at,
-    request_received: p.request_received !== false,
-    signature_verification_ok: Boolean(p.signature_verification_ok),
-    json_parse_ok: Boolean(p.json_parse_ok),
-    top_level_keys: Array.isArray(p.top_level_keys) ? p.top_level_keys.map(String).slice(0, 40) : null,
-    observed_callback_schema_snapshot: snap,
-    run_id_candidate_tail: p.run_id_candidate_tail != null ? String(p.run_id_candidate_tail).slice(0, 32) : null,
-    status_candidate_redacted: stRed,
-    thread_hint_present: Boolean(p.thread_hint_present),
-    packet_hint_present: Boolean(p.packet_hint_present),
-    correlation_outcome: String(p.correlation_outcome || 'unknown').slice(0, 80),
-    rejection_reason: p.rejection_reason != null ? String(p.rejection_reason).slice(0, 120) : null,
-    matched_by: p.matched_by != null ? String(p.matched_by).slice(0, 80) : null,
-    request_id_suffix: p.request_id != null ? String(p.request_id).slice(-12) : null,
-    ingress_callback_gate:
-      p.ingress_callback_gate && typeof p.ingress_callback_gate === 'object'
-        ? p.ingress_callback_gate
-        : null,
-    callback_source_kind:
-      p.callback_source_kind != null ? String(p.callback_source_kind).slice(0, 32) : null,
-    callback_verification_kind:
-      p.callback_verification_kind != null ? String(p.callback_verification_kind).slice(0, 32) : null,
-    callback_match_basis:
-      p.callback_match_basis != null ? String(p.callback_match_basis).slice(0, 40) : null,
-  };
-
   const runId = String(p.run_id || '').trim();
   const threadKey = p.thread_key != null ? String(p.thread_key).slice(0, 200) : null;
+  const payload = mergeCanonicalExecutionEnvelopeToPayload(
+    {
+      smoke_session_id: sid,
+      source: 'cursor',
+      at,
+      request_received: p.request_received !== false,
+      signature_verification_ok: Boolean(p.signature_verification_ok),
+      json_parse_ok: Boolean(p.json_parse_ok),
+      top_level_keys: Array.isArray(p.top_level_keys) ? p.top_level_keys.map(String).slice(0, 40) : null,
+      observed_callback_schema_snapshot: snap,
+      run_id_candidate_tail: p.run_id_candidate_tail != null ? String(p.run_id_candidate_tail).slice(0, 32) : null,
+      status_candidate_redacted: stRed,
+      thread_hint_present: Boolean(p.thread_hint_present),
+      packet_hint_present: Boolean(p.packet_hint_present),
+      correlation_outcome: String(p.correlation_outcome || 'unknown').slice(0, 80),
+      rejection_reason: p.rejection_reason != null ? String(p.rejection_reason).slice(0, 120) : null,
+      matched_by: p.matched_by != null ? String(p.matched_by).slice(0, 80) : null,
+      request_id_suffix: p.request_id != null ? String(p.request_id).slice(-12) : null,
+      ingress_callback_gate:
+        p.ingress_callback_gate && typeof p.ingress_callback_gate === 'object'
+          ? p.ingress_callback_gate
+          : null,
+      callback_source_kind:
+        p.callback_source_kind != null ? String(p.callback_source_kind).slice(0, 32) : null,
+      callback_verification_kind:
+        p.callback_verification_kind != null ? String(p.callback_verification_kind).slice(0, 32) : null,
+      callback_match_basis:
+        p.callback_match_basis != null ? String(p.callback_match_basis).slice(0, 40) : null,
+    },
+    { runId: runId || undefined, threadKey: threadKey || undefined },
+    env,
+  );
   const mode = getCosRunStoreMode();
 
   if (runId) {
@@ -441,30 +445,36 @@ export async function recordOpsSmokeGithubFallbackEvidence(p) {
 
   const at = new Date().toISOString();
   const oid = p.object_id != null ? String(p.object_id).trim() : '';
-  const payload = {
-    smoke_session_id: sid,
-    at,
-    github_fallback_signal_seen: true,
-    github_fallback_match_attempted: Boolean(p.match_attempted),
-    github_fallback_matched: Boolean(p.matched),
-    github_event_header: p.github_event_header != null ? String(p.github_event_header).slice(0, 64) : null,
-    object_type: p.object_type != null ? String(p.object_type).slice(0, 64) : null,
-    object_id_tail: oid.length > 8 ? oid.slice(-8) : oid,
-    ...(p.github_secondary_recovery === true
-      ? {
-          github_secondary_recovery: true,
-          secondary_recovery_outcome:
-            p.secondary_recovery_outcome != null ? String(p.secondary_recovery_outcome).slice(0, 120) : null,
-        }
-      : {}),
-    ...(p.recovery_diagnostics && typeof p.recovery_diagnostics === 'object'
-      ? {
-          recovery_diagnostics: sanitizeRecoveryDiagnosticsForOps(p.recovery_diagnostics),
-        }
-      : {}),
-  };
-
   const runId = String(p.run_id || '').trim();
+  const payload = mergeCanonicalExecutionEnvelopeToPayload(
+    {
+      smoke_session_id: sid,
+      at,
+      github_fallback_signal_seen: true,
+      github_fallback_match_attempted: Boolean(p.match_attempted),
+      github_fallback_matched: Boolean(p.matched),
+      github_event_header: p.github_event_header != null ? String(p.github_event_header).slice(0, 64) : null,
+      object_type: p.object_type != null ? String(p.object_type).slice(0, 64) : null,
+      object_id_tail: oid.length > 8 ? oid.slice(-8) : oid,
+      ...(p.github_secondary_recovery === true
+        ? {
+            github_secondary_recovery: true,
+            secondary_recovery_outcome:
+              p.secondary_recovery_outcome != null ? String(p.secondary_recovery_outcome).slice(0, 120) : null,
+          }
+        : {}),
+      ...(p.recovery_diagnostics && typeof p.recovery_diagnostics === 'object'
+        ? {
+            recovery_diagnostics: sanitizeRecoveryDiagnosticsForOps(p.recovery_diagnostics),
+          }
+        : {}),
+    },
+    {
+      runId: runId || undefined,
+      threadKey: p.thread_key != null ? String(p.thread_key).slice(0, 512) : undefined,
+    },
+    env,
+  );
   const mode = getCosRunStoreMode();
 
   if (runId) {

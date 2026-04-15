@@ -8,6 +8,8 @@
  */
 
 import { withParcelDeploymentPayload } from './parcelDeploymentContext.js';
+import { getRequestScope } from './requestScopeContext.js';
+import { workspaceKeyFromSlackTeamId } from './slackEventTenancy.js';
 
 /** 요약·감사 스트림 payload 에서 흔적 추적에 쓰는 정본 키 (값 비어 있으면 채움 시도). */
 export const CANONICAL_ENVELOPE_SPINE_KEYS = [
@@ -35,6 +37,15 @@ export const CANONICAL_ENVELOPE_SPINE_KEYS = [
 export function mergeCanonicalExecutionEnvelopeToPayload(payload, ctx = {}, env = process.env) {
   let pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...payload } : {};
   pl = withParcelDeploymentPayload(pl, env);
+  const scope = getRequestScope();
+  const scopedTeamId = scope.slack_team_id != null ? String(scope.slack_team_id).trim() : '';
+  const scopedWorkspace = workspaceKeyFromSlackTeamId(scopedTeamId);
+  if (!String(pl.workspace_key || '').trim() && scopedWorkspace) {
+    pl.workspace_key = scopedWorkspace;
+  }
+  if (!String(pl.slack_team_id || '').trim() && scopedTeamId) {
+    pl.slack_team_id = scopedTeamId;
+  }
 
   const r = ctx.runId != null && String(ctx.runId).trim() ? String(ctx.runId).trim() : '';
   if (r && !String(pl.run_id || '').trim()) {

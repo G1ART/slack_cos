@@ -14,3 +14,20 @@ export function slackTeamIdFromEvent(event) {
   const b = e.team_id != null ? String(e.team_id).trim() : '';
   return b || '';
 }
+
+/**
+ * Slack Team ID를 workspace_key 후보로 정규화.
+ * @param {string | null | undefined} teamId
+ * @returns {string}
+ */
+export function workspaceKeyFromSlackTeamId(teamId) {
+  const t = String(teamId || '').trim();
+  if (!t) return '';
+  return (
+    t
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .slice(0, 64) || ''
+  );
+}

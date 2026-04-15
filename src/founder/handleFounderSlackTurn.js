@@ -8,6 +8,7 @@ import { appendThreadTurn, readRecentThreadTurns } from './threadMemory.js';
 import { saveSlackRouting } from './slackRoutingStore.js';
 import { tickRunSupervisorForThread } from './runSupervisor.js';
 import { slackTeamIdFromEvent } from './slackEventTenancy.js';
+import { runWithRequestScope } from './requestScopeContext.js';
 
 /**
  * @param {import('@slack/types').AppMentionEvent | import('@slack/types').MessageEvent} event
@@ -108,17 +109,21 @@ export async function handleFounderSlackTurn(ctx) {
   const recent = await readRecentThreadTurns(threadKey, 13);
   const priorTurns = recent.length > 0 && recent[recent.length - 1]?.role === 'user' ? recent.slice(0, -1) : recent;
 
-  const out = await runFounderDirectConversation({
-    openai: ctx.openai,
-    model: ctx.model,
-    constitutionMarkdown: ctx.constitutionMarkdown,
-    constitutionSha256: ctx.constitutionSha256,
-    userText: rawText,
-    attachmentResults,
-    metadata,
-    recentTurns: priorTurns,
-    threadKey,
-  });
+  const out = await runWithRequestScope(
+    slack_team_id ? { slack_team_id } : {},
+    async () =>
+      runFounderDirectConversation({
+        openai: ctx.openai,
+        model: ctx.model,
+        constitutionMarkdown: ctx.constitutionMarkdown,
+        constitutionSha256: ctx.constitutionSha256,
+        userText: rawText,
+        attachmentResults,
+        metadata,
+        recentTurns: priorTurns,
+        threadKey,
+      }),
+  );
 
   try {
     await tickRunSupervisorForThread(threadKey, {
