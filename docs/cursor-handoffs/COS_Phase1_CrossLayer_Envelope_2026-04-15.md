@@ -29,12 +29,12 @@
 
 ## 3. 의도 · 역할 · 종료 조건 (문서·프롬프트 우선, 코드는 점진)
 
-| 필드 | 의미 |
-|------|------|
-| `intent` | 이번 턴/패킷의 목적 (짧은 기계 친화 라벨) |
-| `role` | 하네스 내 역할 태그 (향후 planner / implementer 등) |
-| `success_criteria` | 완료 판정에 쓸 한 줄 조건 (선택) |
-| `escalation_rule` | 막혔을 때 COS·founder로 올리는 규칙 요약 (선택) |
+| 필드 | 의미 | 코드 SSOT (점진) |
+|------|------|-------------------|
+| `intent` | 이번 턴/패킷의 목적 (짧은 기계 친화 라벨) | `harnessBridge.js` — `deriveHarnessDispatchIntent` / `runHarnessOrchestration` (선택 `payload.intent`, 없으면 `delegate_{team_shape}_{tool}_{action}`) |
+| `role` | 하네스 내 역할 태그 (향후 planner / implementer 등) | (후속) |
+| `success_criteria` | 완료 판정에 쓸 한 줄 조건 (선택) | (후속) |
+| `escalation_rule` | 막혔을 때 COS·founder로 올리는 규칙 요약 (선택) | (후속) |
 
 초기에는 헌법·시스템 지시·패킷 메타에 자연어로만 있어도 되고, **필드명을 코드에 넣기 시작할 때 이 표를 따른다.**
 

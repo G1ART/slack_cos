@@ -39,6 +39,12 @@ assert.ok(Array.isArray(h.packets) && h.packets.length >= 1, 'envelope packets')
 const arts1 = await readRecentExecutionArtifacts(tk, 20);
 assert.ok(arts1.some((a) => a.type === 'harness_dispatch'), 'harness in ledger');
 assert.ok(arts1.some((a) => a.type === 'harness_packet'), 'packet rows in ledger');
+const disp = arts1.find((a) => a.type === 'harness_dispatch');
+const dpl = disp?.payload && typeof disp.payload === 'object' ? disp.payload : {};
+assert.ok(
+  typeof dpl.intent === 'string' && dpl.intent.startsWith('delegate_'),
+  'ledger harness_dispatch carries Phase1 intent',
+);
 
 const prevGithub = process.env.GITHUB_TOKEN;
 const prevPat = process.env.GITHUB_FINE_GRAINED_PAT;

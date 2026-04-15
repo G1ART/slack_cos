@@ -89,6 +89,33 @@ export function validateDelegateHarnessTeamToolArgs(args) {
     };
   }
 
+  if (a.intent != null && a.intent !== undefined && typeof a.intent !== 'string') {
+    return {
+      blocked: true,
+      reason: 'invalid_payload',
+      blocked_reason: 'delegate_schema_invalid_intent_type',
+      machine_hint: 'intent must be a string when present',
+      missing_required_fields: [],
+      invalid_enum_fields: [],
+      invalid_nested_fields: ['intent'],
+      delegate_schema_valid: false,
+      delegate_schema_error_fields: ['intent'],
+    };
+  }
+  if (typeof a.intent === 'string' && String(a.intent).trim().length > 200) {
+    return {
+      blocked: true,
+      reason: 'invalid_payload',
+      blocked_reason: 'delegate_schema_invalid_intent_length',
+      machine_hint: 'intent must be at most 200 characters',
+      missing_required_fields: [],
+      invalid_enum_fields: [],
+      invalid_nested_fields: ['intent'],
+      delegate_schema_valid: false,
+      delegate_schema_error_fields: ['intent'],
+    };
+  }
+
   if (a.packets == null) {
     return { blocked: false, delegate_schema_valid: true };
   }

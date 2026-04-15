@@ -1,11 +1,48 @@
 /**
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
+ *
+ * Phase1 `intent` (COS_Phase1_CrossLayer_Envelope): 짧은 기계 라벨 — {@link deriveHarnessDispatchIntent}.
  */
 
 import crypto from 'node:crypto';
 import { appendExecutionArtifact } from './executionLedger.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
+
+/**
+ * Phase1 봉투 `intent` 후보 문자열 sanitize (의미 해석 없음).
+ * @param {unknown} raw
+ * @returns {string}
+ */
+function sanitizeMachineIntent(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  const safe = s
+    .replace(/[^a-zA-Z0-9_.-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80);
+  return safe || '';
+}
+
+/**
+ * `delegate_harness_team` dispatch 정본 `intent` (짧은 기계 라벨).
+ * `payload.intent`가 있으면 sanitize만 적용; 없으면 team_shape·첫 패킷 tool/action 조합.
+ *
+ * @param {Record<string, unknown>} payload
+ * @param {string} team_shape
+ * @param {Array<Record<string, unknown>>} packets
+ * @returns {string}
+ */
+export function deriveHarnessDispatchIntent(payload, team_shape, packets) {
+  const fromCos = sanitizeMachineIntent(payload.intent);
+  if (fromCos) return fromCos;
+  const shape = sanitizeMachineIntent(team_shape) || 'pm';
+  const first = packets[0] && typeof packets[0] === 'object' && !Array.isArray(packets[0]) ? packets[0] : {};
+  const tool = sanitizeMachineIntent(first.preferred_tool) || 'na';
+  const act = sanitizeMachineIntent(first.preferred_action) || 'na';
+  return `delegate_${shape}_${tool}_${act}`.slice(0, 120);
+}
 
 /** @type {Record<string, object>} */
 export const PERSONA_REGISTRY = {
@@ -250,12 +287,14 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
   const open_questions = Array.isArray(p.open_questions) ? p.open_questions.map((x) => String(x)) : [];
 
   const dispatch_id = `harness_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+  const intent = deriveHarnessDispatchIntent(p, team_shape, packets);
 
   const result = {
     ok: true,
     mode: 'harness_dispatch',
     dispatch_id,
     status: 'accepted',
+    intent,
     personas: plist,
     objective,
     tasks,
