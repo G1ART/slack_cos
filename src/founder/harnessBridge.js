@@ -8,6 +8,10 @@
 import crypto from 'node:crypto';
 import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 import { appendExecutionArtifact } from './executionLedger.js';
+import {
+  loadPersonaContractManifest,
+  validatePersonaContractManifestShape,
+} from './personaContractManifest.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
@@ -309,12 +313,35 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
   const dispatch_id = `harness_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const intent = deriveHarnessDispatchIntent(p, team_shape, packets);
 
+  /** @type {string | null} */
+  let persona_contract_version = null;
+  /** @type {string[]} */
+  let persona_contract_ids = [];
+  try {
+    const m = loadPersonaContractManifest();
+    if (validatePersonaContractManifestShape(m) === null) {
+      persona_contract_version = String(m.version || '').trim() || null;
+      const enumToId = new Map(
+        (Array.isArray(m.personas) ? m.personas : []).map((row) => {
+          const en = String(row.delegate_persona_enum || '').trim();
+          const id = String(row.id || '').trim();
+          return [en, id];
+        }),
+      );
+      persona_contract_ids = plist.map((persona) => enumToId.get(persona) || '').filter(Boolean);
+    }
+  } catch {
+    /* manifest optional — dispatch still succeeds */
+  }
+
   const result = {
     ok: true,
     mode: 'harness_dispatch',
     dispatch_id,
     status: 'accepted',
     intent,
+    ...(persona_contract_version ? { persona_contract_version } : {}),
+    ...(persona_contract_ids.length ? { persona_contract_ids } : {}),
     personas: plist,
     objective,
     tasks,

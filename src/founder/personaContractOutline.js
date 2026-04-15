@@ -12,6 +12,7 @@
 export {
   loadPersonaContractManifest,
   validatePersonaContractManifestShape,
+  formatPersonaContractLinesForInstructions,
   PERSONA_CONTRACT_MANIFEST_REPO_PATH,
 } from './personaContractManifest.js';
 

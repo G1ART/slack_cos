@@ -19,6 +19,7 @@ const STEPS = [
   'test-parcel-closure-ledger-mirror.mjs',
   'test-run-supervisor-parcel-sharding.mjs',
   'test-smoke-summary-stream-view-sql-ssot.mjs',
+  'test-cos-runs-recent-by-tenancy-rpc-ssot.mjs',
   'test-merged-smoke-summary-source-budget.mjs',
   'test-supabase-smoke-summary-stream-view-path.mjs',
   'test-parcel-deployment-key-filter.mjs',

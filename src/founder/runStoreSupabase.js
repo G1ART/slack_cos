@@ -55,6 +55,9 @@ export const COS_OPS_SMOKE_SUMMARY_STREAM_VIEW = 'cos_ops_smoke_summary_stream';
 /** DB 뷰 `supabase/migrations/*_cos_run_events_tenancy_stream_view.sql` — ledger 전 타입 테넌시 슬라이스. */
 export const COS_RUN_EVENTS_TENANCY_STREAM_VIEW = 'cos_run_events_tenancy_stream';
 
+/** DB RPC `supabase/migrations/*_cos_runs_recent_by_tenancy*.sql` — cos_runs 테넌시 필터 슬라이스 (service_role). */
+export const COS_RUNS_RECENT_BY_TENANCY_RPC = 'cos_runs_recent_by_tenancy';
+
 /**
  * @param {Record<string, unknown>} r
  */

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   loadPersonaContractManifest,
   validatePersonaContractManifestShape,
+  formatPersonaContractLinesForInstructions,
   PERSONA_CONTRACT_MANIFEST_REPO_PATH,
 } from '../src/founder/personaContractManifest.js';
 
@@ -19,5 +20,9 @@ const ids = new Set(m.personas.map((p) => String(p.id || '')));
 for (const need of ['planner', 'researcher', 'implementer', 'reviewer', 'risk_gate']) {
   assert.ok(ids.has(need), `missing persona id ${need}`);
 }
+
+const block = formatPersonaContractLinesForInstructions();
+assert.ok(block.includes('planner→pm'), 'instruction block lists planner mapping');
+assert.ok(block.includes('[페르소나 계약 manifest'), 'instruction block header');
 
 console.log('test-persona-contract-manifest: ok');

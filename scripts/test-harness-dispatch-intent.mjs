@@ -17,6 +17,9 @@ const auto = await runHarnessOrchestration({
   constraints: ['내부'],
 });
 assert.equal(auto.ok, true);
+assert.ok(typeof auto.persona_contract_version === 'string' && auto.persona_contract_version.length > 0);
+assert.ok(Array.isArray(auto.persona_contract_ids) && auto.persona_contract_ids.length === 2);
+assert.deepEqual(auto.persona_contract_ids, ['planner', 'implementer']);
 assert.ok(typeof auto.intent === 'string' && auto.intent.length > 0);
 assert.match(auto.intent, /^delegate_pm_engineering_/);
 const p0 = auto.packets[0] && typeof auto.packets[0] === 'object' ? auto.packets[0] : {};
