@@ -11,9 +11,11 @@ import {
 import {
   appendExecutionArtifact,
   readExecutionSummary,
+  readExecutionSummaryForRun,
   readRecentExecutionArtifacts,
   computeExecutionOutcomeCounts,
   readReviewQueue,
+  summarizeParcelLedgerClosureMirrorPresence,
 } from './executionLedger.js';
 import {
   persistAcceptedRunShell,
@@ -316,7 +318,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것)·tenancy_keys_presence·parcel_deployment_scoped_supervisor_lists(부트 cos_runtime_truth 와 동일 불리언; 값 미노출). 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
+      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약(summary_lines, 스레드 전체)·execution_summary_active_run(활성 durable 런에 매칭되는 요약 줄만; 없으면 null)·parcel_ledger_closure_mirror(count+latest_ts, authoritative closure mirror append 횟수)·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct·active_run_shell·tenancy_keys_presence·parcel_deployment_scoped_supervisor_lists. Supabase ops 요약·ledger 한 줄과 동일 truth 로 취급하지 말 것. 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -560,9 +562,21 @@ export async function handleReadExecutionContext(args, threadKey) {
       };
   const review_queue = threadKey ? await readReviewQueue(threadKey, limit) : [];
   const recent_artifact_spine_distinct = distinctSpineKeysFromLedgerArtifacts(artifacts, 8);
+  let execution_summary_active_run = null;
+  if (activeRow && activeRow.id != null && String(activeRow.id).trim()) {
+    execution_summary_active_run = await readExecutionSummaryForRun(activeRow, limit, {
+      suppressStaleLiveOnlyCreateSpecLeak: true,
+      suppressLiveOnlyEmitPatchFounderTechnicalLeak: true,
+    });
+  }
+  const parcel_ledger_closure_mirror = threadKey
+    ? await summarizeParcelLedgerClosureMirrorPresence(threadKey, Math.max(80, limit * 24))
+    : { count: 0, latest_ts: null };
   return {
     ok: true,
     summary_lines,
+    execution_summary_active_run,
+    parcel_ledger_closure_mirror,
     artifacts,
     adapter_readiness_lines,
     review_queue,

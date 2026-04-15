@@ -60,6 +60,8 @@ try {
   assert.equal(ctx.active_run_shell.id, projected.id);
   assert.equal(ctx.active_run_shell.status, projected.status);
   assert.equal(ctx.active_run_shell.workspace_key, 'T_SHELL');
+  assert.ok(Array.isArray(ctx.execution_summary_active_run), 'active-run scoped summary lines');
+  assert.ok(ctx.parcel_ledger_closure_mirror && typeof ctx.parcel_ledger_closure_mirror.count === 'number');
   assert.equal(ctx.parcel_deployment_scoped_supervisor_lists, true);
   assert.equal(ctx.tenancy_keys_presence?.parcel_deployment, true);
 } finally {

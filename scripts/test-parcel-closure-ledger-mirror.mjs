@@ -8,6 +8,7 @@ import {
   appendCloudEmitPatchClosureLedgerMirror,
   clearExecutionArtifacts,
   readExecutionSummary,
+  summarizeParcelLedgerClosureMirrorPresence,
 } from '../src/founder/executionLedger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +18,9 @@ const tk = 'mention:test_channel:closure_mirror_ts';
 
 await clearExecutionArtifacts(tk);
 await appendCloudEmitPatchClosureLedgerMirror(tk);
+const mirror = await summarizeParcelLedgerClosureMirrorPresence(tk, 40);
+assert.equal(mirror.count, 1, 'closure mirror tool_result counted');
+assert.ok(mirror.latest_ts, 'latest_ts set');
 const lines = await readExecutionSummary(tk, 20);
 assert.ok(
   lines.some((l) => String(l).includes('completed') && String(l).includes('cursor:emit_patch')),

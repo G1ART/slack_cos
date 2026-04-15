@@ -60,6 +60,9 @@ assert.ok(counts.review_required_count >= 1, 'read_execution_context-style count
 assert.ok(counts.blocked_count >= 1, 'blocked status counted');
 
 const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
+assert.equal(ctx.execution_summary_active_run, null, 'no durable cos_runs row → active-run summary null');
+assert.ok(ctx.parcel_ledger_closure_mirror && typeof ctx.parcel_ledger_closure_mirror.count === 'number');
+assert.equal(ctx.parcel_ledger_closure_mirror.latest_ts, null);
 assert.ok(ctx.tenancy_keys_presence && typeof ctx.tenancy_keys_presence === 'object', 'tenancy_keys_presence booleans');
 assert.equal(typeof ctx.parcel_deployment_scoped_supervisor_lists, 'boolean');
 assert.ok(Array.isArray(ctx.review_queue));

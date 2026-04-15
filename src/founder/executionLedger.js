@@ -292,6 +292,37 @@ function payloadOfRow(row) {
 }
 
 /**
+ * WHAT truth hierarchy: `tool_result` rows tagged `parcel_ledger_closure_mirror` (authoritative closure mirror append).
+ * COS / `read_execution_context` 전용 기계 집계 — founder 경로 아님.
+ *
+ * @param {string} threadKey
+ * @param {number} [lookback]
+ * @returns {Promise<{ count: number, latest_ts: string | null }>}
+ */
+export async function summarizeParcelLedgerClosureMirrorPresence(threadKey, lookback = 120) {
+  const tk = String(threadKey || '').trim();
+  if (!tk) return { count: 0, latest_ts: null };
+  const list = await readAll(tk);
+  const lb = Math.max(24, Number(lookback) || 120);
+  const slice = list.slice(-lb);
+  let count = 0;
+  let latest_ts = null;
+  for (let i = slice.length - 1; i >= 0; i -= 1) {
+    const row = normalizeArtifactRow(slice[i]);
+    if (String(row.type || '') !== 'tool_result') continue;
+    const pl = payloadOfRow(row);
+    if (pl.parcel_ledger_closure_mirror === true) {
+      count += 1;
+      if (!latest_ts) {
+        const t = String(row.ts || '').trim();
+        latest_ts = t || null;
+      }
+    }
+  }
+  return { count, latest_ts };
+}
+
+/**
  * Run-scoped milestone / summary views. No executionRunStore import (avoid cycles).
  * Priority: explicit cos_run_id / run_id; legacy tool rows by run_packet_id ∈ required_packet_ids;
  * harness rows by dispatch_id (+ packet id when present).
