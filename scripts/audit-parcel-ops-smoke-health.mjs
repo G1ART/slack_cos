@@ -156,7 +156,7 @@ async function main() {
   let sampleQ = sb
     .from(view)
     .select(
-      'run_id,event_type,created_at,payload,parcel_deployment_key,workspace_key,product_key,project_space_key',
+      'run_id,event_type,created_at,payload,parcel_deployment_key,workspace_key,product_key,project_space_key,slack_team_id',
     )
     .order('created_at', { ascending: false });
   if (deployScopeKey) {
@@ -205,6 +205,20 @@ async function main() {
     }
   }
 
+  /** @type {Record<string, number>} */
+  const smokeSlackTeamHist = {};
+  for (const r of list) {
+    const pl = r.payload && typeof r.payload === 'object' && !Array.isArray(r.payload) ? r.payload : {};
+    const fromCol = r.slack_team_id != null && String(r.slack_team_id).trim() ? String(r.slack_team_id).trim() : '';
+    const fromPl = pl.slack_team_id != null && String(pl.slack_team_id).trim() ? String(pl.slack_team_id).trim() : '';
+    const sid = fromCol || fromPl || '(none)';
+    smokeSlackTeamHist[sid] = (smokeSlackTeamHist[sid] || 0) + 1;
+  }
+  const smoke_slack_team_top = Object.entries(smokeSlackTeamHist)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([k, v]) => ({ slack_team_id: k, count: v }));
+
   const orphanFraction = list.length ? orphanish / list.length : 0;
   if (orphanFraction > ORPHAN_FRACTION_WARN) {
     advisory.push(
@@ -242,14 +256,16 @@ async function main() {
     }
   }
 
-  /** 최근 ledger 이벤트 테넌시 분포(M3 / 로드맵 관측). 뷰 미적용 시 advisory 만. */
+  /** 최근 ledger 이벤트 테넌시·Slack 팀 분포(M3 / M0 관측). 뷰 미적용 시 advisory 만. */
   let ledgerTenancySampleSize = 0;
   /** @type {Array<{ workspace_key: string, count: number }>} */
   let ledgerTenancyWorkspaceTop = [];
+  /** @type {Array<{ slack_team_id: string, count: number }>} */
+  let ledgerSlackTeamTop = [];
   const ledgerLim = Math.max(50, Math.min(sample, 500));
   const { data: ledgerRows, error: eLedger } = await sb
     .from(COS_RUN_EVENTS_TENANCY_STREAM_VIEW)
-    .select('workspace_key')
+    .select('workspace_key, slack_team_id')
     .order('created_at', { ascending: false })
     .limit(ledgerLim);
   if (eLedger) {
@@ -261,17 +277,28 @@ async function main() {
     ledgerTenancySampleSize = lr.length;
     /** @type {Record<string, number>} */
     const wh = {};
+    /** @type {Record<string, number>} */
+    const sh = {};
     for (const row of lr) {
       const wk =
         row.workspace_key != null && String(row.workspace_key).trim()
           ? String(row.workspace_key).trim()
           : '(none)';
       wh[wk] = (wh[wk] || 0) + 1;
+      const sid =
+        row.slack_team_id != null && String(row.slack_team_id).trim()
+          ? String(row.slack_team_id).trim()
+          : '(none)';
+      sh[sid] = (sh[sid] || 0) + 1;
     }
     ledgerTenancyWorkspaceTop = Object.entries(wh)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([k, v]) => ({ workspace_key: k, count: v }));
+    ledgerSlackTeamTop = Object.entries(sh)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ slack_team_id: k, count: v }));
   }
 
   const ok = warnings.length === 0;
@@ -305,11 +332,13 @@ async function main() {
     orphanish_fraction_in_sample: list.length ? Number(orphanFraction.toFixed(4)) : null,
     top_event_types_orphanish_sample: topKeys(orphanEventTypes, 8),
     top_event_types_uuid_sample: topKeys(uuidEventTypes, 8),
+    smoke_slack_team_top,
     pending_supervisor_wake_count: eWake ? null : pendingWake ?? 0,
     cos_ops_smoke_events_null_run_id_count: opsNullRunCount,
     ledger_tenancy_stream_view: COS_RUN_EVENTS_TENANCY_STREAM_VIEW,
     ledger_tenancy_sample_size: ledgerTenancySampleSize,
     ledger_tenancy_workspace_top: ledgerTenancyWorkspaceTop,
+    ledger_slack_team_top: ledgerSlackTeamTop,
     thresholds: {
       orphan_fraction_warn: ORPHAN_FRACTION_WARN,
       pending_wake_warn: PENDING_WAKE_WARN,

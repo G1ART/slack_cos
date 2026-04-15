@@ -68,5 +68,10 @@ export function mergeCanonicalExecutionEnvelopeToPayload(payload, ctx = {}, env 
       pl[k] = String(rt[k]).trim();
     }
   }
+  // M0: 요약·감사 한 줄 진단 — scope 없을 때 workspace_key 가 Slack 팀 ID 형태면 slack_team_id 보강.
+  if (!String(pl.slack_team_id || '').trim()) {
+    const wk = String(pl.workspace_key || '').trim();
+    if (/^T[A-Z0-9]+$/.test(wk)) pl.slack_team_id = wk;
+  }
   return pl;
 }

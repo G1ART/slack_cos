@@ -76,6 +76,7 @@ function mapMergedSmokeSummaryRow(r) {
   const workspaceKey = mergedTenancyField(pl, r, 'workspace_key');
   const productKey = mergedTenancyField(pl, r, 'product_key');
   const projectSpaceKey = mergedTenancyField(pl, r, 'project_space_key');
+  const slackTeamId = mergedTenancyField(pl, r, 'slack_team_id');
   return {
     run_id: String(r.run_id || ''),
     event_type: String(r.event_type || ''),
@@ -84,6 +85,7 @@ function mapMergedSmokeSummaryRow(r) {
     ...(workspaceKey ? { workspace_key: workspaceKey } : {}),
     ...(productKey ? { product_key: productKey } : {}),
     ...(projectSpaceKey ? { project_space_key: projectSpaceKey } : {}),
+    ...(slackTeamId ? { slack_team_id: slackTeamId } : {}),
     created_at: r.created_at != null ? String(r.created_at) : '',
   };
 }
@@ -116,7 +118,7 @@ export async function supabaseListMergedSmokeSummaryEventsFromStream(sb, p) {
   let q = sb
     .from(COS_OPS_SMOKE_SUMMARY_STREAM_VIEW)
     .select(
-      'run_id, event_type, payload, created_at, parcel_deployment_key, workspace_key, product_key, project_space_key',
+      'run_id, event_type, payload, created_at, parcel_deployment_key, workspace_key, product_key, project_space_key, slack_team_id',
     );
   if (rid) q = q.eq('run_id', rid);
   if (dk) {

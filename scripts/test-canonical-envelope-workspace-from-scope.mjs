@@ -20,6 +20,14 @@ try {
   assert.equal(String(b.workspace_key || ''), 'ENV_WORKSPACE', 'env workspace must take precedence');
   assert.equal(String(b.slack_team_id || ''), 'T0SCOPE999');
 
+  delete process.env[COS_WORKSPACE_KEY_ENV];
+  const inferred = mergeCanonicalExecutionEnvelopeToPayload(
+    { workspace_key: 'T0INFER01ABC' },
+    {},
+    process.env,
+  );
+  assert.equal(String(inferred.slack_team_id || ''), 'T0INFER01ABC');
+
   console.log('test-canonical-envelope-workspace-from-scope: ok');
 } finally {
   if (savedWorkspace === undefined) delete process.env[COS_WORKSPACE_KEY_ENV];

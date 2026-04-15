@@ -11,6 +11,7 @@
 - **G1 로드맵 M1 (일부):** `src/founder/canonicalExecutionEnvelope.js` — `mergeCanonicalExecutionEnvelopeToPayload` 가 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` append 경로(`appendCosRunEvent` / `appendCosRunEventForRun`) 및 `recordCosPretriggerAudit` 에서 env·요청 스코프·**durable run 행(`runTenancy`)** 로 테넄시 + `run_id` / `thread_key` / `packet_id` 빈칸을 채움. 테스트: `scripts/test-canonical-execution-envelope-smoke-payload.mjs`, `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
 - **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`). Supabase `run_persisted` 직기입도 동일 병합. SQL: `cos_run_events_tenancy_stream` 뷰.
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
+- **G1 로드맵 M0 (일부):** `slack_team_id` 뷰 컬럼 + 감사 히스토그램 + merge 시 workspace→team 보강.
 
 ---
 
@@ -32,7 +33,7 @@
 
 - [x] 부트 `cos_runtime_truth.tenancy_keys_presence` (값 미노출).
 - [x] **Slack 수신 로그에 `slack_team_id` 노출** (`team` / `team_id` — PII 아님, 공개 Team ID). 구현: `slackEventTenancy.js`, `handleFounderSlackTurn`.
-- [ ] 동일 정보를 **ops_smoke / pretrigger** 등 “한 줄 진단”에만 선택 반영(필요 시).
+- [x] 동일 정보를 **ops_smoke / pretrigger** 등 “한 줄 진단”에 선택 반영: `mergeCanonicalExecutionEnvelopeToPayload` 가 `workspace_key`≈팀 ID 형태일 때 `slack_team_id` 보강; `cos_ops_smoke_summary_stream`·`cos_run_events_tenancy_stream` 뷰에 `slack_team_id` 열; `audit-parcel-ops-smoke-health` 의 `smoke_slack_team_top` / `ledger_slack_team_top`.
 
 **완료 기준:** Railway에서 턴 단위로 **어느 Slack 워크스페이스인지** 로그만으로 구분 가능.
 
