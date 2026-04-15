@@ -1,12 +1,12 @@
 # 출시·재배포 점검 체크리스트 (2026-04-16)
 
-**상위:** `COS_Layer_Epic_LockIn_2026-04-14.md`, `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md`, `COS_Upgrade_Milestones_2026-04-16.md`, 루트 `AGENTS.md`.
+**상위:** `COS_Layer_Epic_LockIn_2026-04-14.md`, `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md`, `COS_Upgrade_Milestones_2026-04-16.md`, `COS_Command_Media_Preflight_2026-04-14.md`, 루트 `AGENTS.md`.
 
 목적: **한 사람이 손으로 해야 하는 단계**와 **레포·CI로 자동화 가능한 단계**를 나눈다. 에이전트는 후자를 끝까지 구현하고, 전자가 필요할 때만 멈춘다.
 
 ## 1. Supabase (운영 DB)
 
-- [ ] 마이그레이션 적용 여부: 최소 `20260414120000`, `20260415120000`, `20260416130000` (뷰·`cos_runs` 테넄시 컬럼). 레포 `supabase/migrations/` SSOT.
+- [ ] 마이그레이션 적용 여부: 최소 `20260414120000`, `20260415120000`, `20260416130000` (뷰·`cos_runs` 테넄시 컬럼), 및 **`cos_runs_recent_by_tenancy` RPC** (`supabase/migrations/*_cos_runs_recent_by_tenancy_rpc.sql`). 레포 `supabase/migrations/` SSOT.
 - [ ] `cos_ops_smoke_summary_stream` 뷰가 깨지지 않았는지(열 순서 변경 시 `42P16` 주의 — 에픽 문서 참고).
 
 ## 2. Railway(또는 호스트) 환경 변수
@@ -24,7 +24,7 @@
 
 - [ ] **Slack 스모크:** 실제 워크스페이스에서 멘션 한 턴·콜백 경로 확인 (Socket Mode·토큰).
 - [ ] **Cursor Cloud live emit_patch** 등 비용·외부 계정이 드는 경로는 정책에 맞게만.
-- [ ] 운영 `npm run audit:parcel-health` (Supabase 자격 필요) — 샘플·경고 해석.
+- [ ] 운영 `npm run audit:parcel-health` (Supabase 자격 필요) — 샘플·경고 해석. JSON의 **`runs_tenancy_rpc_ok`** / **`runs_tenancy_rpc_vs_table_row_count_match`** 로 RPC·테이블 샘플 정합을 볼 수 있다(테넄시 CLI 플래그 없을 때만). 임계 조정은 `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §5.1.
 
 ## 5. Git
 

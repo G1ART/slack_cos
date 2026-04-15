@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
 const STEPS = [
+  'test-command-media-preflight-doc.mjs',
   'test-ops-smoke-parcel-gate-invariants.mjs',
   'test-ops-smoke-parcel-gate-summary-invariant.mjs',
   'test-parcel-phase-partition-display.mjs',

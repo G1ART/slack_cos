@@ -23,5 +23,6 @@ assert.ok(
 );
 assert.ok(src.includes('runs_tenancy_rpc_sample_size'), 'report exposes RPC tenancy sample size');
 assert.ok(src.includes('COS_RUNS_RECENT_BY_TENANCY_RPC'), 'audit imports RPC SSOT');
+assert.ok(src.includes('supabaseRpcCosRunsRecentByTenancy'), 'audit calls supabaseRpcCosRunsRecentByTenancy helper');
 
 console.log('test-audit-parcel-ops-smoke-ledger-tenancy-report-shape: ok');

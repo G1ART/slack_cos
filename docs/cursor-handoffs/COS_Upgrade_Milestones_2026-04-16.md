@@ -110,6 +110,7 @@
 - [x] (일부·관측) **`cos_runs` 테넄시 히스토그램:** `audit-parcel-ops-smoke-health.mjs` JSON에 `runs_tenancy_sample_size`, `runs_tenancy_workspace_top`, `runs_tenancy_product_top`, `runs_tenancy_project_space_top`, `runs_tenancy_deployment_top` — 스트림 필터·`filterRowsByOptionalTenancyKeys` 와 동일 스코프로 최근 durable 행 샘플 집계 (ledger 분포와 병치; DDL 없음).
 - [x] (일부·RPC) **`cos_runs_recent_by_tenancy`:** 마이그레이션 `*_cos_runs_recent_by_tenancy_rpc.sql` — 선택 테넄시 키·limit(1–500)로 최근 `cos_runs` 행 반환; `runStoreSupabase.js` `COS_RUNS_RECENT_BY_TENANCY_RPC` SSOT; 테스트 `scripts/test-cos-runs-recent-by-tenancy-rpc-ssot.mjs`. (운영 적용은 DDL 배포.)
 - [x] (일부·감사 연결) **`audit-parcel-ops-smoke-health.mjs`** 가 `supabaseRpcCosRunsRecentByTenancy` 로 RPC 호출해 `runs_tenancy_rpc_*` 및(가능 시) 테이블 직조회 건수 정합 — founder 경로 아님, 운영 가시성만.
+- [x] (일부·command media) **`COS_Command_Media_Preflight_2026-04-14.md`** — npm·env·핸드오프 SSOT 한 장; 테넌시 가이드 §5·릴리스 체크리스트 보강; 회귀 `test-command-media-preflight-doc.mjs` (`npm test`·`verify:parcel-post-office` 선행). (로컬 `.cursor/rules` 는 gitignore — 팀은 이 문서를 정본으로 본다.)
 - [ ] (잔여) 추가 뷰·다른 테이블로의 키 전파·런타임 앱 경로에서의 RPC 활용 등.
 
 ---
