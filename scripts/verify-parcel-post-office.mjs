@@ -22,6 +22,7 @@ const STEPS = [
   'test-merged-smoke-summary-source-budget.mjs',
   'test-supabase-smoke-summary-stream-view-path.mjs',
   'test-parcel-deployment-key-filter.mjs',
+  'test-merge-ledger-execution-row-payload.mjs',
   'test-persona-contract-outline.mjs',
   'test-audit-parcel-health-skips-without-supabase.mjs',
   'test-audit-parcel-ops-smoke-ledger-tenancy-report-shape.mjs',

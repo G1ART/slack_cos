@@ -28,6 +28,7 @@ import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
 import { cosRunTenancyMergeHintsFromRunRow } from './parcelDeploymentContext.js';
+import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -496,10 +497,22 @@ async function handleRecordExecutionNote(args, threadKey) {
   const note = String(args?.note || '').trim();
   if (!note) return { ok: false, blocked: true, reason: 'invalid_payload' };
   const detail = parseExecutionNoteDetail(args?.detail);
+  const active = await getActiveRunForThread(threadKey);
+  const rid = active?.id != null ? String(active.id).trim() : '';
+  const hints = active ? cosRunTenancyMergeHintsFromRunRow(active) : {};
+  const merged = mergeLedgerExecutionRowPayload(
+    detail,
+    {
+      threadKey,
+      ...(rid ? { runId: rid } : {}),
+      ...(Object.keys(hints).length ? { runTenancy: hints } : {}),
+    },
+    process.env,
+  );
   await appendExecutionArtifact(threadKey, {
     type: 'execution_note',
     summary: note.slice(0, 500),
-    payload: detail,
+    payload: merged,
     status: null,
   });
   return { ok: true, recorded: true, summary: note.slice(0, 500) };
@@ -754,6 +767,7 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           threadKey: tk,
           ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
           ...(auditRunId ? { cosRunId: auditRunId } : {}),
+          ...(activeRun ? { runTenancy: cosRunTenancyMergeHintsFromRunRow(activeRun) } : {}),
         });
       } else if (call.name === 'record_execution_note') {
         result = await handleRecordExecutionNote(args, tk);

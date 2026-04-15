@@ -16,7 +16,7 @@
 - **G1 로드맵 M4 (일부·봉투):** Phase1 패킷 `success_criteria` — `runFounderDirectConversation` strict 패킷 스키마 + `specializePacket` sanitize; `delegateHarnessPacketValidate` 가 비문자열 기계 차단.
 - **G1 로드맵 M3 (선택·문서):** `package.json` `name` → `COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY` **문서만** 제안 — `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1.
 - **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
-- **G1 로드맵 M6 (일부·스레드 ledger):** `runHarnessOrchestration` 이 `harness_dispatch` / `harness_packet` ledger payload 에 `mergeCanonicalExecutionEnvelopeToPayload` 적용; `runFounderDirectConversation` 이 활성 run 에서 `run_id`·`cosRunTenancyMergeHintsFromRunRow` 전달.
+- **G1 로드맵 M6 (일부·스레드 ledger):** `mergeLedgerExecutionRowPayload` SSOT — `harness_dispatch` / `harness_packet` / **`tool_invocation`·`tool_result`** / **`execution_note`** / **클로저 mirror `tool_result`** 까지 동일 병합; `invoke_external_tool` ctx `runTenancy`·활성 run.
 
 ---
 

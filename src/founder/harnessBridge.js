@@ -2,11 +2,11 @@
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
  *
  * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다; `success_criteria` — 디스패치 배열은 {@link runHarnessOrchestration} 가 `payload.success_criteria` 및 기본 채움으로 조립; 패킷 단일 문자열은 `specializePacket` 에서 trim·길이 캡만 적용(의미 해석 없음).
- * Ledger `harness_dispatch` / `harness_packet` payload 는 `threadKey` 가 있으면 {@link mergeCanonicalExecutionEnvelopeToPayload} 로 `run_id`·테넄시·`thread_key` 정본을 채운다 (cos_run_events 병합과 동일 SSOT).
+ * Ledger `harness_dispatch` / `harness_packet` payload 는 `threadKey` 가 있으면 {@link mergeLedgerExecutionRowPayload} 로 `run_id`·테넄시·`thread_key` 정본을 채운다 (cos_run_events 병합과 동일 SSOT).
  */
 
 import crypto from 'node:crypto';
-import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
+import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 import { appendExecutionArtifact } from './executionLedger.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
@@ -338,7 +338,7 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
       ...(ledgerRunId ? { runId: ledgerRunId } : {}),
       ...(ledgerRunTenancy ? { runTenancy: ledgerRunTenancy } : {}),
     };
-    const dispatchPayload = mergeCanonicalExecutionEnvelopeToPayload({ ...result }, ledgerMergeCtx, process.env);
+    const dispatchPayload = mergeLedgerExecutionRowPayload({ ...result }, ledgerMergeCtx, process.env);
     await appendExecutionArtifact(threadKey, {
       type: 'harness_dispatch',
       summary: `${dispatch_id} ${objective.slice(0, 120)}`,
@@ -349,10 +349,12 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     });
     for (const pkt of packets) {
       const packetId = pkt.packet_id != null ? String(pkt.packet_id).trim() : '';
-      const packetPayload = mergeCanonicalExecutionEnvelopeToPayload(
+      const packetPayload = mergeLedgerExecutionRowPayload(
         { ...pkt, dispatch_id },
         {
-          ...ledgerMergeCtx,
+          threadKey,
+          ...(ledgerRunId ? { runId: ledgerRunId } : {}),
+          ...(ledgerRunTenancy ? { runTenancy: ledgerRunTenancy } : {}),
           ...(packetId ? { packetId } : {}),
         },
         process.env,

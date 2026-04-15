@@ -106,6 +106,13 @@ const arts2 = await readRecentExecutionArtifacts(tk, 20);
 const inv = arts2.filter((a) => a.type === 'tool_invocation');
 assert.ok(inv.length >= 2, 'tool invocations recorded');
 assert.ok(arts2.filter((a) => a.type === 'tool_result').length >= 2, 'each invocation has tool_result');
+const invGithub = inv.find((a) => {
+  const pl = a.payload && typeof a.payload === 'object' ? a.payload : {};
+  return String(pl.tool || '') === 'github';
+});
+const igl = invGithub?.payload && typeof invGithub.payload === 'object' ? invGithub.payload : {};
+assert.equal(String(igl.thread_key || ''), tk, 'tool_invocation ledger merges thread_key');
+assert.equal(String(igl.product_key || ''), 'orch_ledger_product_key', 'tool_invocation ledger merges product_key');
 
 const summaryLines = await readExecutionSummary(tk, 5);
 const input = buildFounderConversationInput({

@@ -75,3 +75,36 @@ export function mergeCanonicalExecutionEnvelopeToPayload(payload, ctx = {}, env 
   }
   return pl;
 }
+
+/**
+ * 스레드 로컬 execution ledger 행(harness_dispatch·tool_invocation·execution_note 등) — durable `cos_run_events` 와 동일 SSOT 병합.
+ *
+ * @param {Record<string, unknown>} payload
+ * @param {{
+ *   threadKey: string,
+ *   runId?: string | null,
+ *   packetId?: string | null,
+ *   runTenancy?: Record<string, unknown> | null,
+ * }} rowCtx
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {Record<string, unknown>}
+ */
+export function mergeLedgerExecutionRowPayload(payload, rowCtx, env = process.env) {
+  const tk = String(rowCtx.threadKey || '').trim();
+  if (!tk) {
+    return payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...payload } : {};
+  }
+  const base = payload && typeof payload === 'object' && !Array.isArray(payload) ? { ...payload } : {};
+  const rid = rowCtx.runId != null && String(rowCtx.runId).trim() ? String(rowCtx.runId).trim() : '';
+  const pid = rowCtx.packetId != null && String(rowCtx.packetId).trim() ? String(rowCtx.packetId).trim() : '';
+  const rt =
+    rowCtx.runTenancy && typeof rowCtx.runTenancy === 'object' && !Array.isArray(rowCtx.runTenancy)
+      ? rowCtx.runTenancy
+      : null;
+  return mergeCanonicalExecutionEnvelopeToPayload(base, {
+    threadKey: tk,
+    ...(rid ? { runId: rid } : {}),
+    ...(pid ? { packetId: pid } : {}),
+    ...(rt ? { runTenancy: rt } : {}),
+  }, env);
+}

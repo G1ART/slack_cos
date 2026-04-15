@@ -27,6 +27,7 @@ import {
 } from './cursorCloudAdapter.js';
 import { isOpsSmokeEnabled, resolveSmokeSessionId } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
+import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 import {
   emitPatchHasCloudContractSource,
   shouldSkipGithubRecoveryEnvelopeRegistration,
@@ -883,13 +884,21 @@ const TOOL_ADAPTERS = {
 
 /**
  * @param {Record<string, unknown>} spec
- * @param {{ threadKey?: string, packetId?: string, cosRunId?: string, ops_smoke_session_id?: string }} [ctx]
+ * @param {{
+ *   threadKey?: string,
+ *   packetId?: string,
+ *   cosRunId?: string,
+ *   ops_smoke_session_id?: string,
+ *   runTenancy?: Record<string, unknown> | null,
+ * }} [ctx]
  */
 export async function invokeExternalTool(spec, ctx = {}) {
   const s = spec && typeof spec === 'object' ? spec : {};
   const threadKey = ctx.threadKey ? String(ctx.threadKey) : '';
   const runPacketId = ctx.packetId != null ? String(ctx.packetId).trim() : '';
   const cosRunId = ctx.cosRunId != null ? String(ctx.cosRunId).trim() : '';
+  const runTenancy =
+    ctx.runTenancy && typeof ctx.runTenancy === 'object' && !Array.isArray(ctx.runTenancy) ? ctx.runTenancy : null;
   const tool = s.tool;
   const action = String(s.action || '').trim();
   let payload = s.payload && typeof s.payload === 'object' && !Array.isArray(s.payload) ? s.payload : {};
@@ -923,6 +932,20 @@ export async function invokeExternalTool(spec, ctx = {}) {
   const invocation_id = `tool_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const adapter = TOOL_ADAPTERS[tool];
   const env = process.env;
+  /** @param {Record<string, unknown>} pl */
+  const envelopeArtifactPayload = (pl) =>
+    threadKey
+      ? mergeLedgerExecutionRowPayload(
+          pl,
+          {
+            threadKey,
+            ...(cosRunId ? { runId: cosRunId } : {}),
+            ...(runPacketId ? { packetId: runPacketId } : {}),
+            ...(runTenancy ? { runTenancy } : {}),
+          },
+          env,
+        )
+      : pl;
   const opsSmokeSessionId =
     String(ctx.ops_smoke_session_id || '').trim() ||
     (isOpsSmokeEnabled(env) ? resolveSmokeSessionId(env) : null) ||
@@ -1055,14 +1078,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
         summary: result_summary.slice(0, 500),
         status,
         needs_review,
-        payload: ledgerPayload,
+        payload: envelopeArtifactPayload(ledgerPayload),
       });
       await appendExecutionArtifact(threadKey, {
         type: 'tool_result',
         summary: result_summary.slice(0, 500),
         status,
         needs_review,
-        payload: ledgerPayload,
+        payload: envelopeArtifactPayload(ledgerPayload),
       });
     }
     return blockedEarly;
@@ -1147,14 +1170,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
           summary: result_summary.slice(0, 500),
           status,
           needs_review,
-          payload: ledgerPayload,
+          payload: envelopeArtifactPayload(ledgerPayload),
         });
         await appendExecutionArtifact(threadKey, {
           type: 'tool_result',
           summary: result_summary.slice(0, 500),
           status,
           needs_review,
-          payload: ledgerPayload,
+          payload: envelopeArtifactPayload(ledgerPayload),
         });
       }
       return blockedProfile;
@@ -1249,14 +1272,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
         summary: result_summary.slice(0, 500),
         status,
         needs_review,
-        payload: ledgerPayload,
+        payload: envelopeArtifactPayload(ledgerPayload),
       });
       await appendExecutionArtifact(threadKey, {
         type: 'tool_result',
         summary: result_summary.slice(0, 500),
         status,
         needs_review,
-        payload: ledgerPayload,
+        payload: envelopeArtifactPayload(ledgerPayload),
       });
     }
     return result;
@@ -1401,14 +1424,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
           summary: result_summary.slice(0, 500),
           status,
           needs_review,
-          payload: ledgerPayload,
+          payload: envelopeArtifactPayload(ledgerPayload),
         });
         await appendExecutionArtifact(threadKey, {
           type: 'tool_result',
           summary: result_summary.slice(0, 500),
           status,
           needs_review,
-          payload: ledgerPayload,
+          payload: envelopeArtifactPayload(ledgerPayload),
         });
       }
       return blockedAssembly;
@@ -1516,14 +1539,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
           summary: rsBind.slice(0, 500),
           status: stBind,
           needs_review: nrBind,
-          payload: lpBind,
+          payload: envelopeArtifactPayload(lpBind),
         });
         await appendExecutionArtifact(threadKey, {
           type: 'tool_result',
           summary: rsBind.slice(0, 500),
           status: stBind,
           needs_review: nrBind,
-          payload: lpBind,
+          payload: envelopeArtifactPayload(lpBind),
         });
       }
       return {
@@ -2111,14 +2134,14 @@ export async function invokeExternalTool(spec, ctx = {}) {
       summary: result_summary.slice(0, 500),
       status,
       needs_review,
-      payload: ledgerPayload,
+      payload: envelopeArtifactPayload(ledgerPayload),
     });
     await appendExecutionArtifact(threadKey, {
       type: 'tool_result',
       summary: result_summary.slice(0, 500),
       status,
       needs_review,
-      payload: ledgerPayload,
+      payload: envelopeArtifactPayload(ledgerPayload),
     });
   }
 

@@ -7,6 +7,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 
 export function cosRuntimeBaseDir() {
   const env = String(process.env.COS_RUNTIME_STATE_DIR || '').trim();
@@ -106,12 +107,8 @@ export async function appendCloudEmitPatchClosureLedgerMirror(threadKey) {
   if (!tk) return;
   const result_summary =
     'completed / live / cursor:emit_patch — provider callback closure applied (supersedes dispatch running snapshot)';
-  await appendExecutionArtifact(tk, {
-    type: 'tool_result',
-    summary: result_summary.slice(0, 500),
-    status: 'completed',
-    needs_review: false,
-    payload: {
+  const closurePayload = mergeLedgerExecutionRowPayload(
+    {
       tool: 'cursor',
       action: 'emit_patch',
       execution_mode: 'live',
@@ -122,6 +119,15 @@ export async function appendCloudEmitPatchClosureLedgerMirror(threadKey) {
       live_attempted: true,
       parcel_ledger_closure_mirror: true,
     },
+    { threadKey: tk },
+    process.env,
+  );
+  await appendExecutionArtifact(tk, {
+    type: 'tool_result',
+    summary: result_summary.slice(0, 500),
+    status: 'completed',
+    needs_review: false,
+    payload: closurePayload,
   });
 }
 
