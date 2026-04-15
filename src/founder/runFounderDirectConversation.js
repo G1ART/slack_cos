@@ -27,6 +27,7 @@ import { resolveOpsSmokeSessionIdForToolAudit } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
+import { cosRunTenancyMergeHintsFromRunRow } from './parcelDeploymentContext.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -689,7 +690,11 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
           }
         }
       } else if (call.name === 'delegate_harness_team') {
-        result = await runHarnessOrchestration(args, { threadKey: tk });
+        result = await runHarnessOrchestration(args, {
+          threadKey: tk,
+          ...(auditRunId ? { runId: auditRunId } : {}),
+          ...(activeRun ? { runTenancy: cosRunTenancyMergeHintsFromRunRow(activeRun) } : {}),
+        });
         if (result && result.ok && String(result.status) === 'accepted' && tk) {
           stashDelegateEmitPatchContext(tk, /** @type {Record<string, unknown>} */ (result));
           const shell = await persistAcceptedRunShell({

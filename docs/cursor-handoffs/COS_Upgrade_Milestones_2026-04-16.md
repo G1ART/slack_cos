@@ -16,6 +16,7 @@
 - **G1 로드맵 M4 (일부·봉투):** Phase1 패킷 `success_criteria` — `runFounderDirectConversation` strict 패킷 스키마 + `specializePacket` sanitize; `delegateHarnessPacketValidate` 가 비문자열 기계 차단.
 - **G1 로드맵 M3 (선택·문서):** `package.json` `name` → `COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY` **문서만** 제안 — `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1.
 - **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
+- **G1 로드맵 M6 (일부·스레드 ledger):** `runHarnessOrchestration` 이 `harness_dispatch` / `harness_packet` ledger payload 에 `mergeCanonicalExecutionEnvelopeToPayload` 적용; `runFounderDirectConversation` 이 활성 run 에서 `run_id`·`cosRunTenancyMergeHintsFromRunRow` 전달.
 
 ---
 
@@ -82,6 +83,7 @@
 ### M6 — G1 테넌시 데이터 플레인 (로드맵; 단계적)
 
 - [x] (일부) **Ledger 샘플 축 확장:** `npm run audit:parcel-health` JSON에 `product_key` / `project_space_key` 상위 분포 추가 (`ledger_tenancy_product_top`, `ledger_tenancy_project_space_top`). 뷰 `cos_run_events_tenancy_stream` 컬럼 재사용, DDL 변경 없음.
+- [x] (일부) **실행 ledger 하네스 행:** 스레드 `appendExecutionArtifact` 경로의 `harness_dispatch`·`harness_packet` payload 에 정본 봉투 병합 (`canonicalExecutionEnvelope` + 활성 `cos_runs` 테넄시 힌트).
 - [ ] (잔여) RPC·추가 뷰·다른 테이블로의 키 전파 등은 별도 PR에서 G1 M6 범위에 맞춰 진행.
 
 ---

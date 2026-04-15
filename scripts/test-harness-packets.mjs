@@ -59,6 +59,9 @@ assert.equal(pmPkt && pmPkt.success_criteria, 'PRD 초안 합의');
 
 const arts = await readRecentExecutionArtifacts(tk, 50);
 assert.ok(arts.some((a) => a.type === 'harness_packet'), 'ledger harness_packet');
+const dispArt = arts.find((a) => a.type === 'harness_dispatch');
+const dpl0 = dispArt?.payload && typeof dispArt.payload === 'object' ? dispArt.payload : {};
+assert.equal(String(dpl0.thread_key || ''), tk, 'harness_dispatch ledger payload has thread_key');
 
 await clearExecutionArtifacts(tk);
 

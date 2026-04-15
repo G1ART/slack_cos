@@ -13,6 +13,9 @@ import { buildFounderConversationInput } from '../src/founder/runFounderDirectCo
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-ledger');
 
+const prevProduct = process.env.COS_PRODUCT_KEY;
+process.env.COS_PRODUCT_KEY = 'orch_ledger_product_key';
+
 const tk = `dm:ledger-${Date.now()}`;
 await clearExecutionArtifacts(tk);
 
@@ -45,6 +48,16 @@ assert.ok(
   typeof dpl.intent === 'string' && dpl.intent.startsWith('delegate_'),
   'ledger harness_dispatch carries Phase1 intent',
 );
+assert.equal(String(dpl.thread_key || ''), tk, 'ledger harness_dispatch merges canonical thread_key');
+assert.equal(
+  String(dpl.product_key || ''),
+  'orch_ledger_product_key',
+  'ledger harness_dispatch merges env product_key when absent',
+);
+const pktArt = arts1.find((a) => a.type === 'harness_packet');
+const ppl = pktArt?.payload && typeof pktArt.payload === 'object' ? pktArt.payload : {};
+assert.equal(String(ppl.thread_key || ''), tk, 'ledger harness_packet merges thread_key');
+assert.equal(String(ppl.product_key || ''), 'orch_ledger_product_key', 'ledger harness_packet merges product_key');
 
 const prevGithub = process.env.GITHUB_TOKEN;
 const prevPat = process.env.GITHUB_FINE_GRAINED_PAT;
@@ -106,5 +119,8 @@ assert.ok(input.includes('[최근 실행 아티팩트]'), 'conversation can embe
 assert.ok(input.includes('harness_dispatch') || input.includes('tool_invocation'), 'artifact types in input');
 
 await clearExecutionArtifacts(tk);
+
+if (prevProduct === undefined) delete process.env.COS_PRODUCT_KEY;
+else process.env.COS_PRODUCT_KEY = prevProduct;
 
 console.log('test-orchestration-ledger-and-adapters: ok');

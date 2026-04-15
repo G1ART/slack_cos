@@ -2,9 +2,11 @@
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
  *
  * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다; `success_criteria` — 디스패치 배열은 {@link runHarnessOrchestration} 가 `payload.success_criteria` 및 기본 채움으로 조립; 패킷 단일 문자열은 `specializePacket` 에서 trim·길이 캡만 적용(의미 해석 없음).
+ * Ledger `harness_dispatch` / `harness_packet` payload 는 `threadKey` 가 있으면 {@link mergeCanonicalExecutionEnvelopeToPayload} 로 `run_id`·테넄시·`thread_key` 정본을 채운다 (cos_run_events 병합과 동일 SSOT).
  */
 
 import crypto from 'node:crypto';
+import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
 import { appendExecutionArtifact } from './executionLedger.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
@@ -243,11 +245,18 @@ function buildEnvelopePackets(handoff_order, team_plan, deliverables, constraint
 
 /**
  * @param {Record<string, unknown>} payload
- * @param {{ threadKey?: string }} [ctx]
+ * @param {{
+ *   threadKey?: string,
+ *   runId?: string | null,
+ *   runTenancy?: Record<string, unknown> | null,
+ * }} [ctx]
  */
 export async function runHarnessOrchestration(payload, ctx = {}) {
   const p = payload && typeof payload === 'object' ? payload : {};
   const threadKey = ctx.threadKey ? String(ctx.threadKey) : '';
+  const ledgerRunId = ctx.runId != null && String(ctx.runId).trim() ? String(ctx.runId).trim() : '';
+  const ledgerRunTenancy =
+    ctx.runTenancy && typeof ctx.runTenancy === 'object' && !Array.isArray(ctx.runTenancy) ? ctx.runTenancy : null;
   const objective = String(p.objective || '').trim();
   const rawPersonas = Array.isArray(p.personas) ? p.personas : [];
   const personas = [
@@ -324,22 +333,37 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
 
   if (threadKey) {
     const dispatchNeedsReview = packets.some((x) => x.review_required);
+    const ledgerMergeCtx = {
+      threadKey,
+      ...(ledgerRunId ? { runId: ledgerRunId } : {}),
+      ...(ledgerRunTenancy ? { runTenancy: ledgerRunTenancy } : {}),
+    };
+    const dispatchPayload = mergeCanonicalExecutionEnvelopeToPayload({ ...result }, ledgerMergeCtx, process.env);
     await appendExecutionArtifact(threadKey, {
       type: 'harness_dispatch',
       summary: `${dispatch_id} ${objective.slice(0, 120)}`,
       status: 'accepted',
       needs_review: dispatchNeedsReview,
       review_focus: review_checkpoints.slice(0, 5),
-      payload: { ...result },
+      payload: dispatchPayload,
     });
     for (const pkt of packets) {
+      const packetId = pkt.packet_id != null ? String(pkt.packet_id).trim() : '';
+      const packetPayload = mergeCanonicalExecutionEnvelopeToPayload(
+        { ...pkt, dispatch_id },
+        {
+          ...ledgerMergeCtx,
+          ...(packetId ? { packetId } : {}),
+        },
+        process.env,
+      );
       await appendExecutionArtifact(threadKey, {
         type: 'harness_packet',
         summary: `${pkt.packet_id} ${pkt.persona} → ${pkt.preferred_tool}.${pkt.preferred_action}`,
         status: pkt.packet_status,
         needs_review: pkt.review_required,
         review_focus: pkt.review_focus,
-        payload: { ...pkt, dispatch_id },
+        payload: packetPayload,
       });
     }
   }
