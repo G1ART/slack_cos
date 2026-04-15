@@ -3,6 +3,24 @@
 ## Status
 Implementation SSOT companion. The constitution remains the only governing document.
 
+## Strategic axes (what we are optimizing for)
+
+Three intertwined goals. Slack stays the **founder-facing interface**; **committed operational truth** stays in durable store and audit rows, not in founder wording (see Non-negotiable product rules below).
+
+1. **Founder-facing COS (Slack) — interface quality and situational depth**  
+   The founder experiences **one** COS: natural, concise, accurate Korean; no internal code names, packet/webhook jargon, or false certainty; chief-of-staff / PM / chief-engineer feel — not a brittle workflow shell. **Behind that surface**, COS is expected to stay deeply aligned with execution reality by using **raw thread memory, execution-ledger summaries, closure mirrors, structured execution-context reads when appropriate, and tools/adapters** — strong “full stack” awareness of what actually ran and what the DB says **without** the app replacing COS judgment with keyword routers, councils, or semantic classifiers on founder text.
+
+2. **COS ↔ Harness workcell — org-shaped scope and R&R, not vibe-only**  
+   Harness is the **internal** multi-agent group COS assembles per turn. The target is a **designed organization**: explicit scope and R&R, healthy tension and critique in service of run success — not merely different prompt tones. **Implementation philosophy:** clad COS and Harness in **code only where mechanically necessary** (strict envelopes, adapter safety, ledger visibility, tenancy on rows, regression tests). Do not encode “team culture,” debate choreography, or approval theater in application logic.
+
+3. **Parcel office — high-throughput multi-product / multi-project-space external orchestration**  
+   Runs, packets, dispatch evidence, **provider-callback authority**, authoritative closure, progression patches, supervisor wake, and queryable audit — so parallel lanes do not scramble **work orders vs reports**. The **ultimate** direction includes more automation for spin-up and wiring (e.g. new GitHub repos, Supabase projects, deploy tenants) **without** blurring tenancy, identity, or completion truth.
+
+### Implementation philosophy (with constitution §1, §9)
+
+- **Minimal armor:** prefer **model-native orchestration** and COS’s own tool choices over new in-code planners or semantic gates for routine COS↔Harness collaboration.
+- **Spine protection:** do not reopen parcel-office core (callback authority, closure) without a regression proven against **committed** run state.
+
 ## One-line definition
 G1 COS is a Slack-native Chief of Staff runtime. The founder speaks to one human-readable COS in Slack, while behind that interface a harness of AI agents and external tools executes work using shared run, packet, and audit language.
 

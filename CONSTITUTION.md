@@ -1,12 +1,19 @@
 # G1 COS CONSTITUTION
 ## The Only Governing Document
-## Version 2.7 — Founder trust, minimal code coercion; COS orchestrates harness team R&R
+## Version 2.8 — Founder trust, minimal code coercion; COS orchestrates harness team R&R; WHAT_WE_ARE_BUILDING § Strategic axes for product expansion
 
 ---
 
 # 0. 지위
 
 이 문서는 저장소의 **유일한 헌법**이다. 다른 거버넌스·핸드오프·북극성 문서는 두지 않는다.
+
+---
+
+# 0.1 구현 철학 보조 (규범의 확장이 아님)
+
+- 제품이 나아갈 **세 축**(founder 대면 대화 / COS↔Harness 워크셀 / 택배사무소형 외부 오케스트레이션)과, **“COS·하네스에는 필요한 최소만 코드로 강제한다”** 는 실행 철학의 **전개·예시·우선순위 서술**은 `docs/cursor-handoffs/WHAT_WE_ARE_BUILDING_G1_COS_2026-04-14.md` **상단**을 본다.
+- 이 헌법이 **금지·허용·최소 운반체·판단 비개입·택배사무소 코어(콜백 권위·클로저) 보존**의 정본이다. 상위 문서의 서술이 본문 §1·§2·§9 와 충돌하면 **본 헌법이 이긴다**.
 
 ---
 
