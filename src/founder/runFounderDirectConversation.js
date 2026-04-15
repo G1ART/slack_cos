@@ -20,6 +20,7 @@ import {
   finalizeRunAfterStarterKickoff,
   persistRunAfterDelegate,
   getActiveRunForThread,
+  activeRunShellForCosExecutionContext,
 } from './executionRunStore.js';
 import { executeStarterKickoffIfEligible } from './starterLadder.js';
 import { stashDelegateEmitPatchContext } from './delegateEmitPatchStash.js';
@@ -307,7 +308,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님). founder에게 그대로 노출하지 말 것.',
+      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것). founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -530,6 +531,8 @@ export async function handleReadExecutionContext(args, threadKey) {
   const limRaw = args?.limit;
   const limit =
     typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
+  const activeRow = threadKey ? await getActiveRunForThread(threadKey) : null;
+  const active_run_shell = activeRunShellForCosExecutionContext(activeRow);
   const artifacts = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
   const summary_lines = threadKey ? await readExecutionSummary(threadKey, limit) : [];
   const adapter_readiness_lines = await formatAdapterReadinessCompactLines(process.env, 6, threadKey);
@@ -550,6 +553,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     adapter_readiness_lines,
     review_queue,
     recent_artifact_spine_distinct,
+    active_run_shell,
     review_required_count: counts.review_required_count,
     degraded_count: counts.degraded_count,
     blocked_count: counts.blocked_count,

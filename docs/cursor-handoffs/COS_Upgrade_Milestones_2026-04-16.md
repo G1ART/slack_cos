@@ -18,6 +18,25 @@
 - **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
 - **G1 로드맵 M6 (일부·스레드 ledger):** `mergeLedgerExecutionRowPayload` SSOT — `harness_dispatch` / `harness_packet` / **`tool_invocation`·`tool_result`** / **`execution_note`** / **클로저 mirror `tool_result`** 까지 동일 병합; `invoke_external_tool` ctx `runTenancy`·활성 run.
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `recent_artifact_spine_distinct` — `distinctSpineKeysFromLedgerArtifacts` 로 최근 ledger payload 에서 스파인·테넄시 문자열 distinct 만 기계 수집 (Supabase 요약과 혼동 금지; COS 내부 깊은 읽기 보조).
+- **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `active_run_shell` — `activeRunShellForCosExecutionContext(getActiveRunForThread)` 로 thread 최신 **durable cos_runs** 활성 행의 id·status·stage·dispatch_id·packet ids·테넄시 키·`updated_at` 만 (요약 문장·objective 전문 없음). ledger 한 줄·ops smoke 요약과 **동일 truth 가 아니라 병치**한다.
+
+---
+
+## 번호 정리 (혼동 방지)
+
+- 이 파일의 **M0~M6** 표기는 **COS·하네스 업그레이드 마일스톤(로컬 번호)** 이다.
+- **`G1_COS_Upgrade_Roadmap_2026-04-14.md` 의 M5 = Truth stack v2** 는 위 구현 스냅샷의 **“외부 G1 M5”** 줄로 추적한다 (로컬 “M5 — 하네스·COS 경계” 와 **다른 축**).
+
+### 외부 G1 M5 — Truth stack v2 (이 레포 진행 상황)
+
+| 신호 (로드맵 exit) | 상태 |
+|-------------------|------|
+| ledger-first founder 연속성 | 헌법·기존 `[최근 실행 아티팩트]` 경로 유지 |
+| 깊은 점검용 구조화 context read | `read_execution_context` + `recent_artifact_spine_distinct` + **`active_run_shell`** |
+| Supabase = 운영 truth | 기존 smoke/이벤트 스트림·감사; 도구 반환과 **문장·필드 동일화하지 않음** |
+| anti-conflict 회귀 | 스냅샷 정합 테스트 (`test-truth-stack-active-run-shell` 등); founder 슬랙 본문 런타임 검열은 비목표 |
+
+**Non-goals (로드맵 인용):** 감사 row 를 Slack 자연어에 직접 붓지 않는다. 매 founder 턴마다 깊은 운영 상태를 긁지 않는다.
 
 ---
 
@@ -76,7 +95,7 @@
 
 **완료 기준:** 새 PR이 “이름 임의 생성” 대신 표의 키만 쓴다.
 
-### M5 — 하네스·COS 경계 (통제 아님, 품질)
+### 로컬 M5 — 하네스·COS 경계 (통제 아님, 품질; **외부 G1 M5 Truth stack 과 별개**)
 
 - [x] **불필요한 추상 금지:** 범용 “테넌시 매니저” 클래스 추가 없이, 기존 `parcelDeploymentContext` + 소량 헬퍼로 유지 (본 패치도 동일).
 - [x] **회귀:** `npm test` + `verify:parcel-post-office` CI 고정; (주간) Slack 스모크 1턴은 **사람 개입** 유지(자동화 대상 아님).

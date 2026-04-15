@@ -65,6 +65,7 @@ assert.ok(ctx.review_queue.length >= 1, 'review_queue surfaces blocked github ro
 const spine = ctx.recent_artifact_spine_distinct;
 assert.ok(spine && typeof spine === 'object', 'recent_artifact_spine_distinct present');
 assert.ok(Array.isArray(spine.thread_key) && spine.thread_key.includes(tk), 'distinct thread_key from merged ledger');
+assert.equal(ctx.active_run_shell, null, 'harness-only roundtrip thread has no durable cos_runs row');
 
 await clearExecutionArtifacts(tk);
 

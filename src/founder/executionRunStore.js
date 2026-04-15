@@ -670,6 +670,34 @@ export async function getActiveRunForThread(threadKey) {
 }
 
 /**
+ * `read_execution_context` 전용 — thread 기준 **durable 활성 런**의 최소 식별·상태·테넄시만.
+ * ledger 요약·Supabase ops 요약과 역할이 겹치지 않게 하기 위한 기계 스냅샷(판단·요약 문장 없음).
+ *
+ * @param {Record<string, unknown> | null | undefined} run `getActiveRunForThread` 결과 또는 동형
+ * @returns {Record<string, unknown> | null}
+ */
+export function activeRunShellForCosExecutionContext(run) {
+  if (!run || typeof run !== 'object') return null;
+  const id = run.id != null ? String(run.id).trim() : '';
+  if (!id) return null;
+  const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String).filter(Boolean) : [];
+  return {
+    id,
+    thread_key: run.thread_key != null ? String(run.thread_key).trim() || null : null,
+    status: run.status != null ? String(run.status).trim() || null : null,
+    stage: run.stage != null ? String(run.stage).trim() || null : null,
+    dispatch_id: run.dispatch_id != null ? String(run.dispatch_id).trim() || null : null,
+    current_packet_id: run.current_packet_id != null ? String(run.current_packet_id).trim() || null : null,
+    required_packet_ids: req.slice(0, 32),
+    workspace_key: run.workspace_key != null ? String(run.workspace_key) : null,
+    product_key: run.product_key != null ? String(run.product_key) : null,
+    project_space_key: run.project_space_key != null ? String(run.project_space_key) : null,
+    parcel_deployment_key: run.parcel_deployment_key != null ? String(run.parcel_deployment_key) : null,
+    updated_at: run.updated_at != null ? String(run.updated_at) : null,
+  };
+}
+
+/**
  * @param {string} threadKey
  * @param {Record<string, unknown>} patch
  */
