@@ -15,6 +15,7 @@
 - **G1 로드맵 M4 (일부):** Phase1 `intent` — `harnessBridge.runHarnessOrchestration` dispatch 결과 + ledger `harness_dispatch` payload. Phase1 `role` — 패킷 `persona` SSOT 동기 `role` 필드.
 - **G1 로드맵 M4 (일부·봉투):** Phase1 패킷 `success_criteria` — `runFounderDirectConversation` strict 패킷 스키마 + `specializePacket` sanitize; `delegateHarnessPacketValidate` 가 비문자열 기계 차단.
 - **G1 로드맵 M3 (선택·문서):** `package.json` `name` → `COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY` **문서만** 제안 — `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1.
+- **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
 
 ---
 
@@ -60,7 +61,7 @@
 
 ### M3 — 택배사무소 “자동 슬라이스” 운영
 
-- [x] `audit-parcel-health` **ledger 테넌시 샘플**: `cos_run_events_tenancy_stream` 최근 N건 `workspace_key` 분포(`ledger_tenancy_workspace_top`). 뷰 미적용 시 advisory. (`tenancy_keys_presence`는 기존 부트 유지.)
+- [x] `audit-parcel-health` **ledger 테넌시 샘플**: `cos_run_events_tenancy_stream` 최근 N건 `workspace_key`·`product_key`·`project_space_key` 분포(`ledger_tenancy_workspace_top` 등). 뷰 미적용 시 advisory. (`tenancy_keys_presence`는 기존 부트 유지.)
 - [x] (선택) **제품/프로젝트** 기본값: 레포 `package.json` name → `COS_PRODUCT_KEY` 기본 제안은 **문서만** (`COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1), 코드 기본값은 팀 합의 후.
 
 **완료 기준:** 온콜이 **env 없이**도 “어느 팀/배포가 깨졌는지” 5분 안에 좁힌다.
@@ -77,6 +78,11 @@
 
 - [x] **불필요한 추상 금지:** 범용 “테넌시 매니저” 클래스 추가 없이, 기존 `parcelDeploymentContext` + 소량 헬퍼로 유지 (본 패치도 동일).
 - [x] **회귀:** `npm test` + `verify:parcel-post-office` CI 고정; (주간) Slack 스모크 1턴은 **사람 개입** 유지(자동화 대상 아님).
+
+### M6 — G1 테넌시 데이터 플레인 (로드맵; 단계적)
+
+- [x] (일부) **Ledger 샘플 축 확장:** `npm run audit:parcel-health` JSON에 `product_key` / `project_space_key` 상위 분포 추가 (`ledger_tenancy_product_top`, `ledger_tenancy_project_space_top`). 뷰 `cos_run_events_tenancy_stream` 컬럼 재사용, DDL 변경 없음.
+- [ ] (잔여) RPC·추가 뷰·다른 테이블로의 키 전파 등은 별도 PR에서 G1 M6 범위에 맞춰 진행.
 
 ---
 

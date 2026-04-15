@@ -24,6 +24,7 @@ const STEPS = [
   'test-parcel-deployment-key-filter.mjs',
   'test-persona-contract-outline.mjs',
   'test-audit-parcel-health-skips-without-supabase.mjs',
+  'test-audit-parcel-ops-smoke-ledger-tenancy-report-shape.mjs',
   'test-external-event-wakes-supervisor.mjs',
   'test-cursor-callback-wakes-correlated-run-supervisor.mjs',
   'test-github-external-event-targets-correlated-run-not-latest.mjs',

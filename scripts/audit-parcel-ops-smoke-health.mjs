@@ -12,6 +12,7 @@
  *   node scripts/audit-parcel-ops-smoke-health.mjs --json
  *   node scripts/audit-parcel-ops-smoke-health.mjs --parcel-deployment-key prod_a --parcel-deployment-include-legacy
  *   node scripts/audit-parcel-ops-smoke-health.mjs --workspace-key T0123 --tenancy-include-legacy
+ *   (JSON) ledger_tenancy_product_top / ledger_tenancy_project_space_top — cos_run_events_tenancy_stream 샘플 분포
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
  *   COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN
@@ -256,16 +257,20 @@ async function main() {
     }
   }
 
-  /** 최근 ledger 이벤트 테넌시·Slack 팀 분포(M3 / M0 관측). 뷰 미적용 시 advisory 만. */
+  /** 최근 ledger 이벤트 테넌시·Slack 팀·제품·프로젝트 스페이스 분포(M3 / M6 관측). 뷰 미적용 시 advisory 만. */
   let ledgerTenancySampleSize = 0;
   /** @type {Array<{ workspace_key: string, count: number }>} */
   let ledgerTenancyWorkspaceTop = [];
   /** @type {Array<{ slack_team_id: string, count: number }>} */
   let ledgerSlackTeamTop = [];
+  /** @type {Array<{ product_key: string, count: number }>} */
+  let ledgerTenancyProductTop = [];
+  /** @type {Array<{ project_space_key: string, count: number }>} */
+  let ledgerTenancyProjectSpaceTop = [];
   const ledgerLim = Math.max(50, Math.min(sample, 500));
   const { data: ledgerRows, error: eLedger } = await sb
     .from(COS_RUN_EVENTS_TENANCY_STREAM_VIEW)
-    .select('workspace_key, slack_team_id')
+    .select('workspace_key, slack_team_id, product_key, project_space_key')
     .order('created_at', { ascending: false })
     .limit(ledgerLim);
   if (eLedger) {
@@ -279,6 +284,10 @@ async function main() {
     const wh = {};
     /** @type {Record<string, number>} */
     const sh = {};
+    /** @type {Record<string, number>} */
+    const pk = {};
+    /** @type {Record<string, number>} */
+    const psk = {};
     for (const row of lr) {
       const wk =
         row.workspace_key != null && String(row.workspace_key).trim()
@@ -290,6 +299,16 @@ async function main() {
           ? String(row.slack_team_id).trim()
           : '(none)';
       sh[sid] = (sh[sid] || 0) + 1;
+      const prod =
+        row.product_key != null && String(row.product_key).trim()
+          ? String(row.product_key).trim()
+          : '(none)';
+      pk[prod] = (pk[prod] || 0) + 1;
+      const pspace =
+        row.project_space_key != null && String(row.project_space_key).trim()
+          ? String(row.project_space_key).trim()
+          : '(none)';
+      psk[pspace] = (psk[pspace] || 0) + 1;
     }
     ledgerTenancyWorkspaceTop = Object.entries(wh)
       .sort((a, b) => b[1] - a[1])
@@ -299,6 +318,14 @@ async function main() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([k, v]) => ({ slack_team_id: k, count: v }));
+    ledgerTenancyProductTop = Object.entries(pk)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ product_key: k, count: v }));
+    ledgerTenancyProjectSpaceTop = Object.entries(psk)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ project_space_key: k, count: v }));
   }
 
   const ok = warnings.length === 0;
@@ -339,6 +366,8 @@ async function main() {
     ledger_tenancy_sample_size: ledgerTenancySampleSize,
     ledger_tenancy_workspace_top: ledgerTenancyWorkspaceTop,
     ledger_slack_team_top: ledgerSlackTeamTop,
+    ledger_tenancy_product_top: ledgerTenancyProductTop,
+    ledger_tenancy_project_space_top: ledgerTenancyProjectSpaceTop,
     thresholds: {
       orphan_fraction_warn: ORPHAN_FRACTION_WARN,
       pending_wake_warn: PENDING_WAKE_WARN,
