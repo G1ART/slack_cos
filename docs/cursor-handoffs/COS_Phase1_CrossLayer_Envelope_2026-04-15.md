@@ -32,7 +32,7 @@
 | 필드 | 의미 | 코드 SSOT (점진) |
 |------|------|-------------------|
 | `intent` | 이번 턴/패킷의 목적 (짧은 기계 친화 라벨) | `harnessBridge.js` — `deriveHarnessDispatchIntent` / `runHarnessOrchestration` (선택 `payload.intent`, 없으면 `delegate_{team_shape}_{tool}_{action}`) |
-| `role` | 하네스 내 역할 태그 (향후 planner / implementer 등) | (후속) |
+| `role` | 하네스 내 역할 태그 (Phase1 초기에는 `persona` 와 동일 문자열) | `harnessBridge.js` — `specializePacket` 가 `persona` 로 덮어써 SSOT 단일화 (strict 스키마 필드명은 `persona`) |
 | `success_criteria` | 완료 판정에 쓸 한 줄 조건 (선택) | (후속) |
 | `escalation_rule` | 막혔을 때 COS·founder로 올리는 규칙 요약 (선택) | (후속) |
 

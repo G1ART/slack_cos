@@ -12,7 +12,7 @@
 - **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`). Supabase `run_persisted` 직기입도 동일 병합. SQL: `cos_run_events_tenancy_stream` 뷰.
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
 - **G1 로드맵 M0 (일부):** `slack_team_id` 뷰 컬럼 + 감사 히스토그램 + merge 시 workspace→team 보강.
-- **G1 로드맵 M4 (일부):** Phase1 `intent` — `harnessBridge.runHarnessOrchestration` dispatch 결과 + ledger `harness_dispatch` payload.
+- **G1 로드맵 M4 (일부):** Phase1 `intent` — `harnessBridge.runHarnessOrchestration` dispatch 결과 + ledger `harness_dispatch` payload. Phase1 `role` — 패킷 `persona` SSOT 동기 `role` 필드.
 
 ---
 
@@ -66,8 +66,8 @@
 ### M4 — Phase 1 봉투 코드 이식 (점진)
 
 - [x] `intent` (짧은 기계 라벨) — **하네스 dispatch 한 경로**에만 1필드 추가 + 테스트 (`runHarnessOrchestration`, `deriveHarnessDispatchIntent`).
-- [ ] `role` — 패킷 메타와 중복 시 **한쪽 SSOT**로收斂.
-- [ ] 문서 `COS_Phase1_CrossLayer_Envelope` 표와 **필드명 diff 없음**.
+- [x] `role` — 패킷 메타: **SSOT = `persona`** (OpenAI strict), 런타임 출력에 `role` 동일 복제 (`harnessBridge.specializePacket`).
+- [x] 문서 `COS_Phase1_CrossLayer_Envelope` 표와 **필드명 diff 없음** (§3 `intent`/`role` SSOT 열·코드 정렬).
 
 **완료 기준:** 새 PR이 “이름 임의 생성” 대신 표의 키만 쓴다.
 

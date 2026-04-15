@@ -1,7 +1,7 @@
 /**
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
  *
- * Phase1 `intent` (COS_Phase1_CrossLayer_Envelope): 짧은 기계 라벨 — {@link deriveHarnessDispatchIntent}.
+ * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다.
  */
 
 import crypto from 'node:crypto';
@@ -134,6 +134,7 @@ function specializePacket(pkt, persona) {
     : ['산출물 대비 범위', 'definition_of_done'];
   const packet_status =
     pkt.packet_status === 'draft' || pkt.packet_status === 'ready' ? pkt.packet_status : 'ready';
+  const personaNorm = String(persona || '').toLowerCase().trim();
   return {
     ...pkt,
     preferred_tool,
@@ -141,6 +142,7 @@ function specializePacket(pkt, persona) {
     review_required,
     review_focus,
     packet_status,
+    role: personaNorm,
   };
 }
 

@@ -18,6 +18,9 @@ const auto = await runHarnessOrchestration({
 assert.equal(auto.ok, true);
 assert.ok(typeof auto.intent === 'string' && auto.intent.length > 0);
 assert.match(auto.intent, /^delegate_pm_engineering_/);
+const p0 = auto.packets[0] && typeof auto.packets[0] === 'object' ? auto.packets[0] : {};
+assert.equal(String(p0.role || ''), 'pm');
+assert.equal(String(p0.persona || ''), 'pm');
 
 const custom = await runHarnessOrchestration({
   objective: 'x',
