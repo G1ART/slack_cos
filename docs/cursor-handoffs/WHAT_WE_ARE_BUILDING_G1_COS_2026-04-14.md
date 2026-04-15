@@ -52,6 +52,11 @@ A persona should eventually mean more than tone. It should carry a distinct syst
 - Harness runtime stays simple now but must be extensible toward multi-app or multi-bot topology later.
 - Multi-product shared DB and audit slicing are first-class concerns, not backlog ornaments.
 
+## Operating intent (founder · Slack)
+The founder treats this Slack surface as the **primary cockpit for high-velocity MVP-style product iteration** (the same job category as dedicated “build the product” UIs), while staying **COS-first and natural-language-first**: outbound speech stays human, concise, and free of internal mechanics.
+
+Normal operations assume **many products, many repos, and many project spaces advancing in parallel**. The runtime must therefore behave as **one disciplined internal company**: **parcel-office-grade** execution (runs, packets, authoritative callback closure, queryable audit) plus **hard tenancy boundaries** so parallel lanes never blur identity, truth, or control.
+
 ## North star
 The founder talks naturally to one COS in Slack. Behind that, harness agents and external tools operate continuously using the same run language. Work actually gets done. State actually closes. The audit trail is queryable. And the system scales from one execution thread to many products and many project spaces without losing identity, truth, or control.
 
