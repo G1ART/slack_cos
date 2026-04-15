@@ -9,7 +9,8 @@
 ## 구현 스냅샷 (누적)
 
 - **G1 로드맵 M1 (일부):** `src/founder/canonicalExecutionEnvelope.js` — `mergeCanonicalExecutionEnvelopeToPayload` 가 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` append 경로(`appendCosRunEvent` / `appendCosRunEventForRun`) 및 `recordCosPretriggerAudit` 에서 env·요청 스코프·**durable run 행(`runTenancy`)** 로 테넄시 + `run_id` / `thread_key` / `packet_id` 빈칸을 채움. 테스트: `scripts/test-canonical-execution-envelope-smoke-payload.mjs`, `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
-- **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`).
+- **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`). Supabase `run_persisted` 직기입도 동일 병합. SQL: `cos_run_events_tenancy_stream` 뷰.
+- **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
 
 ---
 
@@ -49,13 +50,13 @@
 
 - [x] `appendCosRunEvent` / `appendCosRunEventForRun` 에서 **모든 이벤트 타입** payload 에 테넄시·스파인 키 병합(`mergeCanonicalExecutionEnvelopeToPayload` + `cosRunEventEnvelopeMergeCtxFromRun`). 스트림 뷰와 동일 env·스코프·행 우선순위.
 - [x] **중복 제거(append ctx):** `cosRunEventEnvelopeMergeCtxFromRun` — 행→merge ctx 단일화; env·요청 스코프는 `canonicalExecutionEnvelope` + `workspaceKeyFromRequestScopeFallback` SSOT 유지.
-- [ ] **뷰/마이그레이션:** `cos_run_events` 테이블에 컬럼 추가가 필요하면 **열 끝 추가만** (42P16 방지 — 에픽 문서).
+- [x] **뷰/마이그레이션:** `public.cos_run_events_tenancy_stream` — payload 우선·`cos_runs` coalesce 표현 컬럼 (테이블 열 추가 없음). JS SSOT: `COS_RUN_EVENTS_TENANCY_STREAM_VIEW`.
 
 **완료 기준:** `summarize` / Supabase 직접 쿼리에서 **ledger 이벤트만**으로도 배포·워크스페이스 슬라이스 가능.
 
 ### M3 — 택배사무소 “자동 슬라이스” 운영
 
-- [ ] `audit-parcel-health` / Railway 대시보드용 **한 페이지 요약**: `tenancy_keys_presence` + 최근 N건 `slack_team_id` 분포(식별자만).
+- [x] `audit-parcel-health` **ledger 테넌시 샘플**: `cos_run_events_tenancy_stream` 최근 N건 `workspace_key` 분포(`ledger_tenancy_workspace_top`). 뷰 미적용 시 advisory. (`tenancy_keys_presence`는 기존 부트 유지.)
 - [ ] (선택) **제품/프로젝트** 기본값: 레포 `package.json` name → `COS_PRODUCT_KEY` 기본 제안은 **문서만**, 코드 기본값은 팀 합의 후.
 
 **완료 기준:** 온콜이 **env 없이**도 “어느 팀/배포가 깨졌는지” 5분 안에 좁힌다.

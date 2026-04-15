@@ -22,6 +22,7 @@ import dotenv from 'dotenv';
 import {
   createCosRuntimeSupabaseForSummary,
   COS_OPS_SMOKE_SUMMARY_STREAM_VIEW,
+  COS_RUN_EVENTS_TENANCY_STREAM_VIEW,
 } from '../src/founder/runStoreSupabase.js';
 import {
   filterRowsByOptionalTenancyKeys,
@@ -241,6 +242,38 @@ async function main() {
     }
   }
 
+  /** 최근 ledger 이벤트 테넌시 분포(M3 / 로드맵 관측). 뷰 미적용 시 advisory 만. */
+  let ledgerTenancySampleSize = 0;
+  /** @type {Array<{ workspace_key: string, count: number }>} */
+  let ledgerTenancyWorkspaceTop = [];
+  const ledgerLim = Math.max(50, Math.min(sample, 500));
+  const { data: ledgerRows, error: eLedger } = await sb
+    .from(COS_RUN_EVENTS_TENANCY_STREAM_VIEW)
+    .select('workspace_key')
+    .order('created_at', { ascending: false })
+    .limit(ledgerLim);
+  if (eLedger) {
+    advisory.push(
+      `${COS_RUN_EVENTS_TENANCY_STREAM_VIEW}: ${eLedger.message} (DDL 미적용이면 무시; 마이그레이션 적용 후 재실행)`,
+    );
+  } else {
+    const lr = Array.isArray(ledgerRows) ? ledgerRows : [];
+    ledgerTenancySampleSize = lr.length;
+    /** @type {Record<string, number>} */
+    const wh = {};
+    for (const row of lr) {
+      const wk =
+        row.workspace_key != null && String(row.workspace_key).trim()
+          ? String(row.workspace_key).trim()
+          : '(none)';
+      wh[wk] = (wh[wk] || 0) + 1;
+    }
+    ledgerTenancyWorkspaceTop = Object.entries(wh)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ workspace_key: k, count: v }));
+  }
+
   const ok = warnings.length === 0;
   let interpretationKo =
     ok && advisory.length === 0
@@ -274,6 +307,9 @@ async function main() {
     top_event_types_uuid_sample: topKeys(uuidEventTypes, 8),
     pending_supervisor_wake_count: eWake ? null : pendingWake ?? 0,
     cos_ops_smoke_events_null_run_id_count: opsNullRunCount,
+    ledger_tenancy_stream_view: COS_RUN_EVENTS_TENANCY_STREAM_VIEW,
+    ledger_tenancy_sample_size: ledgerTenancySampleSize,
+    ledger_tenancy_workspace_top: ledgerTenancyWorkspaceTop,
     thresholds: {
       orphan_fraction_warn: ORPHAN_FRACTION_WARN,
       pending_wake_warn: PENDING_WAKE_WARN,

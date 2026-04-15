@@ -52,6 +52,9 @@ export const COS_OPS_SMOKE_SUMMARY_EVENT_TYPES = [
 /** DB 뷰 `supabase/migrations/*_cos_ops_smoke_summary_stream_view.sql` — 단일 시계열 읽기. */
 export const COS_OPS_SMOKE_SUMMARY_STREAM_VIEW = 'cos_ops_smoke_summary_stream';
 
+/** DB 뷰 `supabase/migrations/*_cos_run_events_tenancy_stream_view.sql` — ledger 전 타입 테넌시 슬라이스. */
+export const COS_RUN_EVENTS_TENANCY_STREAM_VIEW = 'cos_run_events_tenancy_stream';
+
 /**
  * @param {Record<string, unknown>} r
  */

@@ -27,7 +27,8 @@ import {
   supabaseAppendRunEvent,
 } from './runStoreSupabase.js';
 import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
-import { applyCosRunTenancyDefaults } from './parcelDeploymentContext.js';
+import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
+import { applyCosRunTenancyDefaults, cosRunEventEnvelopeMergeCtxFromRun } from './parcelDeploymentContext.js';
 
 /** @typedef {'queued'|'running'|'review_required'|'blocked'|'completed'|'failed'|'canceled'} RunStatus */
 /** @typedef {'delegated'|'starter_kickoff'|'executing'|'reviewing'|'finalizing'} RunStage */
@@ -422,11 +423,14 @@ export async function finalizeRunAfterStarterKickoff(p) {
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
     if (sb) {
-      await supabaseAppendRunEvent(sb, runId, 'run_persisted', {
-        thread_key: threadKey,
-        dispatch_id,
-        status,
-      });
+      const run = await getRunById(runId);
+      const mergeCtx = cosRunEventEnvelopeMergeCtxFromRun(run, runId, threadKey);
+      const pl = mergeCanonicalExecutionEnvelopeToPayload(
+        { dispatch_id, status },
+        mergeCtx,
+        process.env,
+      );
+      await supabaseAppendRunEvent(sb, runId, 'run_persisted', pl, {});
     }
   }
 
