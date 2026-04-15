@@ -4,6 +4,9 @@
  * payload 에 이미 값이 있으면 덮어쓰지 않음.
  */
 
+import { getRequestScope } from './requestScopeContext.js';
+import { workspaceKeyFromSlackTeamId } from './slackEventTenancy.js';
+
 const MAX_KEY_LEN = 64;
 
 export const COS_PARCEL_DEPLOYMENT_KEY_ENV = 'COS_PARCEL_DEPLOYMENT_KEY';
@@ -49,6 +52,17 @@ export function parcelDeploymentKeyFromEnv(env = process.env) {
  */
 export function workspaceKeyFromEnv(env = process.env) {
   return tenancyKeyFromEnvVar(env, COS_WORKSPACE_KEY_ENV);
+}
+
+/**
+ * env 에 workspace 가 없을 때만 요청 스코프(Slack team_id)에서 workspace_key 후보.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string}
+ */
+export function workspaceKeyFromRequestScopeFallback(env = process.env) {
+  if (workspaceKeyFromEnv(env)) return '';
+  const sid = getRequestScope().slack_team_id;
+  return workspaceKeyFromSlackTeamId(sid != null ? String(sid) : '');
 }
 
 /**
@@ -111,6 +125,11 @@ export function applyCosRunTenancyDefaults(row, env = process.env) {
     const cur = row[k];
     if (cur != null && String(cur).trim()) continue;
     row[k] = v;
+  }
+  const wkFb = workspaceKeyFromRequestScopeFallback(env);
+  if (wkFb) {
+    const curWk = row.workspace_key;
+    if (curWk == null || !String(curWk).trim()) row.workspace_key = wkFb;
   }
 }
 

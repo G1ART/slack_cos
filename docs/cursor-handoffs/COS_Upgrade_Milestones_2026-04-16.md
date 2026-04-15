@@ -37,7 +37,7 @@
 ### M1 — 동적 `workspace_key` (핵심 “멀티” 1단계)
 
 - [x] **정본 봉투 코드 SSOT:** `canonicalExecutionEnvelope.js` (`mergeCanonicalExecutionEnvelopeToPayload`) 도입; 요약 이벤트 append·pretrigger 경로에서 공통 병합 사용.
-- [ ] **규칙 SSOT:** `COS_WORKSPACE_KEY` 가 비어 있을 때만 `sanitize(slack_team_id)` 를 `workspace_key` 로 사용; env가 있으면 **env 우선** (운영 단일 팀은 기존과 동일).
+- [x] **규칙 SSOT:** `COS_WORKSPACE_KEY` 가 비어 있을 때만 `sanitize(slack_team_id)` 를 `workspace_key` 로 사용; env가 있으면 **env 우선** (운영 단일 팀은 기존과 동일). 코드: `workspaceKeyFromRequestScopeFallback` + `applyCosRunTenancyDefaults` / `appRunToDbRow` + `mergeCanonicalExecutionEnvelopeToPayload`.
 - [x] **전달 경로(1차):** `requestScopeContext`(AsyncLocalStorage) + `handleFounderSlackTurn` → `mergeCanonicalExecutionEnvelopeToPayload` 에서 `slack_team_id`/`workspace_key` 병합.
 - [ ] **전달 경로(2차):** 스레드 외 경로(웹훅/백그라운드)에서 동일 규칙이 필요한 지점 점검.
 - [ ] **테스트:** 단위 + 최소 1개 통합(메모리 스토어).

@@ -7,6 +7,7 @@ import {
   cosRunTenancyColumnsFromEnv,
   filterRowsByOptionalTenancyKeys,
   filterRowsByParcelDeploymentKey,
+  workspaceKeyFromRequestScopeFallback,
 } from './parcelDeploymentContext.js';
 
 /** @returns {import('@supabase/supabase-js').SupabaseClient | null} */
@@ -293,12 +294,19 @@ export function appRunToDbRow(row) {
       : Array.isArray(snap.handoff_order)
         ? snap.handoff_order.map(String)
         : [];
-  const envTen = cosRunTenancyColumnsFromEnv(typeof process !== 'undefined' ? process.env : {});
+  const env = typeof process !== 'undefined' ? process.env : {};
+  const envTen = cosRunTenancyColumnsFromEnv(env);
   /** @param {string} col */
   const pickTenancyCol = (col) => {
     const fromRow = row[col];
     if (fromRow != null && String(fromRow).trim()) return String(fromRow).trim();
-    return envTen[col] ?? null;
+    const fromEnv = envTen[col];
+    if (fromEnv != null && String(fromEnv).trim()) return String(fromEnv).trim();
+    if (col === 'workspace_key') {
+      const fb = workspaceKeyFromRequestScopeFallback(env);
+      return fb || null;
+    }
+    return null;
   };
   const base = {
     thread_key: String(row.thread_key || ''),
