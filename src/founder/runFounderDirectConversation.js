@@ -32,7 +32,11 @@ import {
   PERSONA_CONTRACT_MANIFEST_REPO_PATH,
   formatPersonaContractLinesForInstructions,
 } from './personaContractOutline.js';
-import { cosRunTenancyMergeHintsFromRunRow } from './parcelDeploymentContext.js';
+import {
+  cosRunTenancyMergeHintsFromRunRow,
+  parcelDeploymentKeyFromEnv,
+  tenancyKeysPresenceFromEnv,
+} from './parcelDeploymentContext.js';
 import {
   mergeLedgerExecutionRowPayload,
   distinctSpineKeysFromLedgerArtifacts,
@@ -312,7 +316,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것). 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
+      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것)·tenancy_keys_presence·parcel_deployment_scoped_supervisor_lists(부트 cos_runtime_truth 와 동일 불리언; 값 미노출). 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -564,6 +568,8 @@ export async function handleReadExecutionContext(args, threadKey) {
     review_queue,
     recent_artifact_spine_distinct,
     active_run_shell,
+    tenancy_keys_presence: tenancyKeysPresenceFromEnv(process.env),
+    parcel_deployment_scoped_supervisor_lists: Boolean(parcelDeploymentKeyFromEnv(process.env)),
     review_required_count: counts.review_required_count,
     degraded_count: counts.degraded_count,
     blocked_count: counts.blocked_count,

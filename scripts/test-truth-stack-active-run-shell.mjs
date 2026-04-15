@@ -12,11 +12,13 @@ import {
 import { handleReadExecutionContext } from '../src/founder/runFounderDirectConversation.js';
 
 const savedStore = process.env.COS_RUN_STORE;
+const savedDep = process.env.COS_PARCEL_DEPLOYMENT_KEY;
 
 try {
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.COS_RUN_STORE = 'memory';
+  process.env.COS_PARCEL_DEPLOYMENT_KEY = 'truth_stack_slice_test';
 
   assert.equal(activeRunShellForCosExecutionContext(null), null);
   assert.equal(activeRunShellForCosExecutionContext({}), null);
@@ -58,9 +60,13 @@ try {
   assert.equal(ctx.active_run_shell.id, projected.id);
   assert.equal(ctx.active_run_shell.status, projected.status);
   assert.equal(ctx.active_run_shell.workspace_key, 'T_SHELL');
+  assert.equal(ctx.parcel_deployment_scoped_supervisor_lists, true);
+  assert.equal(ctx.tenancy_keys_presence?.parcel_deployment, true);
 } finally {
   if (savedStore === undefined) delete process.env.COS_RUN_STORE;
   else process.env.COS_RUN_STORE = savedStore;
+  if (savedDep === undefined) delete process.env.COS_PARCEL_DEPLOYMENT_KEY;
+  else process.env.COS_PARCEL_DEPLOYMENT_KEY = savedDep;
 }
 
 console.log('test-truth-stack-active-run-shell: ok');

@@ -60,6 +60,8 @@ assert.ok(counts.review_required_count >= 1, 'read_execution_context-style count
 assert.ok(counts.blocked_count >= 1, 'blocked status counted');
 
 const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
+assert.ok(ctx.tenancy_keys_presence && typeof ctx.tenancy_keys_presence === 'object', 'tenancy_keys_presence booleans');
+assert.equal(typeof ctx.parcel_deployment_scoped_supervisor_lists, 'boolean');
 assert.ok(Array.isArray(ctx.review_queue));
 assert.ok(ctx.review_queue.length >= 1, 'review_queue surfaces blocked github row');
 const spine = ctx.recent_artifact_spine_distinct;

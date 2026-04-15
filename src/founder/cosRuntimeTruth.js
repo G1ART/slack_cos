@@ -16,7 +16,7 @@ import {
 } from './cursorCloudAdapter.js';
 import { listCursorWebhookOverrideKeys } from './cursorWebhookIngress.js';
 import { slackAppIdFromEnv } from './cosSlackAppIdentity.js';
-import { tenancyKeysPresenceFromEnv } from './parcelDeploymentContext.js';
+import { parcelDeploymentKeyFromEnv, tenancyKeysPresenceFromEnv } from './parcelDeploymentContext.js';
 
 /**
  * @param {NodeJS.ProcessEnv} env
@@ -87,6 +87,7 @@ export function logCosRuntimeTruthBoot(env = process.env) {
 
   const slackAppId = slackAppIdFromEnv(env);
   const tenancy_keys_presence = tenancyKeysPresenceFromEnv(env);
+  const parcel_deployment_scoped_supervisor_lists = Boolean(parcelDeploymentKeyFromEnv(env));
 
   console.info(
     JSON.stringify({
@@ -102,6 +103,7 @@ export function logCosRuntimeTruthBoot(env = process.env) {
       slack_app_id_configured: Boolean(slackAppId),
       ...(slackAppId ? { slack_app_id: slackAppId } : {}),
       tenancy_keys_presence,
+      parcel_deployment_scoped_supervisor_lists,
       ...cursorTruth,
     }),
   );

@@ -23,6 +23,7 @@
 - **G1 로드맵 M2 (일부·하네스 페르소나 계약 평면):** `src/founder/personaContracts.manifest.json` + `personaContractManifest.js` — 코어 5역할의 `delegate_persona_enum`·검토·에스컬레이션; `formatPersonaContractLinesForInstructions` 가 **시스템 지시에 계약 요약 블록** 삽입(상한만 기계 적용); `runHarnessOrchestration` 반환·ledger `harness_dispatch` payload 에 `persona_contract_version`·`persona_contract_ids` 기계 태깅. (로컬 스냅샷 “G1 M2 … cos_run_events” 는 이벤트 테넄시 별칭.)
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `recent_artifact_spine_distinct` — `distinctSpineKeysFromLedgerArtifacts` 로 최근 ledger payload 에서 스파인·테넄시 문자열 distinct 만 기계 수집 (Supabase 요약과 혼동 금지; COS 내부 깊은 읽기 보조).
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `active_run_shell` — `activeRunShellForCosExecutionContext(getActiveRunForThread)` 로 thread 최신 **durable cos_runs** 활성 행의 id·status·stage·dispatch_id·packet ids·테넄시 키·`updated_at` 만 (요약 문장·objective 전문 없음). ledger 한 줄·ops smoke 요약과 **동일 truth 가 아니라 병치**한다.
+- **외부 G1 M5 Truth stack (일부):** 동일 도구 반환에 **`tenancy_keys_presence`**·**`parcel_deployment_scoped_supervisor_lists`** (값 없이 불리언만; 부트 `cos_runtime_truth` 와 동일 어휘) — COS 가 운영 슬라이스를 founder 문장과 혼동 없이 확인.
 
 ---
 
