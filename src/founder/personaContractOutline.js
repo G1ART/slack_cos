@@ -5,7 +5,15 @@
  * - system_prompt: Founder `buildSystemInstructions` + `personaHarnessInstructions.js`
  * - tool_scope: COS_TOOLS / delegate — 향후 allowlist·역할 태그
  * - deliverable_schema: delegate 패킷·emit_patch envelope — 기계 검증 계약
+ *
+ * G1 M2 계약 본문 JSON: `personaContractManifest.js` / `personaContracts.manifest.json`
  */
+
+export {
+  loadPersonaContractManifest,
+  validatePersonaContractManifestShape,
+  PERSONA_CONTRACT_MANIFEST_REPO_PATH,
+} from './personaContractManifest.js';
 
 /** @type {readonly ['system_prompt', 'tool_scope', 'deliverable_schema']} */
 export const COS_PERSONA_CONTRACT_LAYERS = Object.freeze([

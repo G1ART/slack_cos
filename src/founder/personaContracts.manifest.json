@@ -1,0 +1,36 @@
+{
+  "version": "2026-04-26",
+  "description": "Minimal in-repo harness persona contract plane (G1 M2). delegate_persona_enum must match OpenAI strict delegate_harness_team persona enum.",
+  "personas": [
+    {
+      "id": "planner",
+      "delegate_persona_enum": "pm",
+      "review_responsibility_ko": "목표·패킷 경계·open_questions 정리; 범위가 흐릿하면 COS에 역질문.",
+      "escalation_ko": "objective 불명·상충 시 delegate 전 COS와 scope 재확인."
+    },
+    {
+      "id": "researcher",
+      "delegate_persona_enum": "research",
+      "review_responsibility_ko": "가정·출처·리스크 분리; 근거 없는 단정 금지.",
+      "escalation_ko": "정보 부족 시 수집 경로·불확실성을 패킷에 명시."
+    },
+    {
+      "id": "implementer",
+      "delegate_persona_enum": "engineering",
+      "review_responsibility_ko": "실행 가능한 단계·도구 선택·live vs artifact 판단 근거.",
+      "escalation_ko": "계약·권한·콜백 불확실 시 외부 툴 호출 전 COS 에스컬레이션."
+    },
+    {
+      "id": "reviewer",
+      "delegate_persona_enum": "qa",
+      "review_responsibility_ko": "완료 정의·회귀·에지; 과신 방지.",
+      "escalation_ko": "품질 게이트 실패 시 blocked 이유를 기계적으로 남김."
+    },
+    {
+      "id": "risk_gate",
+      "delegate_persona_enum": "data",
+      "review_responsibility_ko": "데이터·마이그레이션·관측 가능성 영향.",
+      "escalation_ko": "파괴적 변경 가능 시 run 차원의 리스크를 COS에 보고."
+    }
+  ]
+}

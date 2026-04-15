@@ -18,6 +18,7 @@
 - **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
 - **G1 로드맵 M6 (일부·관측):** 동일 스크립트가 **`cos_runs`** 최근 행에서 `runs_tenancy_*` 히스토그램을 추가 (durable 런 축; ledger 스트림과 혼동하지 말 것).
 - **G1 로드맵 M6 (일부·스레드 ledger):** `mergeLedgerExecutionRowPayload` SSOT — `harness_dispatch` / `harness_packet` / **`tool_invocation`·`tool_result`** / **`execution_note`** / **클로저 mirror `tool_result`** 까지 동일 병합; `invoke_external_tool` ctx `runTenancy`·활성 run.
+- **G1 로드맵 M2 (일부·하네스 페르소나 계약 평면):** `src/founder/personaContracts.manifest.json` + `personaContractManifest.js` — 코어 5역할(planner/researcher/implementer/reviewer/risk_gate)의 `delegate_persona_enum`·검토·에스컬레이션 문장; `buildSystemInstructions` 가 경로 인용; `read_execution_context` 도구 설명에 자기 점검 유도. (로컬 스냅샷 줄 “G1 M2 … cos_run_events” 는 **이벤트 테넄시 M2** 별칭 — 본 줄은 **로드맵 M2 Harness 계약**.)
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `recent_artifact_spine_distinct` — `distinctSpineKeysFromLedgerArtifacts` 로 최근 ledger payload 에서 스파인·테넄시 문자열 distinct 만 기계 수집 (Supabase 요약과 혼동 금지; COS 내부 깊은 읽기 보조).
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `active_run_shell` — `activeRunShellForCosExecutionContext(getActiveRunForThread)` 로 thread 최신 **durable cos_runs** 활성 행의 id·status·stage·dispatch_id·packet ids·테넄시 키·`updated_at` 만 (요약 문장·objective 전문 없음). ledger 한 줄·ops smoke 요약과 **동일 truth 가 아니라 병치**한다.
 

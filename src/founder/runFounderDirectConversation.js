@@ -28,6 +28,7 @@ import { resolveOpsSmokeSessionIdForToolAudit } from './smokeOps.js';
 import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
+import { PERSONA_CONTRACT_MANIFEST_REPO_PATH } from './personaContractOutline.js';
 import { cosRunTenancyMergeHintsFromRunRow } from './parcelDeploymentContext.js';
 import {
   mergeLedgerExecutionRowPayload,
@@ -308,7 +309,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것). founder에게 그대로 노출하지 말 것.',
+      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님)·active_run_shell(thread 최신 durable cos_runs 활성 행의 최소 필드만; Supabase ops 요약·ledger 한 줄과 동일시하지 말 것). 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -402,7 +403,9 @@ export function buildSystemInstructions(constitutionMarkdown) {
     'lock이 충분하면 harness(delegate_harness_team)와 외부 도구(invoke_external_tool)를 스스로 선택하라. team shape·review 리듬은 네가 최적화한다.',
     '실행 아티팩트·ledger·결과를 보고 과사용·독단·낭비를 스스로 조율하라. 코드는 visibility만 준다.',
     'live adapter가 없거나 계약이 부족하면 artifact fallback을 사용한다. 불필요한 tool 남발 없이 최소 호출로 진행하라.',
-    'record_execution_note / read_execution_context 로 내부 맥락을 정리·재확인한다.',
+    'record_execution_note / read_execution_context 로 내부 맥락을 정리·재확인한다. 앱이 매 턴 주입하지 않으므로(A), 스스로 훈련하듯: ledger 한 줄·[최근 대화]와 실행 상태가 어긋나 보이거나 blocked/복수 런이 겹쳐 보이면 founder에게 서술하기 전 같은 턴에서 read_execution_context 로 정렬한다. 상태를 추정해 채우지 않는다.',
+    '반복되는 운영 교훈·실수 패턴은 record_execution_note 에 한 줄(+선택 JSON detail)로만 남긴다. founder 노출·장문 금지.',
+    `내부 하네스 페르소나 계약 초안(G1 M2): 레포 ${PERSONA_CONTRACT_MANIFEST_REPO_PATH} 의 version·personas[] 를 delegate_harness_team 조립 시 참고한다.`,
     'starter(첫 패킷 자동 실행)가 실제로 돌아간 경우에는 “곧 시작합니다” 같은 약속형보다, 도구 호출 결과·ledger에 근거한 사실만 말한다.',
     'founder에게 Node·OS 수준 오류(예: ENOENT, errno, 절대경로 열기 실패) 형식의 메시지를 출력하지 마라. 그런 문자열은 앱 표면이 아니다.',
     '채널·스레드 식별자는 이미 입력 블록([최소 메타], [최근 대화])에 있다. channel-context.json 등 가상 경로를 읽었다고 가정하거나 언급하지 마라.',
