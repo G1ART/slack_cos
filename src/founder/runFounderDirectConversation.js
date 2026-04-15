@@ -28,7 +28,10 @@ import { recordCosPretriggerAudit } from './pretriggerAudit.js';
 import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
 import { cosRunTenancyMergeHintsFromRunRow } from './parcelDeploymentContext.js';
-import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
+import {
+  mergeLedgerExecutionRowPayload,
+  distinctSpineKeysFromLedgerArtifacts,
+} from './canonicalExecutionEnvelope.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -304,7 +307,7 @@ const COS_TOOLS = [
     type: 'function',
     name: 'read_execution_context',
     description:
-      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계(review_required/degraded/blocked/failed 카운트). founder에게 그대로 노출하지 말 것.',
+      '최근 ledger 요약·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct(최근 payload에서 관측된 run/thread/테넄시 문자열 distinct, 판단 아님). founder에게 그대로 노출하지 말 것.',
     strict: true,
     parameters: {
       type: 'object',
@@ -539,12 +542,14 @@ export async function handleReadExecutionContext(args, threadKey) {
         failed_count: 0,
       };
   const review_queue = threadKey ? await readReviewQueue(threadKey, limit) : [];
+  const recent_artifact_spine_distinct = distinctSpineKeysFromLedgerArtifacts(artifacts, 8);
   return {
     ok: true,
     summary_lines,
     artifacts,
     adapter_readiness_lines,
     review_queue,
+    recent_artifact_spine_distinct,
     review_required_count: counts.review_required_count,
     degraded_count: counts.degraded_count,
     blocked_count: counts.blocked_count,

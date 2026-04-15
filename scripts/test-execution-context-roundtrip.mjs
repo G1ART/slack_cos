@@ -62,6 +62,9 @@ assert.ok(counts.blocked_count >= 1, 'blocked status counted');
 const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
 assert.ok(Array.isArray(ctx.review_queue));
 assert.ok(ctx.review_queue.length >= 1, 'review_queue surfaces blocked github row');
+const spine = ctx.recent_artifact_spine_distinct;
+assert.ok(spine && typeof spine === 'object', 'recent_artifact_spine_distinct present');
+assert.ok(Array.isArray(spine.thread_key) && spine.thread_key.includes(tk), 'distinct thread_key from merged ledger');
 
 await clearExecutionArtifacts(tk);
 

@@ -22,6 +22,34 @@ export const CANONICAL_ENVELOPE_SPINE_KEYS = [
   'project_space_key',
 ];
 
+/** `read_execution_context` 보조: ledger artifact payload 스캔 시 `slack_team_id` 포함. */
+const LEDGER_ARTIFACT_SPINE_SCAN_KEYS = [...CANONICAL_ENVELOPE_SPINE_KEYS, 'slack_team_id'];
+
+/**
+ * 최근 스레드 ledger artifact 의 payload 에서 스파인·테넄시 문자열 **distinct** 만 수집 (의미 해석 없음).
+ *
+ * @param {Array<{ payload?: unknown }>} artifacts
+ * @param {number} [maxEach] 키당 최대 개수
+ * @returns {Record<string, string[]>}
+ */
+export function distinctSpineKeysFromLedgerArtifacts(artifacts, maxEach = 8) {
+  const cap = Math.max(1, Math.min(24, maxEach || 8));
+  /** @type {Record<string, Set<string>>} */
+  const sets = Object.fromEntries(LEDGER_ARTIFACT_SPINE_SCAN_KEYS.map((k) => [k, new Set()]));
+  for (const a of artifacts || []) {
+    const p = a.payload && typeof a.payload === 'object' && !Array.isArray(a.payload) ? a.payload : {};
+    for (const k of LEDGER_ARTIFACT_SPINE_SCAN_KEYS) {
+      if (sets[k].size >= cap) continue;
+      const v = p[k];
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (!s) continue;
+      sets[k].add(s);
+    }
+  }
+  return Object.fromEntries(LEDGER_ARTIFACT_SPINE_SCAN_KEYS.map((k) => [k, [...sets[k]].sort()]));
+}
+
 /**
  * 테넄시(env) + run/packet/thread 컨텍스트를 한 경로에서 병합. 이미 비어 있지 않은 필드는 덮어쓰지 않음.
  *
