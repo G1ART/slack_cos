@@ -15,5 +15,11 @@ assert.ok(
   src.includes('product_key, project_space_key'),
   'ledger sample select must include product_key and project_space_key',
 );
+assert.ok(src.includes('runs_tenancy_workspace_top'), 'report must expose runs_tenancy_workspace_top (cos_runs sample)');
+assert.ok(src.includes('runs_tenancy_deployment_top'), 'report must expose runs_tenancy_deployment_top');
+assert.ok(
+  src.includes("from('cos_runs')"),
+  'audit must query cos_runs for durable-run tenancy histogram',
+);
 
 console.log('test-audit-parcel-ops-smoke-ledger-tenancy-report-shape: ok');

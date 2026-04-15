@@ -13,6 +13,7 @@
  *   node scripts/audit-parcel-ops-smoke-health.mjs --parcel-deployment-key prod_a --parcel-deployment-include-legacy
  *   node scripts/audit-parcel-ops-smoke-health.mjs --workspace-key T0123 --tenancy-include-legacy
  *   (JSON) ledger_tenancy_product_top / ledger_tenancy_project_space_top — cos_run_events_tenancy_stream 샘플 분포
+ *   (JSON) runs_tenancy_* — cos_runs 최근 행 샘플의 workspace/product/project_space/deployment 분포 (durable 런 축; ledger 스트림과 병치 비교용)
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
  *   COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN
@@ -328,6 +329,90 @@ async function main() {
       .map(([k, v]) => ({ project_space_key: k, count: v }));
   }
 
+  /** 최근 cos_runs 행 테넄시 분포(M6 durable 런 축; ledger 이벤트 스트림과 동일 언어로 슬라이스 비교). */
+  const runsLim = Math.max(50, Math.min(sample, 500));
+  let runsTenancySampleSize = 0;
+  /** @type {Array<{ workspace_key: string, count: number }>} */
+  let runsTenancyWorkspaceTop = [];
+  /** @type {Array<{ product_key: string, count: number }>} */
+  let runsTenancyProductTop = [];
+  /** @type {Array<{ project_space_key: string, count: number }>} */
+  let runsTenancyProjectSpaceTop = [];
+  /** @type {Array<{ parcel_deployment_key: string, count: number }>} */
+  let runsTenancyDeploymentTop = [];
+  let runsQ = sb
+    .from('cos_runs')
+    .select('workspace_key,product_key,project_space_key,parcel_deployment_key,updated_at')
+    .order('updated_at', { ascending: false });
+  if (deployScopeKey) {
+    if (parcelDeploymentIncludeLegacy) {
+      runsQ = runsQ.or(
+        `parcel_deployment_key.eq.${deployScopeKey},parcel_deployment_key.is.null`,
+      );
+    } else {
+      runsQ = runsQ.eq('parcel_deployment_key', deployScopeKey);
+    }
+  }
+  const { data: runRows, error: eRuns } = await runsQ.limit(runsLim);
+  if (eRuns) {
+    advisory.push(`cos_runs tenancy sample: ${eRuns.message}`);
+  } else {
+    let rr = Array.isArray(runRows) ? runRows : [];
+    rr = filterRowsByOptionalTenancyKeys(rr, {
+      workspaceKey,
+      productKey,
+      projectSpaceKey,
+      tenancyIncludeLegacy,
+    });
+    runsTenancySampleSize = rr.length;
+    /** @type {Record<string, number>} */
+    const rW = {};
+    /** @type {Record<string, number>} */
+    const rP = {};
+    /** @type {Record<string, number>} */
+    const rPs = {};
+    /** @type {Record<string, number>} */
+    const rD = {};
+    for (const row of rr) {
+      const wk =
+        row.workspace_key != null && String(row.workspace_key).trim()
+          ? String(row.workspace_key).trim()
+          : '(none)';
+      rW[wk] = (rW[wk] || 0) + 1;
+      const prod =
+        row.product_key != null && String(row.product_key).trim()
+          ? String(row.product_key).trim()
+          : '(none)';
+      rP[prod] = (rP[prod] || 0) + 1;
+      const pspace =
+        row.project_space_key != null && String(row.project_space_key).trim()
+          ? String(row.project_space_key).trim()
+          : '(none)';
+      rPs[pspace] = (rPs[pspace] || 0) + 1;
+      const dep =
+        row.parcel_deployment_key != null && String(row.parcel_deployment_key).trim()
+          ? String(row.parcel_deployment_key).trim()
+          : '(none)';
+      rD[dep] = (rD[dep] || 0) + 1;
+    }
+    runsTenancyWorkspaceTop = Object.entries(rW)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ workspace_key: k, count: v }));
+    runsTenancyProductTop = Object.entries(rP)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ product_key: k, count: v }));
+    runsTenancyProjectSpaceTop = Object.entries(rPs)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ project_space_key: k, count: v }));
+    runsTenancyDeploymentTop = Object.entries(rD)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([k, v]) => ({ parcel_deployment_key: k, count: v }));
+  }
+
   const ok = warnings.length === 0;
   let interpretationKo =
     ok && advisory.length === 0
@@ -368,6 +453,11 @@ async function main() {
     ledger_slack_team_top: ledgerSlackTeamTop,
     ledger_tenancy_product_top: ledgerTenancyProductTop,
     ledger_tenancy_project_space_top: ledgerTenancyProjectSpaceTop,
+    runs_tenancy_sample_size: runsTenancySampleSize,
+    runs_tenancy_workspace_top: runsTenancyWorkspaceTop,
+    runs_tenancy_product_top: runsTenancyProductTop,
+    runs_tenancy_project_space_top: runsTenancyProjectSpaceTop,
+    runs_tenancy_deployment_top: runsTenancyDeploymentTop,
     thresholds: {
       orphan_fraction_warn: ORPHAN_FRACTION_WARN,
       pending_wake_warn: PENDING_WAKE_WARN,
