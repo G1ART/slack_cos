@@ -14,6 +14,7 @@
  *   node scripts/audit-parcel-ops-smoke-health.mjs --workspace-key T0123 --tenancy-include-legacy
  *   (JSON) ledger_tenancy_product_top / ledger_tenancy_project_space_top — cos_run_events_tenancy_stream 샘플 분포
  *   (JSON) runs_tenancy_* — cos_runs 최근 행 샘플의 workspace/product/project_space/deployment 분포 (durable 런 축; ledger 스트림과 병치 비교용)
+ *   (JSON) runs_tenancy_rpc_* — 동일 스코프에서 `cos_runs_recent_by_tenancy` RPC 샘플 (DDL 적용 후). CLI workspace/product/project_space 가 있으면 테이블 경로와 limit 의미가 달라 row_count_match 는 null.
  *
  * 임계(선택): COS_PARCEL_HEALTH_ORPHAN_FRACTION_WARN, COS_PARCEL_HEALTH_PENDING_WAKE_WARN,
  *   COS_PARCEL_HEALTH_OPS_NULL_RUN_WARN
@@ -25,6 +26,7 @@ import {
   createCosRuntimeSupabaseForSummary,
   COS_OPS_SMOKE_SUMMARY_STREAM_VIEW,
   COS_RUN_EVENTS_TENANCY_STREAM_VIEW,
+  COS_RUNS_RECENT_BY_TENANCY_RPC,
 } from '../src/founder/runStoreSupabase.js';
 import {
   filterRowsByOptionalTenancyKeys,
@@ -413,6 +415,52 @@ async function main() {
       .map(([k, v]) => ({ parcel_deployment_key: k, count: v }));
   }
 
+  /** DDL 배포된 `cos_runs_recent_by_tenancy` 와 테이블 직조회 경로 정합(동일 CLI 스코프일 때만 비교). */
+  let runsTenancyRpcSampleSize = null;
+  let runsTenancyRpcOk = false;
+  /** @type {boolean | null} */
+  let runsTenancyRpcVsTableRowCountMatch = null;
+  const tenancyCliScope =
+    Boolean(workspaceKey && String(workspaceKey).trim()) ||
+    Boolean(productKey && String(productKey).trim()) ||
+    Boolean(projectSpaceKey && String(projectSpaceKey).trim());
+  const { data: rpcRaw, error: eRpc } = await sb.rpc(COS_RUNS_RECENT_BY_TENANCY_RPC, {
+    p_limit: runsLim,
+    p_workspace_key: workspaceKey && String(workspaceKey).trim() ? String(workspaceKey).trim() : null,
+    p_product_key: productKey && String(productKey).trim() ? String(productKey).trim() : null,
+    p_project_space_key: projectSpaceKey && String(projectSpaceKey).trim() ? String(projectSpaceKey).trim() : null,
+    p_parcel_deployment_key:
+      deployScopeKey && !parcelDeploymentIncludeLegacy ? String(deployScopeKey).trim() : null,
+  });
+  if (eRpc) {
+    advisory.push(`cos_runs_recent_by_tenancy_rpc: ${eRpc.message}`);
+  } else {
+    runsTenancyRpcOk = true;
+    let rpcList = Array.isArray(rpcRaw) ? rpcRaw : [];
+    if (deployScopeKey && parcelDeploymentIncludeLegacy) {
+      const sk = String(deployScopeKey).trim();
+      rpcList = rpcList.filter((r) => {
+        const d = r.parcel_deployment_key != null ? String(r.parcel_deployment_key).trim() : '';
+        return !d || d === sk;
+      });
+    }
+    rpcList = filterRowsByOptionalTenancyKeys(rpcList, {
+      workspaceKey,
+      productKey,
+      projectSpaceKey,
+      tenancyIncludeLegacy,
+    });
+    runsTenancyRpcSampleSize = rpcList.length;
+    if (!tenancyCliScope && !eRuns) {
+      runsTenancyRpcVsTableRowCountMatch = runsTenancyRpcSampleSize === runsTenancySampleSize;
+      if (runsTenancyRpcVsTableRowCountMatch === false) {
+        advisory.push(
+          `runs_tenancy_rpc_vs_table_row_count_mismatch: rpc=${runsTenancyRpcSampleSize} table_path=${runsTenancySampleSize}`,
+        );
+      }
+    }
+  }
+
   const ok = warnings.length === 0;
   let interpretationKo =
     ok && advisory.length === 0
@@ -458,6 +506,10 @@ async function main() {
     runs_tenancy_product_top: runsTenancyProductTop,
     runs_tenancy_project_space_top: runsTenancyProjectSpaceTop,
     runs_tenancy_deployment_top: runsTenancyDeploymentTop,
+    runs_tenancy_rpc_name: COS_RUNS_RECENT_BY_TENANCY_RPC,
+    runs_tenancy_rpc_ok: runsTenancyRpcOk,
+    runs_tenancy_rpc_sample_size: runsTenancyRpcSampleSize,
+    runs_tenancy_rpc_vs_table_row_count_match: runsTenancyRpcVsTableRowCountMatch,
     thresholds: {
       orphan_fraction_warn: ORPHAN_FRACTION_WARN,
       pending_wake_warn: PENDING_WAKE_WARN,

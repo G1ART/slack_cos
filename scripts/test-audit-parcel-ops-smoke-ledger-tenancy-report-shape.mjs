@@ -21,5 +21,7 @@ assert.ok(
   src.includes("from('cos_runs')"),
   'audit must query cos_runs for durable-run tenancy histogram',
 );
+assert.ok(src.includes('runs_tenancy_rpc_sample_size'), 'report exposes RPC tenancy sample size');
+assert.ok(src.includes('COS_RUNS_RECENT_BY_TENANCY_RPC'), 'audit imports RPC SSOT');
 
 console.log('test-audit-parcel-ops-smoke-ledger-tenancy-report-shape: ok');
