@@ -30,6 +30,7 @@ export const CANONICAL_ENVELOPE_SPINE_KEYS = [
  *   runId?: string | null,
  *   packetId?: string | null,
  *   threadKey?: string | null,
+ *   runTenancy?: Record<string, unknown> | null,
  * }} [ctx]
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {Record<string, unknown>}
@@ -58,6 +59,14 @@ export function mergeCanonicalExecutionEnvelopeToPayload(payload, ctx = {}, env 
   const tk = ctx.threadKey != null && String(ctx.threadKey).trim() ? String(ctx.threadKey).trim().slice(0, 512) : '';
   if (tk && !String(pl.thread_key || '').trim()) {
     pl.thread_key = tk;
+  }
+
+  const rt = ctx.runTenancy && typeof ctx.runTenancy === 'object' ? ctx.runTenancy : {};
+  const tenancyKeys = ['parcel_deployment_key', 'workspace_key', 'product_key', 'project_space_key'];
+  for (const k of tenancyKeys) {
+    if (!String(pl[k] || '').trim() && rt[k] != null && String(rt[k]).trim()) {
+      pl[k] = String(rt[k]).trim();
+    }
   }
   return pl;
 }

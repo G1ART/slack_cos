@@ -12,9 +12,10 @@ import {
   supabaseAppendRunEvent,
   supabaseListMergedSmokeSummaryEvents,
 } from './runStoreSupabase.js';
-import { getActiveRunForThread, getCosRunStoreMode } from './executionRunStore.js';
+import { getActiveRunForThread, getCosRunStoreMode, getRunById } from './executionRunStore.js';
 import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
 import {
+  cosRunTenancyMergeHintsFromRunRow,
   filterRowsByOptionalTenancyKeys,
   filterRowsByParcelDeploymentKey,
 } from './parcelDeploymentContext.js';
@@ -267,7 +268,12 @@ export async function appendCosRunEvent(threadKey, eventType, payload) {
 
   let pl = payload && typeof payload === 'object' ? payload : {};
   if (isSmokeSummaryEventType(eventType)) {
-    pl = mergeCanonicalExecutionEnvelopeToPayload(pl, { runId: rid, threadKey: tk }, process.env);
+    const hints = cosRunTenancyMergeHintsFromRunRow(run);
+    pl = mergeCanonicalExecutionEnvelopeToPayload(
+      pl,
+      { runId: rid, threadKey: tk, runTenancy: hints },
+      process.env,
+    );
   }
   const mode = getCosRunStoreMode();
   const row = eventRowFromPayload(eventType, pl, {});
@@ -304,7 +310,14 @@ export async function appendCosRunEventForRun(runUuid, eventType, payload, evide
   const mode = getCosRunStoreMode();
   let pl = payload && typeof payload === 'object' ? payload : {};
   if (isSmokeSummaryEventType(eventType)) {
-    pl = mergeCanonicalExecutionEnvelopeToPayload(pl, { runId: rid }, process.env);
+    const run = await getRunById(rid);
+    const hints = cosRunTenancyMergeHintsFromRunRow(run);
+    const rtk = run?.thread_key != null ? String(run.thread_key).trim().slice(0, 512) : '';
+    pl = mergeCanonicalExecutionEnvelopeToPayload(
+      pl,
+      { runId: rid, threadKey: rtk || undefined, runTenancy: hints },
+      process.env,
+    );
   }
   const row = eventRowFromPayload(eventType, pl, evidence);
 

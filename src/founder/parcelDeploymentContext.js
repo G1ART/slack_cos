@@ -133,6 +133,30 @@ export function applyCosRunTenancyDefaults(row, env = process.env) {
   }
 }
 
+const COS_RUN_TENANCY_MERGE_KEYS = [
+  'parcel_deployment_key',
+  'workspace_key',
+  'product_key',
+  'project_space_key',
+];
+
+/**
+ * durable run 행에서 요약·감사 payload 병합용 테넄시 조각만 추출.
+ * @param {Record<string, unknown> | null | undefined} run
+ * @returns {Record<string, string>}
+ */
+export function cosRunTenancyMergeHintsFromRunRow(run) {
+  if (!run || typeof run !== 'object') return {};
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const k of COS_RUN_TENANCY_MERGE_KEYS) {
+    const v = run[k];
+    const s = v != null ? String(v).trim() : '';
+    if (s) out[k] = s;
+  }
+  return out;
+}
+
 /**
  * 요약 이벤트 payload에 최소 테넌시 키 병합 (비어 있는 필드만).
  * @param {Record<string, unknown>} payload
