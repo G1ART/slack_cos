@@ -158,6 +158,33 @@ export function cosRunTenancyMergeHintsFromRunRow(run) {
 }
 
 /**
+ * `appendCosRunEvent*` 가 durable run 행으로부터 `mergeCanonicalExecutionEnvelopeToPayload` 에 넘길 ctx.
+ * env·요청 스코프 병합은 canonical 쪽 SSOT; 여기서는 행 기준 thread + 테넄시 조각만 묶는다.
+ *
+ * @param {Record<string, unknown> | null | undefined} run
+ * @param {string} runId
+ * @param {string | null | undefined} [threadKeyOverride] active-thread 경로에서 이미 알고 있으면 전달
+ * @returns {{ runId: string, threadKey?: string, runTenancy: Record<string, string> }}
+ */
+export function cosRunEventEnvelopeMergeCtxFromRun(run, runId, threadKeyOverride) {
+  const rid = String(runId || '').trim();
+  const fromOverride =
+    threadKeyOverride != null && String(threadKeyOverride).trim()
+      ? String(threadKeyOverride).trim().slice(0, 512)
+      : '';
+  const fromRun =
+    run?.thread_key != null && String(run.thread_key).trim()
+      ? String(run.thread_key).trim().slice(0, 512)
+      : '';
+  const rtk = fromOverride || fromRun;
+  return {
+    runId: rid,
+    ...(rtk ? { threadKey: rtk } : {}),
+    runTenancy: cosRunTenancyMergeHintsFromRunRow(run),
+  };
+}
+
+/**
  * 요약 이벤트 payload에 최소 테넌시 키 병합 (비어 있는 필드만).
  * @param {Record<string, unknown>} payload
  * @param {NodeJS.ProcessEnv} [env]

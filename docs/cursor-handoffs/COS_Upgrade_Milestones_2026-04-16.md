@@ -9,6 +9,7 @@
 ## 구현 스냅샷 (누적)
 
 - **G1 로드맵 M1 (일부):** `src/founder/canonicalExecutionEnvelope.js` — `mergeCanonicalExecutionEnvelopeToPayload` 가 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` append 경로(`appendCosRunEvent` / `appendCosRunEventForRun`) 및 `recordCosPretriggerAudit` 에서 env·요청 스코프·**durable run 행(`runTenancy`)** 로 테넄시 + `run_id` / `thread_key` / `packet_id` 빈칸을 채움. 테스트: `scripts/test-canonical-execution-envelope-smoke-payload.mjs`, `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
+- **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`).
 
 ---
 
@@ -46,8 +47,8 @@
 
 ### M2 — ledger·이벤트 전 구간 테넄시
 
-- [ ] `appendCosRunEvent` / 관련 경로에서 **payload 또는 top-level**에 네 키 주입(이미 스트림 뷰와 동일 규칙).
-- [ ] **중복 제거:** `parcelDeploymentContext` 한 곳에서 “행 + env + 요청 스코프” 병합 헬퍼.
+- [x] `appendCosRunEvent` / `appendCosRunEventForRun` 에서 **모든 이벤트 타입** payload 에 테넄시·스파인 키 병합(`mergeCanonicalExecutionEnvelopeToPayload` + `cosRunEventEnvelopeMergeCtxFromRun`). 스트림 뷰와 동일 env·스코프·행 우선순위.
+- [x] **중복 제거(append ctx):** `cosRunEventEnvelopeMergeCtxFromRun` — 행→merge ctx 단일화; env·요청 스코프는 `canonicalExecutionEnvelope` + `workspaceKeyFromRequestScopeFallback` SSOT 유지.
 - [ ] **뷰/마이그레이션:** `cos_run_events` 테이블에 컬럼 추가가 필요하면 **열 끝 추가만** (42P16 방지 — 에픽 문서).
 
 **완료 기준:** `summarize` / Supabase 직접 쿼리에서 **ledger 이벤트만**으로도 배포·워크스페이스 슬라이스 가능.
