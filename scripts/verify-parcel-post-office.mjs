@@ -11,7 +11,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
 const STEPS = [
-  'test-command-media-preflight-doc.mjs',
   'test-ops-smoke-parcel-gate-invariants.mjs',
   'test-ops-smoke-parcel-gate-summary-invariant.mjs',
   'test-parcel-phase-partition-display.mjs',
@@ -19,6 +18,7 @@ const STEPS = [
   'test-filter-ops-smoke-summaries-session-prefix.mjs',
   'test-parcel-closure-ledger-mirror.mjs',
   'test-run-supervisor-parcel-sharding.mjs',
+  'test-cos-runs-supervisor-lists-parcel-deployment-filter.mjs',
   'test-smoke-summary-stream-view-sql-ssot.mjs',
   'test-cos-runs-recent-by-tenancy-rpc-ssot.mjs',
   'test-merged-smoke-summary-source-budget.mjs',

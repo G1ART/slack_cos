@@ -28,7 +28,19 @@ import {
 } from './runStoreSupabase.js';
 import { notifyRunStateChangedForRun } from './supervisorDirectTrigger.js';
 import { mergeCanonicalExecutionEnvelopeToPayload } from './canonicalExecutionEnvelope.js';
-import { applyCosRunTenancyDefaults, cosRunEventEnvelopeMergeCtxFromRun } from './parcelDeploymentContext.js';
+import {
+  applyCosRunTenancyDefaults,
+  cosRunEventEnvelopeMergeCtxFromRun,
+  parcelDeploymentKeyFromEnv,
+} from './parcelDeploymentContext.js';
+
+/** @param {Record<string, unknown> | null | undefined} r */
+function durableRowMatchesParcelDeploymentEnv(r) {
+  const want = parcelDeploymentKeyFromEnv();
+  if (!want) return true;
+  const v = r && r.parcel_deployment_key != null ? String(r.parcel_deployment_key).trim() : '';
+  return v === want;
+}
 
 /** @typedef {'queued'|'running'|'review_required'|'blocked'|'completed'|'failed'|'canceled'} RunStatus */
 /** @typedef {'delegated'|'starter_kickoff'|'executing'|'reviewing'|'finalizing'} RunStage */
@@ -506,7 +518,9 @@ export async function listNonTerminalRunIds(opts) {
   const mode = storeMode();
 
   if (mode === 'memory') {
-    const rows = [...memRunsById.values()].filter((r) => isRunStatusNonTerminal(r.status));
+    const rows = [...memRunsById.values()]
+      .filter((r) => isRunStatusNonTerminal(r.status))
+      .filter(durableRowMatchesParcelDeploymentEnv);
     rows.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
     let filtered = rows;
     if (updatedSince) {
@@ -534,7 +548,8 @@ export async function listNonTerminalRunIds(opts) {
     try {
       const raw = await fs.readFile(path.join(dir, n), 'utf8');
       const j = JSON.parse(raw);
-      if (j && typeof j === 'object' && isRunStatusNonTerminal(j.status)) rows.push(j);
+      if (j && typeof j === 'object' && isRunStatusNonTerminal(j.status) && durableRowMatchesParcelDeploymentEnv(j))
+        rows.push(j);
     } catch {
       /* skip */
     }
@@ -556,7 +571,9 @@ export async function listPendingSupervisorWakeRunIds(limit = 50) {
   const mode = storeMode();
 
   if (mode === 'memory') {
-    const rows = [...memRunsById.values()].filter((r) => r.pending_supervisor_wake === true);
+    const rows = [...memRunsById.values()]
+      .filter((r) => r.pending_supervisor_wake === true)
+      .filter(durableRowMatchesParcelDeploymentEnv);
     rows.sort((a, b) => String(b.last_supervisor_wake_request_at || '').localeCompare(String(a.last_supervisor_wake_request_at || '')));
     return rows.slice(0, lim).map((r) => String(r.id || '').trim()).filter(Boolean);
   }
@@ -580,7 +597,13 @@ export async function listPendingSupervisorWakeRunIds(limit = 50) {
     try {
       const raw = await fs.readFile(path.join(dir, n), 'utf8');
       const j = JSON.parse(raw);
-      if (j && typeof j === 'object' && j.pending_supervisor_wake === true) rows.push(j);
+      if (
+        j &&
+        typeof j === 'object' &&
+        j.pending_supervisor_wake === true &&
+        durableRowMatchesParcelDeploymentEnv(j)
+      )
+        rows.push(j);
     } catch {
       /* skip */
     }
@@ -604,7 +627,11 @@ export async function listRunsWithPendingRecoveryEnvelope(limit = 200) {
   const mode = storeMode();
 
   if (mode === 'memory') {
-    return [...memRunsById.values()].filter(runRowPendingRecoveryEnvelope).slice(0, lim).map((r) => structuredClone(r));
+    return [...memRunsById.values()]
+      .filter(runRowPendingRecoveryEnvelope)
+      .filter(durableRowMatchesParcelDeploymentEnv)
+      .slice(0, lim)
+      .map((r) => structuredClone(r));
   }
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
@@ -627,7 +654,8 @@ export async function listRunsWithPendingRecoveryEnvelope(limit = 200) {
     try {
       const raw = await fs.readFile(path.join(dir, n), 'utf8');
       const j = JSON.parse(raw);
-      if (j && typeof j === 'object' && runRowPendingRecoveryEnvelope(j)) rows.push(j);
+      if (j && typeof j === 'object' && runRowPendingRecoveryEnvelope(j) && durableRowMatchesParcelDeploymentEnv(j))
+        rows.push(j);
     } catch {
       /* skip */
     }
@@ -820,7 +848,11 @@ export function milestoneField(milestone) {
  */
 export async function listRunThreadKeys() {
   const mode = storeMode();
-  if (mode === 'memory') return [...memRuns.keys()];
+  if (mode === 'memory') {
+    return [...memRuns.entries()]
+      .filter(([, r]) => durableRowMatchesParcelDeploymentEnv(r))
+      .map(([k]) => k);
+  }
   if (mode === 'supabase') {
     const sb = createCosRuntimeSupabase();
     if (!sb) return [];
@@ -839,6 +871,9 @@ export async function listRunThreadKeys() {
     if (!n.endsWith('.json')) continue;
     const b = n.slice(0, -5);
     try {
+      const raw = await fs.readFile(path.join(dir, n), 'utf8');
+      const j = JSON.parse(raw);
+      if (!j || typeof j !== 'object' || !durableRowMatchesParcelDeploymentEnv(j)) continue;
       out.push(Buffer.from(b, 'base64url').toString('utf8'));
     } catch {
       /* skip */

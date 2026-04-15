@@ -18,6 +18,7 @@
 - **G1 로드맵 M6 (일부·관측):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플에서 `ledger_tenancy_product_top` · `ledger_tenancy_project_space_top` 분포를 JSON에 포함 (기존 `workspace`·`slack_team` 과 동일 패턴).
 - **G1 로드맵 M6 (일부·관측):** 동일 스크립트가 **`cos_runs`** 최근 행에서 `runs_tenancy_*` 히스토그램을 추가 (durable 런 축; ledger 스트림과 혼동하지 말 것).
 - **G1 로드맵 M6 (일부·감사·RPC):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_runs_recent_by_tenancy` RPC 를 호출해 `runs_tenancy_rpc_*` 필드 노출; workspace/product/project_space CLI 가 없을 때만 테이블 직조회와 건수 정합 비교.
+- **G1 로드맵 M6 (일부·supervisor):** `COS_PARCEL_DEPLOYMENT_KEY` 설정 시 `runStoreSupabase` 의 non-terminal·pending-wake·recovery·thread-key 목록에 `parcel_deployment_key` eq; `executionRunStore` 메모리·파일 동일. 테스트 `test-cos-runs-supervisor-lists-parcel-deployment-filter.mjs`.
 - **G1 로드맵 M6 (일부·스레드 ledger):** `mergeLedgerExecutionRowPayload` SSOT — `harness_dispatch` / `harness_packet` / **`tool_invocation`·`tool_result`** / **`execution_note`** / **클로저 mirror `tool_result`** 까지 동일 병합; `invoke_external_tool` ctx `runTenancy`·활성 run.
 - **G1 로드맵 M2 (일부·하네스 페르소나 계약 평면):** `src/founder/personaContracts.manifest.json` + `personaContractManifest.js` — 코어 5역할의 `delegate_persona_enum`·검토·에스컬레이션; `formatPersonaContractLinesForInstructions` 가 **시스템 지시에 계약 요약 블록** 삽입(상한만 기계 적용); `runHarnessOrchestration` 반환·ledger `harness_dispatch` payload 에 `persona_contract_version`·`persona_contract_ids` 기계 태깅. (로컬 스냅샷 “G1 M2 … cos_run_events” 는 이벤트 테넄시 별칭.)
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `recent_artifact_spine_distinct` — `distinctSpineKeysFromLedgerArtifacts` 로 최근 ledger payload 에서 스파인·테넄시 문자열 distinct 만 기계 수집 (Supabase 요약과 혼동 금지; COS 내부 깊은 읽기 보조).
@@ -110,8 +111,8 @@
 - [x] (일부·관측) **`cos_runs` 테넄시 히스토그램:** `audit-parcel-ops-smoke-health.mjs` JSON에 `runs_tenancy_sample_size`, `runs_tenancy_workspace_top`, `runs_tenancy_product_top`, `runs_tenancy_project_space_top`, `runs_tenancy_deployment_top` — 스트림 필터·`filterRowsByOptionalTenancyKeys` 와 동일 스코프로 최근 durable 행 샘플 집계 (ledger 분포와 병치; DDL 없음).
 - [x] (일부·RPC) **`cos_runs_recent_by_tenancy`:** 마이그레이션 `*_cos_runs_recent_by_tenancy_rpc.sql` — 선택 테넄시 키·limit(1–500)로 최근 `cos_runs` 행 반환; `runStoreSupabase.js` `COS_RUNS_RECENT_BY_TENANCY_RPC` SSOT; 테스트 `scripts/test-cos-runs-recent-by-tenancy-rpc-ssot.mjs`. (운영 적용은 DDL 배포.)
 - [x] (일부·감사 연결) **`audit-parcel-ops-smoke-health.mjs`** 가 `supabaseRpcCosRunsRecentByTenancy` 로 RPC 호출해 `runs_tenancy_rpc_*` 및(가능 시) 테이블 직조회 건수 정합 — founder 경로 아님, 운영 가시성만.
-- [x] (일부·command media) **`COS_Command_Media_Preflight_2026-04-14.md`** — npm·env·핸드오프 SSOT 한 장; 테넌시 가이드 §5·릴리스 체크리스트 보강; 회귀 `test-command-media-preflight-doc.mjs` (`npm test`·`verify:parcel-post-office` 선행). (로컬 `.cursor/rules` 는 gitignore — 팀은 이 문서를 정본으로 본다.)
-- [ ] (잔여) 추가 뷰·다른 테이블로의 키 전파·런타임 앱 경로에서의 RPC 활용 등.
+- [x] (런타임·배포 슬라이스) **`COS_PARCEL_DEPLOYMENT_KEY`** 가 비어 있지 않을 때 `runStoreSupabase` 의 supervisor·복구·스레드 키 목록 조회에 `parcel_deployment_key` **eq** 적용; `executionRunStore` 메모리·파일 경로 동일. 레거시 null 행은 해당 프로세스에서 제외(가이드 §5.3).
+- [x] **M6 (로컬 번호) 완료:** RPC·감사·ledger 병합·supervisor 배포 슬라이스까지 로드맵 M6 “데이터 플레인 slice” 현 단계 목표 충족. 추가 뷰/타 테이블 확장은 별도 에픽에서 합의 후.
 
 ---
 

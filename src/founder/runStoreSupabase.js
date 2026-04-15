@@ -7,6 +7,7 @@ import {
   cosRunTenancyColumnsFromEnv,
   filterRowsByOptionalTenancyKeys,
   filterRowsByParcelDeploymentKey,
+  parcelDeploymentKeyFromEnv,
   workspaceKeyFromRequestScopeFallback,
 } from './parcelDeploymentContext.js';
 
@@ -735,12 +736,15 @@ export async function supabasePatchRunById(sb, runUuid, patch) {
  */
 export async function supabaseListRunsWithRecoveryEnvelopePending(sb, limit = 200) {
   const lim = Math.min(Math.max(Number(limit) || 200, 1), 500);
-  const { data, error } = await sb
+  const dep = parcelDeploymentKeyFromEnv();
+  let q = sb
     .from('cos_runs')
     .select('*')
     .not('recovery_envelope_pending', 'is', null)
     .order('updated_at', { ascending: false })
     .limit(lim);
+  if (dep) q = q.eq('parcel_deployment_key', dep);
+  const { data, error } = await q;
   if (error) {
     console.error('[cos_runs recovery envelope list]', error.message);
     return [];
@@ -753,7 +757,10 @@ export async function supabaseListRunsWithRecoveryEnvelopePending(sb, limit = 20
  * @returns {Promise<string[]>}
  */
 export async function supabaseListThreadKeys(sb) {
-  const { data, error } = await sb.from('cos_runs').select('thread_key');
+  const dep = parcelDeploymentKeyFromEnv();
+  let q = sb.from('cos_runs').select('thread_key');
+  if (dep) q = q.eq('parcel_deployment_key', dep);
+  const { data, error } = await q;
   if (error || !data) return [];
   return [...new Set(data.map((r) => String(r.thread_key || '').trim()).filter(Boolean))];
 }
@@ -767,12 +774,14 @@ const NON_TERMINAL_STATUSES = ['queued', 'running', 'review_required', 'blocked'
  */
 export async function supabaseListNonTerminalRunIds(sb, limit = 80, updatedSince = null) {
   const lim = Math.min(Math.max(Number(limit) || 80, 1), 500);
+  const dep = parcelDeploymentKeyFromEnv();
   let q = sb
     .from('cos_runs')
     .select('id, updated_at')
     .in('status', NON_TERMINAL_STATUSES)
     .order('updated_at', { ascending: false })
     .limit(lim);
+  if (dep) q = q.eq('parcel_deployment_key', dep);
   if (updatedSince && String(updatedSince).trim()) {
     q = q.gte('updated_at', String(updatedSince).trim());
   }
@@ -790,12 +799,15 @@ export async function supabaseListNonTerminalRunIds(sb, limit = 80, updatedSince
  */
 export async function supabaseListPendingSupervisorWakeRunIds(sb, limit = 50) {
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 200);
-  const { data, error } = await sb
+  const dep = parcelDeploymentKeyFromEnv();
+  let q = sb
     .from('cos_runs')
     .select('id')
     .eq('pending_supervisor_wake', true)
     .order('last_supervisor_wake_request_at', { ascending: false })
     .limit(lim);
+  if (dep) q = q.eq('parcel_deployment_key', dep);
+  const { data, error } = await q;
   if (error) {
     console.error('[cos_runs list pending wake]', error.message);
     return [];

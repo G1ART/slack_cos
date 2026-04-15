@@ -1,6 +1,6 @@
 # 출시·재배포 점검 체크리스트 (2026-04-16)
 
-**상위:** `COS_Layer_Epic_LockIn_2026-04-14.md`, `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md`, `COS_Upgrade_Milestones_2026-04-16.md`, `COS_Command_Media_Preflight_2026-04-14.md`, 루트 `AGENTS.md`.
+**상위:** `COS_Layer_Epic_LockIn_2026-04-14.md`, `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md`, `COS_Upgrade_Milestones_2026-04-16.md`, 루트 `AGENTS.md`.
 
 목적: **한 사람이 손으로 해야 하는 단계**와 **레포·CI로 자동화 가능한 단계**를 나눈다. 에이전트는 후자를 끝까지 구현하고, 전자가 필요할 때만 멈춘다.
 
