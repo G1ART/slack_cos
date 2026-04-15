@@ -27,6 +27,7 @@ import {
   COS_OPS_SMOKE_SUMMARY_STREAM_VIEW,
   COS_RUN_EVENTS_TENANCY_STREAM_VIEW,
   COS_RUNS_RECENT_BY_TENANCY_RPC,
+  supabaseRpcCosRunsRecentByTenancy,
 } from '../src/founder/runStoreSupabase.js';
 import {
   filterRowsByOptionalTenancyKeys,
@@ -424,14 +425,15 @@ async function main() {
     Boolean(workspaceKey && String(workspaceKey).trim()) ||
     Boolean(productKey && String(productKey).trim()) ||
     Boolean(projectSpaceKey && String(projectSpaceKey).trim());
-  const { data: rpcRaw, error: eRpc } = await sb.rpc(COS_RUNS_RECENT_BY_TENANCY_RPC, {
-    p_limit: runsLim,
-    p_workspace_key: workspaceKey && String(workspaceKey).trim() ? String(workspaceKey).trim() : null,
-    p_product_key: productKey && String(productKey).trim() ? String(productKey).trim() : null,
-    p_project_space_key: projectSpaceKey && String(projectSpaceKey).trim() ? String(projectSpaceKey).trim() : null,
-    p_parcel_deployment_key:
+  const rpcCall = await supabaseRpcCosRunsRecentByTenancy(sb, {
+    limit: runsLim,
+    workspace_key: workspaceKey && String(workspaceKey).trim() ? String(workspaceKey).trim() : null,
+    product_key: productKey && String(productKey).trim() ? String(productKey).trim() : null,
+    project_space_key: projectSpaceKey && String(projectSpaceKey).trim() ? String(projectSpaceKey).trim() : null,
+    parcel_deployment_key:
       deployScopeKey && !parcelDeploymentIncludeLegacy ? String(deployScopeKey).trim() : null,
   });
+  const { data: rpcRaw, error: eRpc } = rpcCall;
   if (eRpc) {
     advisory.push(`cos_runs_recent_by_tenancy_rpc: ${eRpc.message}`);
   } else {

@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COS_RUNS_RECENT_BY_TENANCY_RPC } from '../src/founder/runStoreSupabase.js';
+import {
+  COS_RUNS_RECENT_BY_TENANCY_RPC,
+  supabaseRpcCosRunsRecentByTenancy,
+} from '../src/founder/runStoreSupabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migDir = path.join(__dirname, '..', 'supabase', 'migrations');
@@ -20,5 +23,7 @@ assert.match(
   'migration must define RPC name matching COS_RUNS_RECENT_BY_TENANCY_RPC',
 );
 assert.match(sql, /grant\s+execute\s+on\s+function\s+public\.cos_runs_recent_by_tenancy/i, 'service_role execute grant');
+
+assert.equal(typeof supabaseRpcCosRunsRecentByTenancy, 'function', 'export supabaseRpcCosRunsRecentByTenancy');
 
 console.log('test-cos-runs-recent-by-tenancy-rpc-ssot: ok');

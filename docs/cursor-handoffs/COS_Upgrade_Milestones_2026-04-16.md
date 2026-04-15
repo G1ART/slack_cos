@@ -109,7 +109,7 @@
 - [x] (일부) **실행 ledger 하네스 행:** 스레드 `appendExecutionArtifact` 경로의 `harness_dispatch`·`harness_packet` payload 에 정본 봉투 병합 (`canonicalExecutionEnvelope` + 활성 `cos_runs` 테넄시 힌트).
 - [x] (일부·관측) **`cos_runs` 테넄시 히스토그램:** `audit-parcel-ops-smoke-health.mjs` JSON에 `runs_tenancy_sample_size`, `runs_tenancy_workspace_top`, `runs_tenancy_product_top`, `runs_tenancy_project_space_top`, `runs_tenancy_deployment_top` — 스트림 필터·`filterRowsByOptionalTenancyKeys` 와 동일 스코프로 최근 durable 행 샘플 집계 (ledger 분포와 병치; DDL 없음).
 - [x] (일부·RPC) **`cos_runs_recent_by_tenancy`:** 마이그레이션 `*_cos_runs_recent_by_tenancy_rpc.sql` — 선택 테넄시 키·limit(1–500)로 최근 `cos_runs` 행 반환; `runStoreSupabase.js` `COS_RUNS_RECENT_BY_TENANCY_RPC` SSOT; 테스트 `scripts/test-cos-runs-recent-by-tenancy-rpc-ssot.mjs`. (운영 적용은 DDL 배포.)
-- [x] (일부·감사 연결) **`audit-parcel-ops-smoke-health.mjs`** 가 동일 턴에 RPC를 호출해 `runs_tenancy_rpc_*` JSON 필드 및(가능 시) 테이블 직조회와 건수 정합 비교 — founder 경로 아님, 운영 가시성만.
+- [x] (일부·감사 연결) **`audit-parcel-ops-smoke-health.mjs`** 가 `supabaseRpcCosRunsRecentByTenancy` 로 RPC 호출해 `runs_tenancy_rpc_*` 및(가능 시) 테이블 직조회 건수 정합 — founder 경로 아님, 운영 가시성만.
 - [ ] (잔여) 추가 뷰·다른 테이블로의 키 전파·런타임 앱 경로에서의 RPC 활용 등.
 
 ---
