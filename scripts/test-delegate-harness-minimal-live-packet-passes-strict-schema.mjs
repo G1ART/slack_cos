@@ -20,6 +20,7 @@ function minimalPacket() {
     review_required: null,
     review_focus: null,
     packet_status: null,
+    success_criteria: null,
     live_patch: {
       path: 'docs/smoke-minimal.txt',
       operation: 'create',

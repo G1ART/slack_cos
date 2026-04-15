@@ -1,7 +1,7 @@
 /**
  * COS 뒤 Harness — COS dispatch를 실행기 친화적 work packet으로 표준화 (의도 판단 아님).
  *
- * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다; `success_criteria` — 디스패치 결과 배열은 {@link runHarnessOrchestration} 가 `payload.success_criteria` 및 기본 채움 규칙으로 조립한다.
+ * Phase1 봉투 (COS_Phase1_CrossLayer_Envelope): `intent` — {@link deriveHarnessDispatchIntent}; `role` — 패킷은 OpenAI strict `persona` 가 SSOT이며 `role` 에 동일 문자열을 복제한다; `success_criteria` — 디스패치 배열은 {@link runHarnessOrchestration} 가 `payload.success_criteria` 및 기본 채움으로 조립; 패킷 단일 문자열은 `specializePacket` 에서 trim·길이 캡만 적용(의미 해석 없음).
  */
 
 import crypto from 'node:crypto';
@@ -100,6 +100,13 @@ export const PERSONA_REGISTRY = {
  * artifact_format → 기본 tool/action (COS가 이미 고른 내부 표현을 실행 스펙으로만 매핑)
  * @param {string} fmt
  */
+/** @param {unknown} raw */
+function sanitizePacketSuccessCriteria(raw) {
+  if (raw == null) return null;
+  const s = String(raw).trim().slice(0, 500);
+  return s || null;
+}
+
 function preferredToolActionFromFormat(fmt) {
   const f = String(fmt || '').trim().toLowerCase();
   if (f === 'patch_markdown') return { preferred_tool: 'cursor', preferred_action: 'emit_patch' };
@@ -143,6 +150,7 @@ function specializePacket(pkt, persona) {
     review_focus,
     packet_status,
     role: personaNorm,
+    success_criteria: sanitizePacketSuccessCriteria(pkt.success_criteria),
   };
 }
 
@@ -185,6 +193,7 @@ function normalizeCosPackets(raw, handoff_order, team_plan, deliverables, constr
       review_required: p.review_required,
       review_focus: p.review_focus,
       packet_status: p.packet_status,
+      success_criteria: p.success_criteria,
       ...(p.live_patch != null && typeof p.live_patch === 'object' && !Array.isArray(p.live_patch)
         ? { live_patch: p.live_patch }
         : {}),

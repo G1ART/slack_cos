@@ -57,6 +57,18 @@ function validateFunctionalPacketSlot(pkt, index) {
     };
   }
   const p = /** @type {Record<string, unknown>} */ (pkt);
+  if (
+    p.success_criteria !== undefined &&
+    p.success_criteria !== null &&
+    typeof p.success_criteria !== 'string'
+  ) {
+    return {
+      ok: false,
+      missing_required_fields: [],
+      invalid_enum_fields: [],
+      invalid_nested_fields: [`${px}.success_criteria`],
+    };
+  }
   if (p.live_patch == null) {
     return { ok: true, missing_required_fields: [], invalid_enum_fields: [], invalid_nested_fields: [] };
   }

@@ -187,6 +187,10 @@ const DELEGATE_PACKET_ITEM_SCHEMA = {
       ],
       description: 'closed single-file patch or null',
     },
+    success_criteria: {
+      anyOf: [{ type: 'string', description: 'optional one-line completion check' }, { type: 'null' }],
+      description: 'Phase1 packet envelope; null if none',
+    },
   },
   required: [
     'packet_id',
@@ -203,6 +207,7 @@ const DELEGATE_PACKET_ITEM_SCHEMA = {
     'review_focus',
     'packet_status',
     'live_patch',
+    'success_criteria',
   ],
 };
 

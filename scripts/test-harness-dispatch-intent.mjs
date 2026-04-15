@@ -64,4 +64,24 @@ const withCrit = await runHarnessOrchestration({
 });
 assert.deepEqual(withCrit.success_criteria, ['smoke_green', 'ledger_ok']);
 
+const pktCrit = await runHarnessOrchestration({
+  objective: 'x',
+  personas: ['engineering'],
+  tasks: ['patch'],
+  packets: [
+    {
+      persona: 'engineering',
+      mission: 'm',
+      inputs: [],
+      deliverables: ['d'],
+      definition_of_done: ['d'],
+      handoff_to: '',
+      artifact_format: 'spec_markdown',
+      success_criteria: '  CI green  ',
+    },
+  ],
+});
+const e0 = pktCrit.packets[0];
+assert.equal(e0 && e0.success_criteria, 'CI green');
+
 console.log('test-harness-dispatch-intent: ok');

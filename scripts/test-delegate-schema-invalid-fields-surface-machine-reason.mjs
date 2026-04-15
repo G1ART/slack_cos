@@ -35,6 +35,7 @@ const badPersonaPacket = {
       review_focus: null,
       packet_status: null,
       live_patch: null,
+      success_criteria: null,
     },
   ],
 };
@@ -68,6 +69,7 @@ const badLivePatch = {
         live_only: true,
         no_fallback: true,
       },
+      success_criteria: null,
     },
   ],
 };
@@ -86,5 +88,35 @@ const badSlot = {
 const rSlot = validateToolCallArgs('delegate_harness_team', badSlot);
 assert.equal(rSlot.blocked, true);
 assert.equal(rSlot.blocked_reason, 'delegate_schema_invalid_packets_transport');
+
+const badSuccessCrit = {
+  objective: 'o',
+  ...nullTail,
+  packets: [
+    {
+      packet_id: null,
+      persona: 'pm',
+      mission: 'm',
+      inputs: null,
+      deliverables: [],
+      definition_of_done: [],
+      handoff_to: '',
+      artifact_format: 'md',
+      preferred_tool: null,
+      preferred_action: null,
+      review_required: null,
+      review_focus: null,
+      packet_status: null,
+      live_patch: null,
+      success_criteria: 123,
+    },
+  ],
+};
+const rSc = validateToolCallArgs('delegate_harness_team', badSuccessCrit);
+assert.equal(rSc.blocked, true);
+assert.equal(rSc.blocked_reason, 'delegate_schema_invalid_packets_transport');
+assert.ok(
+  (rSc.delegate_schema_error_fields || []).some((f) => String(f).includes('success_criteria')),
+);
 
 console.log('test-delegate-schema-invalid-fields-surface-machine-reason: ok');

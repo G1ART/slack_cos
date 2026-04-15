@@ -13,6 +13,7 @@
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
 - **G1 로드맵 M0 (일부):** `slack_team_id` 뷰 컬럼 + 감사 히스토그램 + merge 시 workspace→team 보강.
 - **G1 로드맵 M4 (일부):** Phase1 `intent` — `harnessBridge.runHarnessOrchestration` dispatch 결과 + ledger `harness_dispatch` payload. Phase1 `role` — 패킷 `persona` SSOT 동기 `role` 필드.
+- **G1 로드맵 M4 (일부·봉투):** Phase1 패킷 `success_criteria` — `runFounderDirectConversation` strict 패킷 스키마 + `specializePacket` sanitize; `delegateHarnessPacketValidate` 가 비문자열 기계 차단.
 - **G1 로드맵 M3 (선택·문서):** `package.json` `name` → `COS_PRODUCT_KEY` / `COS_PROJECT_SPACE_KEY` **문서만** 제안 — `COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md` §2.1.
 
 ---
@@ -74,8 +75,8 @@
 
 ### M5 — 하네스·COS 경계 (통제 아님, 품질)
 
-- [ ] **불필요한 추상 금지:** 범용 “테넌시 매니저” 클래스 추가 없이, 기존 `parcelDeploymentContext` + 소량 헬퍼로 유지.
-- [ ] **회귀:** `npm test` + `verify:parcel-post-office` + (주간) Slack 스모크 1턴은 **사람 개입** 유지.
+- [x] **불필요한 추상 금지:** 범용 “테넌시 매니저” 클래스 추가 없이, 기존 `parcelDeploymentContext` + 소량 헬퍼로 유지 (본 패치도 동일).
+- [x] **회귀:** `npm test` + `verify:parcel-post-office` CI 고정; (주간) Slack 스모크 1턴은 **사람 개입** 유지(자동화 대상 아님).
 
 ---
 

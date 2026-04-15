@@ -26,6 +26,7 @@ const h = await runHarnessOrchestration(
         definition_of_done: ['승인 기준 명시'],
         handoff_to: 'engineering',
         artifact_format: 'spec_markdown',
+        success_criteria: '  PRD 초안 합의  ',
       },
       {
         persona: 'engineering',
@@ -53,6 +54,8 @@ for (const pkt of h.packets) {
   assert.ok(typeof pkt.handoff_to === 'string', 'handoff_to');
   assert.ok(pkt.artifact_format, 'artifact_format');
 }
+const pmPkt = h.packets.find((x) => x.persona === 'pm');
+assert.equal(pmPkt && pmPkt.success_criteria, 'PRD 초안 합의');
 
 const arts = await readRecentExecutionArtifacts(tk, 50);
 assert.ok(arts.some((a) => a.type === 'harness_packet'), 'ledger harness_packet');

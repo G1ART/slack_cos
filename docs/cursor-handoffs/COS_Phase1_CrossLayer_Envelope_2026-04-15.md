@@ -33,7 +33,7 @@
 |------|------|-------------------|
 | `intent` | 이번 턴/패킷의 목적 (짧은 기계 친화 라벨) | `harnessBridge.js` — `deriveHarnessDispatchIntent` / `runHarnessOrchestration` (선택 `payload.intent`, 없으면 `delegate_{team_shape}_{tool}_{action}`) |
 | `role` | 하네스 내 역할 태그 (Phase1 초기에는 `persona` 와 동일 문자열) | `harnessBridge.js` — `specializePacket` 가 `persona` 로 덮어써 SSOT 단일화 (strict 스키마 필드명은 `persona`) |
-| `success_criteria` | 완료 판정에 쓸 조건 (선택; 보통 문자열 배열) | **디스패치 봉투:** `harnessBridge.js` — `runHarnessOrchestration` 가 `payload.success_criteria` 를 그대로 반영하고, 비어 있으면 `deliverables` 또는 `objective` 로만 **기계적 기본값**을 채운다 (의미 해석 아님). **패킷 단일 필드**는 OpenAI strict 패킷 스키마 확장 시 후속. |
+| `success_criteria` | 완료 판정에 쓸 조건 (선택) | **디스패치:** `harnessBridge.js` — `runHarnessOrchestration` 가 `payload.success_criteria` (문자열 배열)를 trim·반영하고, 비어 있으면 `deliverables` / `objective` 로만 **기계적 기본값**을 채운다. **패킷(한 줄):** OpenAI strict `delegate_harness_team.packets[]` 의 `success_criteria` (문자열 또는 null); 런타임 출력은 `specializePacket` 에서 trim·500자 캡만 적용. |
 | `escalation_rule` | 막혔을 때 COS·founder로 올리는 규칙 요약 (선택) | (후속) |
 
 초기에는 헌법·시스템 지시·패킷 메타에 자연어로만 있어도 되고, **필드명을 코드에 넣기 시작할 때 이 표를 따른다.**
