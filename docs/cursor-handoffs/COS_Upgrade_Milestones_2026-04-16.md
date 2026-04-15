@@ -40,7 +40,7 @@
 - [x] **규칙 SSOT:** `COS_WORKSPACE_KEY` 가 비어 있을 때만 `sanitize(slack_team_id)` 를 `workspace_key` 로 사용; env가 있으면 **env 우선** (운영 단일 팀은 기존과 동일). 코드: `workspaceKeyFromRequestScopeFallback` + `applyCosRunTenancyDefaults` / `appRunToDbRow` + `mergeCanonicalExecutionEnvelopeToPayload`.
 - [x] **전달 경로(1차):** `requestScopeContext`(AsyncLocalStorage) + `handleFounderSlackTurn` → `mergeCanonicalExecutionEnvelopeToPayload` 에서 `slack_team_id`/`workspace_key` 병합.
 - [x] **전달 경로(2차):** 스레드 외 경로(웹훅/백그라운드)에서 ALS 없을 때 `cos_runs` 행 테넄시를 `mergeCanonicalExecutionEnvelopeToPayload(..., { runTenancy })` 및 `appendCosRunEvent`/`appendCosRunEventForRun` 요약 병합에 반영.
-- [ ] **테스트:** 단위 + 최소 1개 통합(메모리 스토어).
+- [x] **테스트:** 단위 + 최소 1개 통합(메모리 스토어) — `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
 
 **완료 기준:** env 없이도 **해당 팀으로 태그된** ops smoke / cos_runs 샘플이 요약 필터 `--workspace-key=T…` 와 맞는다.
 
