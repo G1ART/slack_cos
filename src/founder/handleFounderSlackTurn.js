@@ -61,6 +61,19 @@ export async function handleFounderSlackTurn(ctx) {
   });
 
   const slack_team_id = slackTeamIdFromEvent(ctx.event);
+  /** @type {{ has_url_private: boolean, has_url_private_download: boolean, check_file_info: boolean, id: string | null }[] | undefined} */
+  let attachment_files_ingress;
+  if (files.length > 0) {
+    attachment_files_ingress = files.map((raw) => {
+      const x = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+      return {
+        has_url_private: Boolean(String(x.url_private || '').trim()),
+        has_url_private_download: Boolean(String(x.url_private_download || '').trim()),
+        check_file_info: x.file_access === 'check_file_info',
+        id: x.id != null ? String(x.id).slice(0, 24) : null,
+      };
+    });
+  }
   console.info(
     JSON.stringify({
       event: 'cos_turn_ingress',
@@ -70,6 +83,7 @@ export async function handleFounderSlackTurn(ctx) {
       user: ctx.event.user || null,
       text_len: rawText.length,
       file_count: files.length,
+      ...(attachment_files_ingress ? { attachment_files_ingress } : {}),
       ...(slack_team_id ? { slack_team_id } : {}),
     }),
   );
