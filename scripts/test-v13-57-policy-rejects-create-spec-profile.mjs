@@ -11,7 +11,9 @@ import { getExecutionProfileForThread, evaluateCursorActionAgainstProfile } from
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 assert.ok(
-  !fs.readFileSync(path.join(__dirname, '..', 'src/founder/toolsBridge.js'), 'utf8').includes('CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE'),
+  !fs
+    .readFileSync(path.join(__dirname, '..', 'src/founder/toolPlane/dispatchExternalToolCall.js'), 'utf8')
+    .includes('CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE'),
 );
 
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-v13-57-policy');

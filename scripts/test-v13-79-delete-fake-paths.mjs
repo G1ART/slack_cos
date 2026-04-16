@@ -13,9 +13,9 @@ function read(rel) {
   return fs.readFileSync(path.join(root, rel), 'utf8');
 }
 
-const tb = read('src/founder/toolsBridge.js');
-assert.ok(!tb.includes('CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE'));
-assert.ok(!tb.includes('create_spec_disallowed_in_live_only_mode'));
+const dispatchSrc = read('src/founder/toolPlane/dispatchExternalToolCall.js');
+assert.ok(!dispatchSrc.includes('CREATE_SPEC_DISALLOWED_IN_LIVE_ONLY_MODE'));
+assert.ok(!dispatchSrc.includes('create_spec_disallowed_in_live_only_mode'));
 
 const rf = read('src/founder/runFounderDirectConversation.js');
 assert.ok(!rf.includes('formatFounderSafeToolBlockMessage'));

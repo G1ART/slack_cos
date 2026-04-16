@@ -189,10 +189,13 @@ assert.ok(!sumOn.some((l) => /callback_timeout|degraded.*cloud_agent/i.test(l)))
 const rq = await readReviewQueueForRun(runLedger, 8);
 assert.equal(rq.length, 0);
 
-// --- 6) toolsBridge calls bind before triggerCursorAutomation ---
-const tb = readFileSync(path.join(__dirname, '..', 'src', 'founder', 'toolsBridge.js'), 'utf8');
-const bi = tb.indexOf('bindCursorEmitPatchDispatchLedgerBeforeTrigger');
-const ti = tb.indexOf('triggerCursorAutomation({');
+// --- 6) dispatch calls bind before triggerCursorAutomation (W1: dispatch lives in toolPlane) ---
+const disp = readFileSync(
+  path.join(__dirname, '..', 'src', 'founder', 'toolPlane', 'dispatchExternalToolCall.js'),
+  'utf8',
+);
+const bi = disp.indexOf('bindCursorEmitPatchDispatchLedgerBeforeTrigger');
+const ti = disp.indexOf('triggerCursorAutomation({');
 assert.ok(bi > 0 && ti > 0 && bi < ti, 'dispatch ledger bind must precede Cursor HTTP trigger');
 
 console.log('test-v13-75-receive-gate-functional: ok');

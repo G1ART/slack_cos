@@ -12,8 +12,11 @@ import {
 } from '../src/founder/delegateEmitPatchStash.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const toolsSrc = fs.readFileSync(path.join(__dirname, '..', 'src/founder/toolsBridge.js'), 'utf8');
-assert.ok(!toolsSrc.includes('create_spec_disallowed_in_live_only_mode'));
+const dispatchSrc = fs.readFileSync(
+  path.join(__dirname, '..', 'src/founder/toolPlane/dispatchExternalToolCall.js'),
+  'utf8',
+);
+assert.ok(!dispatchSrc.includes('create_spec_disallowed_in_live_only_mode'));
 
 process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-live-only-guard-still');
 process.env.COS_RUN_STORE = 'memory';

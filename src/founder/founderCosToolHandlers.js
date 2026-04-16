@@ -15,7 +15,7 @@ import {
   getActiveRunForThread,
   activeRunShellForCosExecutionContext,
 } from './executionRunStore.js';
-import { formatAdapterReadinessCompactLines } from './toolsBridge.js';
+import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
   cosRunTenancyMergeHintsFromRunRow,
   parcelDeploymentKeyFromEnv,

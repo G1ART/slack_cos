@@ -3,7 +3,7 @@
  */
 
 import { runHarnessOrchestration } from '../harnessBridge.js';
-import { invokeExternalTool } from '../toolsBridge.js';
+import { dispatchExternalToolCall } from './dispatchExternalToolCall.js';
 import {
   persistAcceptedRunShell,
   finalizeRunAfterStarterKickoff,
@@ -159,7 +159,7 @@ export async function executeFounderCosToolCall(p) {
         console.error('[pretrigger_audit]', e);
       }
     }
-    return invokeExternalTool(args, {
+    return dispatchExternalToolCall(args, {
       threadKey: tk,
       ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
       ...(auditRunId ? { cosRunId: auditRunId } : {}),

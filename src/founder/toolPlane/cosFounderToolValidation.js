@@ -2,7 +2,7 @@
  * Founder COS tool-call args — mechanical validation only.
  */
 
-import { isValidToolAction } from '../toolsBridge.js';
+import { isValidToolAction } from './toolLaneActions.js';
 import { validateDelegateHarnessTeamToolArgs } from '../delegateHarnessPacketValidate.js';
 import { ALLOWED_EXTERNAL_TOOLS } from './cosFounderToolDefinitions.js';
 
