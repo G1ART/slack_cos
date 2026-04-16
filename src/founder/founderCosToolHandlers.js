@@ -17,6 +17,8 @@ import {
 } from './executionRunStore.js';
 import { buildExecutionContextReadModel } from './executionContextReadModel.js';
 import { loadActiveProjectSpaceSlice } from './activeProjectSpaceSlice.js';
+import { buildProactiveSignals } from './proactiveSignals.js';
+import { buildToolQualificationSummaryLines } from './toolPlane/toolLaneQualification.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
   cosRunTenancyMergeHintsFromRunRow,
@@ -110,6 +112,22 @@ export async function handleReadExecutionContext(args, threadKey) {
     activeRow,
   });
   const active_project_space = await loadActiveProjectSpaceSlice(rm.project_space_key);
+  const { compact_lines: proactive_signals_compact_lines } = buildProactiveSignals({
+    active_run_shell,
+    workcell_runtime: active_run_shell && typeof active_run_shell === 'object'
+      ? /** @type {Record<string, unknown>} */ (active_run_shell).workcell_runtime
+      : null,
+    active_project_space_slice: active_project_space,
+    surface_model: null,
+    recent_run_shells: [],
+  });
+  const tool_qualification_summary_lines = await buildToolQualificationSummaryLines({
+    env: process.env,
+    threadKey,
+    latest_precheck_by_tool: {},
+    surface_model: null,
+    max: 8,
+  });
   return {
     ok: true,
     persona_contract_snapshot_lines: rm.persona_contract_snapshot_lines,
@@ -125,6 +143,8 @@ export async function handleReadExecutionContext(args, threadKey) {
     active_run_truth_source: rm.active_run_truth_source,
     ...(rm.workcell_status ? { workcell_status: rm.workcell_status } : {}),
     harness_proof_snapshot_lines: rm.harness_proof_snapshot_lines || [],
+    proactive_signals_compact_lines,
+    tool_qualification_summary_lines,
     ...(active_project_space ? { active_project_space } : {}),
     summary_lines,
     execution_summary_active_run,
