@@ -8,11 +8,7 @@
 import crypto from 'node:crypto';
 import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js';
 import { appendExecutionArtifact } from './executionLedger.js';
-import {
-  loadPersonaContractManifest,
-  validatePersonaContractManifestShape,
-  formatPersonaContractRuntimeSnapshotLines,
-} from './personaContractManifest.js';
+import { buildAcceptedPersonaContractMetadata } from './personaContractManifest.js';
 import { validatePersonaContractHarnessDispatch } from './personaContractHarness.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
@@ -332,28 +328,20 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
   const dispatch_id = `harness_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const intent = deriveHarnessDispatchIntent(p, team_shape, packets);
 
-  /** @type {string | null} */
-  let persona_contract_version = null;
-  /** @type {string[]} */
-  let persona_contract_ids = [];
-  try {
-    const m = loadPersonaContractManifest();
-    if (validatePersonaContractManifestShape(m) === null) {
-      persona_contract_version = String(m.version || '').trim() || null;
-      const enumToId = new Map(
-        (Array.isArray(m.personas) ? m.personas : []).map((row) => {
-          const en = String(row.delegate_persona_enum || '').trim();
-          const id = String(row.id || '').trim();
-          return [en, id];
-        }),
-      );
-      persona_contract_ids = plist.map((persona) => enumToId.get(persona) || '').filter(Boolean);
-    }
-  } catch {
-    /* manifest optional — dispatch still succeeds */
+  const meta = buildAcceptedPersonaContractMetadata(plist);
+  if (!meta.ok) {
+    return {
+      ok: false,
+      blocked: true,
+      mode: 'harness_dispatch',
+      status: 'blocked',
+      reason: 'invalid_payload',
+      blocked_reason: meta.blocked_reason,
+      machine_hint: meta.machine_hint,
+      delegate_schema_valid: false,
+    };
   }
-
-  const persona_contract_runtime_snapshot = formatPersonaContractRuntimeSnapshotLines(plist, 12);
+  const { persona_contract_version, persona_contract_ids, persona_contract_runtime_snapshot } = meta;
 
   const result = {
     ok: true,
@@ -361,11 +349,9 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     dispatch_id,
     status: 'accepted',
     intent,
-    ...(persona_contract_version ? { persona_contract_version } : {}),
-    ...(persona_contract_ids.length ? { persona_contract_ids } : {}),
-    ...(persona_contract_runtime_snapshot.length
-      ? { persona_contract_runtime_snapshot }
-      : {}),
+    persona_contract_version,
+    persona_contract_ids,
+    persona_contract_runtime_snapshot,
     personas: plist,
     objective,
     tasks,

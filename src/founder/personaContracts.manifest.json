@@ -10,7 +10,7 @@
       "allowed_actions": ["create_spec", "emit_patch", "create_issue"],
       "allowed_tools": ["cursor", "github"],
       "required_output_mode": "artifact_first",
-      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission"] },
+      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission", "preferred_tool", "preferred_action"] },
       "review_duty": "advisory",
       "escalation_predicates": ["contract_miss", "tenancy_ambiguous"]
     },
@@ -22,7 +22,7 @@
       "allowed_actions": ["create_spec", "emit_patch", "create_issue"],
       "allowed_tools": ["cursor", "github"],
       "required_output_mode": "artifact_first",
-      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission"] },
+      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission", "preferred_tool", "preferred_action"] },
       "review_duty": "advisory",
       "escalation_predicates": ["contract_miss", "live_unavailable"]
     },
@@ -46,7 +46,7 @@
       "allowed_actions": ["create_spec", "emit_patch", "create_issue", "open_pr", "apply_sql", "inspect_logs"],
       "allowed_tools": ["cursor", "github", "supabase", "railway"],
       "required_output_mode": "artifact_first",
-      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission"] },
+      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission", "preferred_tool", "preferred_action"] },
       "review_duty": "blocking",
       "escalation_predicates": ["contract_miss", "live_unavailable"]
     },
@@ -58,7 +58,7 @@
       "allowed_actions": ["create_spec", "emit_patch", "create_issue", "open_pr", "apply_sql", "deploy", "inspect_logs"],
       "allowed_tools": ["cursor", "github", "supabase", "vercel", "railway"],
       "required_output_mode": "artifact_only",
-      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission"] },
+      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission", "preferred_tool", "preferred_action"] },
       "review_duty": "blocking",
       "escalation_predicates": ["tenancy_ambiguous", "contract_miss", "live_unavailable"]
     },
@@ -70,7 +70,7 @@
       "allowed_actions": ["create_spec", "emit_patch"],
       "allowed_tools": ["cursor"],
       "required_output_mode": "artifact_first",
-      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission"] },
+      "required_output_schema": { "kind": "delegate_packet_v1", "min_fields": ["persona", "mission", "preferred_tool", "preferred_action"] },
       "review_duty": "advisory",
       "escalation_predicates": ["contract_miss"]
     }

@@ -7,6 +7,23 @@ import { isValidToolAction } from './toolPlane/toolLaneActions.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
+const SCHEMA_KIND_EXPECTED = 'delegate_packet_v1';
+
+/**
+ * @param {Record<string, unknown>} pkt
+ * @param {string} field
+ */
+function packetFieldPresentAndNonEmpty(pkt, field) {
+  const v = pkt[field];
+  if (v == null) return false;
+  if (typeof v === 'string') return Boolean(v.trim());
+  if (typeof v === 'boolean') return true;
+  if (typeof v === 'number') return !Number.isNaN(v);
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === 'object') return Object.keys(v).length > 0;
+  return false;
+}
+
 /**
  * @param {Record<string, unknown>} extra
  */
@@ -20,11 +37,61 @@ function contractBlocked(extra) {
 }
 
 /**
+ * @param {Record<string, unknown>} row
+ * @param {Record<string, unknown>} pkt
+ * @param {number} i
+ * @param {boolean} strictOutputFields
+ */
+function validatePacketOutputSchema(row, pkt, i, strictOutputFields) {
+  const schema = row.required_output_schema;
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+    return contractBlocked({
+      blocked_reason: 'persona_contract_output_schema_invalid',
+      machine_hint: `packets[${i}] persona row has no required_output_schema`,
+      delegate_schema_error_fields: [`packets[${i}].persona`],
+    });
+  }
+  const kind = String(schema.kind || '').trim();
+  if (kind !== SCHEMA_KIND_EXPECTED) {
+    return contractBlocked({
+      blocked_reason: 'persona_contract_output_schema_invalid',
+      machine_hint: `packets[${i}] contract schema.kind not ${SCHEMA_KIND_EXPECTED}`,
+      delegate_schema_error_fields: [`packets[${i}].persona`],
+    });
+  }
+  const minFields = Array.isArray(schema.min_fields)
+    ? schema.min_fields.map((x) => String(x || '').trim()).filter(Boolean)
+    : [];
+  if (!minFields.length) {
+    return contractBlocked({
+      blocked_reason: 'persona_contract_output_schema_invalid',
+      machine_hint: `packets[${i}] required_output_schema.min_fields empty`,
+      delegate_schema_error_fields: [`packets[${i}].persona`],
+    });
+  }
+  const fieldsToCheck = strictOutputFields
+    ? minFields
+    : minFields.filter((f) => f === 'persona' || f === 'mission');
+  for (const fn of fieldsToCheck) {
+    if (!packetFieldPresentAndNonEmpty(pkt, fn)) {
+      return contractBlocked({
+        blocked_reason: 'persona_contract_output_field_missing',
+        machine_hint: `packets[${i}].${fn} required by persona output contract`,
+        delegate_schema_error_fields: [`packets[${i}].${fn}`],
+      });
+    }
+  }
+  return null;
+}
+
+/**
  * OpenAI tool args 또는 runHarnessOrchestration 정규화 후 payload에 대해 계약 검증.
  * @param {Record<string, unknown>} args
+ * @param {{ strictOutputFields?: boolean }} [options]
  * @returns {{ blocked: false, delegate_schema_valid: true } | Record<string, unknown>}
  */
-export function validatePersonaContractHarnessEnvelope(args) {
+export function validatePersonaContractHarnessEnvelope(args, options = {}) {
+  const strictOutputFields = options.strictOutputFields === true;
   const a = args && typeof args === 'object' ? args : {};
   const objective = typeof a.objective === 'string' ? a.objective.trim() : '';
   const rawPersonas = Array.isArray(a.personas) ? a.personas : [];
@@ -86,6 +153,9 @@ export function validatePersonaContractHarnessEnvelope(args) {
           delegate_schema_error_fields: [`packets[${i}].persona`],
         });
       }
+      const outErr = validatePacketOutputSchema(row, pkt, i, strictOutputFields);
+      if (outErr) return outErr;
+
       const allowed_tools = new Set(
         (Array.isArray(row.allowed_tools) ? row.allowed_tools : []).map((x) => String(x).trim()),
       );
@@ -126,9 +196,12 @@ export function validatePersonaContractHarnessEnvelope(args) {
  */
 export function validatePersonaContractHarnessDispatch(p) {
   const payload = p && typeof p === 'object' ? p : {};
-  return validatePersonaContractHarnessEnvelope({
-    objective: payload.objective,
-    personas: payload.personas,
-    packets: payload.packets,
-  });
+  return validatePersonaContractHarnessEnvelope(
+    {
+      objective: payload.objective,
+      personas: payload.personas,
+      packets: payload.packets,
+    },
+    { strictOutputFields: true },
+  );
 }

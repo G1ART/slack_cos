@@ -709,6 +709,19 @@ export function activeRunShellForCosExecutionContext(run) {
   const id = run.id != null ? String(run.id).trim() : '';
   if (!id) return null;
   const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String).filter(Boolean) : [];
+  const dp =
+    run.dispatch_payload && typeof run.dispatch_payload === 'object' && !Array.isArray(run.dispatch_payload)
+      ? /** @type {Record<string, unknown>} */ (run.dispatch_payload)
+      : null;
+  /** @type {string[] | undefined} */
+  let persona_contract_runtime_snapshot;
+  if (dp && Array.isArray(dp.persona_contract_runtime_snapshot)) {
+    const sn = dp.persona_contract_runtime_snapshot
+      .map((x) => String(x).trim())
+      .filter(Boolean)
+      .slice(0, 12);
+    if (sn.length) persona_contract_runtime_snapshot = sn;
+  }
   return {
     id,
     thread_key: run.thread_key != null ? String(run.thread_key).trim() || null : null,
@@ -722,6 +735,7 @@ export function activeRunShellForCosExecutionContext(run) {
     project_space_key: run.project_space_key != null ? String(run.project_space_key) : null,
     parcel_deployment_key: run.parcel_deployment_key != null ? String(run.parcel_deployment_key) : null,
     updated_at: run.updated_at != null ? String(run.updated_at) : null,
+    ...(persona_contract_runtime_snapshot ? { persona_contract_runtime_snapshot } : {}),
   };
 }
 

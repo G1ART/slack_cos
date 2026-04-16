@@ -128,6 +128,89 @@ export function getPersonaContractRowByDelegateEnum(delegateEnum) {
  * @param {number} [maxLines]
  * @returns {string[]}
  */
+/**
+ * 수락된 harness dispatch 에 붙는 페르소나 계약 메타데이터 (fail-closed).
+ * @param {string[]} delegateEnums delegate_persona_enum 값 (소문자)
+ * @returns {{ ok: true, persona_contract_version: string, persona_contract_ids: string[], persona_contract_runtime_snapshot: string[] } | { ok: false, blocked_reason: string, machine_hint: string }}
+ */
+export function buildAcceptedPersonaContractMetadata(delegateEnums) {
+  const plist = [
+    ...new Set(
+      (Array.isArray(delegateEnums) ? delegateEnums : [])
+        .map((x) => String(x || '').trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  if (!plist.length) {
+    return {
+      ok: false,
+      blocked_reason: 'persona_contract_metadata_plist_empty',
+      machine_hint: 'no delegate personas for contract metadata',
+    };
+  }
+  let m;
+  try {
+    m = loadPersonaContractManifest();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      ok: false,
+      blocked_reason: 'persona_contract_manifest_unreadable',
+      machine_hint: msg.slice(0, 200),
+    };
+  }
+  const shapeErr = validatePersonaContractManifestShape(m);
+  if (shapeErr) {
+    return {
+      ok: false,
+      blocked_reason: 'persona_contract_manifest_invalid',
+      machine_hint: String(shapeErr).slice(0, 200),
+    };
+  }
+  const version = String(m.version || '').trim();
+  if (!version) {
+    return {
+      ok: false,
+      blocked_reason: 'persona_contract_version_missing',
+      machine_hint: 'manifest version string empty',
+    };
+  }
+  const enumToId = new Map(
+    (Array.isArray(m.personas) ? m.personas : []).map((row) => {
+      const en = String(row.delegate_persona_enum || '').trim().toLowerCase();
+      const id = String(row.id || '').trim();
+      return [en, id];
+    }),
+  );
+  /** @type {string[]} */
+  const persona_contract_ids = [];
+  for (const persona of plist) {
+    const id = enumToId.get(persona);
+    if (!id) {
+      return {
+        ok: false,
+        blocked_reason: 'persona_contract_id_resolution_failed',
+        machine_hint: `no manifest id row for delegate enum ${persona}`,
+      };
+    }
+    persona_contract_ids.push(id);
+  }
+  const persona_contract_runtime_snapshot = formatPersonaContractRuntimeSnapshotLines(plist, 12);
+  if (!persona_contract_runtime_snapshot.length) {
+    return {
+      ok: false,
+      blocked_reason: 'persona_contract_snapshot_empty',
+      machine_hint: 'runtime snapshot lines empty after manifest load',
+    };
+  }
+  return {
+    ok: true,
+    persona_contract_version: version,
+    persona_contract_ids,
+    persona_contract_runtime_snapshot,
+  };
+}
+
 export function formatPersonaContractRuntimeSnapshotLines(delegateEnums, maxLines = 12) {
   try {
     const m = loadPersonaContractManifest();
