@@ -4,11 +4,15 @@
 
 import { runHarnessOrchestration } from './harnessBridge.js';
 import { invokeExternalTool } from './toolPlane/dispatchExternalToolCall.js';
-import { readExecutionSummary } from './executionLedger.js';
+import { readExecutionSummary, readRecentExecutionArtifacts } from './executionLedger.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import { buildSystemInstructions } from './founderSystemInstructions.js';
 import { buildFounderConversationInput } from './founderConversationInput.js';
 import { runFounderToolLoop } from './founderToolLoop.js';
+import { getActiveRunForThread, activeRunShellForCosExecutionContext } from './executionRunStore.js';
+import { buildExecutionContextReadModel } from './executionContextReadModel.js';
+import { buildFounderSurfaceModel } from './founderSurfaceModel.js';
+import { renderFounderSurfaceText } from './founderSurfaceRenderer.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
 
@@ -62,14 +66,52 @@ export async function runFounderDirectConversation(ctx) {
     founderRequestSummary: String(ctx.userText || '').slice(0, 500),
   });
 
+  let surfaceModel = null;
+  let surfaceRender = null;
+  try {
+    const activeRow = tk ? await getActiveRunForThread(tk) : null;
+    const active_run_shell = activeRow ? activeRunShellForCosExecutionContext(activeRow) : null;
+    const postTurnArtifacts = tk ? await readRecentExecutionArtifacts(tk, 24) : [];
+    const readModel = buildExecutionContextReadModel({
+      active_run_shell,
+      execution_summary_active_run: null,
+      artifacts: postTurnArtifacts,
+      maxArtifactScan: 24,
+      activeRow,
+    });
+    surfaceModel = buildFounderSurfaceModel({
+      threadKey: tk,
+      modelText: text,
+      activeRunShell: active_run_shell,
+      readModel,
+      artifacts: postTurnArtifacts,
+      recentTurns: ctx.recentTurns || [],
+    });
+    surfaceRender = renderFounderSurfaceText({
+      surfaceModel,
+      modelText: text,
+      recentTurns: ctx.recentTurns || [],
+    });
+  } catch (e) {
+    console.error('[founder_surface_build]', e);
+  }
+  const finalText = surfaceRender && surfaceRender.text ? surfaceRender.text : text;
+
   console.info(
     JSON.stringify({
       stage: 'cos_turn',
       constitution_sha256: ctx.constitutionSha256,
-      output_chars: text.length,
-      response_preview: text.slice(0, 160),
+      output_chars: finalText.length,
+      response_preview: finalText.slice(0, 160),
+      surface_intent: surfaceModel ? surfaceModel.surface_intent : null,
+      surface_rendered_by: surfaceRender ? surfaceRender.rendered_by : null,
     }),
   );
 
-  return { text, starter_ack: text };
+  return {
+    text: finalText,
+    starter_ack: finalText,
+    surface_model: surfaceModel,
+    surface_render: surfaceRender,
+  };
 }

@@ -19,7 +19,9 @@
       "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
     ],
     "founder_surface": [
-      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Gap_Register_And_Workstream_Plan_2026-04-15.md",
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
     ],
     "scenario1_spinup": [
       "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md",
