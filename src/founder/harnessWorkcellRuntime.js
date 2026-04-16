@@ -7,6 +7,31 @@ import { buildFailureClassification } from './failureTaxonomy.js';
 
 const DELEGATE_PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
+/**
+ * W6-B — fixed enum for rework cause codes. packet 입력에 반영되어 있으면 roll-up 하고,
+ * 유효하지 않거나 누락이면 null 로 남긴다(가짜 사유 금지).
+ */
+export const REWORK_CAUSE_CODES = Object.freeze([
+  'reviewer_finding',
+  'disagreement_unresolved',
+  'external_regression',
+  'unclear_spec',
+  'other',
+]);
+const REWORK_SET = new Set(REWORK_CAUSE_CODES);
+
+/**
+ * W6-B — fixed enum for acceptance evidence. 없는 경우 null.
+ */
+export const ACCEPTANCE_EVIDENCE_KINDS = Object.freeze([
+  'artifact_diff',
+  'test_pass',
+  'reviewer_sign_off',
+  'live_demo',
+  'bundle_attached',
+]);
+const ACCEPTANCE_SET = new Set(ACCEPTANCE_EVIDENCE_KINDS);
+
 /** @typedef {'active'|'review_required'|'rework_requested'|'escalated'|'completed'} WorkcellLifecycleStatus */
 
 const LIFECYCLE = new Set(['active', 'review_required', 'rework_requested', 'escalated', 'completed']);
@@ -236,6 +261,24 @@ export function validateHarnessWorkcellRuntime(runtime) {
   if (!Array.isArray(wc.summary_lines) || wc.summary_lines.length === 0) {
     return { ok: false, blocked_reason: 'workcell_runtime_summary_empty', machine_hint: 'summary_lines must be non-empty' };
   }
+  if (typeof wc.reviewer_findings_count !== 'number' || wc.reviewer_findings_count < 0) {
+    return { ok: false, blocked_reason: 'workcell_runtime_reviewer_findings_count_invalid', machine_hint: 'reviewer_findings_count' };
+  }
+  if (typeof wc.unresolved_disagreements !== 'number' || wc.unresolved_disagreements < 0) {
+    return { ok: false, blocked_reason: 'workcell_runtime_unresolved_disagreements_invalid', machine_hint: 'unresolved_disagreements' };
+  }
+  if (wc.rework_cause_code !== null && !REWORK_SET.has(String(wc.rework_cause_code))) {
+    return { ok: false, blocked_reason: 'workcell_runtime_rework_cause_code_invalid', machine_hint: String(wc.rework_cause_code) };
+  }
+  if (wc.acceptance_evidence_kind !== null && !ACCEPTANCE_SET.has(String(wc.acceptance_evidence_kind))) {
+    return { ok: false, blocked_reason: 'workcell_runtime_acceptance_evidence_kind_invalid', machine_hint: String(wc.acceptance_evidence_kind) };
+  }
+  if (wc.correction_hit_rate !== null && !(typeof wc.correction_hit_rate === 'number' && wc.correction_hit_rate >= 0 && wc.correction_hit_rate <= 1)) {
+    return { ok: false, blocked_reason: 'workcell_runtime_correction_hit_rate_invalid', machine_hint: 'correction_hit_rate must be number in [0,1]' };
+  }
+  if (wc.patch_quality_delta !== null && typeof wc.patch_quality_delta !== 'number') {
+    return { ok: false, blocked_reason: 'workcell_runtime_patch_quality_delta_invalid', machine_hint: 'patch_quality_delta must be number or null' };
+  }
   return { ok: true };
 }
 
@@ -358,6 +401,8 @@ export function buildHarnessWorkcellRuntime(input) {
   const review_checkpoint_count = internalCheckpoints.length;
   const escalation_open = escalationTargets.length > 0 || status === 'escalated';
 
+  const proofFields = deriveHarnessProofFields(mergedHarnessPackets, a);
+
   const workcell_id = `wc_${dispatch_id}`;
 
   /** @type {Record<string, unknown>} */
@@ -372,6 +417,12 @@ export function buildHarnessWorkcellRuntime(input) {
     escalation_targets: escalationTargets.slice(0, 12),
     packets: runtimePackets,
     summary_lines: [],
+    reviewer_findings_count: proofFields.reviewer_findings_count,
+    rework_cause_code: proofFields.rework_cause_code,
+    acceptance_evidence_kind: proofFields.acceptance_evidence_kind,
+    unresolved_disagreements: proofFields.unresolved_disagreements,
+    correction_hit_rate: proofFields.correction_hit_rate,
+    patch_quality_delta: proofFields.patch_quality_delta,
   };
 
   workcell_runtime.summary_lines = formatHarnessWorkcellSummaryLines(workcell_runtime, 8);
@@ -460,4 +511,85 @@ export function classifyWorkcellRuntime(wc) {
 /** @deprecated use formatHarnessWorkcellSummaryLines */
 export function formatWorkcellRuntimeSummaryLines(runtime, maxLines = 8) {
   return formatHarnessWorkcellSummaryLines(runtime, maxLines);
+}
+
+/**
+ * W6-B — Harness proof instrumentation derivation (Track E).
+ * 입력 packet 에 값이 없으면 0/null 로 남긴다(가짜 값 금지).
+ *
+ * @param {Record<string, unknown>[]} packets  — merged packets after owner resolution
+ * @param {Record<string, unknown>} input      — original runtime input (top-level overrides)
+ */
+function deriveHarnessProofFields(packets, input) {
+  let reviewer_findings_count = 0;
+  let unresolved_disagreements = 0;
+  /** @type {string | null} */
+  let rework_cause_code = null;
+  /** @type {string | null} */
+  let acceptance_evidence_kind = null;
+
+  for (const pkt of packets) {
+    if (!pkt || typeof pkt !== 'object') continue;
+    const rfc = Number(pkt.reviewer_findings_count);
+    if (Number.isFinite(rfc) && rfc > 0) reviewer_findings_count += Math.trunc(rfc);
+    if (pkt.disagreement_open === true) unresolved_disagreements += 1;
+    const rcc = typeof pkt.rework_cause_code === 'string' ? pkt.rework_cause_code.trim().toLowerCase() : '';
+    if (rcc && REWORK_SET.has(rcc)) {
+      if (!rework_cause_code) rework_cause_code = rcc;
+    }
+    const aek = typeof pkt.acceptance_evidence_kind === 'string'
+      ? pkt.acceptance_evidence_kind.trim().toLowerCase()
+      : '';
+    if (aek && ACCEPTANCE_SET.has(aek)) {
+      if (!acceptance_evidence_kind) acceptance_evidence_kind = aek;
+    }
+  }
+
+  // top-level overrides from runtime input (explicit wins over packet-rollup for proof values)
+  const topRework = typeof input.rework_cause_code === 'string' ? input.rework_cause_code.trim().toLowerCase() : '';
+  if (topRework && REWORK_SET.has(topRework)) rework_cause_code = topRework;
+  const topAccept = typeof input.acceptance_evidence_kind === 'string'
+    ? input.acceptance_evidence_kind.trim().toLowerCase()
+    : '';
+  if (topAccept && ACCEPTANCE_SET.has(topAccept)) acceptance_evidence_kind = topAccept;
+
+  const chrRaw = Number(input.correction_hit_rate);
+  const correction_hit_rate = Number.isFinite(chrRaw) && chrRaw >= 0 && chrRaw <= 1 ? chrRaw : null;
+  const pqdRaw = Number(input.patch_quality_delta);
+  const patch_quality_delta = Number.isFinite(pqdRaw) ? pqdRaw : null;
+
+  // If rework_cause_code ends up set but no rework happened anywhere, clear it — honesty rule.
+  const anyRework = packets.some((p) => p && typeof p === 'object' && p.rework_requested === true);
+  if (!anyRework && !topRework) rework_cause_code = null;
+
+  return {
+    reviewer_findings_count,
+    rework_cause_code,
+    acceptance_evidence_kind,
+    unresolved_disagreements,
+    correction_hit_rate,
+    patch_quality_delta,
+  };
+}
+
+/**
+ * W6-B — compact lines for founder-facing read_execution_context slice.
+ * 모델이 소비하는 내부 요약; founder 표면으로 노출할 때는 호출측에서 다시 정제해야 한다.
+ *
+ * @param {Record<string, unknown>} runtime
+ * @param {number} [maxLines]
+ */
+export function formatHarnessProofSnapshotLines(runtime, maxLines = 6) {
+  const wc = runtime && typeof runtime === 'object' ? runtime : {};
+  /** @type {string[]} */
+  const out = [];
+  const rfc = Number(wc.reviewer_findings_count);
+  const unres = Number(wc.unresolved_disagreements);
+  if (Number.isFinite(rfc)) out.push(`reviewer_findings=${rfc}`);
+  if (Number.isFinite(unres)) out.push(`unresolved_disagreements=${unres}`);
+  if (wc.rework_cause_code) out.push(`rework_cause=${wc.rework_cause_code}`);
+  if (wc.acceptance_evidence_kind) out.push(`acceptance=${wc.acceptance_evidence_kind}`);
+  if (wc.correction_hit_rate != null) out.push(`correction_hit_rate=${wc.correction_hit_rate}`);
+  if (wc.patch_quality_delta != null) out.push(`patch_quality_delta=${wc.patch_quality_delta}`);
+  return out.slice(0, maxLines);
 }

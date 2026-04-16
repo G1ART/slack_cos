@@ -7,6 +7,7 @@ import {
   extractValidWorkcellSummaryLinesFromSummaryTruthObject,
 } from './executionContextShell.js';
 import { filterArtifactsForReadModelTenancy } from './executionRunStore.js';
+import { formatHarnessProofSnapshotLines } from './harnessWorkcellRuntime.js';
 
 export const TRUTH_SOURCES = /** @type {const} */ ({
   ACTIVE_RUN_SHELL: 'active_run_shell',
@@ -154,6 +155,60 @@ function scanArtifactsWorkcell(artifacts, maxArtifactScan) {
 }
 
 /**
+ * W6-B — resolve harness_proof_snapshot_lines (reviewer findings, rework cause, acceptance 등)
+ * by looking at the same truth-source priority as the workcell summary.
+ *
+ * @param {{
+ *   active_run_shell: unknown,
+ *   execution_summary_active_run: unknown,
+ *   artifacts: unknown[],
+ *   maxArtifactScan: number,
+ * }} p
+ * @returns {string[]}
+ */
+export function resolveHarnessProofSnapshotLines(p) {
+  const { active_run_shell, execution_summary_active_run, artifacts } = p;
+  const cap = typeof p.maxArtifactScan === 'number' && p.maxArtifactScan >= 1
+    ? Math.min(48, p.maxArtifactScan)
+    : 48;
+
+  const shellRuntime = extractWorkcellRuntimeObject(active_run_shell);
+  if (shellRuntime) return formatHarnessProofSnapshotLines(shellRuntime, 6);
+
+  const summaryRuntime = extractWorkcellRuntimeObject(execution_summary_active_run);
+  if (summaryRuntime) return formatHarnessProofSnapshotLines(summaryRuntime, 6);
+
+  const list = Array.isArray(artifacts) ? artifacts : [];
+  const n = list.length;
+  const bound = Math.min(cap, n);
+  for (let k = 0; k < bound; k += 1) {
+    const a = list[n - 1 - k];
+    if (!a || typeof a !== 'object') continue;
+    const row = /** @type {Record<string, unknown>} */ (a);
+    if (String(row.type || '') !== 'harness_dispatch') continue;
+    const pl = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? /** @type {Record<string, unknown>} */ (row.payload)
+      : null;
+    if (!pl) continue;
+    const wr = pl.workcell_runtime;
+    if (wr && typeof wr === 'object' && !Array.isArray(wr)) {
+      return formatHarnessProofSnapshotLines(/** @type {Record<string, unknown>} */ (wr), 6);
+    }
+  }
+  return [];
+}
+
+/** @param {unknown} shellOrSummary */
+function extractWorkcellRuntimeObject(shellOrSummary) {
+  if (!shellOrSummary || typeof shellOrSummary !== 'object') return null;
+  const wr = /** @type {Record<string, unknown>} */ (shellOrSummary).workcell_runtime;
+  if (wr && typeof wr === 'object' && !Array.isArray(wr)) {
+    return /** @type {Record<string, unknown>} */ (wr);
+  }
+  return null;
+}
+
+/**
  * @param {unknown} active_run_shell
  * @param {unknown} activeRow
  */
@@ -267,12 +322,20 @@ export function buildExecutionContextReadModel(input) {
   const workcell_status = workcellStatusFromShell(active_run_shell);
   const active_run_truth_source = active_run_shell ? TRUTH_SOURCES.ACTIVE_RUN_SHELL : TRUTH_SOURCES.NONE;
 
+  const harness_proof_snapshot_lines = resolveHarnessProofSnapshotLines({
+    active_run_shell,
+    execution_summary_active_run,
+    artifacts: scopedArtifacts,
+    maxArtifactScan: cap,
+  });
+
   return {
     persona_contract_snapshot_lines: persona.lines,
     persona_contract_snapshot_source: persona.source,
     workcell_summary_lines: workcell.lines,
     workcell_summary_source: workcell.source,
     ...(workcell_status ? { workcell_status } : {}),
+    harness_proof_snapshot_lines,
     tenancy_slice,
     workspace_key: tenancy_slice.workspace_key,
     product_key: tenancy_slice.product_key,

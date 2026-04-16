@@ -124,6 +124,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     artifact_scan_scoped_by_tenancy: rm.artifact_scan_scoped_by_tenancy,
     active_run_truth_source: rm.active_run_truth_source,
     ...(rm.workcell_status ? { workcell_status: rm.workcell_status } : {}),
+    harness_proof_snapshot_lines: rm.harness_proof_snapshot_lines || [],
     ...(active_project_space ? { active_project_space } : {}),
     summary_lines,
     execution_summary_active_run,
