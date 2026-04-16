@@ -86,6 +86,88 @@ function resolvePersonaContractSnapshotLinesFromExecutionContext(ctx) {
 }
 
 /**
+ * @param {unknown} x
+ * @returns {string[] | null}
+ */
+function normalizeWorkcellSummaryArray(x) {
+  if (!Array.isArray(x)) return null;
+  const lines = x.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
+  return lines.length ? lines : null;
+}
+
+/**
+ * @param {Record<string, unknown> | null} pl
+ * @returns {string[] | null}
+ */
+function extractWorkcellSummaryFromPayload(pl) {
+  if (!pl || typeof pl !== 'object') return null;
+  const direct = normalizeWorkcellSummaryArray(pl.workcell_summary_lines);
+  if (direct) return direct;
+  const wr = pl.workcell_runtime;
+  if (wr && typeof wr === 'object' && !Array.isArray(wr) && Array.isArray(wr.summary_lines)) {
+    return normalizeWorkcellSummaryArray(wr.summary_lines);
+  }
+  return null;
+}
+
+/**
+ * @param {{
+ *   active_run_shell: Record<string, unknown> | null,
+ *   execution_summary_active_run: unknown,
+ *   artifacts: unknown[],
+ *   maxArtifactScan: number,
+ * }} ctx
+ * @returns {string[]}
+ */
+function resolveWorkcellSummaryLinesFromExecutionContext(ctx) {
+  const { active_run_shell, execution_summary_active_run, artifacts } = ctx;
+  const maxArtifactScan =
+    typeof ctx.maxArtifactScan === 'number' && ctx.maxArtifactScan >= 1 ? Math.min(48, ctx.maxArtifactScan) : 48;
+
+  const s1 =
+    active_run_shell && typeof active_run_shell === 'object'
+      ? normalizeWorkcellSummaryArray(
+          /** @type {Record<string, unknown>} */ (active_run_shell).workcell_summary_lines,
+        )
+      : null;
+  if (s1) return s1;
+
+  const es = execution_summary_active_run;
+  if (es && typeof es === 'object' && !Array.isArray(es)) {
+    const s2 = normalizeWorkcellSummaryArray(
+      /** @type {Record<string, unknown>} */ (es).workcell_summary_lines,
+    );
+    if (s2) return s2;
+  }
+
+  const list = Array.isArray(artifacts) ? artifacts : [];
+  const n = list.length;
+  const cap = Math.min(maxArtifactScan, n);
+  for (let k = 0; k < cap; k += 1) {
+    const a = list[n - 1 - k];
+    if (!a || typeof a !== 'object') continue;
+    const row = /** @type {Record<string, unknown>} */ (a);
+    const t = String(row.type || '');
+    const rawPayload = row.payload;
+    const pl =
+      rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
+        ? /** @type {Record<string, unknown>} */ (rawPayload)
+        : null;
+    if (!pl) continue;
+    if (t === 'harness_dispatch') {
+      const s3 = extractWorkcellSummaryFromPayload(pl);
+      if (s3) return s3;
+    }
+    if (t === 'harness_packet') {
+      const pid = String(pl.packet_id || '').trim();
+      const owner = String(pl.owner_persona || '').trim();
+      if (pid && owner) return [`packet ${pid} owner=${owner}`.slice(0, 400)];
+    }
+  }
+  return [];
+}
+
+/**
  * @param {Record<string, unknown>} args
  * @param {string} threadKey
  */
@@ -168,9 +250,16 @@ export async function handleReadExecutionContext(args, threadKey) {
     artifacts,
     maxArtifactScan: artifactFetchLimit,
   });
+  const workcell_summary_lines = resolveWorkcellSummaryLinesFromExecutionContext({
+    active_run_shell,
+    execution_summary_active_run,
+    artifacts,
+    maxArtifactScan: artifactFetchLimit,
+  });
   return {
     ok: true,
     persona_contract_snapshot_lines,
+    workcell_summary_lines,
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,

@@ -10,6 +10,7 @@ import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js'
 import { appendExecutionArtifact } from './executionLedger.js';
 import { buildAcceptedPersonaContractMetadata } from './personaContractManifest.js';
 import { validatePersonaContractHarnessDispatch } from './personaContractHarness.js';
+import { buildHarnessWorkcellRuntime } from './harnessWorkcellRuntime.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
@@ -343,6 +344,30 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
   }
   const { persona_contract_version, persona_contract_ids, persona_contract_runtime_snapshot } = meta;
 
+  const wcRes = buildHarnessWorkcellRuntime({
+    dispatch_id,
+    objective,
+    personas: plist,
+    packets,
+    persona_contract_runtime_snapshot,
+  });
+  if (!wcRes.ok) {
+    return {
+      ok: false,
+      blocked: true,
+      mode: 'harness_dispatch',
+      status: 'blocked',
+      reason: 'invalid_payload',
+      blocked_reason: wcRes.blocked_reason,
+      machine_hint: wcRes.machine_hint,
+      ...(Array.isArray(wcRes.delegate_schema_error_fields)
+        ? { delegate_schema_error_fields: wcRes.delegate_schema_error_fields }
+        : {}),
+      delegate_schema_valid: false,
+    };
+  }
+  packets = wcRes.packets;
+
   const result = {
     ok: true,
     mode: 'harness_dispatch',
@@ -352,6 +377,8 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     persona_contract_version,
     persona_contract_ids,
     persona_contract_runtime_snapshot,
+    workcell_runtime: wcRes.workcell_runtime,
+    workcell_summary_lines: wcRes.workcell_summary_lines,
     personas: plist,
     objective,
     tasks,

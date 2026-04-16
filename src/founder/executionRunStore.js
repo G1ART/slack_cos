@@ -722,6 +722,17 @@ export function activeRunShellForCosExecutionContext(run) {
       .slice(0, 12);
     if (sn.length) persona_contract_runtime_snapshot = sn;
   }
+  /** @type {string[] | undefined} */
+  let workcell_summary_lines;
+  if (dp && Array.isArray(dp.workcell_summary_lines)) {
+    const wl = dp.workcell_summary_lines.map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
+    if (wl.length) workcell_summary_lines = wl;
+  }
+  /** @type {Record<string, unknown> | undefined} */
+  let workcell_runtime;
+  if (dp && dp.workcell_runtime && typeof dp.workcell_runtime === 'object' && !Array.isArray(dp.workcell_runtime)) {
+    workcell_runtime = /** @type {Record<string, unknown>} */ (dp.workcell_runtime);
+  }
   return {
     id,
     thread_key: run.thread_key != null ? String(run.thread_key).trim() || null : null,
@@ -736,6 +747,8 @@ export function activeRunShellForCosExecutionContext(run) {
     parcel_deployment_key: run.parcel_deployment_key != null ? String(run.parcel_deployment_key) : null,
     updated_at: run.updated_at != null ? String(run.updated_at) : null,
     ...(persona_contract_runtime_snapshot ? { persona_contract_runtime_snapshot } : {}),
+    ...(workcell_summary_lines ? { workcell_summary_lines } : {}),
+    ...(workcell_runtime ? { workcell_runtime } : {}),
   };
 }
 
