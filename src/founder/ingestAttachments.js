@@ -26,6 +26,7 @@ export function isAllowedSlackRedirectHost(hostname) {
   if (!h) return false;
   if (h === 'files.slack.com') return true;
   if (h === 'slack-files.com' || h.endsWith('.slack-files.com')) return true;
+  if (h === 'slackusercontent.com' || h.endsWith('.slackusercontent.com')) return true;
   if (h.endsWith('.slack.com')) {
     if (h === 'app.slack.com' || h === 'www.slack.com' || h === 'slack.com') return false;
     if (h.startsWith('files')) return true;
@@ -483,18 +484,30 @@ export async function ingestCurrentTurnAttachments(ctx) {
     });
     const source = resolved.source;
 
-    if (
-      !dl.ok &&
-      dl.code === 'attachment_download_http_error' &&
+    /**
+     * 이벤트에 온 URL만으로는 HTML(로그인·만료·뷰어)이 내려오는 경우가 많아,
+     * `files.info`로 갱신된 `url_private_download` 한 번 더 시도한다.
+     * (봇 토큰 + `files:read` 권한이 있어야 함)
+     */
+    const tokenStr = String(client?.token || process.env.SLACK_BOT_TOKEN || '').trim();
+    const needsFilesInfoRedownload =
       source === 'event_payload' &&
-      /\b401\b|\b403\b/.test(String(dl.reason || ''))
-    ) {
+      !dl.ok &&
+      (dl.code === 'attachment_download_received_html' ||
+        (dl.code === 'attachment_download_http_error' && /\b401\b|\b403\b/.test(String(dl.reason || ''))));
+
+    if (needsFilesInfoRedownload) {
+      const trigger =
+        dl.code === 'attachment_download_received_html' ? 'received_html' : 'http_401_403';
       console.info(
         JSON.stringify({
           event: 'attachment_download_retry_via_files_info',
           file_id: id,
-          first_reason: dl.reason || null,
+          trigger,
           first_failure_code: dl.code,
+          first_reason: dl.reason || null,
+          bot_token_present: Boolean(tokenStr),
+          bot_token_shape: tokenStr.startsWith('xoxb-') ? 'xoxb_bot' : tokenStr ? 'non_xoxb' : 'missing',
         }),
       );
       try {
@@ -513,6 +526,15 @@ export async function ingestCurrentTurnAttachments(ctx) {
               dl = dl2;
               file = /** @type {Record<string, unknown>} */ (refreshed);
               pickUsed = pick1;
+            } else if (dl2.code === 'attachment_download_received_html') {
+              console.error(
+                JSON.stringify({
+                  event: 'attachment_download_still_html_after_files_info',
+                  file_id: id,
+                  failure_code: dl2.code,
+                  hint: 'Slack 앱 OAuth에 files:read 스코프가 있는지, 봇이 해당 대화(채널/DM)에 참가했는지 확인',
+                }),
+              );
             }
           }
         }
