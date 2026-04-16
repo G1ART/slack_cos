@@ -189,13 +189,13 @@ assert.ok(!sumOn.some((l) => /callback_timeout|degraded.*cloud_agent/i.test(l)))
 const rq = await readReviewQueueForRun(runLedger, 8);
 assert.equal(rq.length, 0);
 
-// --- 6) dispatch calls bind before triggerCursorAutomation (W1: dispatch lives in toolPlane) ---
-const disp = readFileSync(
-  path.join(__dirname, '..', 'src', 'founder', 'toolPlane', 'dispatchExternalToolCall.js'),
+// --- 6) Cursor lane runtime: ledger bind before triggerCursorAutomation (W1: split under toolPlane/lanes/cursor/) ---
+const cursorLane = readFileSync(
+  path.join(__dirname, '..', 'src', 'founder', 'toolPlane', 'lanes', 'cursor', 'cursorCloudAutomationPath.js'),
   'utf8',
 );
-const bi = disp.indexOf('bindCursorEmitPatchDispatchLedgerBeforeTrigger');
-const ti = disp.indexOf('triggerCursorAutomation({');
+const bi = cursorLane.indexOf('bindCursorEmitPatchDispatchLedgerBeforeTrigger');
+const ti = cursorLane.indexOf('triggerCursorAutomation({');
 assert.ok(bi > 0 && ti > 0 && bi < ti, 'dispatch ledger bind must precede Cursor HTTP trigger');
 
 console.log('test-v13-75-receive-gate-functional: ok');
