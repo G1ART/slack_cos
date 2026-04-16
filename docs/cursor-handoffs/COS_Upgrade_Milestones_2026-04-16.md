@@ -11,6 +11,7 @@
 ## 구현 스냅샷 (누적)
 
 - **W0 Start Gate (일부):** `docs/runtime_required_docs.json` + `preflight_required_docs.mjs` / `verify_preflight_ack.mjs` + `test-runtime-required-docs-registry.mjs` — 필독 문서 청크·sha256 매니페스트 및 ack 검증(fail-closed); 갭/워크스트림 SSOT `COS_Gap_Register_And_Workstream_Plan_2026-04-15.md`.
+- **W1 Tool plane (일부):** `src/founder/toolPlane/` — `COS_TOOLS`·`cosFounderToolValidation`·`cosFounderToolSchemaAudit`·`executeFounderCosToolCall`·`externalToolLaneRegistry`; `founderCosToolHandlers.js` 로 `record_execution_note` / `read_execution_context` 분리; `runFounderDirectConversation.js` 는 Responses 루프·시스템 프롬프트·입력 빌더 중심으로 정리(기존 `runFounderDirectConversation` 재수출 API 유지).
 - **G1 로드맵 M1 (일부):** `src/founder/canonicalExecutionEnvelope.js` — `mergeCanonicalExecutionEnvelopeToPayload` 가 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` append 경로(`appendCosRunEvent` / `appendCosRunEventForRun`) 및 `recordCosPretriggerAudit` 에서 env·요청 스코프·**durable run 행(`runTenancy`)** 로 테넄시 + `run_id` / `thread_key` / `packet_id` 빈칸을 채움. 테스트: `scripts/test-canonical-execution-envelope-smoke-payload.mjs`, `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
 - **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`). Supabase `run_persisted` 직기입도 동일 병합. SQL: `cos_run_events_tenancy_stream` 뷰.
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.

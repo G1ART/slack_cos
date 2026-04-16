@@ -3,48 +3,28 @@
  */
 
 import { runHarnessOrchestration } from './harnessBridge.js';
-import {
-  invokeExternalTool,
-  isValidToolAction,
-  formatAdapterReadinessCompactLines,
-} from './toolsBridge.js';
-import {
-  appendExecutionArtifact,
-  readExecutionSummary,
-  readExecutionSummaryForRun,
-  readRecentExecutionArtifacts,
-  computeExecutionOutcomeCounts,
-  readReviewQueue,
-  summarizeParcelLedgerClosureMirrorPresence,
-} from './executionLedger.js';
-import {
-  persistAcceptedRunShell,
-  finalizeRunAfterStarterKickoff,
-  persistRunAfterDelegate,
-  getActiveRunForThread,
-  activeRunShellForCosExecutionContext,
-} from './executionRunStore.js';
-import { executeStarterKickoffIfEligible } from './starterLadder.js';
-import { stashDelegateEmitPatchContext } from './delegateEmitPatchStash.js';
+import { invokeExternalTool, formatAdapterReadinessCompactLines } from './toolsBridge.js';
+import { readExecutionSummary } from './executionLedger.js';
+import { getActiveRunForThread } from './executionRunStore.js';
 import { resolveOpsSmokeSessionIdForToolAudit } from './smokeOps.js';
-import { recordCosPretriggerAudit } from './pretriggerAudit.js';
-import { validateDelegateHarnessTeamToolArgs } from './delegateHarnessPacketValidate.js';
 import { FOUNDER_COS_PERSONA_HARNESS_BLOCK } from './personaHarnessInstructions.js';
 import {
   PERSONA_CONTRACT_MANIFEST_REPO_PATH,
   formatPersonaContractLinesForInstructions,
 } from './personaContractOutline.js';
-import {
-  cosRunTenancyMergeHintsFromRunRow,
-  parcelDeploymentKeyFromEnv,
-  tenancyKeysPresenceFromEnv,
-} from './parcelDeploymentContext.js';
-import {
-  mergeLedgerExecutionRowPayload,
-  distinctSpineKeysFromLedgerArtifacts,
-} from './canonicalExecutionEnvelope.js';
+import { COS_TOOLS } from './toolPlane/cosFounderToolDefinitions.js';
+import { executeFounderCosToolCall } from './toolPlane/executeFounderCosToolCall.js';
 
 export { runHarnessOrchestration, invokeExternalTool };
+
+export { validateToolCallArgs } from './toolPlane/cosFounderToolValidation.js';
+export {
+  collectOpenAiStrictSchemaViolations,
+  getOpenAiStrictViolationsForCosTools,
+  getDelegateHarnessTeamParametersSnapshot,
+  getDelegateBootSchemaSnapshot,
+} from './toolPlane/cosFounderToolSchemaAudit.js';
+export { handleReadExecutionContext } from './founderCosToolHandlers.js';
 
 /**
  * 레거시 상수 — 과거에는 슬랙에 접수 한 줄만 보냄. 현재는 모델 `text`가 슬랙 본문으로 나감.
@@ -53,351 +33,6 @@ export { runHarnessOrchestration, invokeExternalTool };
 export const FOUNDER_SAME_TURN_ACK_TEXT = '요청을 접수했습니다.';
 
 const MAX_TOOL_ROUNDS = 8;
-
-const ALLOWED_EXTERNAL_TOOLS = new Set(['cursor', 'github', 'supabase', 'vercel', 'railway']);
-
-const INVOKE_ACTION_ENUM = [
-  'create_spec',
-  'emit_patch',
-  'create_issue',
-  'open_pr',
-  'apply_sql',
-  'deploy',
-  'inspect_logs',
-];
-
-const PERSONA_ENUM_ARR = ['research', 'pm', 'engineering', 'design', 'qa', 'data'];
-const PREFERRED_TOOL_ENUM = ['cursor', 'github', 'supabase', 'vercel', 'railway'];
-
-/**
- * Tool-call 인자의 기계적 스키마 검증만.
- * @param {string} callName
- * @param {Record<string, unknown>} args
- * @returns {{ blocked: boolean, reason?: string, machine_hint?: string, missing_required_fields?: string[] }}
- */
-export function validateToolCallArgs(callName, args) {
-  const a = args && typeof args === 'object' ? args : {};
-
-  if (callName === 'delegate_harness_team') {
-    return validateDelegateHarnessTeamToolArgs(a);
-  }
-
-  if (callName === 'invoke_external_tool') {
-    const tool = a.tool;
-    const action = String(a.action || '').trim();
-    const payload = a.payload;
-    if (!ALLOWED_EXTERNAL_TOOLS.has(tool)) return { blocked: true, reason: 'unsupported_tool' };
-    if (!isValidToolAction(tool, action)) return { blocked: true, reason: 'unsupported_action' };
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-      return { blocked: true, reason: 'invalid_payload' };
-    }
-    return { blocked: false };
-  }
-
-  if (callName === 'record_execution_note') {
-    const note = a.note;
-    if (typeof note !== 'string' || !note.trim()) return { blocked: true, reason: 'invalid_payload' };
-    const d = a.detail;
-    if (d !== undefined && d !== null && typeof d !== 'string') return { blocked: true, reason: 'invalid_payload' };
-    return { blocked: false };
-  }
-
-  if (callName === 'read_execution_context') {
-    const lim = a.limit;
-    if (lim !== undefined && lim !== null && (typeof lim !== 'number' || lim < 1 || lim > 20)) {
-      return { blocked: true, reason: 'invalid_payload' };
-    }
-    return { blocked: false };
-  }
-
-  return { blocked: false };
-}
-
-/** nullable 배열 (strict에서 선택 필드) */
-const NULLABLE_STRING_ARRAY = {
-  anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
-};
-
-const NULLABLE_PERSONA_ARRAY = {
-  anyOf: [{ type: 'array', items: { type: 'string', enum: PERSONA_ENUM_ARR } }, { type: 'null' }],
-};
-
-const DELEGATE_HARNESS_REQUIRED_KEYS = [
-  'objective',
-  'personas',
-  'tasks',
-  'deliverables',
-  'constraints',
-  'success_criteria',
-  'risks',
-  'review_checkpoints',
-  'open_questions',
-  'packets',
-];
-
-const DELEGATE_PACKET_ITEM_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    packet_id: {
-      anyOf: [{ type: 'string' }, { type: 'null' }],
-      description: 'optional stable packet id',
-    },
-    persona: {
-      type: 'string',
-      enum: PERSONA_ENUM_ARR,
-      description: 'packet owner persona',
-    },
-    mission: { type: 'string', description: 'packet mission' },
-    inputs: {
-      anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
-      description: 'inputs; null for defaults',
-    },
-    deliverables: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'deliverables',
-    },
-    definition_of_done: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'definition of done',
-    },
-    handoff_to: { type: 'string', description: 'next persona or empty string' },
-    artifact_format: { type: 'string', description: 'artifact format key' },
-    preferred_tool: {
-      anyOf: [{ type: 'string', enum: PREFERRED_TOOL_ENUM }, { type: 'null' }],
-      description: 'preferred tool or null',
-    },
-    preferred_action: {
-      anyOf: [{ type: 'string', enum: INVOKE_ACTION_ENUM }, { type: 'null' }],
-      description: 'preferred action or null',
-    },
-    review_required: {
-      anyOf: [{ type: 'boolean' }, { type: 'null' }],
-      description: 'review gate or null',
-    },
-    review_focus: {
-      anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
-      description: 'review focus topics or null',
-    },
-    packet_status: {
-      anyOf: [{ type: 'string', enum: ['draft', 'ready'] }, { type: 'null' }],
-      description: 'draft|ready or null',
-    },
-    live_patch: {
-      anyOf: [
-        {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            path: { type: 'string', description: 'single repo-relative path' },
-            operation: { type: 'string', enum: ['create', 'replace'], description: 'file operation' },
-            content: { type: 'string', description: 'full exact file content' },
-            live_only: { type: 'boolean', description: 'must be true for narrow automation' },
-            no_fallback: { type: 'boolean', description: 'must be true for narrow automation' },
-          },
-          required: ['path', 'operation', 'content', 'live_only', 'no_fallback'],
-        },
-        { type: 'null' },
-      ],
-      description: 'closed single-file patch or null',
-    },
-    success_criteria: {
-      anyOf: [{ type: 'string', description: 'optional one-line completion check' }, { type: 'null' }],
-      description: 'Phase1 packet envelope; null if none',
-    },
-  },
-  required: [
-    'packet_id',
-    'persona',
-    'mission',
-    'inputs',
-    'deliverables',
-    'definition_of_done',
-    'handoff_to',
-    'artifact_format',
-    'preferred_tool',
-    'preferred_action',
-    'review_required',
-    'review_focus',
-    'packet_status',
-    'live_patch',
-    'success_criteria',
-  ],
-};
-
-const COS_TOOLS = [
-  {
-    type: 'function',
-    name: 'delegate_harness_team',
-    description:
-      'Harness 내부 실행 조직·work packet. 대부분은 packets=null로 두고 서버가 objective·페르소나로 envelope를 만든다. 아주 좁게 닫힌 단일 파일 live patch(create|replace, exact content, live_only+no_fallback)만 packets에 live_patch를 실을 수 있다. founder에게 원시 artifact를 보이지 말 것.',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        objective: { type: 'string', description: '달성 목표 한 줄' },
-        personas: {
-          ...NULLABLE_PERSONA_ARRAY,
-          description: '투입 페르소나; 없으면 null',
-        },
-        tasks: { ...NULLABLE_STRING_ARRAY, description: '세부 작업; 없으면 null' },
-        deliverables: { ...NULLABLE_STRING_ARRAY, description: '기대 산출물; 없으면 null' },
-        constraints: { ...NULLABLE_STRING_ARRAY, description: '제약·가정; 없으면 null' },
-        success_criteria: { ...NULLABLE_STRING_ARRAY, description: '성공 기준; 없으면 null' },
-        risks: { ...NULLABLE_STRING_ARRAY, description: '리스크; 없으면 null' },
-        review_checkpoints: { ...NULLABLE_STRING_ARRAY, description: '리뷰 체크포인트; 없으면 null' },
-        open_questions: { ...NULLABLE_STRING_ARRAY, description: '미결 질문; 없으면 null' },
-        packets: {
-          anyOf: [{ type: 'array', items: DELEGATE_PACKET_ITEM_SCHEMA }, { type: 'null' }],
-          description:
-            '선택 패킷 배열 또는 null. live_patch 사용 시 단일 경로·exact content·live_only·no_fallback 필수.',
-        },
-      },
-      required: DELEGATE_HARNESS_REQUIRED_KEYS,
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'invoke_external_tool',
-    description:
-      '외부 도구. live가 불가하면 artifact fallback. 불필요한 남발 없이 최소 호출. founder 표면은 자연어만.',
-    strict: false,
-    parameters: {
-      type: 'object',
-      properties: {
-        tool: {
-          type: 'string',
-          enum: ['cursor', 'github', 'supabase', 'vercel', 'railway'],
-          description: '호출할 외부 도구',
-        },
-        action: {
-          type: 'string',
-          enum: INVOKE_ACTION_ENUM,
-          description:
-            'cursor: create_spec|emit_patch · github: create_issue|open_pr · supabase: apply_sql · vercel: deploy · railway: inspect_logs|deploy',
-        },
-        payload: {
-          type: 'object',
-          additionalProperties: true,
-          description: '도구별 인자 (빈 객체도 허용)',
-        },
-      },
-      required: ['tool', 'action', 'payload'],
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'record_execution_note',
-    description:
-      '내부 운영 메모(예: packet 축소, 페르소나 과사용). founder 비노출. ledger visibility용.',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        note: { type: 'string', description: '한 줄 요약 (내부용)' },
-        detail: {
-          anyOf: [
-            {
-              type: 'string',
-              description: '선택 구조화 디테일(JSON 객체를 문자열로) 또는 빈 문자열; 없으면 null',
-            },
-            { type: 'null' },
-          ],
-          description: 'JSON 문자열 또는 null(OpenAI strict 호환)',
-        },
-      },
-      required: ['note', 'detail'],
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'read_execution_context',
-    description:
-      'COS 자기 점검·맥락 재동기화용: 최근 ledger 요약(summary_lines, 스레드 전체)·execution_summary_active_run(활성 durable 런에 매칭되는 요약 줄만; 없으면 null)·parcel_ledger_closure_mirror(count+latest_ts, authoritative closure mirror append 횟수)·raw artifact·adapter readiness·review_queue·실행 집계·recent_artifact_spine_distinct·active_run_shell·tenancy_keys_presence·parcel_deployment_scoped_supervisor_lists. Supabase ops 요약·ledger 한 줄과 동일 truth 로 취급하지 말 것. 불확실하면 founder에게 말하기 전 같은 턴에서 호출할 것. founder에게 그대로 노출하지 말 것.',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        limit: {
-          anyOf: [{ type: 'integer', minimum: 1, maximum: 20 }, { type: 'null' }],
-          description: '최대 개수 (1–20); 기본 5는 null',
-        },
-      },
-      required: ['limit'],
-      additionalProperties: false,
-    },
-  },
-];
-
-/**
- * OpenAI Responses `strict: true` 도구 스키마: 각 object 노드에서 properties 키 전부가 required에 있어야 함.
- * @param {Record<string, unknown>} schema
- * @param {string} path
- * @returns {string[]}
- */
-export function collectOpenAiStrictSchemaViolations(schema, path = 'root') {
-  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return [];
-  const out = [];
-  if (schema.type === 'object' && schema.properties && typeof schema.properties === 'object') {
-    const keys = Object.keys(schema.properties);
-    if (keys.length > 0 && schema.additionalProperties !== false) {
-      out.push(`${path}: object with properties must set additionalProperties: false (OpenAI strict)`);
-    }
-    const req = new Set(Array.isArray(schema.required) ? schema.required : []);
-    for (const k of keys) {
-      if (!req.has(k)) out.push(`${path}: missing "${k}" in required (OpenAI strict)`);
-    }
-    for (const k of keys) {
-      const child = schema.properties[k];
-      out.push(...collectOpenAiStrictSchemaViolations(child, `${path}.${k}`));
-    }
-  }
-  if (schema.items) {
-    out.push(...collectOpenAiStrictSchemaViolations(schema.items, `${path}[items]`));
-  }
-  if (Array.isArray(schema.anyOf)) {
-    for (let i = 0; i < schema.anyOf.length; i += 1) {
-      const branch = schema.anyOf[i];
-      if (branch && typeof branch === 'object' && branch.type === 'null') continue;
-      out.push(...collectOpenAiStrictSchemaViolations(branch, `${path}.anyOf[${i}]`));
-    }
-  }
-  return out;
-}
-
-/** strict:true 인 COS_TOOLS만 검사 — CI·회귀용 */
-export function getOpenAiStrictViolationsForCosTools() {
-  const errs = [];
-  for (const t of COS_TOOLS) {
-    if (t.type !== 'function' || !t.strict || !t.parameters) continue;
-    errs.push(...collectOpenAiStrictSchemaViolations(t.parameters, `tool:${t.name}.parameters`));
-  }
-  return errs;
-}
-
-/** @returns {Record<string, unknown> | null} */
-export function getDelegateHarnessTeamParametersSnapshot() {
-  const t = COS_TOOLS.find((x) => x.type === 'function' && x.name === 'delegate_harness_team');
-  return t && t.parameters && typeof t.parameters === 'object' ? t.parameters : null;
-}
-
-/**
- * Boot log helper — same keys as app.js `cos_boot_delegate_schema` (without deploy_sha).
- */
-export function getDelegateBootSchemaSnapshot() {
-  const dhProps = getDelegateHarnessTeamParametersSnapshot()?.properties;
-  const delegateKeys =
-    dhProps && typeof dhProps === 'object' && !Array.isArray(dhProps) ? Object.keys(dhProps).sort() : [];
-  return {
-    delegate_parameter_keys: delegateKeys,
-    delegate_schema_includes_packets: delegateKeys.includes('packets'),
-  };
-}
 
 /**
  * @param {string} constitutionMarkdown
@@ -496,109 +131,11 @@ export function buildFounderConversationInput(p) {
 }
 
 /**
- * @param {Record<string, unknown>} args
- * @param {string} threadKey
- */
-function parseExecutionNoteDetail(raw) {
-  if (raw == null) return {};
-  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) return raw;
-  if (typeof raw !== 'string') return {};
-  const t = raw.trim();
-  if (!t) return {};
-  try {
-    const j = JSON.parse(t);
-    return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
-  } catch {
-    return {};
-  }
-}
-
-async function handleRecordExecutionNote(args, threadKey) {
-  if (!threadKey) return { ok: false, blocked: true, reason: 'invalid_payload' };
-  const note = String(args?.note || '').trim();
-  if (!note) return { ok: false, blocked: true, reason: 'invalid_payload' };
-  const detail = parseExecutionNoteDetail(args?.detail);
-  const active = await getActiveRunForThread(threadKey);
-  const rid = active?.id != null ? String(active.id).trim() : '';
-  const hints = active ? cosRunTenancyMergeHintsFromRunRow(active) : {};
-  const merged = mergeLedgerExecutionRowPayload(
-    detail,
-    {
-      threadKey,
-      ...(rid ? { runId: rid } : {}),
-      ...(Object.keys(hints).length ? { runTenancy: hints } : {}),
-    },
-    process.env,
-  );
-  await appendExecutionArtifact(threadKey, {
-    type: 'execution_note',
-    summary: note.slice(0, 500),
-    payload: merged,
-    status: null,
-  });
-  return { ok: true, recorded: true, summary: note.slice(0, 500) };
-}
-
-/**
- * @param {Record<string, unknown>} args
- * @param {string} threadKey
- */
-export async function handleReadExecutionContext(args, threadKey) {
-  const limRaw = args?.limit;
-  const limit =
-    typeof limRaw === 'number' && limRaw >= 1 ? Math.min(20, limRaw) : 5;
-  const activeRow = threadKey ? await getActiveRunForThread(threadKey) : null;
-  const active_run_shell = activeRunShellForCosExecutionContext(activeRow);
-  const artifacts = threadKey ? await readRecentExecutionArtifacts(threadKey, limit) : [];
-  const summary_lines = threadKey ? await readExecutionSummary(threadKey, limit) : [];
-  const adapter_readiness_lines = await formatAdapterReadinessCompactLines(process.env, 6, threadKey);
-  const counts = threadKey
-    ? await computeExecutionOutcomeCounts(threadKey)
-    : {
-        review_required_count: 0,
-        degraded_count: 0,
-        blocked_count: 0,
-        failed_count: 0,
-      };
-  const review_queue = threadKey ? await readReviewQueue(threadKey, limit) : [];
-  const recent_artifact_spine_distinct = distinctSpineKeysFromLedgerArtifacts(artifacts, 8);
-  let execution_summary_active_run = null;
-  if (activeRow && activeRow.id != null && String(activeRow.id).trim()) {
-    execution_summary_active_run = await readExecutionSummaryForRun(activeRow, limit, {
-      suppressStaleLiveOnlyCreateSpecLeak: true,
-      suppressLiveOnlyEmitPatchFounderTechnicalLeak: true,
-    });
-  }
-  const parcel_ledger_closure_mirror = threadKey
-    ? await summarizeParcelLedgerClosureMirrorPresence(threadKey, Math.max(80, limit * 24))
-    : { count: 0, latest_ts: null };
-  return {
-    ok: true,
-    summary_lines,
-    execution_summary_active_run,
-    parcel_ledger_closure_mirror,
-    artifacts,
-    adapter_readiness_lines,
-    review_queue,
-    recent_artifact_spine_distinct,
-    active_run_shell,
-    tenancy_keys_presence: tenancyKeysPresenceFromEnv(process.env),
-    parcel_deployment_scoped_supervisor_lists: Boolean(parcelDeploymentKeyFromEnv(process.env)),
-    review_required_count: counts.review_required_count,
-    degraded_count: counts.degraded_count,
-    blocked_count: counts.blocked_count,
-    failed_count: counts.failed_count,
-  };
-}
-
-/**
  * @param {import('openai').default} openai
  * @param {string} model
  * @param {string} instructions
  * @param {string} initialInput
  * @param {string} threadKey
- */
-/**
  * @param {{ founderRequestSummary?: string }} [loopExtras]
  */
 async function runToolLoop(openai, model, instructions, initialInput, threadKey, loopExtras = {}) {
@@ -608,8 +145,6 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
   /** @type {Array<{ type: 'function_call_output', call_id: string, output: string }> | null} */
   let toolOutputs = null;
   let lastText = '';
-  /** @type {unknown[]} */
-  let lastToolRoundParsedResults = [];
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     /** @type {Record<string, unknown>} */
     const req = {
@@ -668,8 +203,6 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
     const auditRunId = activeRun?.id != null ? String(activeRun.id) : '';
 
     const outs = [];
-    /** @type {unknown[]} */
-    const currentRoundResults = [];
     for (const call of calls) {
       let args = {};
       try {
@@ -677,153 +210,21 @@ async function runToolLoop(openai, model, instructions, initialInput, threadKey,
       } catch {
         args = {};
       }
-      let result;
-      if (smTurn && call.name === 'delegate_harness_team') {
-        try {
-          await recordCosPretriggerAudit({
-            env: process.env,
-            threadKey: tk,
-            runId: auditRunId,
-            smoke_session_id: smTurn,
-            call_name: call.name,
-            args,
-            blocked: false,
-          });
-        } catch (e) {
-          console.error('[pretrigger_audit]', e);
-        }
-      }
-      const schema = validateToolCallArgs(call.name, args);
-      if (schema.blocked) {
-        result = {
-          ok: false,
-          blocked: true,
-          reason: schema.reason,
-          ...(schema.blocked_reason ? { blocked_reason: schema.blocked_reason } : {}),
-          ...(schema.machine_hint ? { machine_hint: schema.machine_hint } : {}),
-          ...(Array.isArray(schema.missing_required_fields)
-            ? { missing_required_fields: schema.missing_required_fields }
-            : {}),
-          ...(Array.isArray(schema.invalid_enum_fields)
-            ? { invalid_enum_fields: schema.invalid_enum_fields }
-            : {}),
-          ...(Array.isArray(schema.invalid_nested_fields)
-            ? { invalid_nested_fields: schema.invalid_nested_fields }
-            : {}),
-          ...(Array.isArray(schema.delegate_schema_error_fields)
-            ? { delegate_schema_error_fields: schema.delegate_schema_error_fields }
-            : {}),
-        };
-        if (
-          smTurn &&
-          (call.name === 'delegate_harness_team' || call.name === 'invoke_external_tool')
-        ) {
-          try {
-            await recordCosPretriggerAudit({
-              env: process.env,
-              threadKey: tk,
-              runId: auditRunId,
-              smoke_session_id: smTurn,
-              call_name: call.name,
-              args,
-              blocked: true,
-              machine_hint: schema.machine_hint,
-              blocked_reason: schema.blocked_reason || schema.reason,
-              missing_required_fields: schema.missing_required_fields,
-              invalid_enum_fields: schema.invalid_enum_fields,
-              invalid_nested_fields: schema.invalid_nested_fields,
-              delegate_schema_valid:
-                schema.delegate_schema_valid === true || schema.delegate_schema_valid === false
-                  ? schema.delegate_schema_valid
-                  : false,
-              delegate_schema_error_fields: schema.delegate_schema_error_fields,
-            });
-          } catch (e) {
-            console.error('[pretrigger_audit]', e);
-          }
-        }
-      } else if (call.name === 'delegate_harness_team') {
-        result = await runHarnessOrchestration(args, {
-          threadKey: tk,
-          ...(auditRunId ? { runId: auditRunId } : {}),
-          ...(activeRun ? { runTenancy: cosRunTenancyMergeHintsFromRunRow(activeRun) } : {}),
-        });
-        if (result && result.ok && String(result.status) === 'accepted' && tk) {
-          stashDelegateEmitPatchContext(tk, /** @type {Record<string, unknown>} */ (result));
-          const shell = await persistAcceptedRunShell({
-            threadKey: tk,
-            dispatch: result,
-            founder_request_summary: founderRequestSummary,
-          });
-          const runId = shell?.id != null ? String(shell.id).trim() : '';
-          let kick;
-          if (runId) {
-            kick = await executeStarterKickoffIfEligible({
-              threadKey: tk,
-              dispatch: result,
-              env: process.env,
-              cosRunId: runId,
-            });
-            result = { ...result, starter_kickoff: kick };
-            await finalizeRunAfterStarterKickoff({
-              runId,
-              threadKey: tk,
-              dispatch: result,
-              starter_kickoff: kick,
-              founder_request_summary: founderRequestSummary,
-            });
-          } else {
-            kick = await executeStarterKickoffIfEligible({
-              threadKey: tk,
-              dispatch: result,
-              env: process.env,
-            });
-            result = { ...result, starter_kickoff: kick };
-            await persistRunAfterDelegate({
-              threadKey: tk,
-              dispatch: result,
-              starter_kickoff: kick,
-              founder_request_summary: founderRequestSummary,
-            });
-          }
-        }
-      } else if (call.name === 'invoke_external_tool') {
-        if (smTurn && auditRunId) {
-          try {
-            await recordCosPretriggerAudit({
-              env: process.env,
-              threadKey: tk,
-              runId: auditRunId,
-              smoke_session_id: smTurn,
-              call_name: call.name,
-              args,
-              blocked: false,
-            });
-          } catch (e) {
-            console.error('[pretrigger_audit]', e);
-          }
-        }
-        result = await invokeExternalTool(args, {
-          threadKey: tk,
-          ...(smTurn ? { ops_smoke_session_id: smTurn } : {}),
-          ...(auditRunId ? { cosRunId: auditRunId } : {}),
-          ...(activeRun ? { runTenancy: cosRunTenancyMergeHintsFromRunRow(activeRun) } : {}),
-        });
-      } else if (call.name === 'record_execution_note') {
-        result = await handleRecordExecutionNote(args, tk);
-      } else if (call.name === 'read_execution_context') {
-        result = await handleReadExecutionContext(args, tk);
-      } else {
-        result = { ok: false, error: 'unknown_tool', name: call.name };
-      }
-      currentRoundResults.push(result);
+      const result = await executeFounderCosToolCall({
+        call,
+        args,
+        threadKey: tk,
+        smTurn,
+        auditRunId,
+        activeRun,
+        founderRequestSummary,
+      });
       outs.push({
         type: 'function_call_output',
         call_id: call.call_id,
         output: JSON.stringify(result),
       });
     }
-    lastToolRoundParsedResults = currentRoundResults;
     toolOutputs = outs;
   }
 

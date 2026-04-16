@@ -2,6 +2,10 @@ import assert from 'node:assert';
 import { runHarnessOrchestration } from '../src/founder/harnessBridge.js';
 import { invokeExternalTool } from '../src/founder/toolsBridge.js';
 import { validateToolCallArgs } from '../src/founder/runFounderDirectConversation.js';
+import {
+  externalToolLaneRegistryGaps,
+  listExternalToolLanes,
+} from '../src/founder/toolPlane/externalToolLaneRegistry.js';
 
 const h = await runHarnessOrchestration({
   objective: '스펙 정리',
@@ -94,5 +98,8 @@ const bWrongPair = validateToolCallArgs('invoke_external_tool', {
 });
 assert.equal(bWrongPair.blocked, true);
 assert.equal(bWrongPair.reason, 'unsupported_action');
+
+assert.deepEqual(externalToolLaneRegistryGaps(), []);
+assert.equal(listExternalToolLanes().length, 5);
 
 console.log('test-execution-boundary-and-bridges: ok');
