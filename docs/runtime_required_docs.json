@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "description": "Required-doc preflight registry (CURSOR MASTER INSTRUCTION W0). Paths are repo-root-relative.",
+  "global_required": [
+    "CONSTITUTION.md",
+    "docs/cursor-handoffs/WHAT_WE_ARE_BUILDING_G1_COS_2026-04-14.md"
+  ],
+  "workstream_required": {
+    "orchestrator_toolplane": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ],
+    "harness_runtime": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ],
+    "truth_tenancy": [
+      "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md"
+    ],
+    "release_ops": [
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
+    ],
+    "founder_surface": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ],
+    "scenario1_spinup": [
+      "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md",
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ],
+    "scenario2_bundle": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ]
+  }
+}

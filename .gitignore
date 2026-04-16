@@ -12,3 +12,6 @@ supabase/*
 !supabase/migrations/*.sql
 .runtime/
 tmp/
+# Preflight 산출물(로컬/CI에서 생성; .gitkeep 만 추적)
+ops/preflight_manifest/*.json
+ops/preflight_ack/*.json

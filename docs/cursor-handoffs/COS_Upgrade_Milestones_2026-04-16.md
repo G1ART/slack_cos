@@ -4,10 +4,13 @@
 
 **외부 로드맵 SSOT:** `G1_COS_Upgrade_Roadmap_2026-04-14.md` (M1~M10, non-goals). **제품 서술 SSOT:** `WHAT_WE_ARE_BUILDING_G1_COS_2026-04-14.md`.
 
+**W0 Start Gate (필독·갭 SSOT):** `docs/runtime_required_docs.json` · `scripts/preflight_required_docs.mjs` · `scripts/verify_preflight_ack.mjs` · `ops/README.md` · 갭/워크스트림 본문 `COS_Gap_Register_And_Workstream_Plan_2026-04-15.md`. 의미 있는 패치 전 매니페스트·청크별 ack·`verify:preflight-ack` 권장.
+
 **목표 수준(한 줄):** 같은 Supabase·같은 COS 프로세스 안에서 **워크스페이스·제품·프로젝트·배포** 경계가 **자동·일관**하게 태깅·필터되고, **ledger·스트림·요약**이 같은 식별자 어휘를 쓰며, **Phase 1 봉투** 필드가 코드 경로에 점진 이식된다.
 
 ## 구현 스냅샷 (누적)
 
+- **W0 Start Gate (일부):** `docs/runtime_required_docs.json` + `preflight_required_docs.mjs` / `verify_preflight_ack.mjs` + `test-runtime-required-docs-registry.mjs` — 필독 문서 청크·sha256 매니페스트 및 ack 검증(fail-closed); 갭/워크스트림 SSOT `COS_Gap_Register_And_Workstream_Plan_2026-04-15.md`.
 - **G1 로드맵 M1 (일부):** `src/founder/canonicalExecutionEnvelope.js` — `mergeCanonicalExecutionEnvelopeToPayload` 가 `COS_OPS_SMOKE_SUMMARY_EVENT_TYPES` append 경로(`appendCosRunEvent` / `appendCosRunEventForRun`) 및 `recordCosPretriggerAudit` 에서 env·요청 스코프·**durable run 행(`runTenancy`)** 로 테넄시 + `run_id` / `thread_key` / `packet_id` 빈칸을 채움. 테스트: `scripts/test-canonical-execution-envelope-smoke-payload.mjs`, `scripts/test-canonical-envelope-run-tenancy-merge.mjs`.
 - **G1 로드맵 M2 (일부):** `appendCosRunEvent` / `appendCosRunEventForRun` 가 **요약 타입뿐 아니라 전 ledger 이벤트**에 동일 봉투 병합 적용; `cosRunEventEnvelopeMergeCtxFromRun` (`parcelDeploymentContext.js`). Supabase `run_persisted` 직기입도 동일 병합. SQL: `cos_run_events_tenancy_stream` 뷰.
 - **G1 로드맵 M3 (일부):** `audit-parcel-ops-smoke-health.mjs` 가 `cos_run_events_tenancy_stream` 샘플로 `ledger_tenancy_workspace_top` 출력.
