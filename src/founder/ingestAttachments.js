@@ -1,9 +1,11 @@
 /**
  * 현재 턴 Slack 첨부만 읽어 요약 텍스트로 만든다. 상태 병합·영속화 없음.
- * HTTP 200 + HTML(미리보기/로그인) 은 바이너리로 처리하지 않는다.
  *
  * Slack 이벤트의 `files[]` 객체를 우선 사용하고, `files.info`는
  * `check_file_info`·URL 누락·핵심 메타 부족 시에만 호출한다.
+ *
+ * 비공개 파일 바이트는 `downloadSlackPrivateFile`로 가져오며, 리다이렉트마다
+ * Bearer를 재부착하고 HTML/미리보기 응답은 성공으로 처리하지 않는다.
  */
 
 import mammoth from 'mammoth';
@@ -11,6 +13,55 @@ import mammoth from 'mammoth';
 const IMAGE_EXT = /\.(png|jpe?g|webp)$/i;
 
 const HTML_FAILURE_REASON = '파일 대신 HTML 미리보기/로그인 페이지가 내려와 읽지 못했습니다.';
+
+/** @typedef {'url_private_download' | 'url_private'} SlackPrivateUrlVariant */
+
+/**
+ * 리다이렉트 따라가기 허용 호스트 (Slack 파일·워크스페이스 경로).
+ * @param {string} hostname
+ * @returns {boolean}
+ */
+export function isAllowedSlackRedirectHost(hostname) {
+  const h = String(hostname || '').toLowerCase();
+  if (!h) return false;
+  if (h === 'files.slack.com') return true;
+  if (h === 'slack-files.com' || h.endsWith('.slack-files.com')) return true;
+  if (h.endsWith('.slack.com')) {
+    if (h === 'app.slack.com' || h === 'www.slack.com' || h === 'slack.com') return false;
+    if (h.startsWith('files')) return true;
+    if (/^[a-z0-9][a-z0-9-]*\.slack\.com$/.test(h)) return true;
+  }
+  return false;
+}
+
+/**
+ * @param {string} url
+ * @returns {boolean}
+ */
+function slackFinalUrlLooksLikePreviewPage(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'app.slack.com') return true;
+    if (u.hostname.endsWith('.slack.com') && u.pathname.includes('/client/') && u.pathname.includes('/files')) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
+ * @param {Record<string, unknown>} file
+ * @returns {{ url: string, variant: SlackPrivateUrlVariant } | null}
+ */
+export function pickSlackPrivateFileUrl(file) {
+  const udl = String(file.url_private_download || '').trim();
+  const up = String(file.url_private || '').trim();
+  if (udl) return { url: udl, variant: 'url_private_download' };
+  if (up) return { url: up, variant: 'url_private' };
+  return null;
+}
 
 /**
  * `files.info` 후속 조회가 필요한지 (이벤트 페이로드만으로는 불충분한 경우).
@@ -106,6 +157,212 @@ function bufferLooksLikeHtml(buf) {
 }
 
 /**
+ * Slack 비공개 파일 URL을 수동 리다이렉트·Bearer 유지로 다운로드한다.
+ * @param {{
+ *   client: { token?: string },
+ *   url: string,
+ *   maxRedirects?: number,
+ *   urlVariant: SlackPrivateUrlVariant,
+ * }} p
+ * @returns {Promise<
+ *   | {
+ *       ok: true,
+ *       buffer: Buffer,
+ *       contentType: string,
+ *       finalUrl: string,
+ *       diagnostics: Record<string, unknown>,
+ *     }
+ *   | { ok: false, reason: string, code: string, diagnostics: Record<string, unknown> }
+ * >}
+ */
+export async function downloadSlackPrivateFile({ client, url, maxRedirects = 5, urlVariant }) {
+  const token = client?.token || process.env.SLACK_BOT_TOKEN;
+  /** @type {Record<string, unknown>} */
+  const diagnostics = {
+    url_variant_used: urlVariant,
+    redirect_count: 0,
+    initial_host: '',
+    final_host: '',
+    final_status: null,
+    final_content_type: null,
+    content_disposition: null,
+    html_detected: false,
+  };
+
+  let initialHost = '';
+  try {
+    initialHost = new URL(url).hostname;
+  } catch {
+    return {
+      ok: false,
+      reason: '다운로드 URL이 올바르지 않습니다.',
+      code: 'attachment_download_fetch_error',
+      diagnostics: { ...diagnostics, initial_host: initialHost },
+    };
+  }
+  diagnostics.initial_host = initialHost;
+  if (!isAllowedSlackRedirectHost(initialHost)) {
+    return {
+      ok: false,
+      reason: '허용되지 않은 호스트의 비공개 파일 URL입니다.',
+      code: 'attachment_download_disallowed_redirect_host',
+      diagnostics: { ...diagnostics, disallowed_host: initialHost },
+    };
+  }
+
+  let currentUrl = url;
+  let redirectCount = 0;
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  for (;;) {
+    let res;
+    try {
+      res = await fetch(currentUrl, { method: 'GET', headers: { ...authHeaders }, redirect: 'manual' });
+    } catch {
+      return {
+        ok: false,
+        reason: '네트워크 오류로 다운로드하지 못했습니다.',
+        code: 'attachment_download_fetch_error',
+        diagnostics: { ...diagnostics, redirect_count: redirectCount },
+      };
+    }
+
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) {
+        return {
+          ok: false,
+          reason: `다운로드 실패 (HTTP ${res.status}, Location 없음)`,
+          code: 'attachment_download_http_error',
+          diagnostics: { ...diagnostics, redirect_count: redirectCount, final_status: res.status },
+        };
+      }
+      if (redirectCount >= maxRedirects) {
+        return {
+          ok: false,
+          reason: `리다이렉트가 ${maxRedirects}회를 넘어 중단했습니다.`,
+          code: 'attachment_download_redirect_limit',
+          diagnostics: { ...diagnostics, redirect_count: redirectCount },
+        };
+      }
+      let nextUrl;
+      try {
+        nextUrl = new URL(loc, currentUrl).href;
+      } catch {
+        return {
+          ok: false,
+          reason: '리다이렉트 URL을 해석하지 못했습니다.',
+          code: 'attachment_download_fetch_error',
+          diagnostics: { ...diagnostics, redirect_count: redirectCount },
+        };
+      }
+      let nextHost = '';
+      try {
+        nextHost = new URL(nextUrl).hostname;
+      } catch {
+        return {
+          ok: false,
+          reason: '리다이렉트 URL이 올바르지 않습니다.',
+          code: 'attachment_download_fetch_error',
+          diagnostics: { ...diagnostics, redirect_count: redirectCount },
+        };
+      }
+      if (!isAllowedSlackRedirectHost(nextHost)) {
+        return {
+          ok: false,
+          reason: `허용되지 않은 호스트로의 리다이렉트입니다: ${nextHost}`,
+          code: 'attachment_download_disallowed_redirect_host',
+          diagnostics: { ...diagnostics, redirect_count: redirectCount, disallowed_host: nextHost },
+        };
+      }
+      redirectCount += 1;
+      diagnostics.redirect_count = redirectCount;
+      currentUrl = nextUrl;
+      continue;
+    }
+
+    const finalStatus = res.status;
+    diagnostics.final_status = finalStatus;
+    const rawCt = res.headers.get('content-type') || '';
+    const cd = res.headers.get('content-disposition') || '';
+    diagnostics.final_content_type = rawCt;
+    diagnostics.content_disposition = cd;
+    const finalUrl = res.url || currentUrl;
+    let finalHost = '';
+    try {
+      finalHost = new URL(finalUrl).hostname;
+    } catch {
+      /* keep empty */
+    }
+    diagnostics.final_host = finalHost;
+
+    if (!isAllowedSlackRedirectHost(finalHost)) {
+      return {
+        ok: false,
+        reason: `응답 호스트가 허용 범위를 벗어났습니다: ${finalHost || '(알 수 없음)'}`,
+        code: 'attachment_download_disallowed_redirect_host',
+        diagnostics,
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        reason: `다운로드 실패 (HTTP ${finalStatus})`,
+        code: 'attachment_download_http_error',
+        diagnostics,
+      };
+    }
+
+    if (slackFinalUrlLooksLikePreviewPage(finalUrl)) {
+      diagnostics.html_detected = true;
+      return {
+        ok: false,
+        reason: HTML_FAILURE_REASON,
+        code: 'attachment_download_received_html',
+        diagnostics,
+      };
+    }
+
+    const contentType = rawCt.toLowerCase().split(';')[0].trim();
+    const buf = Buffer.from(await res.arrayBuffer());
+
+    if (contentType === 'text/html' || contentType.endsWith('/html') || rawCt.toLowerCase().includes('text/html')) {
+      diagnostics.html_detected = true;
+      return {
+        ok: false,
+        reason: HTML_FAILURE_REASON,
+        code: 'attachment_download_received_html',
+        diagnostics,
+      };
+    }
+
+    if (bufferLooksLikeHtml(buf)) {
+      diagnostics.html_detected = true;
+      return {
+        ok: false,
+        reason: HTML_FAILURE_REASON,
+        code: 'attachment_download_received_html',
+        diagnostics,
+      };
+    }
+
+    return {
+      ok: true,
+      buffer: buf,
+      contentType: contentType || 'application/octet-stream',
+      finalUrl,
+      diagnostics: {
+        ...diagnostics,
+        redirect_count: redirectCount,
+        final_host: finalHost,
+        final_status: finalStatus,
+      },
+    };
+  }
+}
+
+/**
  * @param {{ token?: string }} client
  * @param {string} url
  * @returns {Promise<
@@ -114,40 +371,14 @@ function bufferLooksLikeHtml(buf) {
  * >}
  */
 export async function downloadPrivateUrl(client, url) {
-  const token = client?.token || process.env.SLACK_BOT_TOKEN;
-  let res;
-  try {
-    res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
-    return { ok: false, reason: '네트워크 오류로 다운로드하지 못했습니다.', code: 'fetch_error' };
-  }
-
-  const finalUrl = res.url || url;
-  if (!res.ok) {
-    return { ok: false, reason: `다운로드 실패 (HTTP ${res.status})`, code: 'http_error' };
-  }
-
-  const rawCt = res.headers.get('content-type') || '';
-  const contentType = rawCt.toLowerCase().split(';')[0].trim();
-
-  const buf = Buffer.from(await res.arrayBuffer());
-
-  if (contentType === 'text/html' || contentType.endsWith('/html') || rawCt.toLowerCase().includes('text/html')) {
-    return { ok: false, reason: HTML_FAILURE_REASON, code: 'html_instead_of_binary' };
-  }
-
-  if (bufferLooksLikeHtml(buf)) {
-    return { ok: false, reason: HTML_FAILURE_REASON, code: 'html_instead_of_binary' };
-  }
-
-  return {
-    ok: true,
-    buffer: buf,
-    contentType: contentType || 'application/octet-stream',
-    finalUrl,
-  };
+  const r = await downloadSlackPrivateFile({
+    client,
+    url,
+    maxRedirects: 5,
+    urlVariant: 'url_private',
+  });
+  if (!r.ok) return { ok: false, reason: r.reason, code: r.code };
+  return { ok: true, buffer: r.buffer, contentType: r.contentType, finalUrl: r.finalUrl };
 }
 
 /**
@@ -227,18 +458,34 @@ export async function ingestCurrentTurnAttachments(ctx) {
     }
 
     let file = resolved.file;
-    let fileUrl = String(file.url_private_download || file.url_private || '').trim();
-    if (!fileUrl) {
+    const pick0 = pickSlackPrivateFileUrl(file);
+    if (!pick0) {
       out.push({ filename: name, ok: false, reason: '비공개 다운로드 URL이 없어 읽지 못했습니다.' });
+      console.info(
+        JSON.stringify({
+          event: 'attachment_slack_download_attempt',
+          file_id: id,
+          filename: name,
+          failure_code: 'attachment_download_missing_private_url',
+          used_files_info_fallback: resolved.source === 'files.info',
+          file_access: rawF.file_access ?? null,
+        }),
+      );
       continue;
     }
+    let pickUsed = pick0;
 
-    let dl = await downloadPrivateUrl(client, fileUrl);
+    let dl = await downloadSlackPrivateFile({
+      client,
+      url: pickUsed.url,
+      maxRedirects: 5,
+      urlVariant: pickUsed.variant,
+    });
     const source = resolved.source;
 
     if (
       !dl.ok &&
-      dl.code === 'http_error' &&
+      dl.code === 'attachment_download_http_error' &&
       source === 'event_payload' &&
       /\b401\b|\b403\b/.test(String(dl.reason || ''))
     ) {
@@ -247,18 +494,25 @@ export async function ingestCurrentTurnAttachments(ctx) {
           event: 'attachment_download_retry_via_files_info',
           file_id: id,
           first_reason: dl.reason || null,
+          first_failure_code: dl.code,
         }),
       );
       try {
         const info = await client.files.info({ file: id });
         const refreshed = info?.file && typeof info.file === 'object' ? info.file : null;
         if (refreshed) {
-          const url2 = String(refreshed.url_private_download || refreshed.url_private || '').trim();
-          if (url2) {
-            const dl2 = await downloadPrivateUrl(client, url2);
+          const pick1 = pickSlackPrivateFileUrl(/** @type {Record<string, unknown>} */ (refreshed));
+          if (pick1) {
+            const dl2 = await downloadSlackPrivateFile({
+              client,
+              url: pick1.url,
+              maxRedirects: 5,
+              urlVariant: pick1.variant,
+            });
             if (dl2.ok) {
               dl = dl2;
               file = /** @type {Record<string, unknown>} */ (refreshed);
+              pickUsed = pick1;
             }
           }
         }
@@ -267,10 +521,34 @@ export async function ingestCurrentTurnAttachments(ctx) {
       }
     }
 
+    const diagBase = {
+      event: 'attachment_slack_download_attempt',
+      file_id: id,
+      filename: name,
+      url_variant_used: pickUsed.variant,
+      used_files_info_fallback: resolved.source === 'files.info',
+      file_access: rawF.file_access ?? null,
+    };
     if (!dl.ok) {
+      console.info(
+        JSON.stringify({
+          ...diagBase,
+          ...(dl.diagnostics || {}),
+          failure_code: dl.code,
+        }),
+      );
       out.push({ filename: name, ok: false, reason: dl.reason || '다운로드에 실패했습니다.' });
       continue;
     }
+
+    console.info(
+      JSON.stringify({
+        ...diagBase,
+        ...(dl.diagnostics || {}),
+        failure_code: null,
+        html_detected: Boolean(dl.diagnostics?.html_detected === true),
+      }),
+    );
 
     const buffer = dl.buffer;
     const mime = String((file.mimetype || rawF.mimetype) || '').toLowerCase();

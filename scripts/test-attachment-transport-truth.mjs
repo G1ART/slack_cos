@@ -15,7 +15,7 @@ globalThis.fetch = async () => ({
 
 const dl = await downloadPrivateUrl({ token: 'x-token' }, 'https://files.slack.com/private');
 assert.equal(dl.ok, false, 'html response must not be treated as binary');
-assert.equal(dl.code, 'html_instead_of_binary');
+assert.equal(dl.code, 'attachment_download_received_html');
 assert.ok(
   String(dl.reason).includes('HTML'),
   'failure reason mentions HTML',
