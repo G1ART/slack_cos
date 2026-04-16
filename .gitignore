@@ -4,7 +4,10 @@ node_modules/
 *.log
 .DS_Store
 
-.cursor/
+# Cursor 로컬 캐시 등은 무시하되, 팀 공유 규칙(.cursor/rules)은 추적
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 .vscode/
 # 로컬 supabase CLI 산출물은 무시하되, 레포에 포함하는 마이그레이션만 추적
 supabase/*
