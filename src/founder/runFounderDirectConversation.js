@@ -4,7 +4,11 @@
 
 import { runHarnessOrchestration } from './harnessBridge.js';
 import { invokeExternalTool } from './toolPlane/dispatchExternalToolCall.js';
-import { readExecutionSummary, readRecentExecutionArtifacts } from './executionLedger.js';
+import {
+  readExecutionSummary,
+  readRecentExecutionArtifacts,
+  executionArtifactMatchesRun,
+} from './executionLedger.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import { buildSystemInstructions } from './founderSystemInstructions.js';
 import { buildFounderConversationInput } from './founderConversationInput.js';
@@ -32,6 +36,26 @@ export { buildFounderConversationInput } from './founderConversationInput.js';
  * @deprecated 회귀·문서 호환용; 신규 코드는 `runFounderDirectConversation` 의 `text` 사용.
  */
 export const FOUNDER_SAME_TURN_ACK_TEXT = '요청을 접수했습니다.';
+
+/**
+ * W4 closeout Gap B — founder surface 의 산출물 trailer 는 같은 스레드의 **과거 런** 아티팩트를
+ * 끌어오면 안 된다. 활성 런 식별이 가능할 때는 `executionArtifactMatchesRun` 로 현재 런만 남기고,
+ * 식별이 불가능할 때(런 없음/미정)만 스레드 스코프 fallback 을 허용한다.
+ *
+ * @param {unknown[]} artifacts `readRecentExecutionArtifacts` 결과 (스레드 스코프)
+ * @param {Record<string, unknown> | null | undefined} activeRow `getActiveRunForThread` 결과
+ * @returns {unknown[]}
+ */
+export function scopeArtifactsToActiveRun(artifacts, activeRow) {
+  const list = Array.isArray(artifacts) ? artifacts : [];
+  if (!activeRow || typeof activeRow !== 'object') return list;
+  const run = /** @type {Record<string, unknown>} */ (activeRow);
+  if (run.id == null || !String(run.id).trim()) return list;
+  return list.filter((row) => {
+    if (!row || typeof row !== 'object') return false;
+    return executionArtifactMatchesRun(/** @type {Record<string, unknown>} */ (row), run);
+  });
+}
 
 /**
  * @param {{
@@ -79,12 +103,13 @@ export async function runFounderDirectConversation(ctx) {
       maxArtifactScan: 24,
       activeRow,
     });
+    const activeRunScopedArtifacts = scopeArtifactsToActiveRun(postTurnArtifacts, activeRow);
     surfaceModel = buildFounderSurfaceModel({
       threadKey: tk,
       modelText: text,
       activeRunShell: active_run_shell,
       readModel,
-      artifacts: postTurnArtifacts,
+      artifacts: activeRunScopedArtifacts,
       recentTurns: ctx.recentTurns || [],
     });
     surfaceRender = renderFounderSurfaceText({

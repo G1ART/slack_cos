@@ -55,48 +55,39 @@ export function deriveSurfaceIntentFromActiveRunShell(shell) {
 }
 
 /**
- * workcell_runtime.status 가 review_required/blocked/failed 면 그 신호를 우선한다 (C2: truth over prose).
+ * W4 closeout Gap A — workcell_runtime 가 부정 상태(failed/blocked/escalated/review_required/rework_requested)
+ * 를 들고 있으면 **무조건** 그 신호가 shell 의 `completed` 등을 덮는다 (truth > shell > prose).
+ *
+ * W2-B 실제 shape 의 상태 토큰 (`active|review_required|rework_requested|escalated|completed`) 과
+ * 레거시 토큰 (`blocked`, `failed`) 을 모두 받아서 founder surface intent 로 매핑한다.
+ *
  * @param {unknown} shell
  * @returns {FounderSurfaceIntent | null}
  */
-function deriveSurfaceIntentFromWorkcellStatus(shell) {
+function workcellIntentOverrideForShell(shell) {
   if (!shell || typeof shell !== 'object') return null;
   const wr = /** @type {Record<string, unknown>} */ (shell).workcell_runtime;
   if (!wr || typeof wr !== 'object' || Array.isArray(wr)) return null;
-  const ws = String(/** @type {Record<string, unknown>} */ (wr).status || '').trim().toLowerCase();
-  if (ws === 'review_required') return 'review_required';
-  if (ws === 'blocked') return 'blocked';
+  const wrObj = /** @type {Record<string, unknown>} */ (wr);
+  const ws = String(wrObj.status || '').trim().toLowerCase();
   if (ws === 'failed') return 'failed';
+  if (ws === 'blocked') return 'blocked';
+  if (ws === 'escalated') return 'blocked';
+  if (ws === 'review_required') return 'review_required';
+  if (ws === 'rework_requested') return 'review_required';
+  if (wrObj.escalation_open === true) return 'blocked';
   return null;
 }
 
 /**
- * review_required/blocked 등 강도 낮은 의도가 강도 높은 의도를 덮지 않도록 가중치 비교.
- * 숫자가 클수록 결정적으로 본다. `informational` 은 가장 약하다.
+ * W4 closeout Gap A — deterministic precedence for founder surface intent:
  *
- * @param {FounderSurfaceIntent} intent
- */
-function intentAuthorityRank(intent) {
-  switch (intent) {
-    case 'failed':
-      return 6;
-    case 'completed':
-      return 5;
-    case 'blocked':
-      return 4;
-    case 'review_required':
-      return 4;
-    case 'running':
-      return 3;
-    case 'accepted':
-      return 2;
-    default:
-      return 1;
-  }
-}
-
-/**
- * hint(명시 호출자 값) → workcell_status → active_run_shell.status → informational 순으로 결정.
+ *   1) workcell_runtime negative truth ({failed,blocked,escalated,review_required,rework_requested,
+ *      escalation_open:true}) 이 있으면 그게 우선 (shell 의 `completed` 를 절대 덮지 못하게 차단).
+ *   2) 그 외에는 active_run_shell.status.
+ *   3) 앞 둘이 비었을 때만 호출자 hint.
+ *   4) 최종 fallback 은 `informational`.
+ *
  * @param {{
  *   activeRunShell?: unknown,
  *   surfaceIntentHint?: FounderSurfaceIntent | null,
@@ -104,13 +95,17 @@ function intentAuthorityRank(intent) {
  * @returns {FounderSurfaceIntent}
  */
 export function resolveFounderSurfaceIntent(p) {
-  const hint = p && p.surfaceIntentHint && SURFACE_INTENT_SET.has(p.surfaceIntentHint) ? p.surfaceIntentHint : null;
-  const fromWorkcell = deriveSurfaceIntentFromWorkcellStatus(p ? p.activeRunShell : null);
-  const fromRun = deriveSurfaceIntentFromActiveRunShell(p ? p.activeRunShell : null);
+  const shell = p ? p.activeRunShell : null;
+  const workcellOverride = workcellIntentOverrideForShell(shell);
+  if (workcellOverride) return workcellOverride;
 
-  const candidates = [hint, fromWorkcell, fromRun].filter(Boolean);
-  if (!candidates.length) return 'informational';
-  return candidates.reduce((a, b) => (intentAuthorityRank(b) > intentAuthorityRank(a) ? b : a));
+  const fromShell = deriveSurfaceIntentFromActiveRunShell(shell);
+  if (fromShell) return fromShell;
+
+  const hint = p && p.surfaceIntentHint && SURFACE_INTENT_SET.has(p.surfaceIntentHint) ? p.surfaceIntentHint : null;
+  if (hint) return hint;
+
+  return 'informational';
 }
 
 /**
@@ -143,13 +138,23 @@ const FOUNDER_SURFACE_JARGON_DENYLIST = [
 ];
 
 /**
- * snake_case 토큰이 줄줄이 붙어 있거나 denylist 용어가 들어간 문자열은 founder 표면에 그대로 쓰지 않는다.
+ * W2-B `formatHarnessWorkcellSummaryLines` 가 생성하는 구조화 헤더 줄(`workcell:`, `packet ...`,
+ * `review checkpoints:`, `escalation open:`, `escalation targets:`) 은 founder 표면에 그대로 드러내지
+ * 않는다. 자연어 줄과 구분하려고 전용 regex 로 차단한다.
+ */
+const WORKCELL_SUMMARY_STRUCTURED_LINE_RE =
+  /(^|\s)(workcell:|packet\s+\S+:\S+|review checkpoints:|escalation open:|escalation targets:)/i;
+
+/**
+ * snake_case 토큰·W2-B 구조화 summary 헤더·`key=value` 파편 이 들어간 문자열은 founder 표면에 쓰지 않는다.
  * @param {string} s
  * @returns {boolean}
  */
 function looksLikeRuntimeJargon(s) {
   const t = ` ${String(s || '')} `;
   if (/(^|\s)[a-z][a-z0-9]*(_[a-z0-9]+){1,}(\s|[:.,]|$)/.test(t)) return true;
+  if (WORKCELL_SUMMARY_STRUCTURED_LINE_RE.test(t)) return true;
+  if (/\b(tool|action|personas|packets|packet_count|review_checkpoint_count)\s*=/.test(t)) return true;
   for (const kw of FOUNDER_SURFACE_JARGON_DENYLIST) {
     if (t.includes(kw)) return true;
   }
@@ -205,6 +210,44 @@ function collectDeliverablesFromArtifacts(artifacts, maxItems) {
     });
   }
   return out;
+}
+
+/**
+ * W4 closeout Gap C — founder-facing blocker/review reason 추출 우선순위.
+ *
+ *   1) 1차(primary): `workcell_runtime.summary_lines` 에서 jargon 이 아닌 자연어 줄 (W2-B 실제 shape).
+ *   2) 2차(legacy compat): `workcell_runtime.escalation_state.reasons` 에서 자연어 사유.
+ *
+ * 둘 다 없으면 null 반환 — founder 표면에 machine 토큰을 절대 붙이지 않는다 (truth > prose).
+ *
+ * @param {unknown} shell
+ * @returns {string | null}
+ */
+function pickFounderFacingReasonFromWorkcell(shell) {
+  if (!shell || typeof shell !== 'object') return null;
+  const wr = /** @type {Record<string, unknown>} */ (shell).workcell_runtime;
+  if (!wr || typeof wr !== 'object' || Array.isArray(wr)) return null;
+  const wrObj = /** @type {Record<string, unknown>} */ (wr);
+
+  const lines = Array.isArray(wrObj.summary_lines) ? wrObj.summary_lines : [];
+  for (const raw of lines) {
+    const s = compactString(raw, 240);
+    if (!s) continue;
+    if (looksLikeRuntimeJargon(s)) continue;
+    return s;
+  }
+
+  const es = wrObj.escalation_state;
+  if (es && typeof es === 'object' && !Array.isArray(es)) {
+    const esObj = /** @type {Record<string, unknown>} */ (es);
+    const reasons = Array.isArray(esObj.reasons) ? esObj.reasons.map(String).filter(Boolean) : [];
+    for (const r of reasons) {
+      if (!r || looksLikeRuntimeJargon(r)) continue;
+      return compactString(r, 240);
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -277,24 +320,14 @@ export function buildFounderSurfaceModel(input = {}) {
     surfaceIntentHint: input.surfaceIntentHint || null,
   });
 
+  const naturalReason = pickFounderFacingReasonFromWorkcell(shell);
   /** @type {string | null} */
   let blocker_reason = null;
   /** @type {string | null} */
   let review_reason = null;
-  if (shell && typeof shell === 'object') {
-    const sh = /** @type {Record<string, unknown>} */ (shell);
-    const wr = sh.workcell_runtime;
-    if (wr && typeof wr === 'object' && !Array.isArray(wr)) {
-      const es = /** @type {Record<string, unknown>} */ (wr).escalation_state;
-      if (es && typeof es === 'object' && !Array.isArray(es)) {
-        const esObj = /** @type {Record<string, unknown>} */ (es);
-        const reasons = Array.isArray(esObj.reasons) ? esObj.reasons.map(String).filter(Boolean) : [];
-        const naturalReason = reasons.find((r) => r && !looksLikeRuntimeJargon(r));
-        const firstReason = naturalReason ? compactString(naturalReason, 240) : '';
-        if (surface_intent === 'blocked' && firstReason) blocker_reason = firstReason;
-        if (surface_intent === 'review_required' && firstReason) review_reason = firstReason;
-      }
-    }
+  if (naturalReason) {
+    if (surface_intent === 'blocked' || surface_intent === 'failed') blocker_reason = naturalReason;
+    if (surface_intent === 'review_required') review_reason = naturalReason;
   }
 
   const deliverables = collectDeliverablesFromArtifacts(input.artifacts || [], 4);
