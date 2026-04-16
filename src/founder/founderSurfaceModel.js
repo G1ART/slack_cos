@@ -298,7 +298,48 @@ function resolveTenancySlice(shell, readModel) {
 }
 
 /**
+ * W5-A Slice — pull `human_gate_*` into the surface model so the renderer can emit a single
+ * "다음 조치: …" line. `resolution_class` 토큰은 **절대 노출하지 않는다** (헌법 §2/§6).
+ *
+ * @param {unknown} shell
+ * @param {unknown} readModel
+ * @returns {{ human_gate_required: boolean, human_gate_reason: string | null, human_gate_action: string | null }}
+ */
+function extractHumanGateSlice(shell, readModel) {
+  /** @type {{ human_gate_required: boolean, human_gate_reason: string | null, human_gate_action: string | null }} */
+  const out = { human_gate_required: false, human_gate_reason: null, human_gate_action: null };
+  if (!shell || typeof shell !== 'object') return out;
+  const wr = /** @type {Record<string, unknown>} */ (shell).workcell_runtime;
+  const wrObj = wr && typeof wr === 'object' && !Array.isArray(wr) ? /** @type {Record<string, unknown>} */ (wr) : null;
+  /** @type {Record<string, unknown> | null} */
+  const fcFromWorkcell =
+    wrObj && wrObj.failure_classification && typeof wrObj.failure_classification === 'object' && !Array.isArray(wrObj.failure_classification)
+      ? /** @type {Record<string, unknown>} */ (wrObj.failure_classification)
+      : null;
+  const shellObj = /** @type {Record<string, unknown>} */ (shell);
+  const fcFromShell =
+    shellObj.failure_classification && typeof shellObj.failure_classification === 'object' && !Array.isArray(shellObj.failure_classification)
+      ? /** @type {Record<string, unknown>} */ (shellObj.failure_classification)
+      : null;
+  const rm = readModel && typeof readModel === 'object' ? /** @type {Record<string, unknown>} */ (readModel) : null;
+  const fcFromRm =
+    rm && rm.failure_classification && typeof rm.failure_classification === 'object' && !Array.isArray(rm.failure_classification)
+      ? /** @type {Record<string, unknown>} */ (rm.failure_classification)
+      : null;
+
+  const fc = fcFromWorkcell || fcFromShell || fcFromRm;
+  if (!fc) return out;
+  if (fc.human_gate_required === true) out.human_gate_required = true;
+  const reasonRaw = typeof fc.human_gate_reason === 'string' ? fc.human_gate_reason : '';
+  if (reasonRaw && !looksLikeRuntimeJargon(reasonRaw)) out.human_gate_reason = compactString(reasonRaw, 200);
+  const actionRaw = typeof fc.human_gate_action === 'string' ? fc.human_gate_action : '';
+  if (actionRaw && !looksLikeRuntimeJargon(actionRaw)) out.human_gate_action = compactString(actionRaw, 200);
+  return out;
+}
+
+/**
  * W4 Slice A — 기초 surface model. Slice B/C 가 deliverables/evidence/문구를 채운다.
+ * W5-A Slice — `human_gate_*` 필드가 founder 표면에 1급으로 승격된다(렌더러는 여전히 헤더/트레일러만).
  *
  * @param {{
  *   threadKey?: string,
@@ -332,6 +373,7 @@ export function buildFounderSurfaceModel(input = {}) {
 
   const deliverables = collectDeliverablesFromArtifacts(input.artifacts || [], 4);
   const evidence_lines = collectEvidenceFromReadModel(input.readModel);
+  const hg = extractHumanGateSlice(shell, input.readModel);
 
   return {
     surface_intent,
@@ -340,6 +382,9 @@ export function buildFounderSurfaceModel(input = {}) {
     next_step: '',
     blocker_reason,
     review_reason,
+    human_gate_required: hg.human_gate_required,
+    human_gate_reason: hg.human_gate_reason,
+    human_gate_action: hg.human_gate_action,
     deliverables,
     evidence_lines,
     thread_key: threadKey || null,

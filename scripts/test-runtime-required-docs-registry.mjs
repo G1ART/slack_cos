@@ -25,6 +25,10 @@ const expectedWs = new Set([
   'founder_surface',
   'scenario1_spinup',
   'scenario2_bundle',
+  'failure_taxonomy',
+  'project_space_binding',
+  'scenario_proof_harness',
+  'proactive_cos_ops',
 ]);
 for (const k of Object.keys(ws)) assert.ok(expectedWs.has(k), `unexpected workstream key: ${k}`);
 for (const k of expectedWs) assert.ok(ws[k], `missing workstream: ${k}`);

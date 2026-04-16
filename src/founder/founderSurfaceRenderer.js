@@ -91,6 +91,20 @@ function modelAlreadyLeadsWithHeader(modelText, header) {
 }
 
 /**
+ * 모델이 이미 "action" 문장을 (끝 문장부호를 무시하고) 본문에 포함했는지 느슨하게 판정. 중복 트레일러
+ * 주입을 막기 위한 보조 — 본문에 동일한 핵심 문장이 있다면 "다음 조치:" 한 줄은 생략한다.
+ *
+ * @param {string} modelText
+ * @param {string} phrase
+ */
+function modelMentionsPhrase(modelText, phrase) {
+  const norm = (s) => String(s || '').replace(/\s+/g, ' ').replace(/[\u3002\.!?,;:]+$/g, '').trim().toLowerCase();
+  const needle = norm(phrase);
+  if (!needle) return false;
+  return norm(modelText).includes(needle);
+}
+
+/**
  * 모델이 이미 납품 파일명을 언급했으면 재노출하지 않는다 (C4 반복 억제).
  *
  * @param {Array<{ label: string, detail?: string }>} deliverables
@@ -166,6 +180,15 @@ export function renderFounderSurfaceText(input) {
       trailerParts.push(['확인 근거:', ...appendedEvidence.map((s) => `- ${s}`)].join('\n'));
     }
   }
+  /** @type {string | null} */
+  let appendedHumanGateAction = null;
+  if ((sm.surface_intent === 'blocked' || sm.surface_intent === 'review_required') && sm.human_gate_action) {
+    const action = sanitizeFounderFacingReason(sm.human_gate_action);
+    if (action && !modelMentionsPhrase(modelText, action)) {
+      appendedHumanGateAction = action;
+      trailerParts.push(`다음 조치: ${action}`);
+    }
+  }
   const trailer = trailerParts.length ? `\n\n${trailerParts.join('\n\n')}` : '';
 
   if (!header && !trailer) {
@@ -194,5 +217,6 @@ export function renderFounderSurfaceText(input) {
     ...(skippedForContinuity ? { skipped_header_for_continuity: true } : {}),
     ...(appendedDeliverables.length ? { appended_deliverables: appendedDeliverables } : {}),
     ...(appendedEvidence.length ? { appended_evidence: appendedEvidence } : {}),
+    ...(appendedHumanGateAction ? { appended_human_gate_action: appendedHumanGateAction } : {}),
   };
 }

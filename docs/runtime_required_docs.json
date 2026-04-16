@@ -29,6 +29,26 @@
     ],
     "scenario2_bundle": [
       "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md"
+    ],
+    "failure_taxonomy": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md",
+      "docs/cursor-handoffs/COS_Gap_Register_And_Workstream_Plan_2026-04-15.md",
+      "docs/cursor-handoffs/W5_W7_Gap_Analysis_Mitigation_Architecture_Proof_Roadmap_2026-04-16.md"
+    ],
+    "project_space_binding": [
+      "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md",
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/W5_W7_Gap_Analysis_Mitigation_Architecture_Proof_Roadmap_2026-04-16.md"
+    ],
+    "scenario_proof_harness": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/W5_W7_Gap_Analysis_Mitigation_Architecture_Proof_Roadmap_2026-04-16.md"
+    ],
+    "proactive_cos_ops": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md",
+      "docs/cursor-handoffs/W5_W7_Gap_Analysis_Mitigation_Architecture_Proof_Roadmap_2026-04-16.md"
     ]
   }
 }

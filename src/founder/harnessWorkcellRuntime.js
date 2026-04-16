@@ -3,6 +3,7 @@
  */
 
 import { getPersonaContractRowByDelegateEnum } from './personaContractManifest.js';
+import { buildFailureClassification } from './failureTaxonomy.js';
 
 const DELEGATE_PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
@@ -262,28 +263,13 @@ export function buildHarnessWorkcellRuntime(input) {
     : [];
 
   if (!dispatch_id) {
-    return {
-      ok: false,
-      blocked_reason: 'workcell_dispatch_id_missing',
-      machine_hint: 'dispatch_id required',
-      delegate_schema_error_fields: ['dispatch_id'],
-    };
+    return blockedConstruction('workcell_dispatch_id_missing', 'dispatch_id required', ['dispatch_id']);
   }
   if (!personas.length) {
-    return {
-      ok: false,
-      blocked_reason: 'workcell_personas_empty',
-      machine_hint: 'personas required',
-      delegate_schema_error_fields: ['personas'],
-    };
+    return blockedConstruction('workcell_personas_empty', 'personas required', ['personas']);
   }
   if (!packetsIn.length) {
-    return {
-      ok: false,
-      blocked_reason: 'workcell_packets_empty',
-      machine_hint: 'packets required',
-      delegate_schema_error_fields: ['packets'],
-    };
+    return blockedConstruction('workcell_packets_empty', 'packets required', ['packets']);
   }
 
   for (const pkt of packetsIn) {
@@ -291,34 +277,19 @@ export function buildHarnessWorkcellRuntime(input) {
     if (pkt.owner_persona != null && String(pkt.owner_persona).trim()) {
       const o = String(pkt.owner_persona).trim().toLowerCase();
       if (!DELEGATE_PERSONA_ENUM.has(o)) {
-        return {
-          ok: false,
-          blocked_reason: 'workcell_owner_persona_invalid',
-          machine_hint: o,
-          delegate_schema_error_fields: ['owner_persona'],
-        };
+        return blockedConstruction('workcell_owner_persona_invalid', o, ['owner_persona']);
       }
     }
     if (pkt.reviewer_persona != null && String(pkt.reviewer_persona).trim()) {
       const r = String(pkt.reviewer_persona).trim().toLowerCase();
       if (!DELEGATE_PERSONA_ENUM.has(r)) {
-        return {
-          ok: false,
-          blocked_reason: 'workcell_reviewer_persona_invalid',
-          machine_hint: r,
-          delegate_schema_error_fields: ['reviewer_persona'],
-        };
+        return blockedConstruction('workcell_reviewer_persona_invalid', r, ['reviewer_persona']);
       }
     }
     if (pkt.escalation_target != null && String(pkt.escalation_target).trim()) {
       const e = String(pkt.escalation_target).trim().toLowerCase();
       if (!DELEGATE_PERSONA_ENUM.has(e)) {
-        return {
-          ok: false,
-          blocked_reason: 'workcell_escalation_target_invalid',
-          machine_hint: e,
-          delegate_schema_error_fields: ['escalation_target'],
-        };
+        return blockedConstruction('workcell_escalation_target_invalid', e, ['escalation_target']);
       }
     }
   }
@@ -328,30 +299,23 @@ export function buildHarnessWorkcellRuntime(input) {
   for (let i = 0; i < packetsIn.length; i += 1) {
     const pkt = packetsIn[i];
     if (!pkt || typeof pkt !== 'object' || Array.isArray(pkt)) {
-      return {
-        ok: false,
-        blocked_reason: 'workcell_packet_invalid',
-        machine_hint: `packets[${i}]`,
-        delegate_schema_error_fields: [`packets[${i}]`],
-      };
+      return blockedConstruction('workcell_packet_invalid', `packets[${i}]`, [`packets[${i}]`]);
     }
     const owner = normalizePacketOwnerPersona(pkt, personas);
     if (!owner) {
-      return {
-        ok: false,
-        blocked_reason: 'workcell_packet_owner_unresolved',
-        machine_hint: `packets[${i}]`,
-        delegate_schema_error_fields: [`packets[${i}].persona`, `packets[${i}].owner_persona`],
-      };
+      return blockedConstruction(
+        'workcell_packet_owner_unresolved',
+        `packets[${i}]`,
+        [`packets[${i}].persona`, `packets[${i}].owner_persona`],
+      );
     }
     const pid = String(pkt.packet_id || '').trim();
     if (!pid) {
-      return {
-        ok: false,
-        blocked_reason: 'workcell_packet_id_missing',
-        machine_hint: `packets[${i}].packet_id`,
-        delegate_schema_error_fields: [`packets[${i}].packet_id`],
-      };
+      return blockedConstruction(
+        'workcell_packet_id_missing',
+        `packets[${i}].packet_id`,
+        [`packets[${i}].packet_id`],
+      );
     }
     mergedHarnessPackets.push({ ...pkt, owner_persona: owner });
   }
@@ -368,12 +332,7 @@ export function buildHarnessWorkcellRuntime(input) {
   for (const pkt of mergedHarnessPackets) {
     const persona = String(pkt.persona || '').toLowerCase().trim();
     if (!persona || !DELEGATE_PERSONA_ENUM.has(persona)) {
-      return {
-        ok: false,
-        blocked_reason: 'workcell_packet_persona_invalid',
-        machine_hint: String(pkt.packet_id || ''),
-        delegate_schema_error_fields: ['persona'],
-      };
+      return blockedConstruction('workcell_packet_persona_invalid', String(pkt.packet_id || ''), ['persona']);
     }
     const { review_required } = effectiveReviewRequired(pkt, personas);
     const escRaw = pkt.escalation_target != null ? String(pkt.escalation_target).trim().toLowerCase() : '';
@@ -417,6 +376,9 @@ export function buildHarnessWorkcellRuntime(input) {
 
   workcell_runtime.summary_lines = formatHarnessWorkcellSummaryLines(workcell_runtime, 8);
 
+  const classification = classifyWorkcellRuntime(workcell_runtime);
+  if (classification) workcell_runtime.failure_classification = classification;
+
   const v = validateHarnessWorkcellRuntime(workcell_runtime);
   if (!v.ok) {
     return {
@@ -424,6 +386,11 @@ export function buildHarnessWorkcellRuntime(input) {
       blocked_reason: v.blocked_reason,
       machine_hint: v.machine_hint,
       delegate_schema_error_fields: ['workcell_runtime'],
+      failure_classification: buildFailureClassification({
+        resolution_class: 'model_coordination_failure',
+        human_gate_reason: `harness 워크셀 런타임이 구성 단계에서 ${v.blocked_reason} 로 막혔습니다.`,
+        human_gate_action: null,
+      }),
     };
   }
 
@@ -432,7 +399,62 @@ export function buildHarnessWorkcellRuntime(input) {
     workcell_runtime,
     workcell_summary_lines: /** @type {string[]} */ (workcell_runtime.summary_lines),
     packets: mergedHarnessPackets,
+    failure_classification: classification,
   };
+}
+
+/**
+ * W5-A helper — attach a failure_classification to construction-time bail outs so that
+ * downstream callers (runFounderDirectConversation → founderSurfaceModel) can surface a
+ * consistent resolution_class regardless of which validation failed first.
+ *
+ * @param {string} blocked_reason
+ * @param {string} machine_hint
+ * @param {string[]} delegate_schema_error_fields
+ */
+function blockedConstruction(blocked_reason, machine_hint, delegate_schema_error_fields) {
+  return {
+    ok: false,
+    blocked_reason,
+    machine_hint,
+    delegate_schema_error_fields,
+    failure_classification: buildFailureClassification({
+      resolution_class: 'model_coordination_failure',
+      human_gate_reason: `harness 워크셀 구성이 ${blocked_reason} 로 막혔습니다.`,
+      human_gate_action: null,
+    }),
+  };
+}
+
+/**
+ * W5-A classifier for the workcell runtime. Returns null when the workcell is healthy
+ * (`active` / `completed`). For escalated / review_required / rework_requested, attaches
+ * a `model_coordination_failure` classification because these are harness-internal
+ * coordination states (not HIL-required unless W5-B binding graph escalates further).
+ *
+ * @param {Record<string, unknown>} wc
+ * @returns {ReturnType<typeof buildFailureClassification> | null}
+ */
+export function classifyWorkcellRuntime(wc) {
+  if (!wc || typeof wc !== 'object') return null;
+  const st = String(wc.status || 'active');
+  if (st === 'active' || st === 'completed') return null;
+  const targets = Array.isArray(wc.escalation_targets)
+    ? wc.escalation_targets.map(String).filter(Boolean)
+    : [];
+  const reviewCount = typeof wc.review_checkpoint_count === 'number' ? wc.review_checkpoint_count : 0;
+  const reason = st === 'escalated'
+    ? `워크셀에서 에스컬레이션이 열려 있습니다 (대상: ${targets.join(',') || '미상'}).`
+    : st === 'review_required'
+      ? `워크셀 리뷰 체크포인트 ${reviewCount}건이 대기 중입니다.`
+      : `워크셀에서 재작업 요청이 열려 있습니다.`;
+  return buildFailureClassification({
+    resolution_class: 'model_coordination_failure',
+    human_gate_required: false,
+    human_gate_reason: reason,
+    human_gate_action: null,
+    retryable: false,
+  });
 }
 
 /** @deprecated use formatHarnessWorkcellSummaryLines */

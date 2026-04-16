@@ -16,6 +16,7 @@ import {
   activeRunShellForCosExecutionContext,
 } from './executionRunStore.js';
 import { buildExecutionContextReadModel } from './executionContextReadModel.js';
+import { loadActiveProjectSpaceSlice } from './activeProjectSpaceSlice.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
   cosRunTenancyMergeHintsFromRunRow,
@@ -108,6 +109,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     maxArtifactScan: artifactFetchLimit,
     activeRow,
   });
+  const active_project_space = await loadActiveProjectSpaceSlice(rm.project_space_key);
   return {
     ok: true,
     persona_contract_snapshot_lines: rm.persona_contract_snapshot_lines,
@@ -122,6 +124,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     artifact_scan_scoped_by_tenancy: rm.artifact_scan_scoped_by_tenancy,
     active_run_truth_source: rm.active_run_truth_source,
     ...(rm.workcell_status ? { workcell_status: rm.workcell_status } : {}),
+    ...(active_project_space ? { active_project_space } : {}),
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,
