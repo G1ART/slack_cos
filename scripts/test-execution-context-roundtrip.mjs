@@ -76,6 +76,10 @@ const spine = ctx.recent_artifact_spine_distinct;
 assert.ok(spine && typeof spine === 'object', 'recent_artifact_spine_distinct present');
 assert.ok(Array.isArray(spine.thread_key) && spine.thread_key.includes(tk), 'distinct thread_key from merged ledger');
 assert.equal(ctx.active_run_shell, null, 'harness-only roundtrip thread has no durable cos_runs row');
+assert.equal(ctx.workspace_key, null);
+assert.equal(ctx.product_key, null);
+assert.equal(ctx.project_space_key, null);
+assert.equal(ctx.parcel_deployment_key, null);
 
 await clearExecutionArtifacts(tk);
 

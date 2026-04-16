@@ -15,6 +15,10 @@ process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test
 process.env.COS_RUN_STORE = 'memory';
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+process.env.COS_WORKSPACE_KEY = 'shell_fin_ws';
+process.env.COS_PRODUCT_KEY = 'shell_fin_prod';
+process.env.COS_PROJECT_SPACE_KEY = 'shell_fin_ps';
+process.env.COS_PARCEL_DEPLOYMENT_KEY = 'shell_fin_parcel';
 
 const tk = 'mention:vnext41_shell_fin:1';
 const dispatch = {

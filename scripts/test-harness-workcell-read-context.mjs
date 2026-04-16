@@ -16,12 +16,20 @@ import { formatHarnessWorkcellSummaryLines } from '../src/founder/harnessWorkcel
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const savedDir = process.env.COS_RUNTIME_STATE_DIR;
 const savedStore = process.env.COS_RUN_STORE;
+const savedWs = process.env.COS_WORKSPACE_KEY;
+const savedProd = process.env.COS_PRODUCT_KEY;
+const savedPs = process.env.COS_PROJECT_SPACE_KEY;
+const savedParcel = process.env.COS_PARCEL_DEPLOYMENT_KEY;
 
 try {
   process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-w2b-readctx');
   process.env.COS_RUN_STORE = 'memory';
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.COS_WORKSPACE_KEY = 'w2b_read_ws';
+  process.env.COS_PRODUCT_KEY = 'w2b_read_prod';
+  process.env.COS_PROJECT_SPACE_KEY = 'w2b_read_ps';
+  process.env.COS_PARCEL_DEPLOYMENT_KEY = 'w2b_read_parcel';
   __resetCosRunMemoryStore();
 
   const tk = `dm:w2b-read-${Date.now()}`;
@@ -104,6 +112,14 @@ try {
   else process.env.COS_RUNTIME_STATE_DIR = savedDir;
   if (savedStore === undefined) delete process.env.COS_RUN_STORE;
   else process.env.COS_RUN_STORE = savedStore;
+  if (savedWs === undefined) delete process.env.COS_WORKSPACE_KEY;
+  else process.env.COS_WORKSPACE_KEY = savedWs;
+  if (savedProd === undefined) delete process.env.COS_PRODUCT_KEY;
+  else process.env.COS_PRODUCT_KEY = savedProd;
+  if (savedPs === undefined) delete process.env.COS_PROJECT_SPACE_KEY;
+  else process.env.COS_PROJECT_SPACE_KEY = savedPs;
+  if (savedParcel === undefined) delete process.env.COS_PARCEL_DEPLOYMENT_KEY;
+  else process.env.COS_PARCEL_DEPLOYMENT_KEY = savedParcel;
 }
 
 console.log('test-harness-workcell-read-context: ok');

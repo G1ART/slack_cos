@@ -265,8 +265,21 @@ export async function handleReadExecutionContext(args, threadKey) {
     maxArtifactScan: artifactFetchLimit,
   });
   let workcell_status = null;
+  /** @type {string | null} */
+  let workspace_key = null;
+  /** @type {string | null} */
+  let product_key = null;
+  /** @type {string | null} */
+  let project_space_key = null;
+  /** @type {string | null} */
+  let parcel_deployment_key = null;
   if (active_run_shell && typeof active_run_shell === 'object') {
-    const wr = /** @type {Record<string, unknown>} */ (active_run_shell).workcell_runtime;
+    const sh = /** @type {Record<string, unknown>} */ (active_run_shell);
+    workspace_key = sh.workspace_key != null ? String(sh.workspace_key).trim() || null : null;
+    product_key = sh.product_key != null ? String(sh.product_key).trim() || null : null;
+    project_space_key = sh.project_space_key != null ? String(sh.project_space_key).trim() || null : null;
+    parcel_deployment_key = sh.parcel_deployment_key != null ? String(sh.parcel_deployment_key).trim() || null : null;
+    const wr = sh.workcell_runtime;
     if (wr && typeof wr === 'object' && !Array.isArray(wr) && wr.status != null) {
       const st = String(wr.status).trim();
       if (st) workcell_status = st;
@@ -276,6 +289,10 @@ export async function handleReadExecutionContext(args, threadKey) {
     ok: true,
     persona_contract_snapshot_lines,
     workcell_summary_lines,
+    workspace_key,
+    product_key,
+    project_space_key,
+    parcel_deployment_key,
     ...(workcell_status ? { workcell_status } : {}),
     summary_lines,
     execution_summary_active_run,

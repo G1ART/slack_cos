@@ -15,11 +15,20 @@ import {
 } from '../src/founder/executionRunStore.js';
 
 const savedWs = process.env.COS_WORKSPACE_KEY;
+const savedProd = process.env.COS_PRODUCT_KEY;
+const savedPs = process.env.COS_PROJECT_SPACE_KEY;
+const savedParcel = process.env.COS_PARCEL_DEPLOYMENT_KEY;
 const savedStore = process.env.COS_RUN_STORE;
 
 function restoreEnv() {
   if (savedWs === undefined) delete process.env.COS_WORKSPACE_KEY;
   else process.env.COS_WORKSPACE_KEY = savedWs;
+  if (savedProd === undefined) delete process.env.COS_PRODUCT_KEY;
+  else process.env.COS_PRODUCT_KEY = savedProd;
+  if (savedPs === undefined) delete process.env.COS_PROJECT_SPACE_KEY;
+  else process.env.COS_PROJECT_SPACE_KEY = savedPs;
+  if (savedParcel === undefined) delete process.env.COS_PARCEL_DEPLOYMENT_KEY;
+  else process.env.COS_PARCEL_DEPLOYMENT_KEY = savedParcel;
   if (savedStore === undefined) delete process.env.COS_RUN_STORE;
   else process.env.COS_RUN_STORE = savedStore;
 }
@@ -52,6 +61,11 @@ try {
   __resetCosRunMemoryStore();
   __resetCosRunEventsMemoryForTests();
 
+  process.env.COS_WORKSPACE_KEY = 'env_ws_rtm';
+  process.env.COS_PRODUCT_KEY = 'env_prod_rtm';
+  process.env.COS_PROJECT_SPACE_KEY = 'env_ps_rtm';
+  process.env.COS_PARCEL_DEPLOYMENT_KEY = 'env_parcel_rtm';
+
   const tk = 'mention:test_run_tenancy_merge:1';
   const dispatch = {
     ok: true,
@@ -72,6 +86,11 @@ try {
   const rid = String(shell?.id || '');
   assert.ok(rid);
   await patchRunById(rid, { workspace_key: 'T_ROW_PATCHED', product_key: 'pk_mem' });
+
+  // Envelope merge fills env before run-row hints; clear workspace/product env so
+  // patched durable row wins (original test intent).
+  delete process.env.COS_WORKSPACE_KEY;
+  delete process.env.COS_PRODUCT_KEY;
 
   await appendCosRunEventForRun(rid, 'ops_smoke_phase', {
     smoke_session_id: 'sess_rtm',

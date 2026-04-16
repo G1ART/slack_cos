@@ -33,7 +33,8 @@ import {
   cosRunEventEnvelopeMergeCtxFromRun,
   parcelDeploymentKeyFromEnv,
 } from './parcelDeploymentContext.js';
-import { formatHarnessWorkcellSummaryLines } from './harnessWorkcellRuntime.js';
+import { buildExecutionContextShellFromRun, validateExecutionContextShell } from './executionContextShell.js';
+import { validateRequiredExecutionTenancy } from './executionTenancyGuard.js';
 
 /** @param {Record<string, unknown> | null | undefined} r */
 function durableRowMatchesParcelDeploymentEnv(r) {
@@ -115,6 +116,23 @@ function storeMode() {
   if (m === 'memory') return 'memory';
   if (createCosRuntimeSupabase()) return 'supabase';
   return 'file';
+}
+
+/**
+ * `npm test` 체인 전용: COS_MEMORY_TEST_TENANCY_DEFAULTS=1 이고 스토어가 memory|file 일 때만,
+ * applyCosRunTenancyDefaults 이후에도 비어 있는 필수 테넄시 축을 플레이스홀더로 채운다.
+ * Supabase 운영 삽입은 그대로 fail-closed.
+ *
+ * @param {Record<string, unknown>} row
+ */
+function applyOptionalMemoryTestTenancyDefaults(row) {
+  if (String(process.env.COS_MEMORY_TEST_TENANCY_DEFAULTS || '').trim() !== '1') return;
+  const m = storeMode();
+  if (m !== 'memory' && m !== 'file') return;
+  if (!String(row.workspace_key || '').trim()) row.workspace_key = 'cos_memory_test_workspace_key';
+  if (!String(row.product_key || '').trim()) row.product_key = 'cos_memory_test_product_key';
+  if (!String(row.project_space_key || '').trim()) row.project_space_key = 'cos_memory_test_project_space_key';
+  if (!String(row.parcel_deployment_key || '').trim()) row.parcel_deployment_key = 'cos_memory_test_parcel_deployment_key';
 }
 
 /** 외부 이벤트·correlation 모듈용 */
@@ -337,6 +355,19 @@ export async function persistAcceptedRunShell(p) {
   };
 
   applyCosRunTenancyDefaults(row);
+  applyOptionalMemoryTestTenancyDefaults(row);
+  const tenancyGate = validateRequiredExecutionTenancy(row);
+  if (!tenancyGate.ok) {
+    console.error(
+      JSON.stringify({
+        event: 'persist_accepted_run_shell_tenancy_blocked',
+        thread_key: threadKey,
+        reason: tenancyGate.reason,
+        missing_keys: tenancyGate.missing_keys,
+      }),
+    );
+    return null;
+  }
 
   const mode = storeMode();
   let out = null;
@@ -443,7 +474,20 @@ export async function finalizeRunAfterStarterKickoff(p) {
         mergeCtx,
         process.env,
       );
-      await supabaseAppendRunEvent(sb, runId, 'run_persisted', pl, {});
+      const evTenancy = validateRequiredExecutionTenancy(pl);
+      if (!evTenancy.ok) {
+        console.error(
+          JSON.stringify({
+            event: 'finalize_run_append_event_tenancy_blocked',
+            run_id: runId,
+            thread_key: threadKey,
+            reason: evTenancy.reason,
+            missing_keys: evTenancy.missing_keys,
+          }),
+        );
+      } else {
+        await supabaseAppendRunEvent(sb, runId, 'run_persisted', pl, {});
+      }
     }
   }
 
@@ -706,57 +750,20 @@ export async function getActiveRunForThread(threadKey) {
  * @returns {Record<string, unknown> | null}
  */
 export function activeRunShellForCosExecutionContext(run) {
-  if (!run || typeof run !== 'object') return null;
-  const id = run.id != null ? String(run.id).trim() : '';
-  if (!id) return null;
-  const req = Array.isArray(run.required_packet_ids) ? run.required_packet_ids.map(String).filter(Boolean) : [];
-  const dp =
-    run.dispatch_payload && typeof run.dispatch_payload === 'object' && !Array.isArray(run.dispatch_payload)
-      ? /** @type {Record<string, unknown>} */ (run.dispatch_payload)
-      : null;
-  /** @type {string[] | undefined} */
-  let persona_contract_runtime_snapshot;
-  if (dp && Array.isArray(dp.persona_contract_runtime_snapshot)) {
-    const sn = dp.persona_contract_runtime_snapshot
-      .map((x) => String(x).trim())
-      .filter(Boolean)
-      .slice(0, 12);
-    if (sn.length) persona_contract_runtime_snapshot = sn;
+  const shell = buildExecutionContextShellFromRun(run);
+  if (!shell) return null;
+  const v = validateExecutionContextShell(shell);
+  if (!v.ok) {
+    console.error(
+      JSON.stringify({
+        event: 'active_run_shell_invalid',
+        reason: v.reason,
+        missing_keys: v.missing_keys || null,
+      }),
+    );
+    return null;
   }
-  /** @type {string[] | undefined} */
-  let workcell_summary_lines;
-  if (dp && Array.isArray(dp.workcell_summary_lines)) {
-    const wl = dp.workcell_summary_lines.map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
-    if (wl.length) workcell_summary_lines = wl;
-  }
-  /** @type {Record<string, unknown> | undefined} */
-  let workcell_runtime;
-  if (dp && dp.workcell_runtime && typeof dp.workcell_runtime === 'object' && !Array.isArray(dp.workcell_runtime)) {
-    workcell_runtime = /** @type {Record<string, unknown>} */ (dp.workcell_runtime);
-  }
-  if ((!workcell_summary_lines || workcell_summary_lines.length === 0) && workcell_runtime) {
-    const wl = formatHarnessWorkcellSummaryLines(workcell_runtime, 8)
-      .map((x) => String(x).trim())
-      .filter(Boolean);
-    if (wl.length) workcell_summary_lines = wl;
-  }
-  return {
-    id,
-    thread_key: run.thread_key != null ? String(run.thread_key).trim() || null : null,
-    status: run.status != null ? String(run.status).trim() || null : null,
-    stage: run.stage != null ? String(run.stage).trim() || null : null,
-    dispatch_id: run.dispatch_id != null ? String(run.dispatch_id).trim() || null : null,
-    current_packet_id: run.current_packet_id != null ? String(run.current_packet_id).trim() || null : null,
-    required_packet_ids: req.slice(0, 32),
-    workspace_key: run.workspace_key != null ? String(run.workspace_key) : null,
-    product_key: run.product_key != null ? String(run.product_key) : null,
-    project_space_key: run.project_space_key != null ? String(run.project_space_key) : null,
-    parcel_deployment_key: run.parcel_deployment_key != null ? String(run.parcel_deployment_key) : null,
-    updated_at: run.updated_at != null ? String(run.updated_at) : null,
-    ...(persona_contract_runtime_snapshot ? { persona_contract_runtime_snapshot } : {}),
-    ...(workcell_summary_lines ? { workcell_summary_lines } : {}),
-    ...(workcell_runtime ? { workcell_runtime } : {}),
-  };
+  return shell;
 }
 
 /**

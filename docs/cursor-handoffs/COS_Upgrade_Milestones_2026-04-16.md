@@ -31,6 +31,7 @@
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 반환 `active_run_shell` — `activeRunShellForCosExecutionContext(getActiveRunForThread)` 로 thread 최신 **durable cos_runs** 활성 행의 id·status·stage·dispatch_id·packet ids·테넄시 키·`updated_at` 만 (요약 문장·objective 전문 없음). ledger 한 줄·ops smoke 요약과 **동일 truth 가 아니라 병치**한다.
 - **외부 G1 M5 Truth stack (일부):** 동일 도구 반환에 **`tenancy_keys_presence`**·**`parcel_deployment_scoped_supervisor_lists`** (값 없이 불리언만; 부트 `cos_runtime_truth` 와 동일 어휘) — COS 가 운영 슬라이스를 founder 문장과 혼동 없이 확인.
 - **외부 G1 M5 Truth stack (일부):** `read_execution_context` 에 **`execution_summary_active_run`**(활성 런 매칭 요약)·**`parcel_ledger_closure_mirror`**(`summarizeParcelLedgerClosureMirrorPresence`) — WHAT 의 “ledger 요약 + closure mirror” 축을 COS 전용 구조화 읽기로 보강.
+- **W3-A (truth / tenancy closeout):** `executionContextShell.js`·`executionTenancyGuard.js` 로 활성 런 truth 셸과 durable 경로 **필수 테넄시 4축** 검증을 분리; `persistAcceptedRunShell`·`supabaseInsertRun`·`supabaseAppendRunEvent`·`finalizeRunAfterStarterKickoff`(Supabase append)·`activeRunShellForCosExecutionContext` 가 fail-closed. `read_execution_context` 상단에 `workspace_key`·`product_key`·`project_space_key`·`parcel_deployment_key` 슬라이스. 프리플라이트: `npm run preflight:truth_tenancy` · `npm run verify:preflight:truth_tenancy` (`w3a_truth_tenancy_closeout`). 회귀: `scripts/test-*-w3a-closeout.mjs` 다섯 종.
 
 ---
 

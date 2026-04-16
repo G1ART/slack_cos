@@ -10,6 +10,7 @@ import {
   parcelDeploymentKeyFromEnv,
   workspaceKeyFromRequestScopeFallback,
 } from './parcelDeploymentContext.js';
+import { validateRequiredExecutionTenancy } from './executionTenancyGuard.js';
 
 /** @returns {import('@supabase/supabase-js').SupabaseClient | null} */
 export function createCosRuntimeSupabase() {
@@ -569,6 +570,11 @@ export async function supabaseMapHarnessOpsSmokeSessionIdsByRunIds(sb, runIds) {
  * @returns {Promise<Record<string, unknown> | null>}
  */
 export async function supabaseInsertRun(sb, appRow) {
+  const tv = validateRequiredExecutionTenancy(appRow);
+  if (!tv.ok) {
+    console.error('[cos_runs insert tenancy]', JSON.stringify(tv));
+    return null;
+  }
   const base = appRunToDbRow(appRow);
   const { created_at: _c, ...insertRow } = base;
   const { data, error } = await sb.from('cos_runs').insert(insertRow).select('*').single();
@@ -595,11 +601,17 @@ export async function supabaseInsertRun(sb, appRow) {
 export async function supabaseAppendRunEvent(sb, runUuid, eventType, payload, evidence) {
   const rid = String(runUuid || '');
   if (!rid) return;
+  const pl = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const tv = validateRequiredExecutionTenancy(pl);
+  if (!tv.ok) {
+    console.error('[cos_run_events tenancy]', JSON.stringify({ run_id: rid, event_type: eventType, ...tv }));
+    return;
+  }
   const ev = evidence && typeof evidence === 'object' ? evidence : {};
   await sb.from('cos_run_events').insert({
     run_id: rid,
     event_type: String(eventType || 'unknown'),
-    payload: payload && typeof payload === 'object' ? payload : {},
+    payload: pl,
     matched_by: ev.matched_by != null && String(ev.matched_by).trim() ? String(ev.matched_by).trim() : null,
     canonical_status: ev.canonical_status != null && String(ev.canonical_status).trim() ? String(ev.canonical_status).trim() : null,
     payload_fingerprint_prefix:

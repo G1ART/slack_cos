@@ -12,12 +12,18 @@ import {
 import { handleReadExecutionContext } from '../src/founder/runFounderDirectConversation.js';
 
 const savedStore = process.env.COS_RUN_STORE;
+const savedWs = process.env.COS_WORKSPACE_KEY;
+const savedProd = process.env.COS_PRODUCT_KEY;
+const savedPs = process.env.COS_PROJECT_SPACE_KEY;
 const savedDep = process.env.COS_PARCEL_DEPLOYMENT_KEY;
 
 try {
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.COS_RUN_STORE = 'memory';
+  process.env.COS_WORKSPACE_KEY = 'truth_stack_env_ws';
+  process.env.COS_PRODUCT_KEY = 'truth_stack_env_prod';
+  process.env.COS_PROJECT_SPACE_KEY = 'truth_stack_env_ps';
   process.env.COS_PARCEL_DEPLOYMENT_KEY = 'truth_stack_slice_test';
 
   assert.equal(activeRunShellForCosExecutionContext(null), null);
@@ -64,9 +70,19 @@ try {
   assert.ok(ctx.parcel_ledger_closure_mirror && typeof ctx.parcel_ledger_closure_mirror.count === 'number');
   assert.equal(ctx.parcel_deployment_scoped_supervisor_lists, true);
   assert.equal(ctx.tenancy_keys_presence?.parcel_deployment, true);
+  assert.equal(ctx.workspace_key, 'T_SHELL');
+  assert.equal(ctx.product_key, 'P_SHELL');
+  assert.equal(ctx.project_space_key, 'truth_stack_env_ps');
+  assert.equal(ctx.parcel_deployment_key, 'truth_stack_slice_test');
 } finally {
   if (savedStore === undefined) delete process.env.COS_RUN_STORE;
   else process.env.COS_RUN_STORE = savedStore;
+  if (savedWs === undefined) delete process.env.COS_WORKSPACE_KEY;
+  else process.env.COS_WORKSPACE_KEY = savedWs;
+  if (savedProd === undefined) delete process.env.COS_PRODUCT_KEY;
+  else process.env.COS_PRODUCT_KEY = savedProd;
+  if (savedPs === undefined) delete process.env.COS_PROJECT_SPACE_KEY;
+  else process.env.COS_PROJECT_SPACE_KEY = savedPs;
   if (savedDep === undefined) delete process.env.COS_PARCEL_DEPLOYMENT_KEY;
   else process.env.COS_PARCEL_DEPLOYMENT_KEY = savedDep;
 }
