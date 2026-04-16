@@ -10,10 +10,16 @@
  *   metadata: Record<string, unknown>,
  *   executionSummaryLines?: string[],
  *   adapterReadinessLines?: string[],
+ *   proactiveSurfaceLines?: string[],
  * }} p
  */
 export function buildFounderConversationInput(p) {
   const lines = [];
+  const proactiveLines = Array.isArray(p.proactiveSurfaceLines) ? p.proactiveSurfaceLines.filter(Boolean) : [];
+  if (proactiveLines.length) {
+    for (const line of proactiveLines) lines.push(line);
+    lines.push('');
+  }
   lines.push('[최근 대화]');
   const rt = p.recentTurns || [];
   if (!rt.length) lines.push('(이전 턴 없음)');

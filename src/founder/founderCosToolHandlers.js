@@ -19,6 +19,10 @@ import { buildExecutionContextReadModel } from './executionContextReadModel.js';
 import { loadActiveProjectSpaceSlice } from './activeProjectSpaceSlice.js';
 import { loadDeliveryReadiness } from './deliveryReadiness.js';
 import { buildProactiveSignals } from './proactiveSignals.js';
+import {
+  buildHarnessProofScorecard,
+  toHarnessProofCompactLines,
+} from './harnessProofScorecard.js';
 import { buildToolQualificationSummaryLines } from './toolPlane/toolLaneQualification.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
@@ -123,6 +127,8 @@ export async function handleReadExecutionContext(args, threadKey) {
     surface_model: null,
     recent_run_shells: [],
   });
+  const harness_proof_scorecard = buildHarnessProofSessionScorecard(active_run_shell);
+  const harness_proof_scorecard_lines = toHarnessProofCompactLines(harness_proof_scorecard);
   const tool_qualification_summary_lines = await buildToolQualificationSummaryLines({
     env: process.env,
     threadKey,
@@ -145,6 +151,8 @@ export async function handleReadExecutionContext(args, threadKey) {
     active_run_truth_source: rm.active_run_truth_source,
     ...(rm.workcell_status ? { workcell_status: rm.workcell_status } : {}),
     harness_proof_snapshot_lines: rm.harness_proof_snapshot_lines || [],
+    harness_proof_scorecard,
+    harness_proof_scorecard_lines,
     proactive_signals_compact_lines,
     tool_qualification_summary_lines,
     ...(active_project_space ? { active_project_space } : {}),
@@ -171,4 +179,21 @@ export async function handleReadExecutionContext(args, threadKey) {
     blocked_count: counts.blocked_count,
     failed_count: counts.failed_count,
   };
+}
+
+/**
+ * W10-B — active_run_shell 한 건에서도 의미 있는 scorecard 한 스냅샷을 낸다.
+ * Supabase 에서 recent 세션을 모아 오는 건 audit-harness-proof CLI 가 담당하고,
+ * read_execution_context 에서는 현재 활성 런 셸의 workcell_runtime 한 건을 session 1 로 반영한다.
+ *
+ * @param {unknown} activeRunShell
+ */
+function buildHarnessProofSessionScorecard(activeRunShell) {
+  const wc = activeRunShell && typeof activeRunShell === 'object'
+    ? /** @type {Record<string, unknown>} */ (activeRunShell).workcell_runtime
+    : null;
+  if (!wc || typeof wc !== 'object') return buildHarnessProofScorecard([]);
+  return buildHarnessProofScorecard([
+    /** @type {Record<string, unknown>} */ (wc),
+  ]);
 }

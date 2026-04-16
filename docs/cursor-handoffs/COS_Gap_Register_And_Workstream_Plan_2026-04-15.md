@@ -113,6 +113,34 @@ If any required document changes during the task, rerun preflight and refresh th
 
 ---
 
+## 6.1) W8~W10 Closeout 총괄 보고 (2026-04-16)
+
+1. **구현·변경·검증**
+   - **W8 (live binding & propagation core):** `bindingRequirements` SSOT + `projectSpaceBindingGraph` + DDL `20260601120000_binding_propagation_and_continuation.sql`(additive) + `envSecretPropagationPlan/Engine` + `humanGateRuntime` resumable + live binding writers 4종(smoke-default, flag-gated) + `deliveryReadiness` 4 verdict & 3 slice lines + `read_execution_context` 슬라이스 3종 추가. 회귀 19종 통과.
+   - **W9 (live scenario proof harness):** `scenarioProofResultClassifier` (4축) + `scenarioProofScorecard` + `scenarioProofLiveRunner` + CLI `scenario:proof:live` + 양 러너 `--fixture` 옵션 & Supabase 운영 모드 가드(`tenancy_or_binding_ambiguity`). 회귀 7종 통과.
+   - **W10-A (proactive ops surface, audit/draft only):** `proactiveSurfacePolicy`(severity·dedupe·rate-limit·jargon reject) + `proactiveSurfaceDraft`(“[COS 운영 메모]” 블록) + `founderConversationInput.proactiveSurfaceLines` 파이프 + no-new-send-path 정적 가드. 회귀 5종 통과.
+   - **W10-B (harness quality proof):** `harnessProofScorecard`(6종 roll-up) + `audit-harness-proof` CLI + npm `audit:harness-proof` + `read_execution_context.harness_proof_scorecard(+_lines)` 슬라이스. 회귀 4종 통과.
+   - 실행 명령: `npm test` 전체 그린(W8~W10 새 회귀 35종 포함).
+2. **Preflight 증거**
+   - `ops/preflight_manifest/{w8_live_binding_propagation_epic,w9_scenario_proof_live_epic,w10_proactive_actuation_audit_only_epic}.json` 재생성.
+   - `ops/preflight_ack/*` 동일 3쌍 ack 재해시(Milestones 청크 갱신).
+   - `npm run verify:preflight:{live_binding_propagation,scenario_proof_live,proactive_actuation_audit_only}` 전부 ok.
+3. **G 항목**
+   - 닫음: G4(live binding writers 자격·dry-run), G5(human gate continuation resumable), G6(live scenario proof harness), G7(proactive actuation audit/draft), G8(harness proof scorecard).
+   - 의도적 미접촉: 콜백 권위·단일 Slack 송신 경로·founder 본문 토큰 노출 금지 — 헌법 §4·§5 유지.
+4. **새 리스크**
+   - Live binding writers: `COS_LIVE_BINDING_WRITERS=1` 사용 시 실제 토큰 노출이 가능하지만 **기본은 smoke**, writer 계약에서 secret value 키 reject. 운영 전 팀 합의·감사 필요.
+   - Supabase DDL(W8) 은 코드 경로가 부재 시 graceful degrade 하지만, 실제 마이그레이션 적용은 **운영자 수동 조치**.
+   - Proactive surface lines 는 founder 본문 앞부분을 점유 — rate-limit·dedupe 로 피로 방지하지만 실사용 피드백 주기적 튜닝 필요.
+5. **다음 권장**
+   - Live binding writers 플래그-온 운영 리허설(smoke→live) & delivery readiness scorecard 기반 `audit:delivery-readiness` 감사 CLI 신설 검토.
+6. **운영자 수동 조치**
+   - Supabase 마이그레이션 `20260601120000_binding_propagation_and_continuation.sql` 배포·롤백.
+   - `COS_LIVE_BINDING_WRITERS` flip 여부 결정(기본 off 유지 권장).
+   - `audit:harness-proof` / `scenario:proof:live` 를 주간 리허설 runbook 에 편입.
+
+---
+
 ## 7) 다음 권장
 
 1. **W0** 유지·개선(필요 시 청크 크기·워크스트림 확장).  
