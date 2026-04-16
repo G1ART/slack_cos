@@ -60,6 +60,11 @@ assert.ok(counts.review_required_count >= 1, 'read_execution_context-style count
 assert.ok(counts.blocked_count >= 1, 'blocked status counted');
 
 const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
+assert.ok(Array.isArray(ctx.persona_contract_snapshot_lines), 'persona_contract_snapshot_lines array');
+assert.ok(
+  ctx.persona_contract_snapshot_lines.length >= 1,
+  'read_execution_context exposes compact persona contract snapshot',
+);
 assert.equal(ctx.execution_summary_active_run, null, 'no durable cos_runs row → active-run summary null');
 assert.ok(ctx.parcel_ledger_closure_mirror && typeof ctx.parcel_ledger_closure_mirror.count === 'number');
 assert.equal(ctx.parcel_ledger_closure_mirror.latest_ts, null);

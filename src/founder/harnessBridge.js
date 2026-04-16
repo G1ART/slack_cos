@@ -11,7 +11,9 @@ import { appendExecutionArtifact } from './executionLedger.js';
 import {
   loadPersonaContractManifest,
   validatePersonaContractManifestShape,
+  formatPersonaContractRuntimeSnapshotLines,
 } from './personaContractManifest.js';
+import { validatePersonaContractHarnessDispatch } from './personaContractHarness.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
@@ -305,6 +307,23 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     packets = buildEnvelopePackets(handoff_order, team_plan, deliverables, constraints, objective);
   }
 
+  const pcGate = validatePersonaContractHarnessDispatch({ objective, personas: plist, packets });
+  if (pcGate.blocked) {
+    return {
+      ok: false,
+      blocked: true,
+      mode: 'harness_dispatch',
+      status: 'blocked',
+      reason: pcGate.reason || 'invalid_payload',
+      ...(pcGate.blocked_reason ? { blocked_reason: pcGate.blocked_reason } : {}),
+      ...(pcGate.machine_hint ? { machine_hint: pcGate.machine_hint } : {}),
+      ...(Array.isArray(pcGate.delegate_schema_error_fields)
+        ? { delegate_schema_error_fields: pcGate.delegate_schema_error_fields }
+        : {}),
+      delegate_schema_valid: false,
+    };
+  }
+
   const review_checkpoints = Array.isArray(p.review_checkpoints)
     ? p.review_checkpoints.map((x) => String(x))
     : packets.filter((x) => x.review_required).map((x) => `${x.persona}:${x.packet_id}`);
@@ -334,6 +353,8 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     /* manifest optional — dispatch still succeeds */
   }
 
+  const persona_contract_runtime_snapshot = formatPersonaContractRuntimeSnapshotLines(plist, 12);
+
   const result = {
     ok: true,
     mode: 'harness_dispatch',
@@ -342,6 +363,9 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
     intent,
     ...(persona_contract_version ? { persona_contract_version } : {}),
     ...(persona_contract_ids.length ? { persona_contract_ids } : {}),
+    ...(persona_contract_runtime_snapshot.length
+      ? { persona_contract_runtime_snapshot }
+      : {}),
     personas: plist,
     objective,
     tasks,

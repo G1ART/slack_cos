@@ -17,6 +17,58 @@ import { validateToolCallArgs } from './cosFounderToolValidation.js';
 import { handleRecordExecutionNote, handleReadExecutionContext } from '../founderCosToolHandlers.js';
 
 /**
+ * delegate_harness_team 수락 후 런 셸·스타터 킥오프·영속화를 한 경로로 묶는다.
+ * @param {{
+ *   threadKey: string,
+ *   founderRequestSummary: string,
+ *   dispatch: Record<string, unknown>,
+ * }} p
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function finalizeAcceptedDelegateHarnessDispatch(p) {
+  const { threadKey, founderRequestSummary, dispatch: dispatchResult } = p;
+  let result = { ...dispatchResult };
+  stashDelegateEmitPatchContext(threadKey, /** @type {Record<string, unknown>} */ (result));
+  const shell = await persistAcceptedRunShell({
+    threadKey,
+    dispatch: result,
+    founder_request_summary: founderRequestSummary,
+  });
+  const runId = shell?.id != null ? String(shell.id).trim() : '';
+  let kick;
+  if (runId) {
+    kick = await executeStarterKickoffIfEligible({
+      threadKey,
+      dispatch: result,
+      env: process.env,
+      cosRunId: runId,
+    });
+    result = { ...result, starter_kickoff: kick };
+    await finalizeRunAfterStarterKickoff({
+      runId,
+      threadKey,
+      dispatch: result,
+      starter_kickoff: kick,
+      founder_request_summary: founderRequestSummary,
+    });
+  } else {
+    kick = await executeStarterKickoffIfEligible({
+      threadKey,
+      dispatch: result,
+      env: process.env,
+    });
+    result = { ...result, starter_kickoff: kick };
+    await persistRunAfterDelegate({
+      threadKey,
+      dispatch: result,
+      starter_kickoff: kick,
+      founder_request_summary: founderRequestSummary,
+    });
+  }
+  return result;
+}
+
+/**
  * @param {{
  *   call: { name: string, arguments?: string, call_id: string },
  *   args: Record<string, unknown>,
@@ -102,43 +154,11 @@ export async function executeFounderCosToolCall(p) {
       ...(activeRun ? { runTenancy: cosRunTenancyMergeHintsFromRunRow(activeRun) } : {}),
     });
     if (result && result.ok && String(result.status) === 'accepted' && tk) {
-      stashDelegateEmitPatchContext(tk, /** @type {Record<string, unknown>} */ (result));
-      const shell = await persistAcceptedRunShell({
+      result = await finalizeAcceptedDelegateHarnessDispatch({
         threadKey: tk,
+        founderRequestSummary,
         dispatch: result,
-        founder_request_summary: founderRequestSummary,
       });
-      const runId = shell?.id != null ? String(shell.id).trim() : '';
-      let kick;
-      if (runId) {
-        kick = await executeStarterKickoffIfEligible({
-          threadKey: tk,
-          dispatch: result,
-          env: process.env,
-          cosRunId: runId,
-        });
-        result = { ...result, starter_kickoff: kick };
-        await finalizeRunAfterStarterKickoff({
-          runId,
-          threadKey: tk,
-          dispatch: result,
-          starter_kickoff: kick,
-          founder_request_summary: founderRequestSummary,
-        });
-      } else {
-        kick = await executeStarterKickoffIfEligible({
-          threadKey: tk,
-          dispatch: result,
-          env: process.env,
-        });
-        result = { ...result, starter_kickoff: kick };
-        await persistRunAfterDelegate({
-          threadKey: tk,
-          dispatch: result,
-          starter_kickoff: kick,
-          founder_request_summary: founderRequestSummary,
-        });
-      }
     }
     return result;
   }

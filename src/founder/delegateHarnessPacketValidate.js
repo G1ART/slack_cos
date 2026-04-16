@@ -4,6 +4,8 @@
  * `live_patch`가 비null이면 단일 파일 자동화에 필요한 형식만 본다.
  */
 
+import { validatePersonaContractHarnessEnvelope } from './personaContractHarness.js';
+
 /**
  * Validates `live_patch` sub-object only (when non-null). For local preflight / tests.
  * @param {unknown} lp
@@ -129,6 +131,22 @@ export function validateDelegateHarnessTeamToolArgs(args) {
   }
 
   if (a.packets == null) {
+    const pc0 = validatePersonaContractHarnessEnvelope(a);
+    if (pc0.blocked) {
+      return {
+        blocked: true,
+        reason: pc0.reason || 'invalid_payload',
+        blocked_reason: pc0.blocked_reason,
+        machine_hint: pc0.machine_hint,
+        missing_required_fields: [],
+        invalid_enum_fields: [],
+        invalid_nested_fields: [],
+        delegate_schema_valid: false,
+        delegate_schema_error_fields: Array.isArray(pc0.delegate_schema_error_fields)
+          ? pc0.delegate_schema_error_fields
+          : [],
+      };
+    }
     return { blocked: false, delegate_schema_valid: true };
   }
 
@@ -184,6 +202,23 @@ export function validateDelegateHarnessTeamToolArgs(args) {
       invalid_nested_fields: invalid_nested_fields.slice(0, 24),
       delegate_schema_valid: false,
       delegate_schema_error_fields,
+    };
+  }
+
+  const pc = validatePersonaContractHarnessEnvelope(a);
+  if (pc.blocked) {
+    return {
+      blocked: true,
+      reason: pc.reason || 'invalid_payload',
+      blocked_reason: pc.blocked_reason,
+      machine_hint: pc.machine_hint,
+      missing_required_fields: [],
+      invalid_enum_fields: [],
+      invalid_nested_fields: [],
+      delegate_schema_valid: false,
+      delegate_schema_error_fields: Array.isArray(pc.delegate_schema_error_fields)
+        ? pc.delegate_schema_error_fields
+        : [],
     };
   }
 

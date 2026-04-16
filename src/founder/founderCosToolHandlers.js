@@ -22,6 +22,7 @@ import {
   tenancyKeysPresenceFromEnv,
 } from './parcelDeploymentContext.js';
 import { mergeLedgerExecutionRowPayload, distinctSpineKeysFromLedgerArtifacts } from './canonicalExecutionEnvelope.js';
+import { formatPersonaContractRuntimeSnapshotLines } from './personaContractManifest.js';
 
 /**
  * @param {Record<string, unknown>} args
@@ -101,6 +102,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     : { count: 0, latest_ts: null };
   return {
     ok: true,
+    persona_contract_snapshot_lines: formatPersonaContractRuntimeSnapshotLines([], 12),
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,

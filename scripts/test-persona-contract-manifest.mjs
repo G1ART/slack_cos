@@ -15,11 +15,17 @@ const m = loadPersonaContractManifest();
 const err = validatePersonaContractManifestShape(m);
 assert.equal(err, null, `manifest shape: ${err}`);
 assert.ok(String(m.version || '').trim(), 'version');
-assert.ok(Array.isArray(m.personas) && m.personas.length >= 5, 'five core personas');
+assert.ok(Array.isArray(m.personas) && m.personas.length >= 6, 'six delegate personas in manifest');
 const ids = new Set(m.personas.map((p) => String(p.id || '')));
-for (const need of ['planner', 'researcher', 'implementer', 'reviewer', 'risk_gate']) {
+for (const need of ['planner', 'researcher', 'implementer', 'reviewer', 'risk_gate', 'product_design']) {
   assert.ok(ids.has(need), `missing persona id ${need}`);
 }
+const impl = m.personas.find((p) => String(p.id) === 'implementer');
+assert.ok(impl && Array.isArray(impl.allowed_tools) && impl.allowed_tools.includes('cursor'), 'implementer allows cursor');
+assert.ok(
+  impl && Array.isArray(impl.escalation_predicates) && impl.escalation_predicates.includes('contract_miss'),
+  'implementer escalation_predicates',
+);
 
 const block = formatPersonaContractLinesForInstructions();
 assert.ok(block.includes('planner→pm'), 'instruction block lists planner mapping');
