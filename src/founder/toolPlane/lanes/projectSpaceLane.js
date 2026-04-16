@@ -31,6 +31,10 @@ export const PROJECT_SPACE_ACTIONS = Object.freeze([
   'declare_env_requirement',
   'open_human_gate',
   'close_human_gate',
+  'plan_propagation',
+  'execute_propagation_dry_run',
+  'open_resumable_gate',
+  'close_and_resume_gate',
 ]);
 
 const ACTION_TO_BINDING_KIND = Object.freeze({
@@ -99,7 +103,8 @@ export function projectSpaceInvocationPrecheck(action, payload) {
     };
   }
   const psKey = trimString(pl.project_space_key);
-  if (!psKey && act !== 'close_human_gate') {
+  const exemptPsKey = act === 'close_human_gate' || act === 'close_and_resume_gate';
+  if (!psKey && !exemptPsKey) {
     return {
       blocked: true,
       blocked_reason: 'project_space_key required',
@@ -142,7 +147,7 @@ export function projectSpaceInvocationPrecheck(action, payload) {
     return { blocked: false, blocked_reason: null, next_required_input: null, failure_classification: null };
   }
 
-  if (act === 'open_human_gate') {
+  if (act === 'open_human_gate' || act === 'open_resumable_gate') {
     const kind = trimString(pl.gate_kind);
     if (!PROJECT_SPACE_GATE_KINDS.includes(kind)) {
       return {
@@ -157,6 +162,28 @@ export function projectSpaceInvocationPrecheck(action, payload) {
     }
     return { blocked: false, blocked_reason: null, next_required_input: null, failure_classification: null };
   }
+
+  if (act === 'plan_propagation' || act === 'execute_propagation_dry_run') {
+    // requirements 는 opts 로 전달되므로 payload 는 project_space_key 만 필수.
+    return { blocked: false, blocked_reason: null, next_required_input: null, failure_classification: null };
+  }
+
+  if (act === 'close_and_resume_gate') {
+    const id = trimString(pl.id);
+    if (!id) {
+      return {
+        blocked: true,
+        blocked_reason: 'close_and_resume_gate requires id',
+        next_required_input: 'id',
+        failure_classification: buildFailureClassification({
+          resolution_class: 'model_coordination_failure',
+          human_gate_reason: 'close_and_resume_gate 에 gate id 가 필요합니다.',
+        }),
+      };
+    }
+    return { blocked: false, blocked_reason: null, next_required_input: null, failure_classification: null };
+  }
+
   // close_human_gate
   const id = trimString(pl.id);
   if (!id) {
@@ -255,6 +282,81 @@ export async function applyProjectSpaceAction(action, payload, opts = {}) {
       parcel_deployment_key: opts.parcel_deployment_key || existing?.parcel_deployment_key || null,
     });
     return { ok: true, blocked: false, gate: row };
+  }
+
+  if (action === 'open_resumable_gate') {
+    const { openResumableGate } = await import('../../humanGateRuntime.js');
+    const existing = await getProjectSpace(psKey);
+    if (!existing) {
+      await upsertProjectSpace({
+        project_space_key: psKey,
+        display_name: opts.display_name || null,
+        workspace_key: opts.workspace_key || null,
+        product_key: opts.product_key || null,
+        parcel_deployment_key: opts.parcel_deployment_key || null,
+      });
+    }
+    const row = await openResumableGate({
+      project_space_key: psKey,
+      gate_kind: trimString(pl.gate_kind),
+      gate_reason: opts.gate_reason || (pl.gate_reason != null ? String(pl.gate_reason) : null),
+      gate_action: opts.gate_action || (pl.gate_action != null ? String(pl.gate_action) : null),
+      opened_by_run_id: opts.opened_by_run_id || null,
+      workspace_key: opts.workspace_key || existing?.workspace_key || null,
+      product_key: opts.product_key || existing?.product_key || null,
+      parcel_deployment_key: opts.parcel_deployment_key || existing?.parcel_deployment_key || null,
+      continuation_packet_id: opts.continuation_packet_id || pl.continuation_packet_id || null,
+      continuation_run_id: opts.continuation_run_id || pl.continuation_run_id || null,
+      continuation_thread_key: opts.continuation_thread_key || pl.continuation_thread_key || null,
+      required_human_action:
+        opts.required_human_action || (pl.required_human_action != null ? String(pl.required_human_action) : null),
+    });
+    return { ok: true, blocked: false, gate: row };
+  }
+
+  if (action === 'close_and_resume_gate') {
+    const { closeGateAndResume } = await import('../../humanGateRuntime.js');
+    const result = await closeGateAndResume({
+      id: trimString(pl.id),
+      gate_status: trimString(pl.gate_status) || 'resolved',
+      closed_by_run_id: opts.closed_by_run_id || null,
+    });
+    return { ok: true, blocked: false, gate: result.gate, continuation: result.continuation };
+  }
+
+  if (action === 'plan_propagation') {
+    const { buildPropagationPlan } = await import('../../envSecretPropagationPlan.js');
+    const plan = buildPropagationPlan({
+      project_space_key: psKey,
+      requirements: Array.isArray(opts.requirements) ? opts.requirements : [],
+      existingBindings: Array.isArray(opts.existingBindings) ? opts.existingBindings : [],
+      sinkCapabilities: opts.sinkCapabilities || {},
+    });
+    return { ok: true, blocked: false, plan };
+  }
+
+  if (action === 'execute_propagation_dry_run') {
+    const { buildPropagationPlan } = await import('../../envSecretPropagationPlan.js');
+    const { executePropagationPlan } = await import('../../envSecretPropagationEngine.js');
+    const plan =
+      opts.plan ||
+      buildPropagationPlan({
+        project_space_key: psKey,
+        requirements: Array.isArray(opts.requirements) ? opts.requirements : [],
+        existingBindings: Array.isArray(opts.existingBindings) ? opts.existingBindings : [],
+        sinkCapabilities: opts.sinkCapabilities || {},
+      });
+    const result = await executePropagationPlan({
+      plan,
+      dry_run: opts.dry_run !== false,
+      writers: opts.writers || {},
+      tenancy: {
+        workspace_key: opts.workspace_key || null,
+        product_key: opts.product_key || null,
+        parcel_deployment_key: opts.parcel_deployment_key || null,
+      },
+    });
+    return { ok: true, blocked: false, plan, propagation: result };
   }
 
   // close_human_gate

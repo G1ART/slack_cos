@@ -17,6 +17,7 @@ import {
 } from './executionRunStore.js';
 import { buildExecutionContextReadModel } from './executionContextReadModel.js';
 import { loadActiveProjectSpaceSlice } from './activeProjectSpaceSlice.js';
+import { loadDeliveryReadiness } from './deliveryReadiness.js';
 import { buildProactiveSignals } from './proactiveSignals.js';
 import { buildToolQualificationSummaryLines } from './toolPlane/toolLaneQualification.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
@@ -112,6 +113,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     activeRow,
   });
   const active_project_space = await loadActiveProjectSpaceSlice(rm.project_space_key);
+  const delivery_readiness = await loadDeliveryReadiness(rm.project_space_key);
   const { compact_lines: proactive_signals_compact_lines } = buildProactiveSignals({
     active_run_shell,
     workcell_runtime: active_run_shell && typeof active_run_shell === 'object'
@@ -146,6 +148,14 @@ export async function handleReadExecutionContext(args, threadKey) {
     proactive_signals_compact_lines,
     tool_qualification_summary_lines,
     ...(active_project_space ? { active_project_space } : {}),
+    ...(delivery_readiness
+      ? {
+          delivery_readiness,
+          delivery_readiness_compact_lines: delivery_readiness.delivery_readiness_compact_lines || [],
+          unresolved_human_gates_compact_lines: delivery_readiness.unresolved_human_gates_compact_lines || [],
+          last_propagation_failures_lines: delivery_readiness.last_propagation_failures_lines || [],
+        }
+      : {}),
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,

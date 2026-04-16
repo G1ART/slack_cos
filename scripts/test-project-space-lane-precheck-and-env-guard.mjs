@@ -27,7 +27,18 @@ store.__resetProjectSpaceBindingMemoryForTests();
 // 1) action enum
 assert.deepEqual(
   [...PROJECT_SPACE_ACTIONS],
-  ['bind_repo', 'bind_deploy', 'bind_db', 'declare_env_requirement', 'open_human_gate', 'close_human_gate'],
+  [
+    'bind_repo',
+    'bind_deploy',
+    'bind_db',
+    'declare_env_requirement',
+    'open_human_gate',
+    'close_human_gate',
+    'plan_propagation',
+    'execute_propagation_dry_run',
+    'open_resumable_gate',
+    'close_and_resume_gate',
+  ],
 );
 
 // 2) unknown action

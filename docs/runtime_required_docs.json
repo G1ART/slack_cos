@@ -49,6 +49,20 @@
       "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
       "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md",
       "docs/cursor-handoffs/W5_W7_Gap_Analysis_Mitigation_Architecture_Proof_Roadmap_2026-04-16.md"
+    ],
+    "live_binding_propagation": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Tenancy_Keys_And_Env_Guide_2026-04-15.md",
+      "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md"
+    ],
+    "scenario_proof_live": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md"
+    ],
+    "proactive_actuation_audit_only": [
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md",
+      "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md"
     ]
   }
 }

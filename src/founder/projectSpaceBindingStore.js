@@ -233,6 +233,10 @@ export async function listBindingsForSpace(project_space_key, opts = {}) {
  *   workspace_key?: string | null,
  *   product_key?: string | null,
  *   parcel_deployment_key?: string | null,
+ *   continuation_packet_id?: string | null,
+ *   continuation_run_id?: string | null,
+ *   continuation_thread_key?: string | null,
+ *   required_human_action?: string | null,
  * }} input
  */
 export async function openHumanGate(input) {
@@ -251,6 +255,10 @@ export async function openHumanGate(input) {
     gate_action: asTrimmedString(input.gate_action) || null,
     opened_by_run_id: asTrimmedString(input.opened_by_run_id) || null,
     closed_by_run_id: null,
+    continuation_packet_id: asTrimmedString(input.continuation_packet_id) || null,
+    continuation_run_id: asTrimmedString(input.continuation_run_id) || null,
+    continuation_thread_key: asTrimmedString(input.continuation_thread_key) || null,
+    required_human_action: asTrimmedString(input.required_human_action) || null,
     ...tenancy,
     opened_at: iso,
     closed_at: null,
