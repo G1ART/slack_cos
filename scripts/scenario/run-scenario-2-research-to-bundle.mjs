@@ -16,6 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildScenarioProofEnvelope } from './scenarioProofEnvelope.js';
+import { getCosRunStoreMode } from '../../src/founder/executionRunStore.js';
 
 const SCENARIO_ID = 'scenario_2_research_to_bundle';
 
@@ -48,6 +49,25 @@ export async function runScenarioTwo(opts = {}) {
         resolution_class: 'hil_required_policy_or_product_decision',
         human_gate_reason: 'COS_SCENARIO_LIVE_OPENAI 가 설정되지 않았습니다.',
         human_gate_action: '라이브 실행을 원하시면 COS_SCENARIO_LIVE_OPENAI=1 로 명시해 주세요.',
+      },
+    });
+  }
+
+  // W9: Supabase 운영 모드에서는 scenario proof runner 를 돌리지 않는다 — scenario 1 과 동일 가드.
+  if (getCosRunStoreMode() === 'supabase') {
+    const finishedAt = now();
+    return buildScenarioProofEnvelope({
+      scenario_id: SCENARIO_ID,
+      run_mode: runMode,
+      started_at: startedAt.toISOString(),
+      finished_at: finishedAt.toISOString(),
+      outcome: 'inconclusive',
+      break_location: 'unclassified',
+      founder_surface_slice: { headline: '운영 Supabase 에서는 시나리오 러너를 돌리지 않습니다.' },
+      failure_classification: {
+        resolution_class: 'tenancy_or_binding_ambiguity',
+        human_gate_reason: 'run_store_mode=supabase 상태에서 시나리오 격리를 보장할 수 없습니다.',
+        human_gate_action: '로컬 실행으로 전환한 뒤 다시 시도해 주세요.',
       },
     });
   }
@@ -269,7 +289,10 @@ const isEntry = (() => {
 if (isEntry) {
   const runMode = process.argv.includes('--live') ? 'live_openai' : 'fixture_replay';
   const writeToDisk = !process.argv.includes('--no-write');
-  runScenarioTwo({ runMode, writeToDisk })
+  const fixtureArgIdx = process.argv.indexOf('--fixture');
+  const fixturePath = fixtureArgIdx >= 0 ? process.argv[fixtureArgIdx + 1] : null;
+  const fixture = fixturePath ? JSON.parse(fs.readFileSync(path.resolve(fixturePath), 'utf8')) : undefined;
+  runScenarioTwo({ runMode, writeToDisk, fixture })
     .then((res) => {
       if (res.ok) {
         process.stdout.write(`${JSON.stringify(res.envelope, null, 2)}\n`);

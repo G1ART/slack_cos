@@ -358,7 +358,10 @@ const isEntry = (() => {
 if (isEntry) {
   const runMode = process.argv.includes('--live') ? 'live_openai' : 'fixture_replay';
   const writeToDisk = !process.argv.includes('--no-write');
-  runScenarioOne({ runMode, writeToDisk })
+  const fixtureArgIdx = process.argv.indexOf('--fixture');
+  const fixturePath = fixtureArgIdx >= 0 ? process.argv[fixtureArgIdx + 1] : null;
+  const fixture = fixturePath ? JSON.parse(fs.readFileSync(path.resolve(fixturePath), 'utf8')) : undefined;
+  runScenarioOne({ runMode, writeToDisk, fixture })
     .then((res) => {
       if (res.ok) {
         process.stdout.write(`${JSON.stringify(res.envelope, null, 2)}\n`);
