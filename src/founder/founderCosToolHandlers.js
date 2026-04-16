@@ -132,6 +132,14 @@ function resolveWorkcellSummaryLinesFromExecutionContext(ctx) {
       : null;
   if (s1) return s1;
 
+  if (active_run_shell && typeof active_run_shell === 'object') {
+    const wr = /** @type {Record<string, unknown>} */ (active_run_shell).workcell_runtime;
+    if (wr && typeof wr === 'object' && !Array.isArray(wr) && Array.isArray(wr.summary_lines)) {
+      const s1b = normalizeWorkcellSummaryArray(wr.summary_lines);
+      if (s1b) return s1b;
+    }
+  }
+
   const es = execution_summary_active_run;
   if (es && typeof es === 'object' && !Array.isArray(es)) {
     const s2 = normalizeWorkcellSummaryArray(
@@ -256,10 +264,19 @@ export async function handleReadExecutionContext(args, threadKey) {
     artifacts,
     maxArtifactScan: artifactFetchLimit,
   });
+  let workcell_status = null;
+  if (active_run_shell && typeof active_run_shell === 'object') {
+    const wr = /** @type {Record<string, unknown>} */ (active_run_shell).workcell_runtime;
+    if (wr && typeof wr === 'object' && !Array.isArray(wr) && wr.status != null) {
+      const st = String(wr.status).trim();
+      if (st) workcell_status = st;
+    }
+  }
   return {
     ok: true,
     persona_contract_snapshot_lines,
     workcell_summary_lines,
+    ...(workcell_status ? { workcell_status } : {}),
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,

@@ -1,5 +1,5 @@
 /**
- * W2-B: accepted harness dispatch carries workcell; active run shell exposes it.
+ * W2-B — accepted harness dispatch carries workcell; active run shell exposes summary + runtime (백필 포함).
  */
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -11,19 +11,20 @@ import {
   activeRunShellForCosExecutionContext,
 } from '../src/founder/executionRunStore.js';
 import { runHarnessOrchestration } from '../src/founder/harnessBridge.js';
+import { formatHarnessWorkcellSummaryLines } from '../src/founder/harnessWorkcellRuntime.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const savedDir = process.env.COS_RUNTIME_STATE_DIR;
 const savedStore = process.env.COS_RUN_STORE;
 
 try {
-  process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-w2b-persist');
+  process.env.COS_RUNTIME_STATE_DIR = path.join(__dirname, '..', '.runtime', 'test-w2b-active-shell');
   process.env.COS_RUN_STORE = 'memory';
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   __resetCosRunMemoryStore();
 
-  const tk = `dm:w2b-persist-${Date.now()}`;
+  const tk = `dm:w2b-shell-${Date.now()}`;
   const h = await runHarnessOrchestration(
     {
       objective: 'persist workcell',
@@ -47,6 +48,30 @@ try {
   assert.ok(Array.isArray(shell.workcell_summary_lines) && shell.workcell_summary_lines.length >= 1);
   assert.ok(shell.workcell_runtime && shell.workcell_runtime.dispatch_id === h.dispatch_id);
   assert.ok(Array.isArray(shell.persona_contract_runtime_snapshot));
+
+  const tk2 = `dm:w2b-shell-backfill-${Date.now()}`;
+  const h2 = await runHarnessOrchestration(
+    {
+      objective: 'backfill summary from runtime only',
+      personas: ['pm'],
+      tasks: ['t'],
+      deliverables: ['d'],
+      constraints: [],
+    },
+    { threadKey: tk2 },
+  );
+  assert.equal(h2.ok, true);
+  const dp = { ...h2 };
+  delete dp.workcell_summary_lines;
+  await persistAcceptedRunShell({ threadKey: tk2, dispatch: dp, founder_request_summary: 'w2b-backfill' });
+  const active2 = await getActiveRunForThread(tk2);
+  const shell2 = activeRunShellForCosExecutionContext(active2);
+  assert.ok(shell2 && shell2.workcell_runtime);
+  const expected = formatHarnessWorkcellSummaryLines(
+    /** @type {Record<string, unknown>} */ (shell2.workcell_runtime),
+    8,
+  );
+  assert.deepEqual(shell2.workcell_summary_lines, expected);
 } finally {
   if (savedDir === undefined) delete process.env.COS_RUNTIME_STATE_DIR;
   else process.env.COS_RUNTIME_STATE_DIR = savedDir;
@@ -54,4 +79,4 @@ try {
   else process.env.COS_RUN_STORE = savedStore;
 }
 
-console.log('test-harness-accepted-workcell-persistence-w2b: ok');
+console.log('test-harness-workcell-runtime-active-run-shell: ok');

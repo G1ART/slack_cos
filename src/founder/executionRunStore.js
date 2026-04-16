@@ -33,6 +33,7 @@ import {
   cosRunEventEnvelopeMergeCtxFromRun,
   parcelDeploymentKeyFromEnv,
 } from './parcelDeploymentContext.js';
+import { formatHarnessWorkcellSummaryLines } from './harnessWorkcellRuntime.js';
 
 /** @param {Record<string, unknown> | null | undefined} r */
 function durableRowMatchesParcelDeploymentEnv(r) {
@@ -732,6 +733,12 @@ export function activeRunShellForCosExecutionContext(run) {
   let workcell_runtime;
   if (dp && dp.workcell_runtime && typeof dp.workcell_runtime === 'object' && !Array.isArray(dp.workcell_runtime)) {
     workcell_runtime = /** @type {Record<string, unknown>} */ (dp.workcell_runtime);
+  }
+  if ((!workcell_summary_lines || workcell_summary_lines.length === 0) && workcell_runtime) {
+    const wl = formatHarnessWorkcellSummaryLines(workcell_runtime, 8)
+      .map((x) => String(x).trim())
+      .filter(Boolean);
+    if (wl.length) workcell_summary_lines = wl;
   }
   return {
     id,

@@ -10,7 +10,7 @@ import { mergeLedgerExecutionRowPayload } from './canonicalExecutionEnvelope.js'
 import { appendExecutionArtifact } from './executionLedger.js';
 import { buildAcceptedPersonaContractMetadata } from './personaContractManifest.js';
 import { validatePersonaContractHarnessDispatch } from './personaContractHarness.js';
-import { buildHarnessWorkcellRuntime } from './harnessWorkcellRuntime.js';
+import { buildHarnessWorkcellRuntime, validateHarnessWorkcellRuntime } from './harnessWorkcellRuntime.js';
 
 const PERSONA_ENUM = new Set(['research', 'pm', 'engineering', 'design', 'qa', 'data']);
 
@@ -346,6 +346,7 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
 
   const wcRes = buildHarnessWorkcellRuntime({
     dispatch_id,
+    intent,
     objective,
     personas: plist,
     packets,
@@ -363,6 +364,20 @@ export async function runHarnessOrchestration(payload, ctx = {}) {
       ...(Array.isArray(wcRes.delegate_schema_error_fields)
         ? { delegate_schema_error_fields: wcRes.delegate_schema_error_fields }
         : {}),
+      delegate_schema_valid: false,
+    };
+  }
+  const wcValidate = validateHarnessWorkcellRuntime(wcRes.workcell_runtime);
+  if (!wcValidate.ok) {
+    return {
+      ok: false,
+      blocked: true,
+      mode: 'harness_dispatch',
+      status: 'blocked',
+      reason: 'invalid_payload',
+      blocked_reason: wcValidate.blocked_reason,
+      machine_hint: wcValidate.machine_hint,
+      delegate_schema_error_fields: ['workcell_runtime'],
       delegate_schema_valid: false,
     };
   }

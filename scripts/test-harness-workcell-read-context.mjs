@@ -1,5 +1,5 @@
 /**
- * W2-B: read_execution_context workcell_summary_lines — shell wins over older ledger artifact.
+ * W2-B — read_execution_context: shell 요약 우선, 그다음 workcell_runtime.summary_lines, workcell_status.
  */
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -11,6 +11,7 @@ import {
 import { handleReadExecutionContext } from '../src/founder/founderCosToolHandlers.js';
 import { appendExecutionArtifact, clearExecutionArtifacts } from '../src/founder/executionLedger.js';
 import { mergeLedgerExecutionRowPayload } from '../src/founder/canonicalExecutionEnvelope.js';
+import { formatHarnessWorkcellSummaryLines } from '../src/founder/harnessWorkcellRuntime.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const savedDir = process.env.COS_RUNTIME_STATE_DIR;
@@ -43,6 +44,31 @@ try {
   });
 
   const shellLines = ['workcell from active run shell'];
+  /** @type {Record<string, unknown>} */
+  const rtBase = {
+    workcell_id: 'wc_harness_shell_win',
+    dispatch_id: 'harness_shell_win',
+    status: 'active',
+    personas: ['pm'],
+    packet_count: 1,
+    review_checkpoint_count: 0,
+    escalation_open: false,
+    escalation_targets: [],
+    packets: [
+      {
+        packet_id: 'p1',
+        persona: 'pm',
+        owner_persona: 'pm',
+        status: 'active',
+        review_required: false,
+        escalation_target: null,
+        preferred_tool: 'cursor',
+        preferred_action: 'create_spec',
+      },
+    ],
+  };
+  rtBase.summary_lines = formatHarnessWorkcellSummaryLines(rtBase, 8);
+  const minimalRuntime = rtBase;
   const dispatch = {
     ok: true,
     status: 'accepted',
@@ -50,18 +76,7 @@ try {
     objective: 'shell priority',
     persona_contract_runtime_snapshot: ['pm|planner|v1'],
     workcell_summary_lines: shellLines,
-    workcell_runtime: {
-      workcell_id: 'wc_harness_shell_win',
-      dispatch_id: 'harness_shell_win',
-      objective: 'shell priority',
-      personas: ['pm'],
-      packet_count: 1,
-      review_required_count: 0,
-      packet_owners: [{ packet_id: 'p1', owner_persona: 'pm' }],
-      review_checkpoints: [],
-      escalation_state: { status: 'none', reasons: [] },
-      summary_lines: shellLines,
-    },
+    workcell_runtime: minimalRuntime,
     packets: [
       {
         packet_id: 'p1',
@@ -80,6 +95,7 @@ try {
   const ctx = await handleReadExecutionContext({ limit: 8 }, tk);
   assert.ok(Array.isArray(ctx.workcell_summary_lines));
   assert.deepEqual(ctx.workcell_summary_lines, shellLines);
+  assert.equal(ctx.workcell_status, 'active');
 
   await clearExecutionArtifacts(tk);
   __resetCosRunMemoryStore();
@@ -90,4 +106,4 @@ try {
   else process.env.COS_RUN_STORE = savedStore;
 }
 
-console.log('test-harness-workcell-read-context-w2b: ok');
+console.log('test-harness-workcell-read-context: ok');
