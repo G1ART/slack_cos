@@ -53,6 +53,11 @@ try {
   assert.equal(ctx.parcel_deployment_key, 'w3a_ctx_parcel');
   assert.equal(ctx.active_run_shell.workspace_key, ctx.workspace_key);
   assert.equal(ctx.active_run_shell.product_key, ctx.product_key);
+  assert.equal(ctx.persona_contract_snapshot_source, 'none');
+  assert.equal(ctx.workcell_summary_source, 'none');
+  assert.equal(ctx.active_run_truth_source, 'active_run_shell');
+  assert.ok(ctx.tenancy_slice && typeof ctx.tenancy_slice === 'object');
+  assert.equal(ctx.tenancy_slice.workspace_key, 'w3a_ctx_ws');
 } finally {
   if (savedDir === undefined) delete process.env.COS_RUNTIME_STATE_DIR;
   else process.env.COS_RUNTIME_STATE_DIR = savedDir;

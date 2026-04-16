@@ -65,6 +65,7 @@ try {
     ctx.persona_contract_snapshot_lines[0].includes('pm|'),
     'snapshot line should reflect delegate enum from dispatch',
   );
+  assert.equal(ctx.persona_contract_snapshot_source, 'active_run_shell');
 
   await clearExecutionArtifacts(tk);
   __resetCosRunMemoryStore();
@@ -90,6 +91,7 @@ try {
   });
   const ctx2 = await handleReadExecutionContext({ limit: 5 }, tk2);
   assert.deepEqual(ctx2.persona_contract_snapshot_lines, snap);
+  assert.equal(ctx2.persona_contract_snapshot_source, 'recent_artifact_scan');
   await clearExecutionArtifacts(tk2);
 } finally {
   if (savedDir === undefined) delete process.env.COS_RUNTIME_STATE_DIR;

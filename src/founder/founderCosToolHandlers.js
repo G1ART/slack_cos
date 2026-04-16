@@ -15,6 +15,7 @@ import {
   getActiveRunForThread,
   activeRunShellForCosExecutionContext,
 } from './executionRunStore.js';
+import { buildExecutionContextReadModel } from './executionContextReadModel.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
   cosRunTenancyMergeHintsFromRunRow,
@@ -22,158 +23,6 @@ import {
   tenancyKeysPresenceFromEnv,
 } from './parcelDeploymentContext.js';
 import { mergeLedgerExecutionRowPayload, distinctSpineKeysFromLedgerArtifacts } from './canonicalExecutionEnvelope.js';
-
-/**
- * @param {unknown} x
- * @returns {string[] | null}
- */
-function normalizePersonaContractSnapshotArray(x) {
-  if (!Array.isArray(x)) return null;
-  const lines = x.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
-  return lines.length ? lines : null;
-}
-
-/**
- * 활성 런·요약·최근 ledger 아티팩트에서 페르소나 계약 스냅샷 줄을 역추적한다 (W2-A closeout).
- * @param {{
- *   active_run_shell: Record<string, unknown> | null,
- *   execution_summary_active_run: unknown,
- *   artifacts: unknown[],
- *   maxArtifactScan: number,
- * }} ctx
- * @returns {string[]}
- */
-function resolvePersonaContractSnapshotLinesFromExecutionContext(ctx) {
-  const { active_run_shell, execution_summary_active_run, artifacts } = ctx;
-  const maxArtifactScan =
-    typeof ctx.maxArtifactScan === 'number' && ctx.maxArtifactScan >= 1 ? Math.min(48, ctx.maxArtifactScan) : 48;
-
-  const s1 =
-    active_run_shell && typeof active_run_shell === 'object'
-      ? normalizePersonaContractSnapshotArray(
-          /** @type {Record<string, unknown>} */ (active_run_shell).persona_contract_runtime_snapshot,
-        )
-      : null;
-  if (s1) return s1;
-
-  const es = execution_summary_active_run;
-  if (es && typeof es === 'object' && !Array.isArray(es)) {
-    const s2 = normalizePersonaContractSnapshotArray(
-      /** @type {Record<string, unknown>} */ (es).persona_contract_runtime_snapshot,
-    );
-    if (s2) return s2;
-  }
-
-  const list = Array.isArray(artifacts) ? artifacts : [];
-  const n = list.length;
-  const cap = Math.min(maxArtifactScan, n);
-  for (let k = 0; k < cap; k += 1) {
-    const a = list[n - 1 - k];
-    if (!a || typeof a !== 'object') continue;
-    const row = /** @type {Record<string, unknown>} */ (a);
-    const t = String(row.type || '');
-    if (t !== 'harness_dispatch' && t !== 'harness_packet') continue;
-    const rawPayload = row.payload;
-    const pl =
-      rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
-        ? /** @type {Record<string, unknown>} */ (rawPayload)
-        : null;
-    if (!pl) continue;
-    const s3 = normalizePersonaContractSnapshotArray(pl.persona_contract_runtime_snapshot);
-    if (s3) return s3;
-  }
-  return [];
-}
-
-/**
- * @param {unknown} x
- * @returns {string[] | null}
- */
-function normalizeWorkcellSummaryArray(x) {
-  if (!Array.isArray(x)) return null;
-  const lines = x.map((s) => String(s).trim()).filter(Boolean).slice(0, 12);
-  return lines.length ? lines : null;
-}
-
-/**
- * @param {Record<string, unknown> | null} pl
- * @returns {string[] | null}
- */
-function extractWorkcellSummaryFromPayload(pl) {
-  if (!pl || typeof pl !== 'object') return null;
-  const direct = normalizeWorkcellSummaryArray(pl.workcell_summary_lines);
-  if (direct) return direct;
-  const wr = pl.workcell_runtime;
-  if (wr && typeof wr === 'object' && !Array.isArray(wr) && Array.isArray(wr.summary_lines)) {
-    return normalizeWorkcellSummaryArray(wr.summary_lines);
-  }
-  return null;
-}
-
-/**
- * @param {{
- *   active_run_shell: Record<string, unknown> | null,
- *   execution_summary_active_run: unknown,
- *   artifacts: unknown[],
- *   maxArtifactScan: number,
- * }} ctx
- * @returns {string[]}
- */
-function resolveWorkcellSummaryLinesFromExecutionContext(ctx) {
-  const { active_run_shell, execution_summary_active_run, artifacts } = ctx;
-  const maxArtifactScan =
-    typeof ctx.maxArtifactScan === 'number' && ctx.maxArtifactScan >= 1 ? Math.min(48, ctx.maxArtifactScan) : 48;
-
-  const s1 =
-    active_run_shell && typeof active_run_shell === 'object'
-      ? normalizeWorkcellSummaryArray(
-          /** @type {Record<string, unknown>} */ (active_run_shell).workcell_summary_lines,
-        )
-      : null;
-  if (s1) return s1;
-
-  if (active_run_shell && typeof active_run_shell === 'object') {
-    const wr = /** @type {Record<string, unknown>} */ (active_run_shell).workcell_runtime;
-    if (wr && typeof wr === 'object' && !Array.isArray(wr) && Array.isArray(wr.summary_lines)) {
-      const s1b = normalizeWorkcellSummaryArray(wr.summary_lines);
-      if (s1b) return s1b;
-    }
-  }
-
-  const es = execution_summary_active_run;
-  if (es && typeof es === 'object' && !Array.isArray(es)) {
-    const s2 = normalizeWorkcellSummaryArray(
-      /** @type {Record<string, unknown>} */ (es).workcell_summary_lines,
-    );
-    if (s2) return s2;
-  }
-
-  const list = Array.isArray(artifacts) ? artifacts : [];
-  const n = list.length;
-  const cap = Math.min(maxArtifactScan, n);
-  for (let k = 0; k < cap; k += 1) {
-    const a = list[n - 1 - k];
-    if (!a || typeof a !== 'object') continue;
-    const row = /** @type {Record<string, unknown>} */ (a);
-    const t = String(row.type || '');
-    const rawPayload = row.payload;
-    const pl =
-      rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
-        ? /** @type {Record<string, unknown>} */ (rawPayload)
-        : null;
-    if (!pl) continue;
-    if (t === 'harness_dispatch') {
-      const s3 = extractWorkcellSummaryFromPayload(pl);
-      if (s3) return s3;
-    }
-    if (t === 'harness_packet') {
-      const pid = String(pl.packet_id || '').trim();
-      const owner = String(pl.owner_persona || '').trim();
-      if (pid && owner) return [`packet ${pid} owner=${owner}`.slice(0, 400)];
-    }
-  }
-  return [];
-}
 
 /**
  * @param {Record<string, unknown>} args
@@ -252,48 +101,27 @@ export async function handleReadExecutionContext(args, threadKey) {
   const parcel_ledger_closure_mirror = threadKey
     ? await summarizeParcelLedgerClosureMirrorPresence(threadKey, Math.max(80, limit * 24))
     : { count: 0, latest_ts: null };
-  const persona_contract_snapshot_lines = resolvePersonaContractSnapshotLinesFromExecutionContext({
+  const rm = buildExecutionContextReadModel({
     active_run_shell,
     execution_summary_active_run,
     artifacts,
     maxArtifactScan: artifactFetchLimit,
+    activeRow,
   });
-  const workcell_summary_lines = resolveWorkcellSummaryLinesFromExecutionContext({
-    active_run_shell,
-    execution_summary_active_run,
-    artifacts,
-    maxArtifactScan: artifactFetchLimit,
-  });
-  let workcell_status = null;
-  /** @type {string | null} */
-  let workspace_key = null;
-  /** @type {string | null} */
-  let product_key = null;
-  /** @type {string | null} */
-  let project_space_key = null;
-  /** @type {string | null} */
-  let parcel_deployment_key = null;
-  if (active_run_shell && typeof active_run_shell === 'object') {
-    const sh = /** @type {Record<string, unknown>} */ (active_run_shell);
-    workspace_key = sh.workspace_key != null ? String(sh.workspace_key).trim() || null : null;
-    product_key = sh.product_key != null ? String(sh.product_key).trim() || null : null;
-    project_space_key = sh.project_space_key != null ? String(sh.project_space_key).trim() || null : null;
-    parcel_deployment_key = sh.parcel_deployment_key != null ? String(sh.parcel_deployment_key).trim() || null : null;
-    const wr = sh.workcell_runtime;
-    if (wr && typeof wr === 'object' && !Array.isArray(wr) && wr.status != null) {
-      const st = String(wr.status).trim();
-      if (st) workcell_status = st;
-    }
-  }
   return {
     ok: true,
-    persona_contract_snapshot_lines,
-    workcell_summary_lines,
-    workspace_key,
-    product_key,
-    project_space_key,
-    parcel_deployment_key,
-    ...(workcell_status ? { workcell_status } : {}),
+    persona_contract_snapshot_lines: rm.persona_contract_snapshot_lines,
+    persona_contract_snapshot_source: rm.persona_contract_snapshot_source,
+    workcell_summary_lines: rm.workcell_summary_lines,
+    workcell_summary_source: rm.workcell_summary_source,
+    workspace_key: rm.workspace_key,
+    product_key: rm.product_key,
+    project_space_key: rm.project_space_key,
+    parcel_deployment_key: rm.parcel_deployment_key,
+    tenancy_slice: rm.tenancy_slice,
+    artifact_scan_scoped_by_tenancy: rm.artifact_scan_scoped_by_tenancy,
+    active_run_truth_source: rm.active_run_truth_source,
+    ...(rm.workcell_status ? { workcell_status: rm.workcell_status } : {}),
     summary_lines,
     execution_summary_active_run,
     parcel_ledger_closure_mirror,

@@ -74,6 +74,10 @@ try {
   assert.equal(ctx.product_key, 'P_SHELL');
   assert.equal(ctx.project_space_key, 'truth_stack_env_ps');
   assert.equal(ctx.parcel_deployment_key, 'truth_stack_slice_test');
+  assert.equal(ctx.persona_contract_snapshot_source, 'none');
+  assert.equal(ctx.workcell_summary_source, 'none');
+  assert.equal(ctx.active_run_truth_source, 'active_run_shell');
+  assert.equal(ctx.artifact_scan_scoped_by_tenancy, true);
 } finally {
   if (savedStore === undefined) delete process.env.COS_RUN_STORE;
   else process.env.COS_RUN_STORE = savedStore;

@@ -767,6 +767,45 @@ export function activeRunShellForCosExecutionContext(run) {
 }
 
 /**
+ * W3-B — `read_execution_context` 아티팩트 스캔용. 테넄시 슬라이스에 값이 있으면 payload 동명 키가
+ * **다른 값**을 달고 있으면 제외한다. 키가 없는(레거시) payload 는 충돌이 없으면 통과한다.
+ *
+ * @param {unknown[]} artifacts `readRecentExecutionArtifacts` 등 정규화된 ledger 행
+ * @param {{
+ *   workspace_key?: string | null,
+ *   product_key?: string | null,
+ *   project_space_key?: string | null,
+ *   parcel_deployment_key?: string | null,
+ * }} tenancySlice
+ * @returns {{ artifacts: unknown[], artifact_scan_scoped_by_tenancy: boolean }}
+ */
+export function filterArtifactsForReadModelTenancy(artifacts, tenancySlice) {
+  const list = Array.isArray(artifacts) ? artifacts : [];
+  const slice = tenancySlice && typeof tenancySlice === 'object' ? tenancySlice : {};
+  /** @type {Record<string, string>} */
+  const constraints = {};
+  for (const k of ['workspace_key', 'product_key', 'project_space_key', 'parcel_deployment_key']) {
+    const v = slice[k];
+    if (v != null && String(v).trim()) constraints[k] = String(v).trim();
+  }
+  if (Object.keys(constraints).length === 0) {
+    return { artifacts: list, artifact_scan_scoped_by_tenancy: false };
+  }
+  const out = list.filter((a) => {
+    if (!a || typeof a !== 'object') return true;
+    const raw = /** @type {Record<string, unknown>} */ (a).payload;
+    const pl = raw && typeof raw === 'object' && !Array.isArray(raw) ? /** @type {Record<string, unknown>} */ (raw) : null;
+    if (!pl) return true;
+    for (const [k, want] of Object.entries(constraints)) {
+      const got = pl[k] != null ? String(pl[k]).trim() : '';
+      if (got && got !== want) return false;
+    }
+    return true;
+  });
+  return { artifacts: out, artifact_scan_scoped_by_tenancy: true };
+}
+
+/**
  * @param {string} threadKey
  * @param {Record<string, unknown>} patch
  */

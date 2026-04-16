@@ -104,6 +104,8 @@ try {
   assert.ok(Array.isArray(ctx.workcell_summary_lines));
   assert.deepEqual(ctx.workcell_summary_lines, shellLines);
   assert.equal(ctx.workcell_status, 'active');
+  assert.equal(ctx.workcell_summary_source, 'active_run_shell');
+  assert.equal(ctx.persona_contract_snapshot_source, 'active_run_shell');
 
   await clearExecutionArtifacts(tk);
   __resetCosRunMemoryStore();

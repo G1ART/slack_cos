@@ -80,6 +80,10 @@ assert.equal(ctx.workspace_key, null);
 assert.equal(ctx.product_key, null);
 assert.equal(ctx.project_space_key, null);
 assert.equal(ctx.parcel_deployment_key, null);
+assert.ok(typeof ctx.persona_contract_snapshot_source === 'string');
+assert.ok(typeof ctx.workcell_summary_source === 'string');
+assert.equal(ctx.active_run_truth_source, 'none');
+assert.equal(ctx.artifact_scan_scoped_by_tenancy, false);
 
 await clearExecutionArtifacts(tk);
 

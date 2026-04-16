@@ -87,3 +87,53 @@ export function validateExecutionContextShell(shell) {
   }
   return { ok: true };
 }
+
+/**
+ * W3-B — `execution_summary_active_run` 이 객체 형태의 truth 보조 소스로 쓰일 수 있는지 (배열·문자열 단독은 제외).
+ * @param {unknown} es
+ * @returns {es is Record<string, unknown>}
+ */
+export function isExecutionSummaryActiveRunTruthObject(es) {
+  return Boolean(es && typeof es === 'object' && !Array.isArray(es));
+}
+
+/**
+ * @param {unknown} x
+ * @returns {string[] | null}
+ */
+function normalizeStringListField(x, maxLen) {
+  if (!Array.isArray(x)) return null;
+  const cap = Math.max(1, Math.min(24, maxLen || 12));
+  const lines = x.map((s) => String(s).trim()).filter(Boolean).slice(0, cap);
+  return lines.length ? lines : null;
+}
+
+/**
+ * 요약 객체에 페르소나 스냅샷 배열이 **기계적으로 유효**할 때만 반환 (잘못된 타입은 무시).
+ * @param {unknown} es
+ * @returns {string[] | null}
+ */
+export function extractValidPersonaContractLinesFromSummaryTruthObject(es) {
+  if (!isExecutionSummaryActiveRunTruthObject(es)) return null;
+  return normalizeStringListField(
+    /** @type {Record<string, unknown>} */ (es).persona_contract_runtime_snapshot,
+    12,
+  );
+}
+
+/**
+ * 요약 객체에서 워크셀 요약 줄만 유효할 때 반환 (`workcell_summary_lines` 또는 `workcell_runtime.summary_lines`).
+ * @param {unknown} es
+ * @returns {string[] | null}
+ */
+export function extractValidWorkcellSummaryLinesFromSummaryTruthObject(es) {
+  if (!isExecutionSummaryActiveRunTruthObject(es)) return null;
+  const o = /** @type {Record<string, unknown>} */ (es);
+  const direct = normalizeStringListField(o.workcell_summary_lines, 12);
+  if (direct) return direct;
+  const wr = o.workcell_runtime;
+  if (wr && typeof wr === 'object' && !Array.isArray(wr) && Array.isArray(wr.summary_lines)) {
+    return normalizeStringListField(wr.summary_lines, 12);
+  }
+  return null;
+}
