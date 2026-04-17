@@ -28,6 +28,9 @@ const { buildPropagationRunAuditLines } = await import(
 const humanGate = await import('../src/founder/humanGateRuntime.js');
 const { buildPropagationPlan } = await import('../src/founder/envSecretPropagationPlan.js');
 const { buildBindingRequirement } = await import('../src/founder/bindingRequirements.js');
+const { buildSecretSourceGraph, formatSecretSourceGraphCompactLines } = await import(
+  '../src/founder/secretSourceGraph.js'
+);
 
 store.__resetProjectSpaceBindingMemoryForTests();
 engine.__resetPropagationEngineMemoryForTests?.();
@@ -160,5 +163,47 @@ const readyBJoined = [
 ].join('\n');
 assert.ok(!readyAJoined.includes(PS_B));
 assert.ok(!readyBJoined.includes(PS_A));
+
+// (6) W12-B/D — secret source graph 는 project_space 별로 격리된다
+const reqsA = [
+  buildBindingRequirement({
+    project_space_key: PS_A,
+    binding_kind: 'env_requirement',
+    source_system: 'cos',
+    sink_system: 'github',
+    secret_handling_mode: 'smoke_only',
+    binding_name: 'API_TOKEN_A_ONLY',
+  }),
+];
+const graphA = buildSecretSourceGraph({ project_space_key: PS_A, requirements: reqsA });
+const graphB = buildSecretSourceGraph({ project_space_key: PS_B, requirements: reqsB });
+assert.equal(graphA.project_space_key, PS_A);
+assert.equal(graphB.project_space_key, PS_B);
+for (const v of graphA.values) {
+  assert.ok(v.value_name === 'API_TOKEN_A_ONLY', `A graph must only carry A value, got ${v.value_name}`);
+}
+for (const v of graphB.values) {
+  assert.ok(v.value_name === 'API_TOKEN_B', `B graph must only carry B value, got ${v.value_name}`);
+}
+const graphAStr = JSON.stringify(graphA);
+const graphBStr = JSON.stringify(graphB);
+assert.ok(!graphAStr.includes(PS_B), 'A graph must not leak B space key');
+assert.ok(!graphAStr.includes('API_TOKEN_B'), 'A graph must not leak B value name');
+assert.ok(!graphBStr.includes(PS_A), 'B graph must not leak A space key');
+assert.ok(!graphBStr.includes('API_TOKEN_A_ONLY'), 'B graph must not leak A value name');
+
+// compact lines 역시 상대 space 키/value name 누출 금지
+const linesA = formatSecretSourceGraphCompactLines(graphA).join('\n');
+const linesB = formatSecretSourceGraphCompactLines(graphB).join('\n');
+assert.ok(!linesA.includes('API_TOKEN_B'));
+assert.ok(!linesB.includes('API_TOKEN_A_ONLY'));
+
+// (7) propagation_runs.secret_source_graph_snapshot_json — B 의 run 스냅샷은 A 의 식별자를 포함하지 않는다
+const snapB = runsB[0].run.secret_source_graph_snapshot_json;
+if (snapB) {
+  const snapBStr = typeof snapB === 'string' ? snapB : JSON.stringify(snapB);
+  assert.ok(!snapBStr.includes(PS_A), 'B snapshot must not leak A space key');
+  assert.ok(!snapBStr.includes('API_TOKEN_A_ONLY'), 'B snapshot must not leak A value name');
+}
 
 console.log('test-cross-project-contamination-no-mix: ok');

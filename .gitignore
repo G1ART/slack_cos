@@ -20,3 +20,5 @@ ops/preflight_manifest/*.json
 ops/preflight_ack/*.json
 # 시나리오 하니스 산출물(로컬 실행물; .gitkeep 만 추적)
 ops/scenario_runs/*.json
+# W12-A live binding qualification 원장 (로컬/운영자 생성, raw secret 금지)
+ops/live_binding_capability_qualifications.json

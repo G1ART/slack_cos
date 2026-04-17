@@ -462,6 +462,32 @@ export async function listOpenHumanGates(project_space_key) {
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * W12-B — 특정 propagation_run 의 secret_source_graph_snapshot_json 을 불러온다.
+ * 메모리 모드에서는 envSecretPropagationEngine 의 memPropagationRuns 에 기록된 데이터를 직접 조회하지 않고,
+ * 호출측에서 engine.executePropagationPlan 결과를 통해 snapshot 을 얻는 것을 권장한다.
+ * @param {string} runId
+ * @returns {Promise<object|null>}
+ */
+export async function loadSecretSourceGraphSnapshotForRun(runId) {
+  const id = asTrimmedString(runId);
+  if (!id) return null;
+  const mode = storeMode();
+  if (mode !== 'supabase') return null;
+  const sb = createCosRuntimeSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from('propagation_runs')
+    .select('secret_source_graph_snapshot_json')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    console.error('[propagation_runs.loadSnapshot]', error.message);
+    return null;
+  }
+  return (data && data.secret_source_graph_snapshot_json) || null;
+}
+
 /** Test isolation — memory mode only. */
 export function __resetProjectSpaceBindingMemoryForTests() {
   memSpaces.clear();

@@ -39,6 +39,7 @@ export function buildScenarioProofScorecard(envelopes) {
   let inconclusive = 0;
   let hil = 0;
   let cont = 0;
+  let capability_mismatch = 0;
   const entries = [];
   for (const env of list) {
     const c = classifyScenarioProofEnvelope(env);
@@ -51,12 +52,18 @@ export function buildScenarioProofScorecard(envelopes) {
     else inconclusive += 1;
     if (c.human_gate_required) hil += 1;
     if (c.continuation_path_exists) cont += 1;
+    // W12-D: capability mismatch = 실행이 "제품 기능 미보유" 또는 "technical_capability_missing" 으로 막힌 경우
+    const isMismatch =
+      c.break_reason_cause === 'product_capability_missing' ||
+      c.resolution_class === 'technical_capability_missing';
+    if (isMismatch) capability_mismatch += 1;
     entries.push({
       scenario_id: c.scenario_id,
       outcome: c.outcome,
       break_category: c.break_category,
       break_reason_cause: c.break_reason_cause,
       human_gate_required: c.human_gate_required,
+      capability_mismatch: isMismatch,
       headline: c.headline,
     });
   }
@@ -67,6 +74,7 @@ export function buildScenarioProofScorecard(envelopes) {
     inconclusive,
     human_gate_required: hil,
     continuation_available: cont,
+    capability_mismatch_counts: capability_mismatch,
     break_category_counts: counts,
     break_reason_cause_counts: causeCounts,
     entries,
@@ -86,6 +94,9 @@ export function toScorecardCompactLines(sc) {
   );
   if (sc.human_gate_required > 0) {
     lines.push(`사람 승인 필요 ${sc.human_gate_required}건 · 이어받기 경로 ${sc.continuation_available}건`);
+  }
+  if (typeof sc.capability_mismatch_counts === 'number' && sc.capability_mismatch_counts > 0) {
+    lines.push(`제품 기능 불일치 ${sc.capability_mismatch_counts}건`);
   }
   const dominant = Object.entries(sc.break_category_counts || {})
     .filter(([k, v]) => k !== 'none' && v > 0)

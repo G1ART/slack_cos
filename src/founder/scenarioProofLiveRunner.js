@@ -17,6 +17,10 @@ import { classifyScenarioProofEnvelope } from './scenarioProofResultClassifier.j
 import { buildScenarioProofScorecard, toScorecardCompactLines } from './scenarioProofScorecard.js';
 import { buildScenarioProofEnvelope } from '../../scripts/scenario/scenarioProofEnvelope.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
+import {
+  getQualifiedCapabilityForSink,
+  listKnownSinks,
+} from './liveBindingCapabilityRegistry.js';
 
 /** @typedef {'fixture_replay' | 'live_openai'} ScenarioRunMode */
 
@@ -163,6 +167,27 @@ function detectLiveBoundaryBlock({ env, writersProvided }) {
       action: 'COS_LIVE_BINDING_WRITERS=1 로 writer 를 켜거나, runner 호출 시 writers 를 주입해 주세요.',
       headline: '라이브 writer 자격이 없어 리허설을 중단했습니다.',
     };
+  }
+  // W12-D: live 모드라도 qualified registry 에서 live_verified 인 sink 가 하나도 없으면 차단.
+  try {
+    const sinks = listKnownSinks();
+    const anyVerified = sinks.some((s) => {
+      const q = getQualifiedCapabilityForSink(s, { now: new Date() });
+      return q && q.qualification_status === 'live_verified';
+    });
+    if (!anyVerified) {
+      return {
+        cause: 'product_capability_missing',
+        resolution_class: 'technical_capability_missing',
+        reason:
+          '어떤 sink 도 live_verified 상태가 아닙니다. live rehearsal 의 실제 쓰기 근거가 없습니다.',
+        action:
+          'scripts/qualify-live-binding-capability.mjs 로 최소 1개 sink 를 live_verified 상태로 qualify 한 뒤 다시 실행해 주세요.',
+        headline: '라이브 자격이 검증된 sink 가 없어 리허설을 중단했습니다.',
+      };
+    }
+  } catch (_e) {
+    // capability 조회 실패는 bounded block 을 추가로 만들지 않는다(기존 러너가 불투명 실패로 내려앉도록).
   }
   return null;
 }

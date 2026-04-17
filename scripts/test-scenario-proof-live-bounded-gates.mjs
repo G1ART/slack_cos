@@ -8,8 +8,34 @@
  *  4) 모두 통과 + writers 주입 → bounded block 해제, 기본 경로 진입
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 process.env.COS_RUN_STORE = 'memory';
+
+// W12-D: bounded block 이 해제되었을 때의 경로를 입증하기 위해서는 최소 1개 sink 가
+// live_verified 로 qualify 되어 있어야 한다. 테스트 전용 ledger 를 깐다.
+const ledgerPath = path.resolve(process.cwd(), 'ops/live_binding_capability_qualifications.json');
+let __ledgerBackup = null;
+if (fs.existsSync(ledgerPath)) __ledgerBackup = fs.readFileSync(ledgerPath, 'utf8');
+fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+fs.writeFileSync(
+  ledgerPath,
+  JSON.stringify({
+    schema_version: 1,
+    sinks: {
+      github: { qualification_status: 'live_verified', last_verified_at: new Date().toISOString() },
+    },
+  }),
+);
+process.on('exit', () => {
+  try {
+    if (__ledgerBackup !== null) fs.writeFileSync(ledgerPath, __ledgerBackup);
+    else if (fs.existsSync(ledgerPath)) fs.unlinkSync(ledgerPath);
+  } catch {
+    /* ignore */
+  }
+});
 
 const runner = await import('../src/founder/scenarioProofLiveRunner.js');
 

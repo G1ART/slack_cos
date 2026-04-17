@@ -181,8 +181,16 @@ export async function runScenarioTwo(opts = {}) {
         evidence_ref: bundleRef,
       });
 
-      if (stage.manual_submission_gate) {
-        const gate = stage.manual_submission_gate;
+      // W12-D: live 모드에서는 번들을 자동 제출하지 않는다 — 수동 제출 게이트를 강제 주입한다.
+      let manualGate = stage.manual_submission_gate || null;
+      if (!manualGate && runMode === 'live_openai') {
+        manualGate = {
+          reason: '라이브 리허설에서는 최종 제출을 사람이 확인합니다.',
+          action: '번들을 사용자가 직접 검토하고 수동으로 제출해 주세요.',
+        };
+      }
+      if (manualGate) {
+        const gate = manualGate;
         steps.push({
           step_id: 'bundle:manual_submission_gate',
           status: 'blocked',

@@ -187,6 +187,55 @@ If any required document changes during the task, rerun preflight and refresh th
 
 ---
 
+## 6.3) W12 Live Qualification · Secret Source-of-Truth · Design-Partner Beta Packaging 총괄 보고 (2026-04-16)
+
+1. **Implemented (슬라이스별 요약)**
+   - **W0 확장**: 정본 `docs/cursor-handoffs/W12_LIVE_QUALIFICATION_AND_PACKAGING_PLANMODE_MASTER_INSTRUCTION_2026-04-16.md` 이동, `docs/runtime_required_docs.json` 에 `design_partner_beta_qualification` 워크스트림 등록, `package.json` 에 `preflight:design_partner_beta_qualification`·`verify:preflight:design_partner_beta_qualification` 쌍 추가, 매니페스트·ack 생성 및 검증(21 chunks verified).
+   - **W12-A (verified capability matrix)**: `liveBindingCapabilityRegistry.js` 에 qualification 메타 additive 8 필드 + `getQualifiedCapabilityForSink`·`isLiveWriteAllowed`·`maxAllowedVerificationKind`·`isStaleByDate`·`listKnownSinks` 추가. 신규 CLI `scripts/qualify-live-binding-capability.mjs` (`--sink|--all`·`--mode fixture|live`·`--verified-by`·`--notes`·`--evidence-ref`·`--ledger`·`--json`) → `ops/live_binding_capability_qualifications.json` 원장 upsert(.gitignore). `envSecretPropagationPlan` 은 caller 가 `sinkCapabilities` 를 강제하지 않을 때만 qualification 기반 downgrade, `envSecretPropagationEngine` 은 `isLiveWriteAllowed===false` 에서 live 쓰기를 스킵하고 `technical_capability_missing` 으로 정직한 실패.
+   - **W12-B (secret source-of-truth graph + snapshot)**: 신규 pure 모듈 `src/founder/secretSourceGraph.js` + 마이그레이션 `supabase/migrations/20260617120000_propagation_runs_secret_source_snapshot.sql`(`propagation_runs.secret_source_graph_snapshot_json jsonb` additive). engine 이 run 시작 시 메타 그래프를 계산·`detectSecretLeakInGraph` 로 redaction 검증 후 snapshot 저장. `projectSpaceBindingStore.loadSecretSourceGraphSnapshotForRun` 추가. `audit-delivery-readiness` 와 `read_execution_context` 에 audit-only `secret_source_graph_compact_lines` 병치(founder 본문 주입 금지).
+   - **W12-C (human gate escalation contract)**: 신규 pure 빌더 `src/founder/humanGateEscalationContract.js` 가 `{ gate_id, gate_kind, reason_why, where_to_act, exact_action, resumable, what_resumes }` 를 돌려주고 `renderHumanGateEscalationFounderLines` 가 jargon/raw secret 없는 한국어 라인을 만든다. `founderSurfaceModel.buildFounderSurfaceModel` 가 기존 `human_gate_*` 필드 시그니처를 유지한 채 **모델 입력 compact lines** 로만 `human_gate_escalation_lines` 를 병치(신규 Slack 송신 경로 0).
+   - **W12-D (live rehearsal qualification)**: `scenarioProofLiveRunner.detectLiveBoundaryBlock` 이 qualified registry 에서 `live_verified` sink 0 → `product_capability_missing`+`technical_capability_missing` 로 bounded block. `scenarioProofScorecard.capability_mismatch_counts` 집계 + compact line(`제품 기능 불일치 N건`). `audit-delivery-readiness` 의 verdict `ready` 는 `technical_capability_missing` 근거나 human-gate 요구 graph 가 있으면 `needs_verification` 으로 승격하고 `capability_verification_lines` 병치. 시나리오 2 러너는 live 모드에서 fixture 에 `manual_submission_gate` 가 없어도 **수동 제출 게이트를 강제 주입**.
+   - **W12-E (design-partner beta packaging)**: 신규 `docs/design-partner-beta/` 5개 — `SLACK_APP_MANIFEST.reference.json`·`INSTALL_NOTES.md`·`BYO_KEYS_INFRA_STANCE.md`·`OPERATOR_SMOKE_TEST_CHECKLIST.md`·`KNOWN_HUMAN_GATE_POINTS.md`. `.env.example` 에 `COS_LIVE_BINDING_WRITERS`·`COS_SCENARIO_LIVE_OPENAI` 베타 플래그 섹션 추가. `test-cross-project-contamination-no-mix` 를 secret source graph / snapshot / compact lines 까지 동시 검증하도록 확장.
+
+2. **Capability qualification changes (sink 별 현재 상태)**
+   - `github`·`railway`·`supabase`·`vercel`·`openai` 모두 정적 registry 의 verification_modes 는 W11 과 동일하게 보존. 기본 `qualification_status='conservative'` — 실제 `live_verified` 승격은 `scripts/qualify-live-binding-capability.mjs --sink <name> --mode live` 실행으로만 발생.
+   - runtime 은 `isLiveWriteAllowed` 가 true 가 아닌 모든 sink 에 대해 live 쓰기를 보수적으로 차단. 이는 W11 대비 **정직성은 동일하거나 상승**, writer 가 정책적으로 `live_verified` 라고 주장하는 경로는 제거됨.
+
+3. **Secret propagation model**
+   - raw secret 값은 DB(`propagation_runs.secret_source_graph_snapshot_json`)·audit 출력·founder surface 어디에도 들어가지 않는다(`detectSecretLeakInGraph` 가드 + 회귀 5종).
+   - 메타 그래프는 `value_name`·`source_kind`·`source_ref`·`sink_targets[]`·write/verification policy 만 보관하며 project_space_key 별 격리를 cross-project 회귀에서 추가 증명.
+
+4. **Human gate contract**
+   - 모든 open human gate 는 founder-facing 경로에서 **어디서 / 무엇을 / 이어받기 경로** 를 한국어로 설명. `hil_required_*`·`tool_adapter_unavailable`·raw secret/URL 은 렌더 결과에 포함되지 않음(회귀 4종).
+   - 기존 `human_gate_required`·`human_gate_reason`·`human_gate_action` 필드 시그니처는 보존(추가 `human_gate_escalation_lines` 는 additive).
+
+5. **Live rehearsal**
+   - 시나리오 1·2 모두 fixture_replay 기본. live 경로는 `COS_SCENARIO_LIVE_OPENAI=1` + (`COS_LIVE_BINDING_WRITERS=1` 또는 writers 주입) + 최소 1 sink `live_verified` 세 조건을 모두 만족할 때만 실제 실행되고, 시나리오 2 는 자동 제출 경로를 항상 수동 게이트로 분기.
+   - 현재도 inconclusive 로 남는 것: 실제 외부 provider API 호출 근거가 부족한 sink(Railway deploy 등) 의 live 경로 — `KNOWN_HUMAN_GATE_POINTS.md` 에 명시.
+
+6. **Packaging**
+   - `docs/design-partner-beta/` 가 파트너에게 제공하는 문서 경계의 SSOT. Slack manifest reference + INSTALL_NOTES + BYO 원칙 + 스모크 체크리스트 + 알려진 human-gate 포인트.
+   - 파트너가 추가로 공급해야 하는 것: 파트너 소유 Supabase 프로젝트, provider 키(GitHub/OpenAI 등), 런타임 호스팅. 수동 조치가 여전히 필요한 지점은 `KNOWN_HUMAN_GATE_POINTS.md` 와 회귀 `test-packaging-docs-no-fake-automation-claims.mjs` 로 강제.
+
+7. **Open risks**
+   - qualification 원장이 로컬 파일이므로 파트너 환경 간 공유/동기화는 운영자 책임(의도적).
+   - Railway deploy 자동화 부재는 baseline; W12 에서 확장하지 않는다.
+   - `COS_PROPAGATION_SNAPSHOT_ENABLE` 같은 추가 feature flag 는 이번 에픽에서 도입하지 않았음(현재 snapshot 는 항상 안전하게 수행).
+
+8. **Next recommendation**
+   - 외부 design partner 1~2곳과 bounded pilot 을 진행하되, 첫 온보딩 이후 수집되는 `ops/live_binding_capability_qualifications.json` 패턴을 바탕으로 W13 에서 sink 별 live-verified 비율을 올리는 qualification 에픽을 이어 진행.
+   - 실 파일럿 전, `scripts/qualify-live-binding-capability.mjs --all --mode fixture` 를 기본 seed 로 실행할 것.
+
+- **회귀 21종 (이번 에픽 신규, 모두 `npm test` 체인에 연결됨)**:
+  - W12-A(5): `test-live-binding-capability-qualification-artifact-schema`·`test-live-binding-capability-registry-merge`·`test-live-binding-capability-stale-fails-closed`·`test-live-binding-capability-unverified-limits-writes`·`test-live-binding-capability-no-secret-leak-in-artifact`.
+  - W12-B(5): `test-secret-source-graph-derivation-metadata-only`·`test-secret-source-graph-write-only-vs-readback-distinguished`·`test-secret-source-graph-mixed-sink-fanout-no-leak`·`test-secret-source-graph-snapshot-persisted-per-run`·`test-secret-source-graph-project-space-isolation`.
+  - W12-C(4): `test-human-gate-escalation-contract-shape`·`test-human-gate-escalation-renders-natural-korean`·`test-human-gate-escalation-resumable-preserves-continuation`·`test-human-gate-escalation-no-raw-token-leak`.
+  - W12-D(4): `test-scenario-live-runner-uses-qualified-capability`·`test-scenario-scorecard-capability-mismatch-counts`·`test-audit-delivery-readiness-needs-verification-distinguished`·`test-scenario-live-runner-scenario2-bounded-submission-gate`.
+  - W12-E(2): `test-packaging-manifest-scope-consistency`·`test-packaging-docs-no-fake-automation-claims`.
+  - W11 `test-cross-project-contamination-no-mix` 는 secret source graph / snapshot / compact lines 까지 검증하도록 **확장(신규 파일 없이)**.
+
+---
+
 ## 7) 다음 권장
 
 1. **W0** 유지·개선(필요 시 청크 크기·워크스트림 확장).  

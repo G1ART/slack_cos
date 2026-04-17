@@ -28,6 +28,10 @@ import {
   buildToolLaneQualifications,
   formatToolQualificationSummaryLines,
 } from '../src/founder/toolPlane/toolLaneQualification.js';
+import {
+  buildSecretSourceGraph,
+  formatSecretSourceGraphCompactLines,
+} from '../src/founder/secretSourceGraph.js';
 
 function takeArg(flag) {
   const idx = process.argv.indexOf(flag);
@@ -126,10 +130,34 @@ function buildFromFixture(entry) {
   const toolLines = Array.isArray(entry.tool_qualifications)
     ? formatToolQualificationSummaryLines(entry.tool_qualifications, 6)
     : [];
-  return assembleBlock(report, bindingGraphLines, toolLines, entry.recent_propagation_runs || []);
+  // W12-B: secret_source_graph compact lines
+  let secretGraphLines = [];
+  try {
+    const requirements = Array.isArray(entry.binding_requirements) ? entry.binding_requirements : [];
+    if (requirements.length > 0) {
+      const graph = buildSecretSourceGraph({
+        project_space_key: key,
+        requirements,
+        existingBindings:
+          (entry.binding_graph && Array.isArray(entry.binding_graph.bindings)
+            ? entry.binding_graph.bindings
+            : []) || [],
+      });
+      secretGraphLines = formatSecretSourceGraphCompactLines(graph);
+    }
+  } catch {
+    secretGraphLines = [];
+  }
+  return assembleBlock(
+    report,
+    bindingGraphLines,
+    toolLines,
+    entry.recent_propagation_runs || [],
+    secretGraphLines,
+  );
 }
 
-function assembleBlock(report, bindingGraphLines, toolLines, propagationRuns) {
+function assembleBlock(report, bindingGraphLines, toolLines, propagationRuns, secretGraphLines = []) {
   if (!report) return null;
   const runs = Array.isArray(propagationRuns) ? propagationRuns : [];
   const lastFailures = [];
@@ -146,9 +174,31 @@ function assembleBlock(report, bindingGraphLines, toolLines, propagationRuns) {
       }`,
     );
   }
+
+  // W12-D: verdict 세분화 — delivery_readiness 에서 온 verdict 를 기본으로 두되,
+  // 연관 propagation run 이 technical_capability_missing 을 반환했거나 secret graph 에
+  // 요구 역량이 없는 sink 가 있으면 'needs_verification' 을 선택적으로 승격 힌트 라인으로 붙인다.
+  const capabilityLines = [];
+  for (const r of runs) {
+    const run = (r && r.run) || {};
+    if (run.failure_resolution_class === 'technical_capability_missing') {
+      capabilityLines.push(
+        `capability_missing run=${String(run.id || '').slice(0, 8)} class=technical_capability_missing`,
+      );
+    }
+  }
+
+  let verdict = report.verdict;
+  if (
+    verdict === 'ready' &&
+    (capabilityLines.length > 0 || (Array.isArray(secretGraphLines) && secretGraphLines.some((l) => / gate=Y/.test(l))))
+  ) {
+    verdict = 'needs_verification';
+  }
+
   return {
     project_space_key: report.project_space_key,
-    verdict: report.verdict,
+    verdict,
     unresolved_count: report.unresolved_count,
     delivery_readiness_compact_lines: cleanLines(report.delivery_readiness_compact_lines),
     unresolved_human_gates_compact_lines: cleanLines(report.unresolved_human_gates_compact_lines),
@@ -159,6 +209,8 @@ function assembleBlock(report, bindingGraphLines, toolLines, propagationRuns) {
     ),
     tool_qualification_summary_lines: cleanLines(toolLines),
     binding_graph_compact_lines: cleanLines(bindingGraphLines),
+    secret_source_graph_compact_lines: cleanLines(secretGraphLines),
+    capability_verification_lines: cleanLines(capabilityLines),
   };
 }
 
@@ -199,6 +251,8 @@ function renderBlock(block) {
   for (const l of block.last_propagation_failures_lines) lines.push(`  propagation: ${l}`);
   for (const l of block.tool_qualification_summary_lines) lines.push(`  tool: ${l}`);
   for (const l of block.binding_graph_compact_lines) lines.push(`  binding: ${l}`);
+  for (const l of block.secret_source_graph_compact_lines || []) lines.push(`  secret-graph: ${l}`);
+  for (const l of block.capability_verification_lines || []) lines.push(`  capability: ${l}`);
   return lines.join('\n');
 }
 

@@ -8,6 +8,11 @@
  * 금지: workflow 엔진·의도 분류·콜백/패킷 내부 용어 누수·가짜 완료 (CONSTITUTION §2, §6; WHAT 비협상).
  */
 
+import {
+  buildHumanGateEscalationContract,
+  renderHumanGateEscalationFounderLines,
+} from './humanGateEscalationContract.js';
+
 /**
  * @typedef {'accepted'|'running'|'blocked'|'review_required'|'completed'|'failed'|'informational'} FounderSurfaceIntent
  */
@@ -375,6 +380,16 @@ export function buildFounderSurfaceModel(input = {}) {
   const evidence_lines = collectEvidenceFromReadModel(input.readModel);
   const hg = extractHumanGateSlice(shell, input.readModel);
 
+  // W12-C: human gate escalation contract — 기존 human_gate_* 필드는 그대로 두고,
+  // 모델 입력용 compact lines 슬라이스를 additive 로 병치.
+  const human_gate_escalation_lines = buildHumanGateEscalationLines({
+    shell,
+    readModel: input.readModel,
+    hg,
+    blocker_reason,
+    review_reason,
+  });
+
   return {
     surface_intent,
     title: '',
@@ -385,6 +400,7 @@ export function buildFounderSurfaceModel(input = {}) {
     human_gate_required: hg.human_gate_required,
     human_gate_reason: hg.human_gate_reason,
     human_gate_action: hg.human_gate_action,
+    human_gate_escalation_lines,
     deliverables,
     evidence_lines,
     thread_key: threadKey || null,
@@ -393,4 +409,37 @@ export function buildFounderSurfaceModel(input = {}) {
     project_space_key: tenancy.project_space_key,
     model_text_preview: compactString(input.modelText, 240),
   };
+}
+
+function buildHumanGateEscalationLines({ shell, readModel, hg, blocker_reason, review_reason }) {
+  try {
+    if (!hg || hg.human_gate_required !== true) return [];
+    const rm = readModel && typeof readModel === 'object' ? readModel : {};
+    const openGates = Array.isArray(/** @type {any} */ (rm).delivery_readiness?.open_human_gates)
+      ? /** @type {any[]} */ (rm.delivery_readiness.open_human_gates)
+      : [];
+    const synthetic = {
+      id: 'surface',
+      gate_kind: 'manual_secret_entry',
+      gate_reason: hg.human_gate_reason || blocker_reason || review_reason || null,
+      gate_action: hg.human_gate_action || null,
+      required_human_action: hg.human_gate_action || null,
+      continuation_packet_id: null,
+      continuation_run_id: null,
+      continuation_thread_key: null,
+      resume_target_kind: null,
+      sink_system: null,
+    };
+    const gateRows = openGates.length > 0 ? openGates : [synthetic];
+    const contracts = gateRows.slice(0, 3).map((gate) =>
+      buildHumanGateEscalationContract({
+        gate_row: gate,
+        failure_classification: null,
+        qualified_capability: null,
+      }),
+    );
+    return renderHumanGateEscalationFounderLines(contracts, { max: 3 });
+  } catch (_e) {
+    return [];
+  }
 }

@@ -27,6 +27,10 @@ import { listOpenHumanGates } from './projectSpaceBindingStore.js';
 import { listRecentPropagationRunsForSpace } from './envSecretPropagationEngine.js';
 import { buildHumanGateResumeAuditLines } from './humanGateResumeAuditLines.js';
 import { buildPropagationRunAuditLines } from './propagationRunAuditLines.js';
+import {
+  buildSecretSourceGraph,
+  formatSecretSourceGraphCompactLines,
+} from './secretSourceGraph.js';
 import { buildToolQualificationSummaryLines } from './toolPlane/toolLaneQualification.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
@@ -122,9 +126,10 @@ export async function handleReadExecutionContext(args, threadKey) {
   });
   const active_project_space = await loadActiveProjectSpaceSlice(rm.project_space_key);
   const delivery_readiness = await loadDeliveryReadiness(rm.project_space_key);
-  // W11-F: audit-only slices (founder 본문 노출 금지, read_execution_context 내부 truth 전용)
+  // W11-F + W12-B: audit-only slices (founder 본문 노출 금지, read_execution_context 내부 truth 전용)
   let human_gate_resume_audit_lines = [];
   let propagation_run_audit_lines = [];
+  let secret_source_graph_compact_lines = [];
   if (rm.project_space_key) {
     try {
       const [openGates, recentRuns] = await Promise.all([
@@ -139,6 +144,16 @@ export async function handleReadExecutionContext(args, threadKey) {
         project_space_key: rm.project_space_key,
         recent_propagation_runs: recentRuns || [],
       }).propagation_run_audit_lines;
+      // W12-B: 가장 최근 run 에 attached 된 secret_source_graph_snapshot_json 이 있으면 그것을 사용,
+      // 없으면 현재 binding graph 에서 가볍게 재구성 (값 없음).
+      const latestWithSnapshot = (recentRuns || []).find(
+        (r) => r && r.run && r.run.secret_source_graph_snapshot_json,
+      );
+      if (latestWithSnapshot) {
+        secret_source_graph_compact_lines = formatSecretSourceGraphCompactLines(
+          latestWithSnapshot.run.secret_source_graph_snapshot_json,
+        );
+      }
     } catch (err) {
       console.error('[w11f_audit_slices]', err && err.message ? err.message : String(err));
     }
@@ -182,6 +197,7 @@ export async function handleReadExecutionContext(args, threadKey) {
     tool_qualification_summary_lines,
     human_gate_resume_audit_lines,
     propagation_run_audit_lines,
+    secret_source_graph_compact_lines,
     ...(active_project_space ? { active_project_space } : {}),
     ...(delivery_readiness
       ? {

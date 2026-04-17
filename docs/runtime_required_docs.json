@@ -69,6 +69,11 @@
       "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
       "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md",
       "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
+    ],
+    "design_partner_beta_qualification": [
+      "docs/cursor-handoffs/W12_LIVE_QUALIFICATION_AND_PACKAGING_PLANMODE_MASTER_INSTRUCTION_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
     ]
   }
 }

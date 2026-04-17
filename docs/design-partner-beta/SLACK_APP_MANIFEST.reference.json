@@ -1,0 +1,47 @@
+{
+  "_comment": "W12-E reference manifest — 복사/붙여넣기용. Slack app 콘솔(https://api.slack.com/apps) 에서 'Create New App → From an app manifest' 로 참조하세요. 본 파일은 구동 스크립트가 아닙니다.",
+  "display_information": {
+    "name": "G1 COS",
+    "description": "Chief-of-Staff Slack agent for bounded design-partner pilots.",
+    "background_color": "#101418"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "G1 COS",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "chat:write.public",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": false
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false
+  }
+}

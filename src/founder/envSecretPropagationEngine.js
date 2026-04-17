@@ -19,9 +19,15 @@ import { createCosRuntimeSupabase } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
 import {
   getCapabilityForSink,
+  getQualifiedCapabilityForSink,
+  isLiveWriteAllowed,
   isVerificationKindSupported,
 } from './liveBindingCapabilityRegistry.js';
 import { listOpenHumanGates } from './projectSpaceBindingStore.js';
+import {
+  buildSecretSourceGraph,
+  detectSecretLeakInGraph,
+} from './secretSourceGraph.js';
 
 /** @type {Map<string, { run: Record<string, unknown>, steps: Array<Record<string, unknown>> }>} */
 const memPropagationRuns = new Map();
@@ -117,6 +123,30 @@ export async function executePropagationPlan(input) {
 
   const runId = newRunId();
   const startedAt = nowIso(input.now);
+
+  // W12-B: plan 에 이미 포함된 메타 그래프가 있으면 재사용, 없으면 requirements 없이 빈 그래프로 fallback.
+  // plan 생성 측에서 buildSecretSourceGraph 를 이미 호출했다면 동일 결과 (순수 함수).
+  let secret_source_graph_snapshot = plan.secret_source_graph || null;
+  if (!secret_source_graph_snapshot) {
+    try {
+      secret_source_graph_snapshot = buildSecretSourceGraph({
+        project_space_key: plan.project_space_key,
+        requirements: [],
+        existingBindings: [],
+      });
+    } catch (_e) {
+      secret_source_graph_snapshot = null;
+    }
+  }
+  // redaction guard — raw secret/token/URL 패턴이 snapshot 에 들어가 있지 않은지 검사.
+  if (secret_source_graph_snapshot) {
+    const leak = detectSecretLeakInGraph(secret_source_graph_snapshot);
+    if (leak) {
+      console.error('[propagation_engine.snapshot_redaction]', leak);
+      secret_source_graph_snapshot = null;
+    }
+  }
+
   const run = {
     id: runId,
     project_space_key: plan.project_space_key,
@@ -128,6 +158,9 @@ export async function executePropagationPlan(input) {
     workspace_key: asString(tenancy.workspace_key) || null,
     product_key: asString(tenancy.product_key) || null,
     parcel_deployment_key: asString(tenancy.parcel_deployment_key) || null,
+    secret_source_graph_snapshot_json: secret_source_graph_snapshot
+      ? JSON.parse(JSON.stringify(secret_source_graph_snapshot))
+      : null,
   };
 
   const mode = storeMode();
@@ -197,6 +230,21 @@ export async function executePropagationPlan(input) {
         failure_resolution_class:
           writerResult.failure_resolution_class || 'tool_adapter_unavailable',
       };
+    }
+
+    // W12-A: qualification ledger 기준 live write 불허이면 실제 write 수행 불가 — not_applicable + technical_capability_missing
+    if (writerResult && writerResult.live === true) {
+      const qualified = getQualifiedCapabilityForSink(step.sink_system);
+      if (!isLiveWriteAllowed(qualified)) {
+        writerResult = {
+          ...writerResult,
+          live: false,
+          wrote_at: null,
+          verification_kind: 'none',
+          verification_result: 'not_applicable',
+          failure_resolution_class: 'technical_capability_missing',
+        };
+      }
     }
 
     const row = makeStepRow(runId, step, writerResult);
@@ -292,7 +340,20 @@ export async function executePropagationPlan(input) {
     verification_modes_used,
     resumable,
     next_human_action,
+    secret_source_graph_snapshot: secret_source_graph_snapshot || null,
   };
+}
+
+/**
+ * W12-B — 특정 propagation_run 의 snapshot (memory 모드용 reader).
+ * @param {string} runId
+ * @returns {object|null}
+ */
+export function getPropagationRunSnapshotFromMemory(runId) {
+  const key = asString(runId);
+  const entry = memPropagationRuns.get(key);
+  if (!entry) return null;
+  return entry.run.secret_source_graph_snapshot_json || null;
 }
 
 /**

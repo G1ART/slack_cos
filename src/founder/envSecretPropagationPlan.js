@@ -22,7 +22,12 @@
 
 import crypto from 'node:crypto';
 import { SECRET_HANDLING_MODES } from './bindingRequirements.js';
-import { getCapabilityForSink } from './liveBindingCapabilityRegistry.js';
+import {
+  getCapabilityForSink,
+  getQualifiedCapabilityForSink,
+  maxAllowedVerificationKind,
+} from './liveBindingCapabilityRegistry.js';
+import { buildSecretSourceGraph } from './secretSourceGraph.js';
 
 function asString(v) {
   return v == null ? '' : String(v);
@@ -43,6 +48,18 @@ function capOf(sinkCapabilities, sink) {
     supports_secret_write: cap.can_write === true,
     supports_read_back: cap.can_read_back_value === true,
   };
+}
+
+function downgradeToMaxAllowed(verificationKind, qualifiedCap) {
+  if (!qualifiedCap) return verificationKind;
+  const status = qualifiedCap.qualification_status;
+  if (status === 'live_verified') return verificationKind;
+  const maxAllowed = maxAllowedVerificationKind(qualifiedCap);
+  const order = ['none', 'smoke', 'existence_only', 'read_back'];
+  const curIdx = order.indexOf(verificationKind);
+  const maxIdx = order.indexOf(maxAllowed);
+  if (curIdx < 0 || maxIdx < 0) return 'none';
+  return curIdx <= maxIdx ? verificationKind : maxAllowed;
 }
 
 /**
@@ -103,6 +120,17 @@ export function buildPropagationPlan(input) {
     if (cap.supports_read_back) verification_kind = 'read_back';
     else if (cap.supports_secret_write) verification_kind = 'smoke';
 
+    // W12-A: sinkCapabilities override 가 주어진 경우는 caller 의 명시적 의도(tests/테넌트) 를 존중.
+    // 기본 registry 경로일 때만 qualification ledger 를 기준으로 강등 적용.
+    const hasOverride =
+      sinkCapabilities &&
+      typeof sinkCapabilities === 'object' &&
+      Object.prototype.hasOwnProperty.call(sinkCapabilities, r.sink_system);
+    if (!hasOverride) {
+      const qualified = getQualifiedCapabilityForSink(r.sink_system);
+      verification_kind = downgradeToMaxAllowed(verification_kind, qualified);
+    }
+
     // env_requirement 는 NAME 이 반드시 있어야 하며, 없으면 missing 으로 분류
     if (r.binding_kind === 'env_requirement' && !r.binding_name) {
       missingNames.add(`(unnamed env for ${r.sink_system})`);
@@ -136,10 +164,18 @@ export function buildPropagationPlan(input) {
   });
   const plan_hash = crypto.createHash('sha256').update(canonical, 'utf8').digest('hex').slice(0, 32);
 
+  // W12-B: additive 메타 그래프 (값 저장 금지)
+  const secret_source_graph = buildSecretSourceGraph({
+    project_space_key,
+    requirements,
+    existingBindings,
+  });
+
   return Object.freeze({
     project_space_key,
     steps,
     plan_hash,
     missing_source_values_names: [...missingNames].sort(),
+    secret_source_graph,
   });
 }
