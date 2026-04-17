@@ -2,7 +2,7 @@
  * W11-A — buildPropagationPlan 이 sinkCapabilities 미전달 시 registry 를 사용하는지 회귀.
  *
  * - sinkCapabilities 생략하면 supabase 는 verification_kind='none' 으로 나와야 함 (can_write=false).
- * - github(write_only) 는 registry 상 can_write=true → 'smoke' 로 나와야 함.
+ * - github(write_only) 는 W13-A 이후 registry 상 existence_only 를 지원하므로 'existence_only' 로 나와야 함.
  * - 호출측이 sinkCapabilities 를 직접 넘기면 그 값이 우선 사용되어야 함.
  */
 import assert from 'node:assert/strict';
@@ -40,7 +40,7 @@ const planDefault = buildPropagationPlan({
 assert.equal(planDefault.steps.length, 2);
 const githubStep = planDefault.steps.find((s) => s.sink_system === 'github');
 const supabaseStep = planDefault.steps.find((s) => s.sink_system === 'supabase');
-assert.equal(githubStep.verification_kind, 'smoke', 'github default → smoke');
+assert.equal(githubStep.verification_kind, 'existence_only', 'github default → existence_only (W13-A)');
 assert.equal(supabaseStep.verification_kind, 'none', 'supabase default → none (no write cap)');
 
 // (2) 호출측이 legacy shape 을 주면 그대로 우선

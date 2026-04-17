@@ -36,6 +36,19 @@ if (!env.ok) {
   process.exit(1);
 }
 
+// W13-D: Design-partner mode boot guard. If COS_DESIGN_PARTNER_MODE=1 is set,
+// a memory truth-store is unsafe for a dedicated partner install (state is lost
+// on process restart and tenancy becomes ambiguous). Fail-closed at boot.
+const partnerMode = String(process.env.COS_DESIGN_PARTNER_MODE || '').trim() === '1';
+const runStoreMode = String(process.env.COS_RUN_STORE || '').trim().toLowerCase();
+if (partnerMode && runStoreMode === 'memory') {
+  console.error(
+    '[fatal] COS_DESIGN_PARTNER_MODE=1 with COS_RUN_STORE=memory is unsafe. ' +
+      'Set COS_RUN_STORE=supabase (recommended) or unset COS_DESIGN_PARTNER_MODE for local test runs.',
+  );
+  process.exit(1);
+}
+
 const CONSTITUTION_PATH = path.join(__dirname, 'CONSTITUTION.md');
 const constitutionMarkdown = fs.readFileSync(CONSTITUTION_PATH, 'utf8');
 const constitutionSha256 = crypto.createHash('sha256').update(constitutionMarkdown, 'utf8').digest('hex');

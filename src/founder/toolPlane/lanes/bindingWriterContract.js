@@ -42,8 +42,17 @@ export function buildSmokeResult({ secret_handling_mode, reason }) {
   };
 }
 
-export function buildLiveResult({ secret_handling_mode, sink_ref, verification_kind, verification_result, wrote_at }) {
-  return {
+export function buildLiveResult({
+  secret_handling_mode,
+  sink_ref,
+  verification_kind,
+  verification_result,
+  wrote_at,
+  write_only_reminder,
+  requires_redeploy_to_apply,
+}) {
+  /** @type {Record<string, unknown>} */
+  const out = {
     wrote_at: wrote_at || new Date().toISOString(),
     sink_ref: sink_ref || null,
     secret_handling_mode: secret_handling_mode || 'write_only',
@@ -52,6 +61,9 @@ export function buildLiveResult({ secret_handling_mode, sink_ref, verification_k
     live: true,
     failure_resolution_class: null,
   };
+  if (write_only_reminder === true) out.write_only_reminder = true;
+  if (requires_redeploy_to_apply === true) out.requires_redeploy_to_apply = true;
+  return out;
 }
 
 export function buildFailureResult({ secret_handling_mode, failure_resolution_class, verification_kind }) {

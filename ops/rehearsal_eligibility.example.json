@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "project_space_key": "example_space_key",
+      "target_sink": "github",
+      "class": "sandbox_safe",
+      "allowed_live_writers": ["github"],
+      "notes": "example only — 실제 운용 시 ops/rehearsal_eligibility.json 에 사본 후 수정",
+      "last_reviewed_at": "2026-04-16T00:00:00Z",
+      "reviewed_by": "operator@example.com"
+    }
+  ]
+}

@@ -236,6 +236,33 @@ If any required document changes during the task, rerun preflight and refresh th
 
 ---
 
+## 6.4) W13 Bulk — Live Surface · Staging Rehearsal · Release Hygiene · Bootstrap Audit · Harness Quality Proof 총괄 보고 (2026-04-16)
+
+- **스코프 고정**
+  - W13-A: **실제 live write surface** 는 GitHub Actions secrets (`libsodium-wrappers` crypto_box_seal → PUT + existence_only) 와 Vercel Project Env (`POST/PATCH /v10/projects/{id}/env` + existence_only + `requires_redeploy_to_apply`) 두 곳만. Railway / Supabase 는 `artifact_only` / `live_verified_read_only` 로 정직 고정.
+  - W13-B: Supabase 운영 모드에서의 live rehearsal 은 **hybrid SSOT** — 로컬 `ops/rehearsal_eligibility.json` 을 primary SSOT, 감사용 additive 컬럼 `project_space_bindings.rehearsal_safety_class_json` 으로 mirror. `fixture_replay` 는 Supabase 모드에서도 `COS_RUN_STORE='memory'` 로 임시 overridden (try/finally) 되어 항상 허용.
+  - W13-C: 신규 `audit-preflight-ack-drift` CLI + `ops/preflight_ack_drift_exceptions.json` 으로 과거 워크스트림의 stale manifest/ack 를 **숨기지 않고 auditable exception** 으로 고정. 새 manifest (W13+) 는 drift 0 유지.
+  - W13-D: 신규 `audit-bootstrap-readiness` CLI (D1~D5 · `pass`/`pass_with_manual_gates`/`fail_drift`/`fail_missing_prereq`/`fail_unsafe_mode` 5종 verdict) + `COS_DESIGN_PARTNER_MODE` env + `app.js` boot 가드.
+  - W13-E: 신규 pure 모듈 `harnessQualityProofReadModel.js` (6 축 roll-up · evidence-absent 은 null) + `audit-harness-quality-proof.mjs` CLI.
+  - Cross-slice: `test-cross-project-contamination-no-mix` 를 A/B/E 표면까지 확장; `.env.example` 에 W13 플래그 블록.
+- **회귀(총 21종)**
+  - W13-A(6): `test-github-secrets-actual-live-put-write`·`test-vercel-env-actual-live-post-patch-write`·`test-writer-contract-no-raw-secret-value`·`test-read-back-degrades-to-existence-only-for-write-only-sinks`·`test-qualify-live-binding-capability-live-probe-github-vercel`·`test-bindingwriter-result-includes-write-only-reminder-and-requires-redeploy`.
+  - W13-B(6): `test-rehearsal-eligibility-file-is-ssot`·`test-rehearsal-gate-supabase-blocks-when-no-safe-target`·`test-rehearsal-gate-supabase-allows-sandbox-safe`·`test-rehearsal-gate-does-not-cross-project-space`·`test-rehearsal-gate-writer-allowlist-filters-sinks`·`test-rehearsal-gate-does-not-weaken-qualification` + 갱신 `test-scenario-proof-live-supabase-guard`.
+  - W13-C(2): `test-audit-preflight-ack-drift-detects-stale-manifest`·`test-runtime-required-docs-integrity`.
+  - W13-D(5): `test-audit-bootstrap-readiness-{missing-dependency,partner-mode-memory-store-unsafe,script-drift,live-writers-without-tokens,verdict-ordering}`.
+  - W13-E(4): `test-harness-quality-proof-{read-model-axes,no-claim-without-evidence,no-internal-noise-leak,project-space-isolation}`.
+  - Cross-slice: `test-cross-project-contamination-no-mix` 는 W13 A/B/E 표면 **모두** 에서 격리 확인하도록 확장(신규 파일 없이).
+- **운영자 수동 조치**
+  1. Supabase SQL editor 에서 `supabase/migrations/20260618120000_project_space_rehearsal_mirror.sql` 적용.
+  2. `ops/rehearsal_eligibility.json` 을 수기 작성(예시: `ops/rehearsal_eligibility.example.json`). production 은 기본 fail-closed.
+  3. sink 재자격: `scripts/qualify-live-binding-capability.mjs --sink github --mode live --verified-by <op>` 등.
+  4. `npm run audit:bootstrap-readiness` 로 `pass`/`pass_with_manual_gates` 확인; partner install 에선 `COS_DESIGN_PARTNER_MODE=1` + `COS_RUN_STORE=supabase` 권장.
+  5. `npm run audit:preflight-ack-drift --strict` 로 새 manifest drift 0 확인.
+- **Non-goals (재확인)**
+  - Railway 실시간 deploy automation · Supabase `apply_sql` live 기본 on · 새 Slack 송신 경로 · founder 본문에 write_only_reminder/evidence_grade/verdict 원시 토큰 노출 · 이미 적용된 migration 의 rename · 메모리 store 위에서 partner_mode 기동 · marketplace 공개 배포.
+
+---
+
 ## 7) 다음 권장
 
 1. **W0** 유지·개선(필요 시 청크 크기·워크스트림 확장).  

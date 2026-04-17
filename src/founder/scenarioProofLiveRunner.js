@@ -21,6 +21,10 @@ import {
   getQualifiedCapabilityForSink,
   listKnownSinks,
 } from './liveBindingCapabilityRegistry.js';
+import {
+  readRehearsalEligibility,
+  hasAnySandboxSafeEntry,
+} from './rehearsalEligibility.js';
 
 /** @typedef {'fixture_replay' | 'live_openai'} ScenarioRunMode */
 
@@ -50,7 +54,14 @@ export async function runScenarioProofLive(opts = {}) {
   const runs = [];
 
   // W11-E bounded live gates: live 모드일 때 누락 조합별로 정직한 cause 로 inconclusive 를 돌려준다.
-  const boundedBlock = runMode === 'live_openai' ? detectLiveBoundaryBlock({ env, writersProvided }) : null;
+  const boundedBlock =
+    runMode === 'live_openai'
+      ? detectLiveBoundaryBlock({
+          env,
+          writersProvided,
+          project_space_key: opts.project_space_key || null,
+        })
+      : null;
   if (boundedBlock) {
     const isoStart = now().toISOString();
     for (const scenarioId of wanted) {
@@ -139,15 +150,25 @@ export async function runScenarioProofLive(opts = {}) {
  *  3) COS_LIVE_BINDING_WRITERS!=1 AND writers 주입 없음 → product_capability_missing
  *  그 외는 null 을 돌려줘 기존 러너가 live 실행을 수행.
  */
-function detectLiveBoundaryBlock({ env, writersProvided }) {
+function detectLiveBoundaryBlock({ env, writersProvided, project_space_key }) {
   if (getCosRunStoreMode() === 'supabase') {
-    return {
-      cause: 'binding_propagation_stop',
-      resolution_class: 'tenancy_or_binding_ambiguity',
-      reason: 'Supabase 운영 모드에서는 live rehearsal 이 불가합니다(테넨시 격리 보장 불가).',
-      action: '로컬 in-memory 모드로 전환한 뒤 다시 실행해 주세요.',
-      headline: '운영 Supabase 에서는 라이브 리허설을 실행하지 않습니다.',
-    };
+    // W13-B: rehearsal-safe entry 가 등록된 경우만 Supabase 모드에서도 bounded live rehearsal 허용.
+    const eligibility = readRehearsalEligibility({ now: new Date() });
+    const anyRehearsalSafe = hasAnySandboxSafeEntry({
+      project_space_key: project_space_key || null,
+      eligibility,
+    });
+    if (!anyRehearsalSafe) {
+      return {
+        cause: 'binding_propagation_stop',
+        resolution_class: 'tenancy_or_binding_ambiguity',
+        reason:
+          'Supabase 운영 모드에서 rehearsal-safe 로 분류된 target 이 없습니다 (ops/rehearsal_eligibility.json 미등록).',
+        action:
+          'ops/rehearsal_eligibility.json 에 sandbox_safe entry 를 등록한 뒤 재실행해 주세요.',
+        headline: '리허설-세이프 경계가 없어 Supabase 모드 라이브 실행을 중단했습니다.',
+      };
+    }
   }
   if (env.COS_SCENARIO_LIVE_OPENAI !== '1') {
     return {

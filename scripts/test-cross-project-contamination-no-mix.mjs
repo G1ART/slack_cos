@@ -206,4 +206,98 @@ if (snapB) {
   assert.ok(!snapBStr.includes('API_TOKEN_A_ONLY'), 'B snapshot must not leak A value name');
 }
 
+// ============================================================
+// W13 cross-slice reinforcement — A(live surface) / B(rehearsal) / E(quality proof)
+// ============================================================
+
+// (W13-B) rehearsal_eligibility.json 기반 writer allowlist 는 project_space_key 별로 격리된다.
+const { filterWritersByRehearsalAllowlist, readRehearsalEligibility } = await import(
+  '../src/founder/rehearsalEligibility.js'
+);
+const fsMod = await import('node:fs');
+const pathMod = await import('node:path');
+const osMod = await import('node:os');
+const tmpDir = fsMod.mkdtempSync(pathMod.join(osMod.tmpdir(), 'w13cross_'));
+try {
+  const eligFile = pathMod.join(tmpDir, 'rehearsal_eligibility.json');
+  fsMod.writeFileSync(
+    eligFile,
+    JSON.stringify({
+      schema_version: 1,
+      entries: [
+        {
+          project_space_key: PS_A,
+          target_sink: 'github',
+          class: 'sandbox_safe',
+          allowed_live_writers: ['github'],
+        },
+      ],
+    }),
+  );
+  const elig = readRehearsalEligibility({ filePath: eligFile });
+  const writers = { github: { write: async () => ({}) }, vercel: { write: async () => ({}) } };
+  const filteredA = filterWritersByRehearsalAllowlist(writers, {
+    project_space_key: PS_A,
+    eligibility: elig,
+  });
+  const filteredB = filterWritersByRehearsalAllowlist(writers, {
+    project_space_key: PS_B,
+    eligibility: elig,
+  });
+  assert.deepEqual(Object.keys(filteredA).sort(), ['github'], 'A: only github allowed');
+  assert.deepEqual(Object.keys(filteredB), [], 'B: no sandbox entry → fail-closed');
+} finally {
+  fsMod.rmSync(tmpDir, { recursive: true, force: true });
+}
+
+// (W13-A) live binding writer WriterResult 메타는 project_space_key/sink_ref 원시값 말고는
+// 반대편 식별자를 포함할 수 없다. 핵심 invariant: write_only_reminder / requires_redeploy_to_apply 같은
+// 메타 플래그는 per-call 이며 다른 project_space_key 로 새지 않는다.
+const { buildLiveResult } = await import('../src/founder/toolPlane/lanes/bindingWriterContract.js');
+const resA = buildLiveResult({
+  sink_ref: `owner/${PS_A}`,
+  verification_kind: 'existence_only',
+  verification_result: 'ok',
+  write_only_reminder: true,
+});
+const resB = buildLiveResult({
+  sink_ref: `acme/${PS_B}`,
+  verification_kind: 'existence_only',
+  verification_result: 'ok',
+  requires_redeploy_to_apply: true,
+});
+const strA = JSON.stringify(resA);
+const strB = JSON.stringify(resB);
+assert.ok(!strA.includes(PS_B), 'A WriterResult must not contain B space key');
+assert.ok(!strB.includes(PS_A), 'B WriterResult must not contain A space key');
+assert.equal(resA.write_only_reminder, true);
+assert.equal(resB.requires_redeploy_to_apply, true);
+
+// (W13-E) harness quality proof read model — 다른 project_space 의 shape 와 섞이지 않는다
+const { buildHarnessQualityProofReadModel } = await import(
+  '../src/founder/harnessQualityProofReadModel.js'
+);
+const rmA = buildHarnessQualityProofReadModel({
+  run_rows: [{ run_id: 'r1A', outcome: 'success', team_shape: `shape_${PS_A}` }],
+});
+const rmB = buildHarnessQualityProofReadModel({
+  run_rows: [{ run_id: 'r1B', outcome: 'failed', team_shape: `shape_${PS_B}` }],
+});
+assert.ok(
+  `shape_${PS_A}` in rmA.run_outcome_by_team_shape.histogram,
+  'A read-model must retain its own shape',
+);
+assert.ok(
+  !(`shape_${PS_B}` in rmA.run_outcome_by_team_shape.histogram),
+  'A read-model must NOT include B shape',
+);
+assert.ok(
+  `shape_${PS_B}` in rmB.run_outcome_by_team_shape.histogram,
+  'B read-model must retain its own shape',
+);
+assert.ok(
+  !(`shape_${PS_A}` in rmB.run_outcome_by_team_shape.histogram),
+  'B read-model must NOT include A shape',
+);
+
 console.log('test-cross-project-contamination-no-mix: ok');

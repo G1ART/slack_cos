@@ -74,6 +74,11 @@
       "docs/cursor-handoffs/W12_LIVE_QUALIFICATION_AND_PACKAGING_PLANMODE_MASTER_INSTRUCTION_2026-04-16.md",
       "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
       "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
+    ],
+    "w13_bulk_live_surface_rehearsal_bootstrap_quality": [
+      "docs/cursor-handoffs/W13_Bulk_Master_Instruction_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Gap_Register_And_Workstream_Plan_2026-04-15.md"
     ]
   }
 }

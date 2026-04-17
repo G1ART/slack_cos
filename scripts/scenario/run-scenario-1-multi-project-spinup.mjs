@@ -27,6 +27,10 @@ import {
   __resetProjectSpaceBindingMemoryForTests,
 } from '../../src/founder/projectSpaceBindingStore.js';
 import { getCosRunStoreMode } from '../../src/founder/executionRunStore.js';
+import {
+  readRehearsalEligibility,
+  hasAnySandboxSafeEntry,
+} from '../../src/founder/rehearsalEligibility.js';
 
 const SCENARIO_ID = 'scenario_1_multi_project_spinup';
 const PARCEL_DEPLOYMENT_KEY = 'scenario_local';
@@ -41,6 +45,23 @@ const PARCEL_DEPLOYMENT_KEY = 'scenario_local';
  * }} [opts]
  */
 export async function runScenarioOne(opts = {}) {
+  // W13-B: fixture_replay 는 Supabase 모드에서도 허용 — 로컬 메모리 store 로 임시 overridden 후 try/finally 로 복구.
+  const runModeEarly = opts.runMode === 'live_openai' ? 'live_openai' : 'fixture_replay';
+  const priorRunStore = process.env.COS_RUN_STORE;
+  const needsMemoryOverride =
+    runModeEarly === 'fixture_replay' && getCosRunStoreMode() === 'supabase';
+  if (needsMemoryOverride) process.env.COS_RUN_STORE = 'memory';
+  try {
+    return await runScenarioOneImpl(opts);
+  } finally {
+    if (needsMemoryOverride) {
+      if (priorRunStore === undefined) delete process.env.COS_RUN_STORE;
+      else process.env.COS_RUN_STORE = priorRunStore;
+    }
+  }
+}
+
+async function runScenarioOneImpl(opts) {
   const now = opts.now || (() => new Date());
   const runMode = opts.runMode === 'live_openai' ? 'live_openai' : 'fixture_replay';
   const startedAt = now();
@@ -63,23 +84,31 @@ export async function runScenarioOne(opts = {}) {
     });
   }
 
-  // Supabase 모드 방어: 시나리오 러너는 메모리 격리만 보장한다.
-  if (getCosRunStoreMode() === 'supabase') {
-    const finishedAt = now();
-    return buildScenarioProofEnvelope({
-      scenario_id: SCENARIO_ID,
-      run_mode: runMode,
-      started_at: startedAt.toISOString(),
-      finished_at: finishedAt.toISOString(),
-      outcome: 'inconclusive',
-      break_location: 'unclassified',
-      founder_surface_slice: { headline: '운영 Supabase 에서는 시나리오 러너를 돌리지 않습니다.' },
-      failure_classification: {
-        resolution_class: 'tenancy_or_binding_ambiguity',
-        human_gate_reason: 'run_store_mode=supabase 상태에서 in-memory 격리를 보장할 수 없습니다.',
-        human_gate_action: '로컬 실행으로 전환한 뒤 다시 시도해 주세요.',
-      },
-    });
+  // W13-B: live_openai 는 rehearsal-safe entry 가 하나라도 등록되어 있을 때만 허용.
+  if (getCosRunStoreMode() === 'supabase' && runMode === 'live_openai') {
+    const eligibility = readRehearsalEligibility({ now: new Date() });
+    const anyRehearsalSafe = hasAnySandboxSafeEntry({ eligibility });
+    if (!anyRehearsalSafe) {
+      const finishedAt = now();
+      return buildScenarioProofEnvelope({
+        scenario_id: SCENARIO_ID,
+        run_mode: runMode,
+        started_at: startedAt.toISOString(),
+        finished_at: finishedAt.toISOString(),
+        outcome: 'inconclusive',
+        break_location: 'unclassified',
+        founder_surface_slice: {
+          headline: '리허설-세이프 경계가 없어 Supabase 모드 라이브 실행을 중단했습니다.',
+        },
+        failure_classification: {
+          resolution_class: 'tenancy_or_binding_ambiguity',
+          human_gate_reason:
+            'Supabase 운영 모드에서 rehearsal-safe 로 분류된 target 이 없습니다 (ops/rehearsal_eligibility.json 미등록).',
+          human_gate_action:
+            'ops/rehearsal_eligibility.json 에 sandbox_safe entry 를 등록한 뒤 재실행해 주세요.',
+        },
+      });
+    }
   }
 
   if (opts.resetStore !== false) __resetProjectSpaceBindingMemoryForTests();

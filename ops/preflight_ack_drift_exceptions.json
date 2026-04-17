@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "description": "W13-C — Explicit auditable exception list for historical-frozen preflight manifests. Listed manifests ARE known to drift against live docs because the Milestones/SSOT docs have since evolved. They remain on disk as historical records of the ack state at the time each past workstream was executed. Drift findings for these manifests are surfaced as 'accepted_historical_drift: true' but NOT hidden. New manifests (W13 and later) must stay non-drifted.",
+  "policy": "frozen_historical_record",
+  "frozen_manifests": [
+    {
+      "manifest": "w1_closeout_5024db1.json",
+      "reason": "W1 closeout historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w1_remaining_g3_ab500d7.json",
+      "reason": "W1 remaining historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "harness_w2a_216aa5d.json",
+      "reason": "W2-A historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w4_founder_surface_epic.json",
+      "reason": "W4 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w5a_failure_taxonomy_epic.json",
+      "reason": "W5-A historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w5b_project_space_binding_epic.json",
+      "reason": "W5-B historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w6_scenario_proof_harness_epic.json",
+      "reason": "W6 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w7_proactive_cos_ops_epic.json",
+      "reason": "W7 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w8_live_binding_propagation_epic.json",
+      "reason": "W8 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w9_scenario_proof_live_epic.json",
+      "reason": "W9 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w10_proactive_actuation_audit_only_epic.json",
+      "reason": "W10 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w11_internal_alpha_qualification_epic.json",
+      "reason": "W11 historical ack — milestones doc has evolved since"
+    },
+    {
+      "manifest": "w12_design_partner_beta_qualification_epic.json",
+      "reason": "W12 historical ack — milestones doc has evolved since W13 bulk epic"
+    }
+  ]
+}

@@ -22,3 +22,4 @@ ops/preflight_ack/*.json
 ops/scenario_runs/*.json
 # W12-A live binding qualification 원장 (로컬/운영자 생성, raw secret 금지)
 ops/live_binding_capability_qualifications.json
+ops/rehearsal_eligibility.json

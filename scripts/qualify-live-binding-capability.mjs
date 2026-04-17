@@ -77,7 +77,8 @@ function emitSinkAbsenceReason(sink) {
   return null;
 }
 
-async function probeLive(sink) {
+export async function probeLive(sink, { fetchImpl } = {}) {
+  const fx = fetchImpl || (typeof fetch === 'function' ? fetch : null);
   const tokenEnvMap = {
     github: ['GITHUB_TOKEN', 'GH_TOKEN'],
     vercel: ['VERCEL_TOKEN'],
@@ -85,17 +86,103 @@ async function probeLive(sink) {
     supabase: ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_MANAGEMENT_TOKEN'],
   };
   const envs = tokenEnvMap[sink] || [];
-  const hasToken = envs.some((n) => typeof process.env[n] === 'string' && process.env[n].length > 0);
-  if (!hasToken) {
+  const tokenEnvName = envs.find(
+    (n) => typeof process.env[n] === 'string' && process.env[n].length > 0,
+  );
+  if (!tokenEnvName) {
     return { outcome: 'skipped', reason: 'no_credentials' };
   }
+  const token = String(process.env[tokenEnvName] || '').trim();
+  if (!fx) {
+    return { outcome: 'skipped', reason: 'no_fetch_impl' };
+  }
+
+  if (sink === 'railway') {
+    return {
+      outcome: 'verification_failed',
+      reason: 'no_write_support_in_this_epic',
+    };
+  }
+
+  if (sink === 'github') {
+    const repoFull =
+      String(process.env.GITHUB_DEFAULT_OWNER || '').trim() &&
+      String(process.env.GITHUB_DEFAULT_REPO || '').trim()
+        ? `${process.env.GITHUB_DEFAULT_OWNER}/${process.env.GITHUB_DEFAULT_REPO}`
+        : String(process.env.GITHUB_DEFAULT_BINDING_REPO || '').trim();
+    if (!repoFull || !repoFull.includes('/')) {
+      return { outcome: 'skipped', reason: 'github_default_repo_missing' };
+    }
+    try {
+      const res = await fx(
+        `https://api.github.com/repos/${repoFull}/actions/secrets/public-key`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+        },
+      );
+      if (res.status >= 200 && res.status < 300) {
+        return { outcome: 'live_verified', reason: `github_public_key_probe_ok_${res.status}` };
+      }
+      return { outcome: 'verification_failed', reason: `github_public_key_probe_status_${res.status}` };
+    } catch (_e) {
+      return { outcome: 'verification_failed', reason: 'github_public_key_probe_network_error' };
+    }
+  }
+
+  if (sink === 'vercel') {
+    const projectId = String(process.env.VERCEL_DEFAULT_PROJECT_ID || '').trim();
+    if (!projectId) {
+      return { outcome: 'skipped', reason: 'vercel_default_project_id_missing' };
+    }
+    try {
+      const url = new URL(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}/env`);
+      url.searchParams.set('limit', '1');
+      const teamId = String(process.env.VERCEL_TEAM_ID || '').trim();
+      if (teamId) url.searchParams.set('teamId', teamId);
+      const res = await fx(url.toString(), {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (res.status >= 200 && res.status < 300) {
+        return { outcome: 'live_verified', reason: `vercel_env_probe_ok_${res.status}` };
+      }
+      return { outcome: 'verification_failed', reason: `vercel_env_probe_status_${res.status}` };
+    } catch (_e) {
+      return { outcome: 'verification_failed', reason: 'vercel_env_probe_network_error' };
+    }
+  }
+
+  if (sink === 'supabase') {
+    try {
+      const res = await fx('https://api.supabase.com/v1/projects', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (res.status >= 200 && res.status < 300) {
+        return {
+          outcome: 'live_verified_read_only',
+          reason: `supabase_projects_probe_ok_${res.status}`,
+        };
+      }
+      return {
+        outcome: 'verification_failed',
+        reason: `supabase_projects_probe_status_${res.status}`,
+      };
+    } catch (_e) {
+      return { outcome: 'verification_failed', reason: 'supabase_projects_probe_network_error' };
+    }
+  }
+
   const absenceReason = emitSinkAbsenceReason(sink);
   if (absenceReason) {
     return { outcome: 'verification_failed', reason: absenceReason };
   }
-  // NOTE: 실제 HTTP 호출은 이 번들에서 수행하지 않는다 (네트워크/자격 외부화).
-  // 자격이 주입되었고 sink 가 write 가능 타입이면 live_verified 로 마크하되 notes 에 운영자 수동 근거를 요구한다.
-  return { outcome: 'live_verified', reason: 'credentials_present_operator_confirms_live' };
+  return { outcome: 'verification_failed', reason: 'unknown_sink_probe' };
 }
 
 async function qualifyOne(sink, { mode, verifiedBy, notes, evidenceRef }) {
@@ -210,7 +297,14 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('qualify-live-binding-capability: fatal', err && err.message ? err.message : err);
-  process.exit(1);
-});
+import { fileURLToPath } from 'node:url';
+
+const invokedDirectly =
+  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error('qualify-live-binding-capability: fatal', err && err.message ? err.message : err);
+    process.exit(1);
+  });
+}

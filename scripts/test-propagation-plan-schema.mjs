@@ -58,14 +58,14 @@ assert.ok(plan.missing_source_values_names.includes('SUPABASE_SERVICE_ROLE_KEY')
 // step shape
 for (const s of plan.steps) {
   assert.ok(typeof s.step_index === 'number');
-  assert.ok(['read_back', 'smoke', 'none'].includes(s.verification_kind));
+  assert.ok(['read_back', 'existence_only', 'smoke', 'none'].includes(s.verification_kind));
   assert.ok(['plain_readable', 'write_only', 'smoke_only'].includes(s.secret_handling_mode));
 }
 
-// Railway(env_requirement, write-only) → smoke
+// Railway(env_requirement, write-only) → smoke (override keeps legacy smoke — registry existence_only 미지원)
 assert.equal(plan.steps[0].verification_kind, 'smoke');
-// GitHub (repo, readable) → smoke (no read_back cap set)
-assert.equal(plan.steps[1].verification_kind, 'smoke');
+// GitHub (repo, readable) → W13-A 이후 existence_only (registry write_only_write_back_forbidden + existence_only 지원)
+assert.equal(plan.steps[1].verification_kind, 'existence_only');
 // Supabase (no secret_write cap) → none
 assert.equal(plan.steps[2].verification_kind, 'none');
 

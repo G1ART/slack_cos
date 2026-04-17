@@ -70,7 +70,7 @@ function downgradeToMaxAllowed(verificationKind, qualifiedCap) {
  * @property {string} sink_system
  * @property {string} secret_handling_mode
  * @property {string|null} binding_name
- * @property {'read_back'|'smoke'|'none'} verification_kind
+ * @property {'read_back'|'existence_only'|'smoke'|'none'} verification_kind
  * @property {string|null} required_human_action
  */
 
@@ -117,8 +117,20 @@ export function buildPropagationPlan(input) {
     }
     const cap = capOf(sinkCapabilities, r.sink_system);
     let verification_kind = 'none';
-    if (cap.supports_read_back) verification_kind = 'read_back';
-    else if (cap.supports_secret_write) verification_kind = 'smoke';
+    const registryCap = getCapabilityForSink(r.sink_system);
+    const registryModes = Array.isArray(registryCap.verification_modes_supported)
+      ? registryCap.verification_modes_supported
+      : [];
+    // W13-A: registry 가 실제 write 지원 + write-back 금지 라고 선언한 경우만 read_back 선택을 차단.
+    const enforceWriteOnlyDowngrade =
+      registryCap.can_write === true && registryCap.write_only_write_back_forbidden === true;
+    if (cap.supports_read_back && !enforceWriteOnlyDowngrade) {
+      verification_kind = 'read_back';
+    } else if (cap.supports_secret_write && registryModes.includes('existence_only')) {
+      verification_kind = 'existence_only';
+    } else if (cap.supports_secret_write) {
+      verification_kind = 'smoke';
+    }
 
     // W12-A: sinkCapabilities override 가 주어진 경우는 caller 의 명시적 의도(tests/테넌트) 를 존중.
     // 기본 registry 경로일 때만 qualification ledger 를 기준으로 강등 적용.

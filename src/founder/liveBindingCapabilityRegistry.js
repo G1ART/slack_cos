@@ -30,13 +30,15 @@ import path from 'node:path';
  * @property {boolean} requires_manual_confirmation
  * @property {string|null} required_human_action
  * @property {string} notes
- * @property {'live_verified'|'fixture_verified'|'conservative'|'unverified'|'stale'|'verification_failed'} qualification_status
+ * @property {'live_verified'|'fixture_verified'|'conservative'|'unverified'|'stale'|'verification_failed'|'manual_only'} qualification_status
  * @property {string|null} last_verified_at
  * @property {'live'|'fixture'|null} last_verified_mode
  * @property {string|null} verified_by
  * @property {string|null} verification_notes
  * @property {string|null} evidence_ref
  * @property {number} stale_after_days
+ * @property {boolean} [write_only_write_back_forbidden]
+ * @property {string|null} [known_limitation]
  */
 
 /** @type {readonly string[]} */
@@ -45,11 +47,13 @@ export const VERIFICATION_MODES = Object.freeze(['read_back', 'smoke', 'existenc
 /** @type {readonly string[]} */
 export const QUALIFICATION_STATUSES = Object.freeze([
   'live_verified',
+  'live_verified_read_only',
   'fixture_verified',
   'conservative',
   'unverified',
   'stale',
   'verification_failed',
+  'manual_only',
 ]);
 
 const DEFAULT_STALE_AFTER_DAYS = 30;
@@ -63,7 +67,7 @@ const REGISTRY = Object.freeze({
     verification_modes_supported: Object.freeze(['existence_only', 'smoke', 'none']),
     requires_manual_confirmation: false,
     required_human_action: null,
-    notes: 'GitHub Actions secrets API — write 후 existence check 가능, 값 read-back 불가',
+    notes: 'GitHub Actions secrets API — libsodium encrypt + PUT write, 존재 확인만 가능, 값 read-back 불가',
     qualification_status: 'conservative',
     last_verified_at: null,
     last_verified_mode: null,
@@ -71,6 +75,8 @@ const REGISTRY = Object.freeze({
     verification_notes: null,
     evidence_ref: null,
     stale_after_days: DEFAULT_STALE_AFTER_DAYS,
+    write_only_write_back_forbidden: true,
+    known_limitation: null,
   }),
   vercel: Object.freeze({
     can_write: true,
@@ -79,7 +85,7 @@ const REGISTRY = Object.freeze({
     verification_modes_supported: Object.freeze(['existence_only', 'smoke', 'none']),
     requires_manual_confirmation: false,
     required_human_action: null,
-    notes: 'Vercel Project Env API — write 후 existence check, 값 read-back 불가',
+    notes: 'Vercel Project Env API — POST/PATCH write, 존재 확인 가능, 값 read-back 불가, 적용은 다음 deploy 부터',
     qualification_status: 'conservative',
     last_verified_at: null,
     last_verified_mode: null,
@@ -87,22 +93,26 @@ const REGISTRY = Object.freeze({
     verification_notes: null,
     evidence_ref: null,
     stale_after_days: DEFAULT_STALE_AFTER_DAYS,
+    write_only_write_back_forbidden: true,
+    known_limitation: 'requires_redeploy_to_apply',
   }),
   railway: Object.freeze({
-    can_write: true,
-    can_verify_existence: true,
+    can_write: false,
+    can_verify_existence: false,
     can_read_back_value: false,
-    verification_modes_supported: Object.freeze(['existence_only', 'smoke', 'none']),
-    requires_manual_confirmation: false,
-    required_human_action: null,
-    notes: 'Railway Project Variables API — write 후 existence check, 값 read-back 불가',
-    qualification_status: 'conservative',
+    verification_modes_supported: Object.freeze(['smoke', 'none']),
+    requires_manual_confirmation: true,
+    required_human_action: 'Railway 대시보드에서 프로젝트 변수를 수동 설정',
+    notes: 'Railway — 본 에픽에서는 live write 미구현, 운영자 수동 설정으로만 처리',
+    qualification_status: 'manual_only',
     last_verified_at: null,
     last_verified_mode: null,
     verified_by: null,
     verification_notes: null,
     evidence_ref: null,
     stale_after_days: DEFAULT_STALE_AFTER_DAYS,
+    write_only_write_back_forbidden: true,
+    known_limitation: 'no_official_public_api_variable_write_in_this_epic',
   }),
   supabase: Object.freeze({
     can_write: false,
@@ -111,7 +121,7 @@ const REGISTRY = Object.freeze({
     verification_modes_supported: Object.freeze(['smoke', 'none']),
     requires_manual_confirmation: true,
     required_human_action: 'Supabase 콘솔에서 프로젝트 설정·서비스 키 발급을 수동 확인',
-    notes: 'Supabase Management API 미보유 — smoke_only, 콘솔에서 수동 확인 필수',
+    notes: 'Supabase Management API — probe 전용, write 미구현',
     qualification_status: 'conservative',
     last_verified_at: null,
     last_verified_mode: null,
@@ -119,6 +129,8 @@ const REGISTRY = Object.freeze({
     verification_notes: null,
     evidence_ref: null,
     stale_after_days: DEFAULT_STALE_AFTER_DAYS,
+    write_only_write_back_forbidden: true,
+    known_limitation: 'management_api_probe_only',
   }),
 });
 
@@ -138,6 +150,8 @@ const FAIL_CLOSED_DEFAULT = Object.freeze({
   verification_notes: null,
   evidence_ref: null,
   stale_after_days: DEFAULT_STALE_AFTER_DAYS,
+  write_only_write_back_forbidden: true,
+  known_limitation: 'unknown_sink',
 });
 
 export function getCapabilityForSink(sink) {

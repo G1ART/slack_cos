@@ -34,6 +34,7 @@ const expectedWs = new Set([
   'proactive_actuation_audit_only',
   'internal_alpha_qualification',
   'design_partner_beta_qualification',
+  'w13_bulk_live_surface_rehearsal_bootstrap_quality',
 ]);
 for (const k of Object.keys(ws)) assert.ok(expectedWs.has(k), `unexpected workstream key: ${k}`);
 for (const k of expectedWs) assert.ok(ws[k], `missing workstream: ${k}`);
