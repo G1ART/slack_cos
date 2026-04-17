@@ -141,6 +141,52 @@ If any required document changes during the task, rerun preflight and refresh th
 
 ---
 
+## 6.2) W11 Internal Alpha Qualification & Live Rehearsal 총괄 보고 (2026-04-16)
+
+- **구현 순서**: W0 확장 → G11-A(capability registry) → G11-C(resume audit DDL + 런타임) → G11-D(engine rollup) → G11-B(audit CLI) → G11-E(scenario cause axis + bounded live) → G11-F(audit-only read slices) → cross-project contamination 회귀 → closeout.
+- **주요 산출물**:
+  - **A**: `src/founder/liveBindingCapabilityRegistry.js`(SSOT, 4 sinks × 5축) · `envSecretPropagationPlan.buildPropagationPlan` registry fallback · `envSecretPropagationEngine.executePropagationPlan` verification_kind 호환성 fail-closed.
+  - **C**: `supabase/migrations/20260616120000_human_gate_resume_audit.sql`(5 additive columns) · `projectSpaceBindingStore.openHumanGate`/`closeHumanGate`/`markGateResumed` · `humanGateRuntime.openResumableGate`/`closeGateAndResume`·`RESUME_TARGET_KINDS`·`deriveContinuationKey`·`formatUnresolvedHumanGatesCompactLines`.
+  - **D**: `executePropagationPlan` → additive 6 roll-up 필드(`attempted_steps_count`·`completed_steps_count`·`blocked_steps_count`·`verification_modes_used`·`resumable`·`next_human_action`).
+  - **B**: `scripts/audit-delivery-readiness.mjs` + npm `audit:delivery-readiness`(fixture/json/project-space-key 옵션).
+  - **E**: `BREAK_REASON_CAUSES` 8종 enum + additive `break_reason_cause` 필드(envelope·classification·scorecard), `scenarioProofLiveRunner.detectLiveBoundaryBlock` 로 Supabase·`COS_SCENARIO_LIVE_OPENAI`·writers 조건 누락 시 inconclusive + 정확 cause 반환.
+  - **F**: `src/founder/humanGateResumeAuditLines.js`·`src/founder/propagationRunAuditLines.js` 신규 pure 모듈, `founderCosToolHandlers.read_execution_context` 에 `human_gate_resume_audit_lines`·`propagation_run_audit_lines` 병치(기존 응답 shape 보존, founder 본문 파이프와 비혼용).
+  - **W0**: `docs/runtime_required_docs.json.internal_alpha_qualification` 워크스트림 + `ops/preflight_manifest/w11_internal_alpha_qualification_epic.json` + `ops/preflight_ack/w11_internal_alpha_qualification_epic.json`.
+- **회귀 18종(모두 green, `npm test` 전체 통과)**:
+  - `test-live-binding-capability-registry-schema.mjs`
+  - `test-propagation-plan-uses-registry.mjs`
+  - `test-propagation-plan-unknown-sink-fails-closed.mjs`
+  - `test-human-gate-resume-target-invariant.mjs`
+  - `test-human-gate-reopened-count-and-timestamps.mjs`
+  - `test-human-gate-continuation-key-derived.mjs`
+  - `test-human-gate-tenancy-preserved-across-resume.mjs`
+  - `test-propagation-engine-result-rollup-fields.mjs`
+  - `test-propagation-engine-next-human-action-fallback.mjs`
+  - `test-audit-delivery-readiness-fixture-basic.mjs`
+  - `test-audit-delivery-readiness-no-secret-leak.mjs`
+  - `test-audit-delivery-readiness-blocked-plus-open-gate.mjs`
+  - `test-audit-delivery-readiness-smoke-vs-verified-distinguished.mjs`
+  - `test-scenario-proof-envelope-break-reason-cause-additive.mjs`
+  - `test-scenario-proof-classifier-break-reason-cause-mapping.mjs`
+  - `test-scenario-proof-scorecard-cause-histogram.mjs`
+  - `test-scenario-proof-live-bounded-gates.mjs`
+  - `test-scenario-proof-live-no-secret-in-cause.mjs`
+  - `test-human-gate-resume-audit-lines-pure.mjs`
+  - `test-propagation-run-audit-lines-pure.mjs`
+  - `test-read-execution-context-w11f-audit-slices.mjs`
+  - `test-cross-project-contamination-no-mix.mjs`
+- **검증 / 안전성**:
+  - `npm run preflight:internal_alpha_qualification` → 청크 매니페스트 생성, `npm run verify:preflight:internal_alpha_qualification` → ack 해시·요약 통과.
+  - `npm test` 전체 green. `npm run audit:delivery-readiness -- --json` 는 Supabase 미자격 환경에서 `skipped` exit 0.
+  - Founder surface 토큰 금지(헌법 §4/§6): cause enum·resolution_class·`resume_target_kind`·`continuation_*`·내부 ID 는 audit 슬라이스 안에서만 노출되고 `summary_lines`·founder 대화 본문으로 흐르지 않는다(회귀 검증됨).
+  - **Cross-project contamination 불가 증명**: 같은 workspace/product 에서 서로 다른 `project_space_key` A/B 에 각각 gate·propagation run 을 주입해도, `listOpenHumanGates`·`listRecentPropagationRunsForSpace`·`loadDeliveryReadiness`·audit lines 어디에도 반대편 키/ID 가 섞이지 않는다.
+- **Non-goals 준수**: 새 Slack 송신 경로·founder 본문 내부 토큰 직접 노출·live writer 기본 on·`continuation_key` DB 중복 저장·콜백 코어 재개방·자동 재시도/오케스트레이션 모두 도입하지 않음.
+- **운영 후속(다음 기회에 다룰 권고)**:
+  - live rehearsal runbook 에 `audit:delivery-readiness` + `scenario:proof:live` 체인을 정기 스케줄로 편입.
+  - W8 DDL 사전 의존(W5-B 마이그레이션 선행) 을 릴리즈 체크리스트 첫 줄에 고정.
+
+---
+
 ## 7) 다음 권장
 
 1. **W0** 유지·개선(필요 시 청크 크기·워크스트림 확장).  

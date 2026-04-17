@@ -23,6 +23,10 @@ import {
   buildHarnessProofScorecard,
   toHarnessProofCompactLines,
 } from './harnessProofScorecard.js';
+import { listOpenHumanGates } from './projectSpaceBindingStore.js';
+import { listRecentPropagationRunsForSpace } from './envSecretPropagationEngine.js';
+import { buildHumanGateResumeAuditLines } from './humanGateResumeAuditLines.js';
+import { buildPropagationRunAuditLines } from './propagationRunAuditLines.js';
 import { buildToolQualificationSummaryLines } from './toolPlane/toolLaneQualification.js';
 import { formatAdapterReadinessCompactLines } from './toolPlane/toolLaneReadiness.js';
 import {
@@ -118,6 +122,27 @@ export async function handleReadExecutionContext(args, threadKey) {
   });
   const active_project_space = await loadActiveProjectSpaceSlice(rm.project_space_key);
   const delivery_readiness = await loadDeliveryReadiness(rm.project_space_key);
+  // W11-F: audit-only slices (founder 본문 노출 금지, read_execution_context 내부 truth 전용)
+  let human_gate_resume_audit_lines = [];
+  let propagation_run_audit_lines = [];
+  if (rm.project_space_key) {
+    try {
+      const [openGates, recentRuns] = await Promise.all([
+        listOpenHumanGates(rm.project_space_key).catch(() => []),
+        listRecentPropagationRunsForSpace(rm.project_space_key, { limit: 5 }).catch(() => []),
+      ]);
+      human_gate_resume_audit_lines = buildHumanGateResumeAuditLines({
+        project_space_key: rm.project_space_key,
+        human_gates: openGates || [],
+      }).human_gate_resume_audit_lines;
+      propagation_run_audit_lines = buildPropagationRunAuditLines({
+        project_space_key: rm.project_space_key,
+        recent_propagation_runs: recentRuns || [],
+      }).propagation_run_audit_lines;
+    } catch (err) {
+      console.error('[w11f_audit_slices]', err && err.message ? err.message : String(err));
+    }
+  }
   const { compact_lines: proactive_signals_compact_lines } = buildProactiveSignals({
     active_run_shell,
     workcell_runtime: active_run_shell && typeof active_run_shell === 'object'
@@ -155,6 +180,8 @@ export async function handleReadExecutionContext(args, threadKey) {
     harness_proof_scorecard_lines,
     proactive_signals_compact_lines,
     tool_qualification_summary_lines,
+    human_gate_resume_audit_lines,
+    propagation_run_audit_lines,
     ...(active_project_space ? { active_project_space } : {}),
     ...(delivery_readiness
       ? {

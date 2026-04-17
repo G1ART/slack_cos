@@ -15,6 +15,8 @@ import { runScenarioOne } from '../../scripts/scenario/run-scenario-1-multi-proj
 import { runScenarioTwo } from '../../scripts/scenario/run-scenario-2-research-to-bundle.mjs';
 import { classifyScenarioProofEnvelope } from './scenarioProofResultClassifier.js';
 import { buildScenarioProofScorecard, toScorecardCompactLines } from './scenarioProofScorecard.js';
+import { buildScenarioProofEnvelope } from '../../scripts/scenario/scenarioProofEnvelope.js';
+import { getCosRunStoreMode } from './executionRunStore.js';
 
 /** @typedef {'fixture_replay' | 'live_openai'} ScenarioRunMode */
 
@@ -25,6 +27,8 @@ import { buildScenarioProofScorecard, toScorecardCompactLines } from './scenario
  *   fixtures?: { scenario1?: object, scenario2?: object },
  *   now?: () => Date,
  *   scenarios?: Array<'scenario_1_multi_project_spinup' | 'scenario_2_research_to_bundle'>,
+ *   writers?: Record<string, unknown>,
+ *   env?: NodeJS.ProcessEnv,
  * }} [opts]
  */
 export async function runScenarioProofLive(opts = {}) {
@@ -35,9 +39,43 @@ export async function runScenarioProofLive(opts = {}) {
   const wanted = Array.isArray(opts.scenarios) && opts.scenarios.length > 0
     ? opts.scenarios
     : ['scenario_1_multi_project_spinup', 'scenario_2_research_to_bundle'];
+  const env = opts.env || process.env;
+  const writersProvided = opts.writers && typeof opts.writers === 'object';
 
   /** @type {Array<{envelope: object, classification: object, build_errors: string[] | null}>} */
   const runs = [];
+
+  // W11-E bounded live gates: live 모드일 때 누락 조합별로 정직한 cause 로 inconclusive 를 돌려준다.
+  const boundedBlock = runMode === 'live_openai' ? detectLiveBoundaryBlock({ env, writersProvided }) : null;
+  if (boundedBlock) {
+    const isoStart = now().toISOString();
+    for (const scenarioId of wanted) {
+      const env1 = buildScenarioProofEnvelope({
+        scenario_id: scenarioId,
+        run_mode: 'live_openai',
+        started_at: isoStart,
+        finished_at: isoStart,
+        outcome: 'inconclusive',
+        break_location: 'unclassified',
+        break_reason_cause: boundedBlock.cause,
+        failure_classification: {
+          resolution_class: boundedBlock.resolution_class,
+          human_gate_reason: boundedBlock.reason,
+          human_gate_action: boundedBlock.action,
+        },
+        founder_surface_slice: { headline: boundedBlock.headline },
+      });
+      const envelope = env1 && env1.ok ? env1.envelope : null;
+      runs.push({
+        envelope,
+        classification: envelope ? classifyScenarioProofEnvelope(envelope) : null,
+        build_errors: envelope ? null : (env1 && env1.errors) || ['bounded_block_envelope_failed'],
+      });
+    }
+    const scorecard = buildScenarioProofScorecard(runs.map((r) => r.envelope).filter(Boolean));
+    const compact_lines = toScorecardCompactLines(scorecard);
+    return { run_mode: runMode, runs, scorecard, compact_lines };
+  }
 
   for (const scenarioId of wanted) {
     let res = null;
@@ -86,4 +124,45 @@ export async function runScenarioProofLive(opts = {}) {
     scorecard,
     compact_lines,
   };
+}
+
+/**
+ * W11-E — live rehearsal 가능 여부를 게이트한다. 어느 하나라도 누락이면 bounded block 반환.
+ *
+ * 순서 (정직한 cause 분리):
+ *  1) Supabase 강제 운영 모드 → binding_propagation_stop (테넨시 격리 깨뜨리지 않기 위해 live 금지)
+ *  2) COS_SCENARIO_LIVE_OPENAI 미설정 → external_auth_gate (기존 gated 유지)
+ *  3) COS_LIVE_BINDING_WRITERS!=1 AND writers 주입 없음 → product_capability_missing
+ *  그 외는 null 을 돌려줘 기존 러너가 live 실행을 수행.
+ */
+function detectLiveBoundaryBlock({ env, writersProvided }) {
+  if (getCosRunStoreMode() === 'supabase') {
+    return {
+      cause: 'binding_propagation_stop',
+      resolution_class: 'tenancy_or_binding_ambiguity',
+      reason: 'Supabase 운영 모드에서는 live rehearsal 이 불가합니다(테넨시 격리 보장 불가).',
+      action: '로컬 in-memory 모드로 전환한 뒤 다시 실행해 주세요.',
+      headline: '운영 Supabase 에서는 라이브 리허설을 실행하지 않습니다.',
+    };
+  }
+  if (env.COS_SCENARIO_LIVE_OPENAI !== '1') {
+    return {
+      cause: 'external_auth_gate',
+      resolution_class: 'hil_required_policy_or_product_decision',
+      reason: 'COS_SCENARIO_LIVE_OPENAI 가 설정되지 않았습니다.',
+      action: '라이브 실행을 원하시면 COS_SCENARIO_LIVE_OPENAI=1 로 명시해 주세요.',
+      headline: '라이브 모드 실행이 게이트되어 있습니다.',
+    };
+  }
+  if (env.COS_LIVE_BINDING_WRITERS !== '1' && !writersProvided) {
+    return {
+      cause: 'product_capability_missing',
+      resolution_class: 'technical_capability_missing',
+      reason:
+        'live 바인딩 writer 가 활성화되지 않았고 호출측이 writers 를 주입하지도 않았습니다.',
+      action: 'COS_LIVE_BINDING_WRITERS=1 로 writer 를 켜거나, runner 호출 시 writers 를 주입해 주세요.',
+      headline: '라이브 writer 자격이 없어 리허설을 중단했습니다.',
+    };
+  }
+  return null;
 }

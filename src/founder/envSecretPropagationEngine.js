@@ -17,6 +17,11 @@
 import crypto from 'node:crypto';
 import { createCosRuntimeSupabase } from './runStoreSupabase.js';
 import { getCosRunStoreMode } from './executionRunStore.js';
+import {
+  getCapabilityForSink,
+  isVerificationKindSupported,
+} from './liveBindingCapabilityRegistry.js';
+import { listOpenHumanGates } from './projectSpaceBindingStore.js';
 
 /** @type {Map<string, { run: Record<string, unknown>, steps: Array<Record<string, unknown>> }>} */
 const memPropagationRuns = new Map();
@@ -178,6 +183,22 @@ export async function executePropagationPlan(input) {
       console.error('[propagation_engine.writer_throw]', step.sink_system, err && err.message);
     }
 
+    // W11-A: step.verification_kind 가 registry 지원 범위 밖이면 none + tool_adapter_unavailable 로 강등
+    if (
+      writerResult &&
+      writerResult.verification_kind &&
+      writerResult.verification_kind !== 'none' &&
+      !isVerificationKindSupported(step.sink_system, writerResult.verification_kind)
+    ) {
+      writerResult = {
+        ...writerResult,
+        verification_kind: 'none',
+        verification_result: 'failed',
+        failure_resolution_class:
+          writerResult.failure_resolution_class || 'tool_adapter_unavailable',
+      };
+    }
+
     const row = makeStepRow(runId, step, writerResult);
     stepRows.push(row);
     if (row.verification_result === 'failed') {
@@ -212,12 +233,65 @@ export async function executePropagationPlan(input) {
     if (mem) Object.assign(mem.run, updates);
   }
 
+  // W11-D — additive audit rollup (기존 필드는 그대로 유지; 새 필드만 얹는다).
+  const attempted_steps_count = stepRows.length;
+  const completed_steps_count = stepRows.filter((r) => r.verification_result === 'ok').length;
+  const blocked_steps_count = stepRows.filter(
+    (r) => r.verification_result === 'failed' || r.verification_result === 'not_applicable',
+  ).length;
+  const verification_modes_used = [
+    ...new Set(
+      stepRows
+        .map((r) => r.verification_kind)
+        .filter((k) => typeof k === 'string' && k.length > 0),
+    ),
+  ].sort();
+
+  // first blocked step → next_human_action 유도
+  const blockedRow = stepRows.find(
+    (r) => r.verification_result === 'failed' || r.verification_result === 'not_applicable',
+  );
+  const blockedStepPlan = blockedRow
+    ? plan.steps.find((s) => s.step_index === blockedRow.step_index)
+    : null;
+  let next_human_action = null;
+  if (blockedStepPlan) {
+    if (blockedStepPlan.required_human_action) {
+      next_human_action = blockedStepPlan.required_human_action;
+    } else {
+      // registry 에서 유도: requires_manual_confirmation=true 면 "sink 콘솔에서 수동 확인"
+      const cap = getCapabilityForSink(blockedStepPlan.sink_system);
+      if (cap.requires_manual_confirmation) {
+        next_human_action = `${blockedStepPlan.sink_system} 콘솔에서 수동 확인 필요`;
+      }
+    }
+  }
+
+  // resumable: blocked step + 대응 open gate 존재 시 true
+  let resumable = false;
+  if (blockedRow) {
+    try {
+      const openGates = await listOpenHumanGates(plan.project_space_key);
+      if (Array.isArray(openGates) && openGates.length > 0) {
+        resumable = openGates.some((g) => String(g.gate_status || '') === 'open');
+      }
+    } catch (err) {
+      console.error('[propagation_engine.resumable_lookup]', err && err.message);
+    }
+  }
+
   return {
     propagation_run_id: runId,
     plan_hash: plan.plan_hash,
     status: finalStatus,
     step_rows: stepRows,
     failure_resolution_class: firstFailure,
+    attempted_steps_count,
+    completed_steps_count,
+    blocked_steps_count,
+    verification_modes_used,
+    resumable,
+    next_human_action,
   };
 }
 

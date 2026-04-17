@@ -8,7 +8,11 @@
  * 본 모듈은 pure — store/fetch/Slack 호출 금지.
  */
 
-import { classifyScenarioProofEnvelope, BREAK_CATEGORIES } from './scenarioProofResultClassifier.js';
+import {
+  classifyScenarioProofEnvelope,
+  BREAK_CATEGORIES,
+  BREAK_REASON_CAUSES,
+} from './scenarioProofResultClassifier.js';
 
 /**
  * @typedef {Object} ScenarioProofScorecard
@@ -29,6 +33,7 @@ import { classifyScenarioProofEnvelope, BREAK_CATEGORIES } from './scenarioProof
 export function buildScenarioProofScorecard(envelopes) {
   const list = Array.isArray(envelopes) ? envelopes.filter(Boolean) : [];
   const counts = Object.fromEntries(BREAK_CATEGORIES.map((k) => [k, 0]));
+  const causeCounts = Object.fromEntries(BREAK_REASON_CAUSES.map((k) => [k, 0]));
   let passed = 0;
   let broken = 0;
   let inconclusive = 0;
@@ -38,6 +43,9 @@ export function buildScenarioProofScorecard(envelopes) {
   for (const env of list) {
     const c = classifyScenarioProofEnvelope(env);
     counts[c.break_category] = (counts[c.break_category] || 0) + 1;
+    if (c.break_reason_cause) {
+      causeCounts[c.break_reason_cause] = (causeCounts[c.break_reason_cause] || 0) + 1;
+    }
     if (c.outcome === 'succeeded') passed += 1;
     else if (c.outcome === 'broken') broken += 1;
     else inconclusive += 1;
@@ -47,6 +55,7 @@ export function buildScenarioProofScorecard(envelopes) {
       scenario_id: c.scenario_id,
       outcome: c.outcome,
       break_category: c.break_category,
+      break_reason_cause: c.break_reason_cause,
       human_gate_required: c.human_gate_required,
       headline: c.headline,
     });
@@ -59,6 +68,7 @@ export function buildScenarioProofScorecard(envelopes) {
     human_gate_required: hil,
     continuation_available: cont,
     break_category_counts: counts,
+    break_reason_cause_counts: causeCounts,
     entries,
   };
 }
@@ -83,7 +93,35 @@ export function toScorecardCompactLines(sc) {
   if (dominant) {
     lines.push(`가장 잦은 중단 영역: ${humanizeBreakCategory(dominant[0])} (${dominant[1]}건)`);
   }
+  // W11-E: cause 축에서도 top 1 만 한 줄 (토큰 없음, 자연어 요약)
+  const dominantCause = Object.entries(sc.break_reason_cause_counts || {})
+    .filter(([k, v]) => k !== 'none' && v > 0)
+    .sort((a, b) => b[1] - a[1])[0];
+  if (dominantCause) {
+    lines.push(`주된 원인: ${humanizeBreakReasonCause(dominantCause[0])} (${dominantCause[1]}건)`);
+  }
   return lines;
+}
+
+function humanizeBreakReasonCause(cause) {
+  switch (cause) {
+    case 'binding_propagation_stop':
+      return '바인딩 전파 중단';
+    case 'external_auth_gate':
+      return '외부 인증 게이트';
+    case 'subscription_billing_gate':
+      return '결제/구독 게이트';
+    case 'provider_transient_failure':
+      return '일시적 제공자 장애';
+    case 'product_capability_missing':
+      return '제품 기능 미보유';
+    case 'runtime_regression':
+      return '런타임 회귀';
+    case 'unclassified':
+      return '미분류';
+    default:
+      return cause;
+  }
 }
 
 function humanizeBreakCategory(cat) {

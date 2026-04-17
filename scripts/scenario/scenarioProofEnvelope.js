@@ -51,10 +51,26 @@ export const BREAK_LOCATIONS = Object.freeze([
 /** 실행 모드 — fixture replay 기본, live OpenAI 는 게이트된 별도 모드. */
 export const SCENARIO_RUN_MODES = Object.freeze(['fixture_replay', 'live_openai']);
 
+/**
+ * W11-E — break_reason_cause 는 "왜 끊겼는가" 의 고정 카테고리.
+ * break_location("어디서 끊겼는가") 와 직교하는 축. 기존 필드 모양은 건드리지 않고 additive.
+ */
+export const BREAK_REASON_CAUSES = Object.freeze([
+  'none',
+  'binding_propagation_stop',
+  'external_auth_gate',
+  'subscription_billing_gate',
+  'provider_transient_failure',
+  'product_capability_missing',
+  'runtime_regression',
+  'unclassified',
+]);
+
 const OUTCOME_SET = new Set(SCENARIO_OUTCOMES);
 const BREAK_SET = new Set(BREAK_LOCATIONS);
 const MODE_SET = new Set(SCENARIO_RUN_MODES);
 const SCENARIO_SET = new Set(SCENARIO_IDS);
+const CAUSE_SET = new Set(BREAK_REASON_CAUSES);
 
 /**
  * @typedef {object} ScenarioStep
@@ -111,6 +127,19 @@ export function buildScenarioProofEnvelope(input = {}) {
   }
   if (outcome === 'broken' && break_location === 'none') {
     errors.push('broken_outcome_must_have_break_location');
+  }
+
+  // W11-E: additive break_reason_cause (기본 'none'; outcome succeeded 면 'none' 강제, 그 외는 'unclassified' 기본)
+  let break_reason_cause =
+    typeof input.break_reason_cause === 'string' ? input.break_reason_cause : null;
+  if (break_reason_cause && !CAUSE_SET.has(break_reason_cause)) {
+    errors.push(`break_reason_cause_must_be_one_of:${BREAK_REASON_CAUSES.join('|')}`);
+  }
+  if (!break_reason_cause) {
+    break_reason_cause = outcome === 'succeeded' ? 'none' : 'unclassified';
+  }
+  if (outcome === 'succeeded' && break_reason_cause !== 'none') {
+    errors.push('succeeded_outcome_requires_break_reason_cause_none');
   }
 
   const started_at = normalizeIso(input.started_at);
@@ -186,6 +215,7 @@ export function buildScenarioProofEnvelope(input = {}) {
       finished_at,
       outcome,
       break_location,
+      break_reason_cause,
       steps,
       isolation,
       deliverable,

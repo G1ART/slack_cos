@@ -14,8 +14,11 @@ import {
   openHumanGate as storeOpenHumanGate,
   closeHumanGate as storeCloseHumanGate,
   listOpenHumanGates,
+  markGateResumed as storeMarkGateResumed,
   PROJECT_SPACE_GATE_KINDS,
 } from './projectSpaceBindingStore.js';
+
+export const RESUME_TARGET_KINDS = Object.freeze(['packet', 'run', 'thread']);
 
 function asString(v) {
   return v == null ? '' : String(v);
@@ -39,12 +42,27 @@ function trim(v) {
  *   continuation_run_id?: string|null,
  *   continuation_thread_key?: string|null,
  *   required_human_action?: string|null,
+ *   resume_target_kind?: 'packet'|'run'|'thread'|null,
+ *   resume_target_ref?: string|null,
  * }} input
  */
 export async function openResumableGate(input) {
   if (!PROJECT_SPACE_GATE_KINDS.includes(trim(input && input.gate_kind))) {
     throw new Error(
       `openResumableGate: gate_kind must be one of ${PROJECT_SPACE_GATE_KINDS.join('|')}`,
+    );
+  }
+  // W11-C invariant: resume_target_kind 와 resume_target_ref 는 동시에 존재하거나 동시에 null.
+  const rtk = trim(input.resume_target_kind);
+  const rtr = trim(input.resume_target_ref);
+  if ((rtk && !rtr) || (!rtk && rtr)) {
+    throw new Error(
+      'openResumableGate: resume_target_kind and resume_target_ref must be provided together',
+    );
+  }
+  if (rtk && !RESUME_TARGET_KINDS.includes(rtk)) {
+    throw new Error(
+      `openResumableGate: resume_target_kind must be one of ${RESUME_TARGET_KINDS.join('|')}`,
     );
   }
   return storeOpenHumanGate({
@@ -60,14 +78,31 @@ export async function openResumableGate(input) {
     continuation_run_id: input.continuation_run_id ?? null,
     continuation_thread_key: input.continuation_thread_key ?? null,
     required_human_action: input.required_human_action ?? null,
+    resume_target_kind: rtk || null,
+    resume_target_ref: rtr || null,
   });
+}
+
+/**
+ * W11-C — gate row 에서 continuation_key 를 결정적으로 파생한다.
+ * shape: 'packet:<id>|run:<id>|thread:<key>' (없으면 '-' 로 치환).
+ * 값(secret)을 포함하지 않고 식별자만.
+ * @param {Record<string, unknown> | null | undefined} gateRow
+ * @returns {string}
+ */
+export function deriveContinuationKey(gateRow) {
+  if (!gateRow || typeof gateRow !== 'object') return 'packet:-|run:-|thread:-';
+  const packet = asString(gateRow.continuation_packet_id) || '-';
+  const run = asString(gateRow.continuation_run_id) || '-';
+  const thread = asString(gateRow.continuation_thread_key) || '-';
+  return `packet:${packet}|run:${run}|thread:${thread}`;
 }
 
 /**
  * gate close + continuation meta 를 함께 반환. **자동 재개 금지** — 호출자(lane/supervisor)가
  * continuation_run_id 등을 보고 "어떤 run/packet 을 깨울지" 판단한다.
  *
- * @param {{ id: string, closed_by_run_id?: string|null, gate_status?: 'resolved'|'abandoned' }} input
+ * @param {{ id: string, closed_by_run_id?: string|null, gate_status?: 'resolved'|'abandoned', resumed_by?: string|null }} input
  */
 export async function closeGateAndResume(input) {
   const id = trim(input && input.id);
@@ -76,6 +111,7 @@ export async function closeGateAndResume(input) {
     id,
     gate_status: input.gate_status || 'resolved',
     closed_by_run_id: input.closed_by_run_id ?? null,
+    resumed_by: input.resumed_by ?? null,
   });
   return {
     gate: row,
@@ -84,8 +120,17 @@ export async function closeGateAndResume(input) {
       run_id: row.continuation_run_id || null,
       thread_key: row.continuation_thread_key || null,
       required_human_action: row.required_human_action || null,
+      resume_target_kind: row.resume_target_kind || null,
+      resume_target_ref: row.resume_target_ref || null,
+      continuation_key: deriveContinuationKey(row),
     },
   };
+}
+
+export async function markGateResumed(input) {
+  const id = trim(input && input.id);
+  if (!id) throw new Error('markGateResumed: id required');
+  return storeMarkGateResumed({ id, resumed_by: input.resumed_by ?? null });
 }
 
 /**
@@ -124,8 +169,15 @@ export function formatUnresolvedHumanGatesCompactLines(openGates) {
     const idShort = asString(g.id).slice(0, 8);
     const kind = asString(g.gate_kind);
     const action = asString(g.required_human_action || g.gate_action || '').slice(0, 80);
-    const packet = g.continuation_packet_id ? ` cont_packet:${asString(g.continuation_packet_id).slice(0, 12)}` : '';
-    out.push(`gate[${idShort}] ${kind}: ${action || '(조치 미기재)'}${packet}`);
+    const packet = g.continuation_packet_id
+      ? ` cont_packet:${asString(g.continuation_packet_id).slice(0, 12)}`
+      : '';
+    const reopened =
+      Number.isFinite(g.reopened_count) && g.reopened_count > 0
+        ? ` reopened=${g.reopened_count}`
+        : '';
+    const resumeKind = g.resume_target_kind ? ` resume→${asString(g.resume_target_kind)}` : '';
+    out.push(`gate[${idShort}] ${kind}: ${action || '(조치 미기재)'}${packet}${reopened}${resumeKind}`);
   }
   return out.slice(0, 6);
 }

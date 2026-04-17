@@ -237,6 +237,8 @@ export async function listBindingsForSpace(project_space_key, opts = {}) {
  *   continuation_run_id?: string | null,
  *   continuation_thread_key?: string | null,
  *   required_human_action?: string | null,
+ *   resume_target_kind?: 'packet' | 'run' | 'thread' | null,
+ *   resume_target_ref?: string | null,
  * }} input
  */
 export async function openHumanGate(input) {
@@ -246,6 +248,19 @@ export async function openHumanGate(input) {
   const tenancy = shallowTenancySlice(input);
   const id = newId();
   const iso = nowIso();
+  // W11-C: resume_target_kind 와 resume_target_ref 는 동시에 존재하거나 동시에 null 이어야 한다.
+  const rtk = asTrimmedString(input.resume_target_kind) || null;
+  const rtr = asTrimmedString(input.resume_target_ref) || null;
+  if ((rtk && !rtr) || (!rtk && rtr)) {
+    throw new Error(
+      'openHumanGate: resume_target_kind and resume_target_ref must be set together (or both null)',
+    );
+  }
+  if (rtk && !['packet', 'run', 'thread'].includes(rtk)) {
+    throw new Error(
+      `openHumanGate: resume_target_kind must be one of packet|run|thread (got ${rtk})`,
+    );
+  }
   const row = {
     id,
     project_space_key,
@@ -259,6 +274,11 @@ export async function openHumanGate(input) {
     continuation_run_id: asTrimmedString(input.continuation_run_id) || null,
     continuation_thread_key: asTrimmedString(input.continuation_thread_key) || null,
     required_human_action: asTrimmedString(input.required_human_action) || null,
+    resume_target_kind: rtk,
+    resume_target_ref: rtr,
+    reopened_count: 0,
+    last_resumed_at: null,
+    last_resumed_by: null,
     ...tenancy,
     opened_at: iso,
     closed_at: null,
@@ -283,7 +303,7 @@ export async function openHumanGate(input) {
 }
 
 /**
- * @param {{ id: string, gate_status?: 'resolved'|'abandoned', closed_by_run_id?: string | null }} input
+ * @param {{ id: string, gate_status?: 'resolved'|'abandoned', closed_by_run_id?: string | null, resumed_by?: string | null }} input
  */
 export async function closeHumanGate(input) {
   const id = asTrimmedString(input.id);
@@ -293,11 +313,21 @@ export async function closeHumanGate(input) {
     throw new Error(`closeHumanGate: gate_status must be resolved|abandoned (got ${target})`);
   }
   const iso = nowIso();
-  const patch = {
+  const closedBy = asTrimmedString(input.closed_by_run_id) || null;
+  const resumedBy = asTrimmedString(input.resumed_by) || closedBy || null;
+  const basePatch = {
     gate_status: target,
-    closed_by_run_id: asTrimmedString(input.closed_by_run_id) || null,
+    closed_by_run_id: closedBy,
     closed_at: iso,
   };
+  // W11-C: close→resolved 시 reopened_count 증분 + last_resumed_at/by 기록
+  const auditPatch =
+    target === 'resolved'
+      ? {
+          last_resumed_at: iso,
+          last_resumed_by: resumedBy,
+        }
+      : {};
 
   const mode = storeMode();
   if (mode === 'memory') {
@@ -306,12 +336,34 @@ export async function closeHumanGate(input) {
     if (prev.gate_status !== 'open') {
       throw new Error(`closeHumanGate: gate ${id} already ${prev.gate_status}`);
     }
-    const next = { ...prev, ...patch };
+    const prevCount = Number.isFinite(prev.reopened_count) ? prev.reopened_count : 0;
+    const next = {
+      ...prev,
+      ...basePatch,
+      ...auditPatch,
+      reopened_count: target === 'resolved' ? prevCount + 1 : prevCount,
+    };
     memGates.set(id, next);
     return next;
   }
   const sb = createCosRuntimeSupabase();
   if (!sb) throw new Error('supabase unavailable');
+  // Supabase 에서는 increment 를 두 스텝으로: 우선 현재 값 읽고 +1, patch 전체를 update.
+  let prevCount = 0;
+  if (target === 'resolved') {
+    const { data: cur, error: curErr } = await sb
+      .from('project_space_human_gates')
+      .select('reopened_count')
+      .eq('id', id)
+      .maybeSingle();
+    if (curErr) console.error('[project_space_human_gates.prevCount]', curErr.message);
+    prevCount = cur && Number.isFinite(cur.reopened_count) ? cur.reopened_count : 0;
+  }
+  const patch = {
+    ...basePatch,
+    ...auditPatch,
+    ...(target === 'resolved' ? { reopened_count: prevCount + 1 } : {}),
+  };
   const { data, error } = await sb
     .from('project_space_human_gates')
     .update(patch)
@@ -324,6 +376,56 @@ export async function closeHumanGate(input) {
     throw new Error(`project_space_human_gates.update failed: ${error.message}`);
   }
   if (!data) throw new Error(`closeHumanGate: gate ${id} not open or not found`);
+  return data;
+}
+
+/**
+ * W11-C — 보조 감사 훅. gate 의 resume 시점 기록만 갱신(상태 변경 없음).
+ * @param {{ id: string, resumed_by?: string | null }} input
+ */
+export async function markGateResumed(input) {
+  const id = asTrimmedString(input.id);
+  if (!id) throw new Error('markGateResumed: id required');
+  const iso = nowIso();
+  const resumedBy = asTrimmedString(input.resumed_by) || null;
+
+  const mode = storeMode();
+  if (mode === 'memory') {
+    const prev = memGates.get(id);
+    if (!prev) throw new Error(`markGateResumed: gate ${id} not found`);
+    const prevCount = Number.isFinite(prev.reopened_count) ? prev.reopened_count : 0;
+    const next = {
+      ...prev,
+      last_resumed_at: iso,
+      last_resumed_by: resumedBy,
+      reopened_count: prevCount + 1,
+    };
+    memGates.set(id, next);
+    return next;
+  }
+  const sb = createCosRuntimeSupabase();
+  if (!sb) throw new Error('supabase unavailable');
+  const { data: cur, error: curErr } = await sb
+    .from('project_space_human_gates')
+    .select('reopened_count')
+    .eq('id', id)
+    .maybeSingle();
+  if (curErr) console.error('[project_space_human_gates.prevCount]', curErr.message);
+  const prevCount = cur && Number.isFinite(cur.reopened_count) ? cur.reopened_count : 0;
+  const { data, error } = await sb
+    .from('project_space_human_gates')
+    .update({
+      last_resumed_at: iso,
+      last_resumed_by: resumedBy,
+      reopened_count: prevCount + 1,
+    })
+    .eq('id', id)
+    .select()
+    .maybeSingle();
+  if (error) {
+    console.error('[project_space_human_gates.markResumed]', error.message);
+    throw new Error(`markGateResumed: ${error.message}`);
+  }
   return data;
 }
 

@@ -63,6 +63,12 @@
       "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
       "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md",
       "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md"
+    ],
+    "internal_alpha_qualification": [
+      "docs/cursor-handoffs/W11_INTERNAL_ALPHA_QUALIFICATION_AND_LIVE_REHEARSAL_49f6924_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Upgrade_Milestones_2026-04-16.md",
+      "docs/cursor-handoffs/W8_W10_LIVE_AUTOMATION_AND_PROOF_ARCHITECTURE_2026-04-16.md",
+      "docs/cursor-handoffs/COS_Release_Readiness_Checklist_2026-04-16.md"
     ]
   }
 }

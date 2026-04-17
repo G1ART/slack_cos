@@ -22,17 +22,26 @@
 
 import crypto from 'node:crypto';
 import { SECRET_HANDLING_MODES } from './bindingRequirements.js';
+import { getCapabilityForSink } from './liveBindingCapabilityRegistry.js';
 
 function asString(v) {
   return v == null ? '' : String(v);
 }
 
 function capOf(sinkCapabilities, sink) {
-  const map = sinkCapabilities && typeof sinkCapabilities === 'object' ? sinkCapabilities : {};
-  const row = map[sink];
+  const map = sinkCapabilities && typeof sinkCapabilities === 'object' ? sinkCapabilities : null;
+  if (map && Object.prototype.hasOwnProperty.call(map, sink)) {
+    const row = map[sink];
+    return {
+      supports_secret_write: !!(row && row.supports_secret_write),
+      supports_read_back: !!(row && row.supports_read_back),
+    };
+  }
+  // W11-A: registry fallback (fail-closed for unknown sink)
+  const cap = getCapabilityForSink(sink);
   return {
-    supports_secret_write: !!(row && row.supports_secret_write),
-    supports_read_back: !!(row && row.supports_read_back),
+    supports_secret_write: cap.can_write === true,
+    supports_read_back: cap.can_read_back_value === true,
   };
 }
 
